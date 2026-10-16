@@ -10,10 +10,18 @@
 
 static volatile sig_atomic_t seen[4];
 static volatile sig_atomic_t bad;
+static volatile sig_atomic_t expected_nzcv = -1;
 static void handler(int sig, siginfo_t *info, void *context) {
     ucontext_t *uc = context;
     int slot = sig == SIGTRAP ? 0 : sig == SIGILL ? 1 : sig == SIGSEGV ? 2 : 3;
     seen[slot]++;
+    if (expected_nzcv >= 0) {
+        if ((uc->uc_mcontext.pstate >> 28 & 15) != (unsigned)expected_nzcv) bad = 1;
+        /* A signal return replaces pending flags with the handler's edited
+           architectural NZCV, even if the handler itself changed flags. */
+        uc->uc_mcontext.pstate = (uc->uc_mcontext.pstate & ~(15ULL << 28)) | (10ULL << 28);
+        expected_nzcv = -1;
+    }
     if (sig == SIGSEGV) {
         if (info->si_code != SEGV_MAPERR && info->si_code != SEGV_ACCERR) bad = 1;
     } else if (sig == SIGILL) {
@@ -49,7 +57,16 @@ int main(void) {
     if (readonly == MAP_FAILED) return 3;
     __asm__ volatile("str xzr,[%0]" :: "r"(readonly) : "memory");
     __asm__ volatile("blr %0" :: "r"(zero) : "x30", "memory");
-    if (bad || seen[0] != 1 || seen[1] != 2 || seen[2] != 3 || seen[3] != 1) {
+    uint64_t observed;
+    expected_nzcv = 6; /* UINT64_MAX + 1: Z and C, pending when BRK traps. */
+    __asm__ volatile("adds xzr,%1,#1\n\tbrk #124\n\tmrs %0,nzcv"
+                     : "=r"(observed) : "r"(UINT64_MAX) : "cc", "memory");
+    if (observed != 10ULL << 28 || expected_nzcv != -1) bad = 1;
+    expected_nzcv = 8; /* 0 - 1: N, pending when the load faults. */
+    __asm__ volatile("subs xzr,%1,#1\n\tldr xzr,[%1]\n\tmrs %0,nzcv"
+                     : "=r"(observed) : "r"(zero) : "cc", "memory");
+    if (observed != 10ULL << 28 || expected_nzcv != -1) bad = 1;
+    if (bad || seen[0] != 2 || seen[1] != 2 || seen[2] != 4 || seen[3] != 1) {
         printf("signal-failed %d %d %d %d %d\n", (int)bad, (int)seen[0], (int)seen[1], (int)seen[2], (int)seen[3]);
         return 4;
     }
