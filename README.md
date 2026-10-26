@@ -32,13 +32,21 @@ preserved. `--memory-mib` defaults
 to 4096; it caps guest memory without allocating a fixed RAM image. Released
 physical pages are returned while hardware execution remains alive.
 
-The current hardware backend schedules Linux tasks on one host execution thread.
-Guest pthreads/TLS/futexes work; multiple simultaneous HVF vCPUs, physical export
-of shared mapping providers, and live-anonymous host-pressure paging remain
-separate gates. Wayland protocol services are shared, but a native Mac window
-presenter is not connected yet. The intended display model creates windows on
-demand for guest Wayland toplevels and keeps the terminal session alive after the
-last display window closes.
+Linux tasks now run on multiple hardware vCPUs through the common worker
+scheduler. `--cpus N` selects the limit (default: available CPUs, capped at eight
+and the HVF limit). Shared file mappings and native/VFS access use canonical
+physical pages with scoped hardware exclusion.
+
+Live dirty memory can be paged out and restored. macOS pressure notifications
+trigger batched reclamation; `--resident-mib N` optionally sets a deterministic
+hardware working-set target, independently of the 4096MiB logical guest budget.
+This does not cap all process RSS. See [hardware execution and paging](docs/architecture/execution-backends.md)
+for ownership, temporary backing storage, remaining fork costs and repeatable
+hardware acceptance.
+
+Wayland protocol services are shared; a native Mac presenter and external GPU
+buffer exports remain separate gates. Windows will be created on demand for
+guest Wayland toplevels, with the terminal session surviving the last window.
 
 Hardware acceptance on a real Apple Silicon host:
 

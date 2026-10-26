@@ -78,9 +78,9 @@ impl trames_engine::Cpu for Cpu {
         hwcap2: 0,
     };
     const FEATURE_NAMES: &'static str = "fp asimd";
-    // Current hardware memory authority is one stopped/executing vCPU. Tasks
-    // (including CLONE_VM threads) are scheduled by the common process kernel.
-    const PARALLEL: bool = false;
+    // Every worker owns its thread-affine vCPU; physical bytes are shared
+    // through the common frozen View and its hardware host-borrow gate.
+    const PARALLEL: bool = true;
     const EXACT_INSTRUCTIONS: bool = false;
     fn new(pc: u64, sp: u64) -> Self {
         Self {
@@ -141,10 +141,39 @@ impl trames_engine::Cpu for Cpu {
             Err(error) => SliceOutcome::Fault(fault(&self.state, error)),
         }
     }
-    fn run_parallel(&mut self, _: &mut Engine, _: &mut View, _: u64) -> SliceOutcome {
-        SliceOutcome::Fault(CpuFault::Host(
-            "HVF requires exclusive joined memory authority".into(),
-        ))
+    fn prepare_hardware_memory(
+        memory: &mut Memory,
+        registry: &mut trames_memory::parallel::Registry,
+    ) -> Result<(), MemoryError> {
+        registry.use_hardware();
+        memory.prepare_hardware()
+    }
+    fn prepare_hardware_view(view: &mut View) {
+        view.enable_hardware();
+    }
+    fn take_hardware_wait(
+        engine: &mut Engine,
+    ) -> Option<std::sync::Arc<trames_memory::HardwareWait>> {
+        engine.executor.as_mut().and_then(Executor::take_wait)
+    }
+    fn run_parallel(&mut self, engine: &mut Engine, memory: &mut View, _: u64) -> SliceOutcome {
+        if engine.executor.is_none() {
+            match Executor::new() {
+                Ok(executor) => engine.executor = Some(executor),
+                Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
+            }
+        }
+        match engine.executor.as_mut().unwrap().run_parallel(
+            &mut self.state,
+            memory,
+            Duration::from_millis(2),
+        ) {
+            Ok(exit) => match exit.reason {
+                ExitReason::Syscall => SliceOutcome::Syscall { instructions: 0 },
+                ExitReason::Yield => SliceOutcome::Yield { instructions: 0 },
+            },
+            Err(error) => SliceOutcome::Fault(fault(&self.state, error)),
+        }
     }
 }
 

@@ -14,7 +14,7 @@ _trames_hvf_vectors_end:
 .global _trames_hvf_tlbi_end
 _trames_hvf_tlbi_begin:
     dsb ishst
-    tlbi vmalle1
+    tlbi aside1is, x0
     dsb ish
     isb
     hvc #1

@@ -10,6 +10,24 @@ type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 struct Output {
     deadline: Instant,
     window: Option<(u16, u16)>,
+    pressure_target: Option<u64>,
+}
+impl Output {
+    fn observe_pressure(&mut self) -> io::Result<()> {
+        match trames_hvf::take_memory_pressure().map_err(io::Error::other)? {
+            1 => self.pressure_target = None,
+            level if level & 6 != 0 => {
+                let mapped = trames_hvf::paging_stats().mapped_bytes;
+                self.pressure_target = Some(if level & 4 != 0 {
+                    mapped / 4
+                } else {
+                    mapped / 4 * 3
+                });
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 }
 fn window_size() -> Option<(u16, u16)> {
     let mut size = libc::winsize {
@@ -25,10 +43,26 @@ fn window_size() -> Option<(u16, u16)> {
 }
 impl GuestOutput for Output {
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
-        Ok(Instant::now() >= self.deadline)
+        self.observe_pressure()?;
+        Ok(Instant::now() >= self.deadline || self.pressure_target.is_some())
     }
     fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
-        Ok(Instant::now() < self.deadline)
+        if Instant::now() >= self.deadline {
+            return Ok(false);
+        }
+        self.observe_pressure()?;
+        if let Some(target) = self.pressure_target {
+            let remaining = trames_hvf::paging_stats()
+                .mapped_bytes
+                .saturating_sub(target);
+            if remaining != 0 {
+                trames_hvf::reclaim(remaining.min(8 << 20)).map_err(io::Error::other)?;
+            }
+            if trames_hvf::paging_stats().mapped_bytes <= target {
+                self.pressure_target = None;
+            }
+        }
+        Ok(true)
     }
     fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
         match fd {
@@ -140,6 +174,11 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
     let mut metrics = false;
     let mut timeout = 86400;
     let mut limit = 4usize << 30;
+    let mut cpus = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(8)
+        .min(trames_hvf::max_parallel_cpus());
+    let mut resident_limit = None;
     let mut pty = io::stdin().is_terminal();
     while arguments.peek().is_some_and(|a| a.starts_with("--")) {
         match arguments.next().unwrap().as_str() {
@@ -156,6 +195,26 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
                 }
             }
             "--timeout" => timeout = arguments.next().ok_or("missing timeout")?.parse()?,
+            "--cpus" => {
+                cpus = arguments.next().ok_or("missing CPU count")?.parse()?;
+                if !(1..=trames_hvf::max_parallel_cpus()).contains(&cpus) {
+                    return Err(format!(
+                        "CPU count must be 1..{}",
+                        trames_hvf::max_parallel_cpus()
+                    )
+                    .into());
+                }
+            }
+            "--resident-mib" => {
+                resident_limit = Some(
+                    arguments
+                        .next()
+                        .ok_or("missing resident target")?
+                        .parse::<u64>()?
+                        .checked_mul(1 << 20)
+                        .ok_or("resident target overflow")?,
+                );
+            }
             "--memory-mib" => {
                 limit = arguments
                     .next()
@@ -170,7 +229,7 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
             "--no-pty" => pty = false,
             "--" => break,
             "--help" => {
-                println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--timeout SECONDS] [--pty|--no-pty] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
+                println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
                 return Ok(0);
             }
             _ => return Err("unknown option".into()),
@@ -242,7 +301,8 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
     ];
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
-    runtime.cpu_count = 1;
+    runtime.cpu_count = cpus;
+    trames_hvf::set_resident_limit(resident_limit);
     runtime.profile_syscalls = metrics;
     if pty {
         runtime.enable_terminal(Terminal::default())?;
@@ -250,10 +310,18 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
     let _terminal = RawTerminal::enter(pty)?;
     let mut output = Output {
         deadline: Instant::now() + Duration::from_secs(timeout),
+        pressure_target: None,
         window: None,
     };
     let result = runtime.run(&mut output, u64::MAX);
     if metrics {
+        eprintln!(
+            "trames mac parallel: peak={} chunks={} cpu_time_us={}",
+            runtime.metrics.peak_parallel_cpus,
+            runtime.metrics.worker_chunks,
+            runtime.metrics.cpu_time.as_micros()
+        );
+        eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
         eprintln!("trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"instruction_count\":null}}", runtime.metrics.syscalls, runtime.metrics.context_switches, runtime.engine.mapped_bytes(), runtime.memory.resident_bytes());
     }
     runtime.linux.vfs.sync()?;
@@ -263,6 +331,75 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn pressure_notification_only_latches_until_joined_control_reclaims() {
+        unsafe extern "C" {
+            fn trames_hvf_inject_pressure_for_test(bits: u32);
+        }
+        let mut memory = trames_memory::Memory::default();
+        memory
+            .map(
+                0x10000,
+                trames_memory::PAGE_SIZE,
+                trames_memory::Permissions::RW,
+            )
+            .unwrap();
+        memory
+            .write_array(0x10000, 0xd4000001u32.to_le_bytes())
+            .unwrap();
+        memory
+            .protect(
+                0x10000,
+                trames_memory::PAGE_SIZE,
+                trames_memory::Permissions::RX,
+            )
+            .unwrap();
+        let mut executor = trames_hvf::Executor::new().unwrap();
+        let mut state = trames_execution::Aarch64State {
+            pc: 0x10000,
+            ..Default::default()
+        };
+        loop {
+            if executor
+                .run(&mut state, &mut memory, Duration::from_millis(2))
+                .unwrap()
+                .reason
+                == trames_execution::ExitReason::Syscall
+            {
+                break;
+            }
+        }
+        let before = trames_hvf::paging_stats();
+        assert!(before.mapped_bytes > 0);
+        let mut output = Output {
+            deadline: Instant::now() + Duration::from_secs(5),
+            window: None,
+            pressure_target: None,
+        };
+        let mut vfs = trames_vfs::Vfs::default();
+        trames_hvf::take_memory_pressure().unwrap();
+        // SAFETY: process-local metadata injection; no system-wide pressure.
+        unsafe {
+            trames_hvf_inject_pressure_for_test(4);
+        }
+        assert!(output.poll_control(&vfs).unwrap());
+        assert_eq!(trames_hvf::paging_stats().mapped_bytes, before.mapped_bytes);
+        assert!(output.control(&mut vfs).unwrap());
+        assert_eq!(trames_hvf::paging_stats().mapped_bytes, 0);
+        state.pc = 0x10000;
+        loop {
+            if executor
+                .run(&mut state, &mut memory, Duration::from_millis(2))
+                .unwrap()
+                .reason
+                == trames_execution::ExitReason::Syscall
+            {
+                break;
+            }
+        }
+        assert!(trames_hvf::paging_stats().page_ins > before.page_ins);
+    }
     #[test]
     fn exact_instruction_budget_is_rejected_before_creating_hardware() {
         let mut runtime = Runtime {

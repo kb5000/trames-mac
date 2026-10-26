@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     ffi::c_void,
     marker::PhantomData,
     ptr::NonNull,
@@ -9,8 +9,15 @@ use std::{
     time::Duration,
 };
 use trames_execution::{Aarch64State, ExecutionExit, ExitReason, Features, InstructionCount};
-use trames_memory::{Access, HardwarePageInfo, Memory, MemoryError, SharedPage, PAGE_SIZE};
-
+use trames_memory::{
+    parallel::{Registry, View},
+    Access, CpuMemory, HardwarePageInfo, HardwareStorage, HardwareWait, Memory, MemoryError,
+    PAGE_SIZE,
+};
+#[path = "machine.rs"]
+mod machine;
+use machine::Machine;
+pub use machine::{paging_stats, reclaim, set_resident_limit, take_memory_pressure, PagingStats};
 const VECTOR_VA: u64 = 0xffffffe00000;
 #[repr(C)]
 #[derive(Default)]
@@ -21,8 +28,7 @@ struct HostExit {
     pc: u64,
 }
 unsafe extern "C" {
-    fn trames_hvf_create(error: *mut i32) -> *mut c_void;
-    fn trames_hvf_destroy(host: *mut c_void);
+    fn trames_hvf_max_vcpus() -> u32;
     fn trames_hvf_page(host: *mut c_void, va: u64, gpa: u64, flags: u32) -> i32;
     fn trames_hvf_map(host: *mut c_void, memory: *mut c_void, gpa: u64, size: usize) -> i32;
     fn trames_hvf_unmap(host: *mut c_void, gpa: u64, size: usize) -> i32;
@@ -37,6 +43,7 @@ unsafe extern "C" {
 #[derive(Debug)]
 pub enum Error {
     Host(i32),
+    Io(std::io::Error),
     Memory(MemoryError),
     Unsupported(&'static str),
     Fault {
@@ -63,81 +70,34 @@ fn check(value: i32) -> Result<(), Error> {
         Err(Error::Host(value))
     }
 }
-
-struct Physical {
-    pointer: NonNull<u8>,
-    length: usize,
-}
-// SAFETY: immutable allocation ownership, not byte authority. SharedPage guards
-// protect host access; the one-thread executor excludes byte actors while live.
-unsafe impl Send for Physical {}
-unsafe impl Sync for Physical {}
-impl Physical {
-    fn new(length: usize) -> Result<Arc<Self>, Error> {
-        // SAFETY: private, non-executable anonymous host storage, OS-selected VA.
-        let p = unsafe {
-            libc::mmap(
-                std::ptr::null_mut(),
-                length,
-                libc::PROT_READ | libc::PROT_WRITE,
-                libc::MAP_PRIVATE | libc::MAP_ANON,
-                -1,
-                0,
-            )
-        };
-        if p == libc::MAP_FAILED {
-            return Err(Error::Host(-1));
-        }
-        let Some(pointer) = NonNull::new(p.cast()) else {
-            return Err(Error::Host(-1));
-        };
-        Ok(Arc::new(Self { pointer, length }))
-    }
-}
-impl Drop for Physical {
-    fn drop(&mut self) {
-        // SAFETY: final physical owner, after every hardware mapping/byte owner ends.
-        unsafe {
-            libc::munmap(self.pointer.as_ptr().cast(), self.length);
-        }
-    }
-}
 struct Page {
-    bytes: Weak<SharedPage>,
+    storage: Weak<dyn HardwareStorage>,
+    gpa: u64,
     info: HardwarePageInfo,
 }
-struct Chunk {
-    physical: Arc<Physical>,
-    gpa: u64,
-    pages: BTreeMap<u64, Page>,
-    used: u64,
-}
-
-/// One hardware VM with one thread-affine vCPU. No Linux kernel or boot RAM.
-/// Multi-task scheduling/signals are a separate common-runtime integration gate.
+/// A thread-affine vCPU with private stage-one tables in the process-wide VM.
+/// Canonical physical pages, VFS and native access share one byte authority.
 pub struct Executor {
     host: NonNull<c_void>,
-    chunks: BTreeMap<u64, Chunk>,
-    next_gpa: u64,
-    free_gpas: Vec<u64>,
-    granule: usize,
+    machine: Arc<Machine>,
+    pages: BTreeMap<u64, Page>,
+    registry: Registry,
+    wait: Option<Arc<HardwareWait>>,
     _same_thread: PhantomData<Rc<()>>,
 }
 impl Executor {
     pub fn new() -> Result<Self, Error> {
         assert_eq!(std::mem::size_of::<Aarch64State>(), 816);
-        let mut error = 0;
-        // SAFETY: complete error output; C owns all partial-initialization cleanup.
-        let host =
-            NonNull::new(unsafe { trames_hvf_create(&mut error) }).ok_or(Error::Host(error))?;
-        // SAFETY: sysconf has no pointers; supported Darwin host page size.
-        let granule = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize };
+        let machine = Machine::shared()?;
+        let host = machine.cpu()?;
+        let mut registry = Registry::default();
+        registry.use_hardware();
         Ok(Self {
             host,
-            chunks: BTreeMap::new(),
-            next_gpa: 0x100000000,
-            free_gpas: Vec::new(),
-            granule,
+            machine,
+            pages: BTreeMap::new(),
+            registry,
+            wait: None,
             _same_thread: PhantomData,
         })
     }
@@ -148,7 +108,16 @@ impl Executor {
         }
     }
     pub fn mapped_bytes(&self) -> usize {
-        self.chunks.len() * self.granule
+        let granule = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as u64 };
+        self.pages
+            .values()
+            .map(|p| p.gpa & !(granule - 1))
+            .collect::<BTreeSet<_>>()
+            .len()
+            * granule as usize
+    }
+    pub fn take_wait(&mut self) -> Option<Arc<HardwareWait>> {
+        self.wait.take()
     }
     fn flags(info: HardwarePageInfo) -> Result<u32, Error> {
         if !info.permissions.read && (info.permissions.write || info.permissions.execute) {
@@ -161,105 +130,57 @@ impl Executor {
             | (u32::from(info.permissions.execute) << 2))
     }
     fn pte(&self, va: u64, gpa: u64, flags: u32) -> Result<(), Error> {
-        // SAFETY: stopped vCPU, owned page tables, no guest virtual host pointers.
         check(unsafe { trames_hvf_page(self.host.as_ptr(), va, gpa, flags) })
     }
-    fn detach_chunk(&mut self, base: u64) -> Result<(), Error> {
-        let Some(chunk) = self.chunks.get(&base) else {
-            return Ok(());
-        };
-        for &va in chunk.pages.keys() {
-            self.pte(va, 0, 0)?;
-        }
-        // SAFETY: stopped single vCPU; old byte owners (e.g. fork) keep physical
-        // data, while this parent's new hardware binding gets separate storage.
-        check(unsafe { trames_hvf_unmap(self.host.as_ptr(), chunk.gpa, self.granule) })?;
-        self.free_gpas.push(chunk.gpa);
-        self.chunks.remove(&base);
-        Ok(())
-    }
-    /// Retire hardware aliases before their physical owners. Called after every
-    /// joined syscall, including discard, heap shrink, replacement and exit.
+    /// Retire stopped CPU aliases before a joined mapping change. Canonical
+    /// page owners retain their data; a surviving fork remains independent.
     pub fn synchronize(&mut self, memory: &Memory) -> Result<(), Error> {
         if !memory.parallel_views_quiescent() {
             return Err(Error::Unsupported("active execution Views"));
         }
-        let mut changes = Vec::new();
-        for (&base, chunk) in &self.chunks {
-            for (&va, page) in &chunk.pages {
-                match memory.hardware_page_info(va) {
-                    Ok(info)
-                        if info.storage_id == page.info.storage_id
-                            && info.backing_version == page.info.backing_version
-                            && page.bytes.strong_count() != 0 =>
-                    {
-                        if info != page.info {
-                            changes.push((base, va, Some(info)));
-                        }
-                    }
-                    _ => changes.push((base, va, None)),
-                }
-            }
-        }
-        for (base, va, info) in changes {
-            if let Some(info) = info {
-                let chunk = &self.chunks[&base];
-                let offset = (va - base) as usize;
-                if info.permissions.execute {
-                    // SAFETY: one complete live page, vCPU stopped; publish data
-                    // writes before permitting hardware instruction fetch.
-                    unsafe {
-                        trames_hvf_icache(
-                            chunk.physical.pointer.as_ptr().add(offset).cast(),
-                            PAGE_SIZE as usize,
-                        );
-                    }
-                }
-                self.pte(va, chunk.gpa + va - base, Self::flags(info)?)?;
-                self.chunks
-                    .get_mut(&base)
-                    .unwrap()
-                    .pages
-                    .get_mut(&va)
-                    .unwrap()
-                    .info = info;
-            } else {
-                self.pte(va, 0, 0)?;
-                self.chunks.get_mut(&base).unwrap().pages.remove(&va);
-            }
-        }
-        let empty: Vec<_> = self
-            .chunks
-            .iter()
-            .filter_map(|(&base, c)| c.pages.is_empty().then_some(base))
-            .collect();
-        for base in empty {
-            let chunk = &self.chunks[&base];
-            // SAFETY: vCPU stopped, all stage-one aliases removed before stage
-            // two unmap and before dropping this physical mapping's owner.
-            check(unsafe { trames_hvf_unmap(self.host.as_ptr(), chunk.gpa, self.granule) })?;
-            self.free_gpas.push(chunk.gpa);
-            self.chunks.remove(&base);
+        let addresses: Vec<_> = self.pages.keys().copied().collect();
+        for va in addresses {
+            self.pte(va, 0, 0)?;
+            self.pages.remove(&va);
         }
         Ok(())
     }
-    fn fault(&mut self, memory: &mut Memory, event: &HostExit) -> Result<(), Error> {
+    fn synchronize_view(&mut self, memory: &View) -> Result<(), Error> {
+        let retired: Vec<_> = self
+            .pages
+            .iter()
+            .filter_map(|(&va, p)| {
+                (p.storage.strong_count() == 0
+                    || memory.hardware_page_info(va).ok() != Some(p.info))
+                .then_some(va)
+            })
+            .collect();
+        for va in retired {
+            self.pte(va, 0, 0)?;
+            self.pages.remove(&va);
+        }
+        for (&va, page) in &self.pages {
+            if page.info.writable {
+                memory.mark_hardware_write(va)?;
+            }
+        }
+        Ok(())
+    }
+    fn fault(&mut self, memory: &View, event: &HostExit) -> Result<(), Error> {
         let ec = event.syndrome >> 26;
         let status = event.syndrome & 63;
         if status == 0x21 {
             return Err(MemoryError::Alignment(event.address).into());
         }
+        // Cache-maintenance aborts can set WnR even on RX memory (IC IVAU).
+        // As in Linux arm64, CM excludes these from ordinary write admission.
         let access = if ec == 0x20 {
             Access::Execute
-        } else if event.syndrome & 64 != 0 {
+        } else if event.syndrome & 64 != 0 && event.syndrome & 256 == 0 {
             Access::Write
         } else {
             Access::Read
         };
-        memory.check(event.address, 1, access)?;
-        // Only translation/access/permission aborts can be repaired by binding
-        // canonical Memory bytes. Retrying an alignment/external abort as a
-        // missing mapping would execute the same fault forever.
         if !(4..=15).contains(&status) {
             return Err(Error::Fault {
                 pc: event.pc,
@@ -267,83 +188,37 @@ impl Executor {
                 syndrome: event.syndrome,
             });
         }
+        memory.check(event.address, 1, access)?;
         let va = (event.address & 0x00ff_ffff_ffff_ffff) & !(PAGE_SIZE - 1);
-        if (VECTOR_VA..VECTOR_VA + self.granule as u64).contains(&va) {
+        if (VECTOR_VA..VECTOR_VA + 65536).contains(&va) {
             return Err(Error::Unsupported("reserved exception adapter address"));
         }
-        let info = memory.hardware_page_info(va)?;
-        let base = va & !(self.granule as u64 - 1);
-        if access == Access::Write && !info.exclusive {
-            self.detach_chunk(base)?;
-        }
-        if !self.chunks.contains_key(&base) {
-            let physical = Physical::new(self.granule)?;
-            let gpa = self.free_gpas.pop().unwrap_or_else(|| {
-                let gpa = self.next_gpa;
-                self.next_gpa += self.granule as u64;
-                gpa
-            });
-            // SAFETY: aligned retained allocation with exactly one owned GPA.
-            check(unsafe {
-                trames_hvf_map(
-                    self.host.as_ptr(),
-                    physical.pointer.as_ptr().cast(),
-                    gpa,
-                    self.granule,
-                )
-            })?;
-            self.chunks.insert(
-                base,
-                Chunk {
-                    physical,
-                    gpa,
-                    pages: BTreeMap::new(),
-                    used: 0,
-                },
-            );
-        }
-        let chunk = &self.chunks[&base];
-        let offset = (va - base) as usize;
-        let storage = chunk
-            .pages
-            .get(&va)
-            .and_then(|p| p.bytes.upgrade())
-            .unwrap_or_else(|| {
-                // SAFETY: this exact complete page is retained by its immutable
-                // physical owner. All host bytes use SharedPage guards; hardware
-                // executes only under this thread's exclusive Memory borrow.
-                Arc::new(unsafe {
-                    SharedPage::from_mapping(
-                        chunk.physical.pointer.as_ptr().add(offset),
-                        chunk.physical.clone(),
-                    )
+        // SAFETY: the scheduler admits every View in hardware mode and joins
+        // before coordinator mutation. Canonical exports gate all host borrows.
+        let mut allocation_error = None;
+        let exported = unsafe {
+            memory.export_hardware_page(va, access, |bytes| {
+                self.machine.allocate(bytes).map_err(|error| {
+                    allocation_error = Some(error);
+                    MemoryError::BackingIo(5)
                 })
-            });
-        // SAFETY: this backend is single-threaded; no concurrent View/pin may
-        // execute. No Rust byte slice exists across trames_hvf_run.
-        let fresh = chunk.used & (1 << (offset / PAGE_SIZE as usize)) == 0;
-        let info = unsafe {
-            memory.bind_hardware_page(va, storage.clone(), access == Access::Write, fresh)
-        }?;
-        let chunk = &self.chunks[&base];
+            })
+        };
+        let (storage, info) =
+            exported.map_err(|error| allocation_error.unwrap_or(Error::Memory(error)))?;
+        let flags = Self::flags(info)?;
         if info.permissions.execute {
-            // SAFETY: initialized complete code page, still stopped.
-            unsafe {
-                trames_hvf_icache(
-                    chunk.physical.pointer.as_ptr().add(offset).cast(),
-                    PAGE_SIZE as usize,
-                );
-            }
+            self.machine.publish_code(storage.physical_address())?;
         }
-        self.pte(va, chunk.gpa + va - base, Self::flags(info)?)?;
-        self.chunks.get_mut(&base).unwrap().pages.insert(
+        self.pte(va, storage.physical_address(), flags)?;
+        self.pages.insert(
             va,
             Page {
-                bytes: Arc::downgrade(&storage),
+                gpa: storage.physical_address(),
+                storage: Arc::downgrade(&storage),
                 info,
             },
         );
-        self.chunks.get_mut(&base).unwrap().used |= 1 << (offset / PAGE_SIZE as usize);
         Ok(())
     }
     pub fn run(
@@ -352,33 +227,29 @@ impl Executor {
         memory: &mut Memory,
         quantum: Duration,
     ) -> Result<ExecutionExit, Error> {
+        memory.prepare_hardware()?;
+        let mut view = memory
+            .parallel_view(&mut self.registry)
+            .ok_or(Error::Unsupported("hardware view admission"))?;
+        view.enable_hardware();
+        let result = self.run_parallel(state, &mut view, quantum);
+        drop(view);
+        memory.commit_parallel()?;
+        result
+    }
+    pub fn run_parallel(
+        &mut self,
+        state: &mut Aarch64State,
+        memory: &mut View,
+        quantum: Duration,
+    ) -> Result<ExecutionExit, Error> {
         if state.tpidr2_el0 != 0 {
             return Err(Error::Unsupported(
                 "SME/TPIDR2 is not advertised by this backend",
             ));
         }
-        self.synchronize(memory)?;
-        let result = self.execute(state, memory, quantum);
-        // Publish after hardware stops, before the host kernel can access
-        // guest bytes or invalidate exclusive/code state. No ordinary guest
-        // instruction acquires this guard or increments a Rust counter.
-        for chunk in self.chunks.values() {
-            for (&va, page) in &chunk.pages {
-                if page.info.writable {
-                    // SAFETY: the only hardware CPU is stopped and its Memory
-                    // is exclusively borrowed; original page bindings live.
-                    unsafe { memory.finish_hardware_write(va) }?;
-                }
-            }
-        }
-        result
-    }
-    fn execute(
-        &mut self,
-        state: &mut Aarch64State,
-        memory: &mut Memory,
-        quantum: Duration,
-    ) -> Result<ExecutionExit, Error> {
+        self.wait = None;
+        self.synchronize_view(memory)?;
         let deadline = std::time::Instant::now() + quantum;
         loop {
             let mut event = HostExit::default();
@@ -389,8 +260,8 @@ impl Executor {
                     instructions: InstructionCount::Unavailable,
                 });
             }
-            // SAFETY: exact repr(C) state/layout, retained host VM, creator
-            // thread, exclusive guest memory ownership, bounded hardware timer.
+            // SAFETY: retained VM/physical owners, creator-thread vCPU, bounded
+            // timer and exact C register layout. No Rust slice spans this call.
             check(unsafe {
                 trames_hvf_run(
                     self.host.as_ptr(),
@@ -400,19 +271,26 @@ impl Executor {
                 )
             })?;
             match event.kind {
-                0 => {
+                0 | 1 => {
                     return Ok(ExecutionExit {
-                        reason: ExitReason::Yield,
-                        instructions: InstructionCount::Unavailable,
-                    })
-                }
-                1 => {
-                    return Ok(ExecutionExit {
-                        reason: ExitReason::Syscall,
+                        reason: if event.kind == 1 {
+                            ExitReason::Syscall
+                        } else {
+                            ExitReason::Yield
+                        },
                         instructions: InstructionCount::Unavailable,
                     })
                 }
                 2 => self.fault(memory, &event)?,
+                4 => {
+                    if let Some(wait) = self.machine.resume(event.address)? {
+                        self.wait = Some(wait);
+                        return Ok(ExecutionExit {
+                            reason: ExitReason::Yield,
+                            instructions: InstructionCount::Unavailable,
+                        });
+                    }
+                }
                 _ => {
                     return Err(Error::Fault {
                         pc: event.pc,
@@ -426,10 +304,17 @@ impl Executor {
 }
 impl Drop for Executor {
     fn drop(&mut self) {
-        // SAFETY: creator-thread destruction first removes the vCPU and entire VM;
-        // only afterward may Rust drop GPA owners. Memory retains its own bytes.
-        unsafe {
-            trames_hvf_destroy(self.host.as_ptr());
-        }
+        self.machine.destroy_cpu(self.host);
     }
 }
+
+/// One creator-thread vCPU is reserved for joined single-task execution.
+pub fn max_parallel_cpus() -> usize {
+    (unsafe { trames_hvf_max_vcpus() } as usize)
+        .saturating_sub(1)
+        .clamp(1, 32)
+}
+
+#[cfg(test)]
+#[path = "hardware_tests.rs"]
+mod hardware_tests;

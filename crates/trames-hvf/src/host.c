@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Small EL1 exception/page-table adapter. Linux remains in the host runtime.
 #include <Hypervisor/Hypervisor.h>
+#include <dispatch/dispatch.h>
+#include <stdatomic.h>
 #include <libkern/OSCacheControl.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -27,14 +30,25 @@ _Static_assert(sizeof(struct state) == 816, "shared AArch64 state layout");
 _Static_assert(offsetof(struct state, vectors) == 304, "shared SIMD offset");
 struct result { uint64_t kind, syndrome, address, pc; };
 struct table { void *memory; uint64_t gpa; struct table *next; };
+struct free_gpa { uint64_t value; struct free_gpa *next; };
+struct machine {
+    size_t granule;
+    void *vectors;
+    pthread_mutex_t addresses;
+    uint64_t next_gpa;
+    bool asids[256];
+    struct free_gpa *free_gpas;
+};
 struct host {
+    struct machine *machine;
+    bool owns_machine;
+    unsigned asid;
     hv_vcpu_t cpu;
     hv_vcpu_exit_t *exit;
     bool cpu_created, tlb_dirty;
     size_t granule;
-    void *vectors;
     struct table *tables;
-    uint64_t *root, root_gpa, next_table;
+    uint64_t *root, root_gpa;
 };
 extern const char trames_hvf_vectors_begin[], trames_hvf_vectors_end[];
 extern const char trames_hvf_tlbi_begin[], trames_hvf_tlbi_end[];
@@ -44,6 +58,23 @@ static uint64_t frequency(void) { uint64_t n; __asm__ volatile("mrs %0,cntfrq_el
 static void *anonymous(size_t length) {
     void *p = mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     return p == MAP_FAILED ? NULL : p;
+}
+uint64_t trames_hvf_reserve(struct machine *m) {
+    pthread_mutex_lock(&m->addresses);
+    struct free_gpa *entry=m->free_gpas;
+    uint64_t gpa;
+    if (entry) { gpa=entry->value; m->free_gpas=entry->next; free(entry); }
+    else { gpa=m->next_gpa; m->next_gpa+=m->granule; }
+    pthread_mutex_unlock(&m->addresses);
+    return gpa;
+}
+void trames_hvf_release(struct machine *m, uint64_t gpa) {
+    struct free_gpa *entry=malloc(sizeof(*entry));
+    if (!entry) return; // A lost address slot cannot invalidate live RAM.
+    entry->value=gpa;
+    pthread_mutex_lock(&m->addresses);
+    entry->next=m->free_gpas; m->free_gpas=entry;
+    pthread_mutex_unlock(&m->addresses);
 }
 static uint64_t *table_for(struct host *h, uint64_t gpa) {
     for (struct table *t=h->tables; t; t=t->next)
@@ -56,8 +87,9 @@ static uint64_t *new_table(struct host *h, uint64_t *gpa) {
     if (!t) return NULL;
     t->memory=anonymous(h->granule);
     if (!t->memory) { free(t); return NULL; }
-    t->gpa=h->next_table; h->next_table+=h->granule;
+    t->gpa=trames_hvf_reserve(h->machine);
     if (hv_vm_map(t->memory,t->gpa,h->granule,HV_MEMORY_READ|HV_MEMORY_WRITE)) {
+        trames_hvf_release(h->machine,t->gpa);
         munmap(t->memory,h->granule); free(t); return NULL;
     }
     t->next=h->tables; h->tables=t; *gpa=t->gpa;
@@ -97,7 +129,7 @@ static int remove_page(struct host *h, uint64_t va) {
         if (!*link) return -1;
         struct table *t=*link;
         hv_return_t e=hv_vm_unmap(t->gpa,h->granule); if (e) return (int)e;
-        *link=t->next;munmap(t->memory,h->granule);free(t);
+        *link=t->next;trames_hvf_release(h->machine,t->gpa);munmap(t->memory,h->granule);free(t);
     }
     return 0;
 }
@@ -109,7 +141,7 @@ int trames_hvf_page(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
     else {
         // flags: read=1, write=2, execute=4, EL1-only=8.
         uint64_t ap=(flags&8) ? 0 : (flags&2) ? 1 : 3;
-        *p=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
+        *p=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
         if (!(flags&8)) *p|=UINT64_C(1)<<53;
         if (!(flags&4) || (flags&8)) *p|=UINT64_C(1)<<54;
         if ((flags&8) && (flags&4)) *p&=~(UINT64_C(1)<<53);
@@ -126,49 +158,87 @@ int trames_hvf_unmap(struct host *h, uint64_t gpa, size_t size) {
     (void)h; return (int)hv_vm_unmap(gpa,size);
 }
 void trames_hvf_icache(void *memory, size_t size) { sys_icache_invalidate(memory,size); }
-void trames_hvf_destroy(struct host *h) {
+int trames_hvf_protect(uint64_t gpa, size_t size, unsigned flags) {
+    return (int)hv_vm_protect(gpa,size,flags);
+}
+void trames_hvf_vm_destroy(struct machine *m) {
+    if (!m) return;
+    if (m->vectors) { hv_vm_unmap(VECTOR_GPA,m->granule); munmap(m->vectors,m->granule); }
+    hv_vm_destroy();
+    while (m->free_gpas) { struct free_gpa *p=m->free_gpas; m->free_gpas=p->next; free(p); }
+    pthread_mutex_destroy(&m->addresses); free(m);
+}
+struct machine *trames_hvf_vm_create(int *error) {
+    *error=(int)hv_vm_create(NULL); if (*error) return NULL;
+    struct machine *m=calloc(1,sizeof(*m));
+    if (!m) { hv_vm_destroy(); *error=-1; return NULL; }
+    pthread_mutex_init(&m->addresses,NULL);
+    m->granule=(size_t)sysconf(_SC_PAGESIZE); m->next_gpa=TABLE_GPA;
+    m->vectors=anonymous(m->granule);
+    if (!m->vectors) { *error=-1; goto fail; }
+    memcpy(m->vectors,trames_hvf_vectors_begin,(size_t)(trames_hvf_vectors_end-trames_hvf_vectors_begin));
+    memcpy((char *)m->vectors+0x800,trames_hvf_tlbi_begin,(size_t)(trames_hvf_tlbi_end-trames_hvf_tlbi_begin));
+    memcpy((char *)m->vectors+0x900,trames_hvf_resume_begin,(size_t)(trames_hvf_resume_end-trames_hvf_resume_begin));
+    sys_icache_invalidate(m->vectors,m->granule);
+    *error=(int)hv_vm_map(m->vectors,VECTOR_GPA,m->granule,HV_MEMORY_READ|HV_MEMORY_EXEC);
+    if (*error) goto fail;
+    return m;
+fail:
+    trames_hvf_vm_destroy(m); return NULL;
+}
+void trames_hvf_cpu_destroy(struct host *h) {
     if (!h) return;
     if (h->cpu_created) hv_vcpu_destroy(h->cpu);
-    if (h->vectors) { hv_vm_unmap(VECTOR_GPA,h->granule); munmap(h->vectors,h->granule); }
     while (h->tables) {
         struct table *t=h->tables; h->tables=t->next;
-        hv_vm_unmap(t->gpa,h->granule); munmap(t->memory,h->granule); free(t);
+        hv_vm_unmap(t->gpa,h->granule); trames_hvf_release(h->machine,t->gpa);
+        munmap(t->memory,h->granule); free(t);
     }
-    hv_vm_destroy(); free(h);
+    pthread_mutex_lock(&h->machine->addresses); h->machine->asids[h->asid]=false; pthread_mutex_unlock(&h->machine->addresses);
+    free(h);
 }
-struct host *trames_hvf_create(int *error) {
-    *error=(int)hv_vm_create(NULL); if (*error) return NULL;
+struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
     struct host *h=calloc(1,sizeof(*h));
-    if (!h) { hv_vm_destroy(); *error=-1; return NULL; }
-    h->granule=(size_t)sysconf(_SC_PAGESIZE); h->next_table=TABLE_GPA;
+    if (!h) { *error=-1; return NULL; }
+    h->machine=m; h->granule=m->granule;
+    pthread_mutex_lock(&m->addresses);
+    for (unsigned i=1;i<256;i++) if (!m->asids[i]) { m->asids[i]=true; h->asid=i; break; }
+    pthread_mutex_unlock(&m->addresses);
+    if (!h->asid) { *error=-1; goto fail; }
     h->root=new_table(h,&h->root_gpa);
-    h->vectors=anonymous(h->granule);
-    if (!h->root || !h->vectors) goto fail;
-    memcpy(h->vectors,trames_hvf_vectors_begin,(size_t)(trames_hvf_vectors_end-trames_hvf_vectors_begin));
-    memcpy((char *)h->vectors+0x800,trames_hvf_tlbi_begin,(size_t)(trames_hvf_tlbi_end-trames_hvf_tlbi_begin));
-    memcpy((char *)h->vectors+0x900,trames_hvf_resume_begin,(size_t)(trames_hvf_resume_end-trames_hvf_resume_begin));
-    sys_icache_invalidate(h->vectors,h->granule);
-    *error=(int)hv_vm_map(h->vectors,VECTOR_GPA,h->granule,HV_MEMORY_READ|HV_MEMORY_EXEC);
-    if (*error) goto fail;
+    if (!h->root) { *error=-1; goto fail; }
     for (size_t offset=0; offset<h->granule; offset+=PAGE)
-        if (trames_hvf_page(h,VECTOR_VA+offset,VECTOR_GPA+offset,1|4|8)) goto fail;
+        if (trames_hvf_page(h,VECTOR_VA+offset,VECTOR_GPA+offset,1|4|8)) { *error=-1; goto fail; }
     *error=(int)hv_vcpu_create(&h->cpu,&h->exit,NULL); if (*error) goto fail;
     h->cpu_created=true;
-    if ((*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,h->root_gpa)) ||
+    if ((*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,h->root_gpa|((uint64_t)h->asid<<48))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TCR_EL1,16|(1<<8)|(1<<10)|(3<<12)|(1<<23)|(UINT64_C(2)<<32)|(UINT64_C(1)<<37))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_MAIR_EL1,0xff)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_VBAR_EL1,VECTOR_VA)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,3<<20)) ||
-        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)))) goto fail;
+        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)))) goto fail;
     *error=0; return h;
 fail:
     if (!*error) *error=-1;
-    trames_hvf_destroy(h); return NULL;
+    trames_hvf_cpu_destroy(h); return NULL;
+}
+struct host *trames_hvf_create(int *error) {
+    struct machine *m=trames_hvf_vm_create(error); if (!m) return NULL;
+    struct host *h=trames_hvf_cpu_create(m,error);
+    if (!h) { trames_hvf_vm_destroy(m); return NULL; }
+    h->owns_machine=true; return h;
+}
+void trames_hvf_destroy(struct host *h) {
+    if (!h) return;
+    struct machine *m=h->machine; bool owned=h->owns_machine;
+    trames_hvf_cpu_destroy(h);
+    if (owned) trames_hvf_vm_destroy(m);
 }
 int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct result *out) {
     hv_return_t e;
     if (h->tlb_dirty) {
-        if ((e=hv_vcpu_set_vtimer_mask(h->cpu,true)) ||
+        if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_X0,(uint64_t)h->asid<<48)) ||
+            (e=hv_vcpu_set_vtimer_mask(h->cpu,true)) ||
             (e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
             (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
             (e=hv_vcpu_run(h->cpu))) return (int)e;
@@ -228,8 +298,48 @@ int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct
             (e=hv_vcpu_get_sys_reg(h->cpu,HV_SYS_REG_SPSR_EL1,&n))) return (int)e;
     } else {
         s->pc=raw_pc; n=raw_pstate;
-        if (h->exit->reason!=HV_EXIT_REASON_VTIMER_ACTIVATED && h->exit->reason!=HV_EXIT_REASON_CANCELED) out->kind=3;
+        if (h->exit->reason!=HV_EXIT_REASON_VTIMER_ACTIVATED && h->exit->reason!=HV_EXIT_REASON_CANCELED) {
+            unsigned ec=(unsigned)(out->syndrome>>26);
+            out->kind=(ec==0x20 || ec==0x24) ? 4 : 3;
+            out->address=h->exit->exception.physical_address;
+        }
     }
     s->nzcv=(uint32_t)n&0xf0000000; out->pc=s->pc;
     return 0;
+}
+
+uint32_t trames_hvf_max_vcpus(void) {
+    uint32_t count=1;
+    if (hv_vm_get_max_vcpu_count(&count)) return 1;
+    return count;
+}
+
+// The legacy EVFILT_VM filter is unsupported on current macOS. libdispatch's
+// memory-pressure source uses the supported OS notification mechanism. Its
+// shared utility queue only latches metadata; the session thread does eviction.
+static dispatch_source_t pressure_source;
+static pthread_once_t pressure_once=PTHREAD_ONCE_INIT;
+static atomic_uint pressure_bits;
+static void pressure_event(void *context) {
+    unsigned bits=(unsigned)dispatch_source_get_data((dispatch_source_t)context);
+    atomic_store_explicit(&pressure_bits,bits,memory_order_relaxed);
+}
+static void pressure_init(void) {
+    pressure_source=dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE,0,
+        DISPATCH_MEMORYPRESSURE_NORMAL|DISPATCH_MEMORYPRESSURE_WARN|DISPATCH_MEMORYPRESSURE_CRITICAL,
+        dispatch_get_global_queue(QOS_CLASS_UTILITY,0));
+    if (!pressure_source) return;
+    dispatch_set_context(pressure_source,pressure_source);
+    dispatch_source_set_event_handler_f(pressure_source,pressure_event);
+    dispatch_resume(pressure_source);
+}
+int trames_hvf_pressure_supported(void) {
+    pthread_once(&pressure_once,pressure_init); return pressure_source!=NULL;
+}
+unsigned trames_hvf_take_pressure(void) {
+    return atomic_exchange_explicit(&pressure_bits,0,memory_order_relaxed);
+}
+// Referenced only by signed unit tests; no product CLI or IPC exposes injection.
+void trames_hvf_inject_pressure_for_test(unsigned bits) {
+    atomic_store_explicit(&pressure_bits,bits,memory_order_relaxed);
 }

@@ -1,156 +1,121 @@
-# Shared Linux runtime and execution backends
+# Hardware execution and pageable memory
 
-The accepted target is three projects: one common Linux userspace runtime, the
-iPad interpreter product, and an Apple Silicon Mac hardware-execution product.
-Work starts in this workspace so boundaries can be checked before repository
-extraction. [Issue #44](https://github.com/kb5000/trames/issues/44) tracks the
-remaining integration and extraction gates. This foundation is not feature
-parity between the Mac bring-up runner and the iPad application.
+`trames-mac` is a terminal product over the same `trames-session` Linux userspace
+kernel as `trames-ipad`. ARM64 instructions execute in Hypervisor.framework; a
+small EL1 adapter returns SVC, faults and timer exits to the host kernel. No full
+Linux kernel, boot RAM image, interpreter, or product-specific syscall kernel is
+started. [Issue 44](https://github.com/kb5000/trames-ipad/issues/44) tracks remaining
+product integration gates.
 
-## Current boundaries
+## VM and CPU ownership
 
-| Component | Responsibility |
-| --- | --- |
-| `trames-execution` | AArch64 architectural state, register access, advertised features and honest instruction-count availability. No dependencies, decoder or OS VM. |
-| `trames-kernel` | Shared task signal state/ABI, fault policy and ready-task affinity placement. No interpreter or host execution transport. |
-| `trames-linux`, `trames-elf`, `trames-memory`, VFS/network/storage | Shared Linux syscall and image ABI, virtual mappings and actual byte ownership. No interpreter/native-accelerator dependency. |
-| `trames-cpu` and current `trames-core`/iPad composition | Existing interpreter, decoded state and product integration. Core's task/signal scheduler still needs its execution dependency extracted. |
-| `trames-hvf`, `trames-mac` | Thread-affine Hypervisor transport and single-process Mac bring-up CLI. Hardware CPU execution; common Linux syscalls and process-entry stack. |
+There is one HVF VM per host process. Each existing execution worker lazily
+creates its own thread-affine vCPU and private stage-one tables. Movable Linux
+task state includes all general/SIMD registers, NZCV, stack and TLS; it never
+moves a vCPU between threads. A distinct ASID and non-global PTEs isolate each
+worker's virtual translations. Table updates invalidate that ASID, rather than
+all peers' translations. ASID encoding and TLBI operands follow the ARM64 layout
+also used by [Linux](https://github.com/torvalds/linux/blob/v6.12/arch/arm64/include/asm/mmu_context.h).
 
-Task-state integration moves signal ownership, dispositions/queues,
-alternate stacks and architectural frame entry/return into `trames-kernel`,
-used by both Core and the Mac adapter. Real hardware fault handlers now recover
-through that shared code. [Task-state boundaries](task-state.md) describes the
-completed extraction and the process/scheduler work that remains.
+All CPUs share canonical physical storage exported from the common frozen
+`View`. Threads, processes and MAP_SHARED providers therefore see the original
+bytes, not per-vCPU RAM shadows. The common runtime owns permission/COW/quota
+admission and dirty/persistence publication. Task switches clear exclusive
+reservations; ordinary instructions use hardware atomicity and memory ordering.
+Cache-maintenance aborts follow the [Linux arm64 CM/WnR distinction](https://github.com/torvalds/linux/blob/v6.12/arch/arm64/mm/fault.c):
+clearing an RX instruction cache is not an ordinary guest write.
+Hardware instruction retirement remains unavailable. Scheduler fairness uses
+bounded slices without manufacturing instruction counts.
 
-`scripts/check-execution-boundaries.py` checks normal transitive dependencies.
-The bridge's opt-in SHA-256 service is platform-neutral host functionality;
-keeping it in `trames-accel` previously pulled native instruction helpers into
-the entire VFS/Linux graph. Its implementation now lives in the bridge and the
-old accelerator API re-exports it. Algorithms and wire accounting are unchanged.
+The VM lifetime factory acknowledges final teardown before allowing a new VM.
+Host byte borrows retain the VM. vCPU destruction occurs on its creator thread;
+idle PTE caches hold weak storage references and invalidate them before reuse.
+Retained data can be rebound after the previous VM has permanently ended.
 
-Linux dispatch is generic over register access, rather than `trames_cpu::Cpu`.
-The interpreter implements that small interface without changing normal slices,
-deferred flags or decode caches. Architectural state is materialized only at an
-explicit handoff; a regression preserves deferred carry, SIMD, TLS, FP state and
-resume PC. The shared Linux stack builder receives the executor's HWCAP values
-and caller-supplied extension auxv entries. Mac must not advertise the
-interpreter's larger emulated ISA. Hardware reports instruction count as
-unavailable; it does not invent an exact software instruction budget.
+## Host borrows
 
-## Mac hardware path
+Before a syscall/native/VFS callback can expose a Rust byte slice, its physical
+host granule loses stage-two hardware access. The original 64-byte region locks
+still arbitrate overlapping host borrows; unrelated granules and CPUs continue.
+The last borrower restores access and wakes affected tasks. Hardware stage-two
+faults park on the existing epoch queue and return their execution slots.
+Release-before-park and stop/checkpoint races use one-shot readiness tickets.
+There is no additional resource-service thread or polling message bus.
 
-The Mac adapter creates a hardware VM/vCPU object without booting a Linux kernel,
-firmware, initramfs or virtual device stack. Guest ARM64 runs at EL0. A small EL1
-exception vector returns SVC and page faults to the host Linux implementation.
-Four-level guest page tables preserve Linux's 4 KiB mappings independently of
-the host's 16 KiB physical allocation granule. Host buffers are never executable;
-the signed Mac executable needs the Hypervisor entitlement, not a JIT entitlement.
+Hardware views bypass old native MMU aliases. The joined preparation boundary
+invalidates cached native translations before releasing those aliases. Storage
+transfer happens once under all region bits. External raw GPU/pinned mappings
+are rejected until they have a compatible ownership protocol; shared providers
+without canonical `shared_page()` exports are rejected as well. Ordinary shared
+file and anonymous mappings are supported. See the common runtime's
+[region-memory contract](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/region-memory.md).
 
-The vCPU remains on its creator thread. A virtual timer bounds each run, with no
-polling message bus or service thread. A timer may exit after EL0 entered an EL1
-exception vector but before its HVC. The adapter must recover the saved EL0
-PC/PSTATE/exception in that case; treating the vector PC as EL0 would resume at
-an inaccessible kernel address. The long memory fixture exposed this race.
+## Physical paging
 
-The first access binds physical bytes to the existing Memory page, replacing
-its earlier byte owner; there is no permanent second guest RAM image. Canonical
-permissions, first-write quota admission and private COW remain in Memory.
-Hardware runs while that Memory is exclusively owned, with no Rust byte slice
-or concurrent View/pin spanning execution. Shared providers/pins that cannot
-meet this contract are rejected explicitly. Host accesses use the established
-SharedPage guards. Stopped hardware writes publish existing data, exclusive and
-code invalidation state at the execution boundary, not on ordinary instructions.
+The default 4096MiB guest limit is a logical allocation budget, not preallocated
+RAM. Only accessed pages acquire physical slots. Four unrelated 4KiB guest pages
+can share one 16KiB host granule, and partially freed granules are reused before
+allocating another. Mapping addresses need not be contiguous.
 
-Private file shadows preserve the backing until COW and refresh after backing
-changes. Fork byte owners force a new physical binding before a parent write.
-Partial unmap, protection and discard retire stage-one aliases before stage-two
-unmap and physical release. Empty page tables retire and guest physical addresses
-are reused. The sparse host allocation is independent of the configured RAM cap.
+Canonical storage uses one unlinked, mode-0600, close-on-exec temporary file.
+Disk space is reserved in checked 1MiB extents before writable pages are
+published. Freed file offsets are reused; file size reflects the session's high
+water mark and is released when its final mapping/owner ends. Host volume
+protection applies; Trames does not add separate backing-file encryption.
 
-Instruction-cache maintenance applies only to initialized executable pages.
-Applying it to the entire data RAM range prematurely populated that memory and
-raised the measured 64 MiB fixture's peak physical footprint from roughly
-76–79 MiB to roughly 141 MiB. An isolated negative control restores that mistake
-and the physical-footprint test rejects it.
+Reclamation withdraws the stage-two mapping, preserves dirty data with
+`MS_SYNC`, then invalidates host residency. The stable MAP_SHARED host address
+remains valid. Hardware access remaps the granule; native access faults the same
+file-backed bytes in through the OS. Final host borrows of evicted granules also
+release their restored host residency. Failed backing I/O does not discard the
+only live data copy, and initial backing allocation failures remain host errors.
 
-## Reclaimable physical memory
+The supported Dispatch memory-pressure source latches only level metadata on a
+shared system utility queue. The existing joined session-control hook performs
+eviction in bounded batches: warning targets one quarter of mapped RAM for
+reclamation, critical targets three quarters. Normal-pressure events cancel
+pending work. No application monitor thread is created. The obsolete EVFILT_VM
+filter is deliberately not used: current macOS returns ENOTSUP for it.
 
-A RAM limit or low initial footprint is insufficient. The common runtime must
-return released storage while the runtime/VM remains alive, and preserve data
-that remains valid. These are separate responsibilities:
+`--resident-mib N` sets an optional deterministic hardware working-set target
+(minimum 8MiB), independent of the logical guest budget. Mapping/page-in faults
+trim cold granules with a small hysteresis. It is a soft working-set target,
+**not a total process RSS cap**: kernel/scheduler metadata, host aliases, files,
+and temporary COW preparation also consume memory. Frozen-view fork preparation
+can still copy writable private pages before actual guest writes; reducing that
+fork cost remains follow-up work.
 
-- Unmap, heap shrink, discard and exit retire actual byte owners. Cached
-  preparation cannot extend an obsolete page's lifetime after its last View.
-- A physical host granule is reclaimable only after all its 4 KiB byte/slot
-  owners finish. Fork, pins and active snapshots retain their legitimate leases.
-- Slot creation/final retirement uses an object-local metadata lock. Ordinary
-  CPU/native loads and stores retain the existing ARM/region model.
-- Linux punches empty granules in the shared memfd. Darwin marks them reusable
-  and reactivates them before publishing a new slot. A partially occupied arena
-  no longer keeps every previously touched granule charged until whole-arena drop.
-- A unique quiescent snapshot retires unmapped/discarded frames and affected CPU
-  aliases while retaining incremental preparation for surviving pages.
+## Local acceptance
 
-The existing interpreter-memory test fills 64 MiB, keeps one host granule in
-every 1 MiB arena, frees the rest, and verifies three reuse cycles. On this Mac,
-physical footprint falls from about 70 MiB to 8 MiB; the old implementation stays
-near 70 MiB and fails. This checks OS accounting, not just the guest quota.
+Build the fixtures unchanged with a native AArch64 Linux static-musl toolchain:
 
-The actual static-musl hardware guest fills 64 MiB, blocks for a host footprint
-sample, discards the range, verifies zero refill, unmaps and repeats without
-process restart. A final private-file mapping verifies that COW does not alter
-the file and discard restores its original contents. Current samples fall from
-about 76–79 MiB populated to 13 MiB discarded. Remaining metadata/allocator
-overhead is visible; these are bounded correctness probes, not product throughput
-or whole-application memory guarantees.
+```sh
+musl-gcc -O2 -static -pthread tests/fixtures/smp-paging.c -o smp-paging
+musl-gcc -O2 -static tests/fixtures/shared-map.c -o shared-map
+musl-gcc -O2 -static tests/fixtures/code-cache.c -o code-cache
+```
 
-Memory-pressure reclamation of reconstructible caches and live anonymous paging
-remain separate gates. `free()` does not itself tell the kernel that an allocator
-has returned a page. Still-live anonymous bytes cannot be discarded: reclaiming
-their RAM needs preserved contents and a correct fault-recovery path. Host
-pressure notifications must use existing host/event infrastructure, without an
-extra coordinator thread or ordinary-access barriers.
+After `bash scripts/build-mac.sh`, run:
 
-## Build and validation
+```sh
+python3 tests/integration/mac-smp-paging.py \
+  --runner target/release/trames-mac-run --fixture /path/to/smp-paging \
+  --rootfs /path/to/verified-Alpine.tar.gz --output target/smp-paging-acceptance
+```
 
-On Apple Silicon macOS, run `bash scripts/build-mac.sh` and then
-`target/release/trames-mac-run --rootfs <verified-Alpine-archive> /bin/busybox echo hello`.
-The archive uses the existing pinned distribution verification. A host static
-ARM64 ELF can be passed directly without `--rootfs`. The same ELF loader and
-Linux stack/syscall implementation serve both products.
+The test compares four CPUs, a 16MiB working set, and one CPU. It checks four
+million shared atomic increments, two complete 64MiB byte checksums, fork/COW,
+and live-process RSS before/after reclamation. Shared-map and code-cache fixtures
+add cross-process MAP_SHARED/VFS coherence and EL0 cache-maintenance/W^X checks.
+Existing session/signals tests cover external commands, PTY/job control,
+persistence, signal frames and precise fault recovery.
 
-The hardware entry example additionally verifies real SVC entry, sparse access,
-resumed registers, fork COW, write protection and live VM reclamation. Sign its
-executable with `apps/macos/Trames.entitlements` before running it. The original
-musl memory fixture runs against the hardware backend, interpreter and independent
-native Linux semantic oracle. `tests/integration/mac-execution.py` samples the
-live child's physical footprint and rejects premature data-RAM population.
+Ignored tests in the signed HVF test binary cover host-borrow parking, live dirty
+page-out/page-in, retained storage across VM replacement, partial-granule reuse,
+and concurrent VM teardown. The signed Mac product test binary additionally
+injects process-local pressure metadata to verify latch-only polling followed by
+joined eviction. It does not put other Mac applications under artificial memory
+pressure. Hosted build CI does not claim nested Hypervisor access.
 
-Full local CI precedes pushing. Preserve unchanged passing results; after a
-test-only waiting correction, rerun that case and affected TSan checks rather
-than repeating unrelated CPU/network/graphics acceptance. An older persistent
-wait test cancelled after a fixed number of control checks; under TSan load that
-could precede a reader's completion. Its guest now acknowledges both completed
-reads before cancellation, retaining the original FD-reuse/cohort assertions.
-
-The [source-bound validation summary](../validation/execution-backends-summary.json)
-records the complete 80-stage native ARM64 Linux workflow, 71 passed iPad
-simulator tests with one existing opt-in skip, hardware and interpreter memory
-measurements, negative controls and the scoped test-only follow-ups. Physical
-iPad release acceptance remains a separate gate.
-
-## Remaining integration and repository extraction
-
-The Mac runner currently covers one process, private mappings and shared signal
-frame/state semantics. Common process scheduling and signal routing, clone/exec,
-shared mapping/provider export, native
-syscall admission and full application integration must move behind the executor
-boundary before feature-parity claims or independent repository releases.
-Hardware and interpreter capabilities/interrupt accounting remain distinct.
-
-Keep the current iPad runtime as the reference while migrating these gates. After
-both products run through the common task/memory model, extract the common
-runtime, iPad product and Mac product into independently buildable repositories,
-pin dependencies and preserve source pairing. Do not fork Linux semantics into
-two product copies or infer completion from a renamed crate/backend selector.
+Native Wayland presentation, the external GPU buffer ownership protocol and
+physical iPad release acceptance remain separate product gates.
