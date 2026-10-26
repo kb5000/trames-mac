@@ -37,6 +37,7 @@ try:
         b'fork-cow-pipe-wait: ok\nthreads-tls-futex-atomics: ok\nstop-continue-wait: ok\n')
     run('shell-processes', ['/bin/sh', '-c', '''set -eu
 /usr/bin/test -x /bin/ls
+/bin/grep -q 169.254.0.53 /etc/resolv.conf
 printf 'alpha\nbeta\n' | /bin/grep beta | /usr/bin/wc -l
 /bin/sh -c 'exit 7' || test "$?" = 7
 /bin/sleep 0.02 & child=$!; wait "$child"
@@ -47,9 +48,9 @@ echo external-exec-pipe-wait-ok'''], b'1\nexternal-exec-pipe-wait-ok\n', ['--roo
     run('script', ['/bin/sh', '-c', 'exec /tmp/script.sh'], b'shebang-exec-ok\n',
         ['--rootfs', rootfs, '--exec-file', '/tmp/script.sh=' + str(script.resolve())])
     store = str((args.output / 'storage').resolve())
-    run('storage-write', ['/bin/sh', '-c', 'echo persisted > /root/session-check'], b'',
+    run('storage-write', ['/bin/sh', '-c', 'echo persisted > /root/session-check; echo nameserver 192.0.2.53 > /etc/resolv.conf'], b'',
         ['--rootfs', rootfs, '--storage', store])
-    run('storage-read', ['/bin/cat', '/root/session-check'], b'persisted\n', ['--storage', store])
+    run('storage-read', ['/bin/cat', '/root/session-check', '/etc/resolv.conf'], b'persisted\nnameserver 192.0.2.53\n', ['--storage', store])
 
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 33, 101, 0, 0))

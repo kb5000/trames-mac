@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Hardware backend bring-up CLI. Shares ELF/Linux/VFS/memory with the iPad;
-//! process scheduling, signals and shared providers remain integration gates.
+//! Terminal-first Mac composition of the shared Linux process kernel.
+//! The Hypervisor adapter owns instruction execution and MMU transport.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod session;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

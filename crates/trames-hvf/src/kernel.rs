@@ -47,8 +47,16 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
             let (signal, code, address) = match syndrome >> 26 {
                 0 => (4, 1, pc),
                 0x3c => (5, 1, pc),
-                0x22 => (7, 1, pc),
-                0x26 => (7, 1, state.sp),
+                0x22 | 0x26 => {
+                    return CpuFault::Memory {
+                        pc,
+                        error: MemoryError::Alignment(if syndrome >> 26 == 0x26 {
+                            state.sp
+                        } else {
+                            pc
+                        }),
+                    }
+                }
                 _ => return CpuFault::Host(error.to_string()),
             };
             // The shared kernel preserves the fault address in Linux siginfo.
@@ -137,5 +145,33 @@ impl trames_engine::Cpu for Cpu {
         SliceOutcome::Fault(CpuFault::Host(
             "HVF requires exclusive joined memory authority".into(),
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn stack_alignment_keeps_instruction_pc_separate_from_fault_address() {
+        let state = Aarch64State {
+            pc: 0x1000,
+            sp: 0x2008,
+            ..Default::default()
+        };
+        let failure = fault(
+            &state,
+            Error::Fault {
+                pc: state.pc,
+                address: state.sp,
+                syndrome: 0x26 << 26,
+            },
+        );
+        assert!(matches!(
+            failure,
+            CpuFault::Memory {
+                pc: 0x1000,
+                error: MemoryError::Alignment(0x2008)
+            }
+        ));
     }
 }

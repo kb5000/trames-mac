@@ -26,7 +26,9 @@ are forwarded through the shared guest terminal model.
 `--storage DIR` selects the existing transactional disk VFS. `--rootfs` installs
 Alpine only if that store is not initialized; subsequent launches can use just
 `--storage DIR`. Omitting storage keeps the in-memory filesystem. `--network`
-accepts `off`, `loopback`, `outbound`, or `full` (default). `--memory-mib` defaults
+accepts `off`, `loopback`, `outbound`, or `full` (default). A missing guest DNS
+configuration uses the managed host resolver; existing guest DNS settings are
+preserved. `--memory-mib` defaults
 to 4096; it caps guest memory without allocating a fixed RAM image. Released
 physical pages are returned while hardware execution remains alive.
 

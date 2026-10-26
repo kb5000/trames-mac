@@ -205,6 +205,24 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
             trames_distro::install_alpine(&mut std::fs::File::open(archive)?, &mut vfs)?;
         }
     }
+    // Use the runtime's existing host-resolver endpoint, as the iPad and CLI
+    // products do. Never replace a resolver file configured by the guest user.
+    if vfs
+        .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
+        .is_err_and(|e| e.0 == 2)
+    {
+        if vfs
+            .stat_at(trames_vfs::AT_FDCWD, b"/etc")
+            .is_err_and(|e| e.0 == 2)
+        {
+            vfs.mkdir_at(trames_vfs::AT_FDCWD, b"/etc", 0o755)?;
+        }
+        vfs.import_reader(
+            b"/etc/resolv.conf",
+            &mut &b"nameserver 169.254.0.53\n"[..],
+            false,
+        )?;
+    }
     for import in imports {
         let (guest, host) = import.split_once('=').ok_or("import must be GUEST=HOST")?;
         vfs.import_reader(guest.as_bytes(), &mut std::fs::File::open(host)?, true)?;
