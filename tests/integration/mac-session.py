@@ -3,6 +3,7 @@
 """Exercise the shared Linux process kernel through the signed HVF product."""
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -113,5 +114,5 @@ echo external-exec-pipe-wait-ok'''], b'1\nexternal-exec-pipe-wait-ok\n', ['--roo
         os.close(master)
         os.close(slave)
 finally:
-    (args.output / 'results.json').write_text(json.dumps(dict(passed=len(rows) == 6, rows=rows), indent=2) + '\n')
+    (args.output / 'results.json').write_text(json.dumps(dict(passed=len(rows) == 6, runner_sha256=hashlib.sha256(args.runner.read_bytes()).hexdigest(), fixture_sha256=hashlib.sha256(args.fixture.read_bytes()).hexdigest(), rootfs_sha256=hashlib.sha256(args.rootfs.read_bytes()).hexdigest(), rows=rows), indent=2) + '\n')
 print(json.dumps(dict(passed=True, rows=rows)))
