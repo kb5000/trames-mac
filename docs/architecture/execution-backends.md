@@ -110,6 +110,9 @@ add cross-process MAP_SHARED/VFS coherence and EL0 cache-maintenance/W^X checks.
 Existing session/signals tests cover external commands, PTY/job control,
 persistence, signal frames and precise fault recovery.
 
+Run `python3 scripts/check-hardware.py` to build and sign both explicit test
+binaries, then execute the six hardware/pressure checks.
+
 Ignored tests in the signed HVF test binary cover host-borrow parking, live dirty
 page-out/page-in, retained storage across VM replacement, partial-granule reuse,
 and concurrent VM teardown. The signed Mac product test binary additionally
@@ -119,3 +122,6 @@ pressure. Hosted build CI does not claim nested Hypervisor access.
 
 Native Wayland presentation, the external GPU buffer ownership protocol and
 physical iPad release acceptance remain separate product gates.
+
+The [recorded acceptance summary](../validation/hvf-smp-paging-summary.json)
+contains exact source/binary/fixture hashes, CI scope and live RSS measurements.

@@ -64,3 +64,7 @@ foreground, terminal resizing and host terminal restoration. Existing
 `mac-signals.py` and `mac-execution.py` cover Linux signal contexts and repeated
 live physical memory reclamation. Hosted Mac build CI does not claim availability
 of nested Hypervisor execution. See `SOURCE.json` for extraction provenance.
+
+Run `python3 scripts/check-hardware.py` for the explicit local HVF/pressure tests.
+The [acceptance record](docs/validation/hvf-smp-paging-summary.json) includes the
+full native Linux CI result and live-page integrity/RSS samples.

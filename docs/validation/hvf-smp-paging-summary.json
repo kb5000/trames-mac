@@ -1,0 +1,257 @@
+{
+  "schema": 1,
+  "date": "2026-10-27",
+  "source": {
+    "mac_code_commit": "ac8370071535b33d08242dc3d48086be790d3347",
+    "ipad_commit": "121d8154e3f8911e79342b43609b34b27459177f",
+    "runtime_revision": "2f4e29cdaff0db359ae925f30e01505e50dfbc49",
+    "mac_source_sha256": {
+      "crates/trames-hvf/Cargo.toml": "914f581191b9937135666adb399d1c7b55c45d2ea3bd8b512550955678da9c89",
+      "crates/trames-hvf/build.rs": "46b63dd8165b079b94a6d1f868ea9646fb2403ad282398d8b19b31cab860587f",
+      "crates/trames-hvf/examples/entry.rs": "bb4c17536f916fa30f1241557a49ffab652515e5fddea55cf1084e163ab7f245",
+      "crates/trames-hvf/src/hardware_tests.rs": "fc9695a72b723d4a8242a51c907a77e3099aded3f900ff5fa99dac91c0fb8dc3",
+      "crates/trames-hvf/src/host.c": "7ec286ac2921940484947abdc4232284b29f457d6da86892fa705d0111af3373",
+      "crates/trames-hvf/src/kernel.rs": "d0428b0b239c2d2fd86cfa83b694cd3639f380c57dd71f5b3225f88ff2efc07f",
+      "crates/trames-hvf/src/lib.rs": "5b60728c80f2de2991c615643c0042e797cef598eb8a73cc06562002f5e14ae0",
+      "crates/trames-hvf/src/machine.rs": "cee56012d48aba8448f32e640ef517ea58314250c5f766b717278b96f31c3522",
+      "crates/trames-hvf/src/macos.rs": "64d085fe0bb5e0b7e7a5b40811ee95365346ec2b4639add5e158708e8dfebe11",
+      "crates/trames-hvf/src/vectors.S": "b53adb86f07752895253f8b0f49d24b6ef3d3c35646177051d03a3020d7c6de5",
+      "crates/trames-mac/Cargo.toml": "b0b723c1e2849c2050add081ff3557ee236d0572c454ed18a838768cd74906bc",
+      "crates/trames-mac/src/main.rs": "2fc1bb1ffdcfdea6be9b84f44f4d6e04ee4505aa9c053a25e20dfcb1888b8faf",
+      "crates/trames-mac/src/session.rs": "1a3246eee3501e029ecd691477fa2e7a657bfe67951c6140572c6de6ec7dd4c9"
+    },
+    "local_ci_runner_sha256": "817d954f4e7a9aa09bae41b65b4ec94e7921f82f75b4f81e7435f6edb669a80a"
+  },
+  "runner_sha256": "d5cb566db4abb11b52a8ab0b3ab86dd0ff8de633f5ceedf31000a1015e576ae7",
+  "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+  "linux_ci": {
+    "passed": true,
+    "passed_steps": 81,
+    "snapshot": {
+      "dirty": false,
+      "head": "0a83997e4da0fa126f707de6ff0a57e02ffd85cc",
+      "runtime_revision": "2f4e29cdaff0db359ae925f30e01505e50dfbc49",
+      "snapshot": "Local Linux CI checkout with the exact product runtime pin; pre-existing host test edits excluded."
+    },
+    "reused_steps": 0,
+    "sanitizers": "Rust std TSan and original native C ASan/UBSan passed",
+    "ios": "Rust cross-check only; no SDK link or device execution"
+  },
+  "mac_ci": {
+    "passed": true,
+    "passed_steps": 6,
+    "scope": "Exact runtime boundary, fmt, strict clippy, unit tests, release build and ad-hoc signature"
+  },
+  "signed_hardware": {
+    "passed": true,
+    "runtime_revision": "2f4e29cdaff0db359ae925f30e01505e50dfbc49",
+    "rows": [
+      {
+        "target": "trames-mac-run",
+        "executable_sha256": "175b63ee73f883723cc9ff5348263843f5e7fdde5b3ccc9d750210ba396dc116",
+        "exit": 0,
+        "passed_tests": 1
+      },
+      {
+        "target": "trames_hvf",
+        "executable_sha256": "5910168ee130fe75b83c0fbe79a670f1dcd37212950341484bd9a53d10bf1808",
+        "exit": 0,
+        "passed_tests": 5
+      }
+    ]
+  },
+  "linux_hardware_memory": {
+    "passed": true,
+    "runner_sha256": "d5cb566db4abb11b52a8ab0b3ab86dd0ff8de633f5ceedf31000a1015e576ae7",
+    "fixture_sha256": "44d59d8a85fe632af83887a3bef6ef3df70df8f86286f64a63aa74131668b462",
+    "cases": [
+      {
+        "name": "smp",
+        "cpus": 4,
+        "resident_target_mib": null,
+        "samples": [
+          {
+            "phase": "BASELINE",
+            "rss": 48447488,
+            "physical_footprint": 41091744
+          },
+          {
+            "phase": "POPULATED",
+            "rss": 205225984,
+            "physical_footprint": 63488984
+          },
+          {
+            "phase": "VERIFIED",
+            "rss": 209043456,
+            "physical_footprint": 67290072
+          },
+          {
+            "phase": "UNMAPPED",
+            "rss": 84475904,
+            "physical_footprint": 76973064
+          }
+        ],
+        "passed": true,
+        "exit": 0,
+        "seconds": 1.575611125
+      },
+      {
+        "name": "paging",
+        "cpus": 4,
+        "resident_target_mib": 16,
+        "samples": [
+          {
+            "phase": "BASELINE",
+            "rss": 50528256,
+            "physical_footprint": 43156104
+          },
+          {
+            "phase": "POPULATED",
+            "rss": 105218048,
+            "physical_footprint": 65340352
+          },
+          {
+            "phase": "VERIFIED",
+            "rss": 92733440,
+            "physical_footprint": 69125056
+          },
+          {
+            "phase": "UNMAPPED",
+            "rss": 65224704,
+            "physical_footprint": 30884824
+          }
+        ],
+        "passed": true,
+        "exit": 0,
+        "seconds": 4.647363167
+      },
+      {
+        "name": "single-paging",
+        "cpus": 1,
+        "resident_target_mib": 16,
+        "samples": [
+          {
+            "phase": "BASELINE",
+            "rss": 48201728,
+            "physical_footprint": 40878704
+          },
+          {
+            "phase": "POPULATED",
+            "rss": 96976896,
+            "physical_footprint": 57311976
+          },
+          {
+            "phase": "VERIFIED",
+            "rss": 81248256,
+            "physical_footprint": 57393896
+          },
+          {
+            "phase": "UNMAPPED",
+            "rss": 53805056,
+            "physical_footprint": 21119648
+          }
+        ],
+        "passed": true,
+        "exit": 0,
+        "seconds": 4.398720708
+      }
+    ]
+  },
+  "session": {
+    "passed": true,
+    "runner_sha256": "d5cb566db4abb11b52a8ab0b3ab86dd0ff8de633f5ceedf31000a1015e576ae7",
+    "fixture_sha256": "685f9c667253bafc9902ade812c24ffcf7454e4b2256ce38aaa42def16b23b2f",
+    "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+    "rows": [
+      {
+        "name": "process-threads",
+        "passed": true
+      },
+      {
+        "name": "shell-processes",
+        "passed": true
+      },
+      {
+        "name": "script",
+        "passed": true
+      },
+      {
+        "name": "storage-write",
+        "passed": true
+      },
+      {
+        "name": "storage-read",
+        "passed": true
+      },
+      {
+        "name": "interactive-job-control-resize-restore",
+        "passed": true
+      }
+    ]
+  },
+  "signals": {
+    "passed": true,
+    "runner_sha256": "d5cb566db4abb11b52a8ab0b3ab86dd0ff8de633f5ceedf31000a1015e576ae7",
+    "rows": [
+      {
+        "fixture": "cpu-signals",
+        "arguments": [],
+        "fixture_sha256": "fbd88226b9871493cf59cbe65073eb92d5ec7a52b77ff79adef76dada25c31ac",
+        "oracle_stdout_sha256": "cf72bdc614b10580f66e38c2e13f632d56001d830f49722efa48909f504a891a",
+        "returncode": 0,
+        "passed": true
+      },
+      {
+        "fixture": "signal-leaf-stack",
+        "arguments": [],
+        "fixture_sha256": "1e78251bb5581e5c94daa0bde3721cd5c32285190146e58f032b345f11b953cd",
+        "oracle_stdout_sha256": "9bf8b6addab624f569a6416f9b03e1d38e1a8ab413869648030ca7174668ed27",
+        "returncode": 0,
+        "passed": true
+      },
+      {
+        "fixture": "task-signals",
+        "arguments": [],
+        "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+        "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+        "returncode": 0,
+        "passed": true
+      },
+      {
+        "fixture": "task-signals",
+        "arguments": [
+          "autodisarm"
+        ],
+        "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+        "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+        "returncode": 0,
+        "passed": true
+      }
+    ]
+  },
+  "additional_guests": {
+    "runner_sha256": "d5cb566db4abb11b52a8ab0b3ab86dd0ff8de633f5ceedf31000a1015e576ae7",
+    "passed": true,
+    "rows": [
+      {
+        "name": "shared-map",
+        "exit": 0,
+        "stdout": "MAP_SHARED fork atomics and concurrent VFS pread: ok\n",
+        "stderr": "trames mac parallel: peak=2 chunks=8 cpu_time_us=8023\ntrames mac paging: PagingStats { mapped_bytes: 49152, backing_bytes: 1048576, page_out_bytes: 0, page_ins: 0 }\ntrames mac metrics: {\"syscalls\":122,\"context_switches\":122,\"hardware_mapped_bytes\":49152,\"guest_resident_bytes\":53248,\"instruction_count\":null}\n"
+      },
+      {
+        "name": "code-cache",
+        "exit": 0,
+        "stdout": "EL0 code-cache maintenance and W^X: ok\n",
+        "stderr": "trames mac parallel: peak=0 chunks=0 cpu_time_us=1050\ntrames mac paging: PagingStats { mapped_bytes: 49152, backing_bytes: 1048576, page_out_bytes: 0, page_ins: 0 }\ntrames mac metrics: {\"syscalls\":8,\"context_switches\":8,\"hardware_mapped_bytes\":49152,\"guest_resident_bytes\":49152,\"instruction_count\":null}\n"
+      }
+    ]
+  },
+  "limits": [
+    "resident-mib targets hardware working-set residency, not total process RSS",
+    "Frozen-view fork preparation can eagerly copy writable private pages",
+    "External raw GPU/pinned storage and shared providers without canonical shared_page exports remain unsupported",
+    "Pressure subscription and process-local metadata injection were exercised; no artificial system-wide pressure was imposed",
+    "Native Mac Wayland presentation and physical iPad release acceptance remain separate gates"
+  ]
+}
