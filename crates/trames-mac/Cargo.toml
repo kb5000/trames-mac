@@ -10,7 +10,8 @@ name = "trames-mac-run"
 path = "src/main.rs"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
-trames-kernel = { workspace = true }
+trames-session = { workspace = true }
+libc = "=0.2.190"
 trames-execution = { workspace = true }
 trames-hvf = { path = "../trames-hvf" }
 trames-linux = { workspace = true }

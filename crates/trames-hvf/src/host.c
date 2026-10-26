@@ -38,6 +38,7 @@ struct host {
 };
 extern const char trames_hvf_vectors_begin[], trames_hvf_vectors_end[];
 extern const char trames_hvf_tlbi_begin[], trames_hvf_tlbi_end[];
+extern const char trames_hvf_resume_begin[], trames_hvf_resume_end[];
 static uint64_t ticks(void) { uint64_t n; __asm__ volatile("mrs %0,cntpct_el0":"=r"(n)); return n; }
 static uint64_t frequency(void) { uint64_t n; __asm__ volatile("mrs %0,cntfrq_el0":"=r"(n)); return n; }
 static void *anonymous(size_t length) {
@@ -145,6 +146,7 @@ struct host *trames_hvf_create(int *error) {
     if (!h->root || !h->vectors) goto fail;
     memcpy(h->vectors,trames_hvf_vectors_begin,(size_t)(trames_hvf_vectors_end-trames_hvf_vectors_begin));
     memcpy((char *)h->vectors+0x800,trames_hvf_tlbi_begin,(size_t)(trames_hvf_tlbi_end-trames_hvf_tlbi_begin));
+    memcpy((char *)h->vectors+0x900,trames_hvf_resume_begin,(size_t)(trames_hvf_resume_end-trames_hvf_resume_begin));
     sys_icache_invalidate(h->vectors,h->granule);
     *error=(int)hv_vm_map(h->vectors,VECTOR_GPA,h->granule,HV_MEMORY_READ|HV_MEMORY_EXEC);
     if (*error) goto fail;
@@ -182,8 +184,12 @@ int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct
         (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TPIDR_EL0,s->tpidr)) ||
         (e=hv_vcpu_set_reg(h->cpu,HV_REG_FPCR,s->fpcr)) ||
         (e=hv_vcpu_set_reg(h->cpu,HV_REG_FPSR,s->fpsr)) ||
-        (e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c0|(s->nzcv&0xf0000000))) ||
-        (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,s->pc)) ||
+        // Each task/slice may invalidate an exclusive reservation. Enter through
+        // two EL1 instructions so reservations never leak between guest tasks.
+        (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_ELR_EL1,s->pc)) ||
+        (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SPSR_EL1,0x3c0|(s->nzcv&0xf0000000))) ||
+        (e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
+        (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x900)) ||
         (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CVAL_EL0,ticks()+nanoseconds*frequency()/UINT64_C(1000000000))) ||
         (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CTL_EL0,1)) ||
         (e=hv_vcpu_set_vtimer_mask(h->cpu,false)) ||
@@ -216,6 +222,10 @@ int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct
             (e=hv_vcpu_get_sys_reg(h->cpu,HV_SYS_REG_SPSR_EL1,&n))) return (int)e;
         unsigned ec=(unsigned)(out->syndrome>>26);
         out->kind=ec==0x15 ? 1 : (ec==0x20 || ec==0x24) ? 2 : 3;
+    } else if ((raw_pstate&15)==5 && raw_pc>=VECTOR_VA+0x900 && raw_pc<VECTOR_VA+0x908) {
+        // Timer/cancellation before ERET: retain the saved EL0 continuation.
+        if ((e=hv_vcpu_get_sys_reg(h->cpu,HV_SYS_REG_ELR_EL1,&s->pc)) ||
+            (e=hv_vcpu_get_sys_reg(h->cpu,HV_SYS_REG_SPSR_EL1,&n))) return (int)e;
     } else {
         s->pc=raw_pc; n=raw_pstate;
         if (h->exit->reason!=HV_EXIT_REASON_VTIMER_ACTIVATED && h->exit->reason!=HV_EXIT_REASON_CANCELED) out->kind=3;

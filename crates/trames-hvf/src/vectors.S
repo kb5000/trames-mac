@@ -19,3 +19,10 @@ _trames_hvf_tlbi_begin:
     isb
     hvc #1
 _trames_hvf_tlbi_end:
+
+.global _trames_hvf_resume_begin
+.global _trames_hvf_resume_end
+_trames_hvf_resume_begin:
+    clrex
+    eret
+_trames_hvf_resume_end:

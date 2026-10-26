@@ -7,6 +7,11 @@ members = [
 exclude = ["runtime"]
 
 [workspace.dependencies]
+trames-vulkan = { path = "runtime/crates/trames-vulkan" }
+trames-accel = { path = "runtime/crates/trames-accel" }
+trames-native = { path = "runtime/crates/trames-native" }
+trames-session = { path = "runtime/crates/trames-session" }
+trames-engine = { path = "runtime/crates/trames-engine" }
 trames-execution = { path = "runtime/crates/trames-execution" }
 trames-kernel = { path = "runtime/crates/trames-kernel" }
 trames-memory = { path = "runtime/crates/trames-memory" }

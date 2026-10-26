@@ -7,3 +7,6 @@ mod macos;
 pub use macos::*;
 
 pub const SUPPORTED: bool = cfg!(all(target_os = "macos", target_arch = "aarch64"));
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub mod kernel;
