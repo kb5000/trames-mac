@@ -1,20 +1,30 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/trames-execution",
-    "crates/trames-kernel",
     "crates/trames-hvf",
     "crates/trames-mac",
-    "crates/trames-shared", "crates/trames-wayland", "crates/trames-memory", "crates/trames-elf", "crates/trames-cpu", "crates/trames-vulkan",
-    "crates/trames-linux", "crates/trames-core", "crates/trames-cli", "crates/trames-vfs", "crates/trames-net", "crates/trames-distro", "crates/trames-ffi", "crates/trames-bridge", "crates/trames-accel", "crates/trames-compute", "crates/trames-native",
 ]
+exclude = ["runtime"]
+
+[workspace.dependencies]
+trames-execution = { path = "runtime/crates/trames-execution" }
+trames-kernel = { path = "runtime/crates/trames-kernel" }
+trames-memory = { path = "runtime/crates/trames-memory" }
+trames-elf = { path = "runtime/crates/trames-elf" }
+trames-linux = { path = "runtime/crates/trames-linux" }
+trames-vfs = { path = "runtime/crates/trames-vfs" }
+trames-net = { path = "runtime/crates/trames-net" }
+trames-distro = { path = "runtime/crates/trames-distro" }
+trames-bridge = { path = "runtime/crates/trames-bridge" }
+trames-shared = { path = "runtime/crates/trames-shared" }
+trames-wayland = { path = "runtime/crates/trames-wayland" }
 
 [workspace.package]
 version = "1.3.0"
 edition = "2021"
 rust-version = "1.101"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/kb5000/trames"
+repository = "https://github.com/kb5000/trames-mac"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
@@ -31,4 +41,4 @@ overflow-checks = true
 lto = "thin"
 
 [patch.crates-io]
-wayland-backend = { path = "vendor/wayland-backend" }
+wayland-backend = { path = "runtime/vendor/wayland-backend" }

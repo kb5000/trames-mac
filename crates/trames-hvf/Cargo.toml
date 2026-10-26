@@ -6,8 +6,8 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-trames-execution = { path = "../trames-execution" }
-trames-memory = { path = "../trames-memory" }
+trames-execution = { workspace = true }
+trames-memory = { workspace = true }
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
 libc = "=0.2.190"
@@ -16,7 +16,7 @@ libc = "=0.2.190"
 cc = "=1.8.0"
 
 [dev-dependencies]
-trames-linux = { path = "../trames-linux" }
+trames-linux = { workspace = true }
 
 [lints]
 workspace = true
