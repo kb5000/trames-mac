@@ -1,0 +1,22 @@
+[package]
+name = "trames-mac"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "trames-mac-run"
+path = "src/main.rs"
+
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+trames-execution = { path = "../trames-execution" }
+trames-hvf = { path = "../trames-hvf" }
+trames-linux = { path = "../trames-linux" }
+trames-memory = { path = "../trames-memory" }
+trames-elf = { path = "../trames-elf" }
+trames-vfs = { path = "../trames-vfs" }
+trames-distro = { path = "../trames-distro" }
+
+[lints]
+workspace = true
