@@ -10,6 +10,7 @@ name = "trames-mac-run"
 path = "src/main.rs"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+trames-kernel = { path = "../trames-kernel" }
 trames-execution = { path = "../trames-execution" }
 trames-hvf = { path = "../trames-hvf" }
 trames-linux = { path = "../trames-linux" }

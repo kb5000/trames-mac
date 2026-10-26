@@ -245,6 +245,10 @@ impl Executor {
     }
     fn fault(&mut self, memory: &mut Memory, event: &HostExit) -> Result<(), Error> {
         let ec = event.syndrome >> 26;
+        let status = event.syndrome & 63;
+        if status == 0x21 {
+            return Err(MemoryError::Alignment(event.address).into());
+        }
         let access = if ec == 0x20 {
             Access::Execute
         } else if event.syndrome & 64 != 0 {
@@ -253,6 +257,16 @@ impl Executor {
             Access::Read
         };
         memory.check(event.address, 1, access)?;
+        // Only translation/access/permission aborts can be repaired by binding
+        // canonical Memory bytes. Retrying an alignment/external abort as a
+        // missing mapping would execute the same fault forever.
+        if !(4..=15).contains(&status) {
+            return Err(Error::Fault {
+                pc: event.pc,
+                address: event.address,
+                syndrome: event.syndrome,
+            });
+        }
         let va = (event.address & 0x00ff_ffff_ffff_ffff) & !(PAGE_SIZE - 1);
         if (VECTOR_VA..VECTOR_VA + self.granule as u64).contains(&va) {
             return Err(Error::Unsupported("reserved exception adapter address"));

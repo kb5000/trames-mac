@@ -5,6 +5,8 @@ use std::{
 };
 use trames_execution::{Aarch64State, ExitReason};
 use trames_linux::{GuestOutput, OutputFd, SyscallOutcome};
+#[path = "task.rs"]
+mod task;
 struct Output;
 impl GuestOutput for Output {
     fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
@@ -101,17 +103,33 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
     let mut syscalls = 0u64;
     let mut yields = 0u64;
     let mut output = Output;
+    let mut task = task::Task::default();
     loop {
         if Instant::now() >= deadline {
             return Err("execution timeout".into());
         }
-        match executor
-            .run(&mut state, &mut elf.memory, Duration::from_millis(2))?
-            .reason
-        {
+        if let Some(code) = task.deliver(&mut state, &mut elf.memory)? {
+            return Ok(code);
+        }
+        if task.stopped {
+            std::thread::park_timeout(deadline.saturating_duration_since(Instant::now()));
+            continue;
+        }
+        let execution = match executor.run(&mut state, &mut elf.memory, Duration::from_millis(2)) {
+            Ok(result) => result,
+            Err(error) => match task.fault(&state, &error) {
+                Ok(Some(code)) => return Ok(code),
+                Ok(None) => continue,
+                Err(()) => return Err(error.into()),
+            },
+        };
+        match execution.reason {
             ExitReason::Yield => yields += 1,
             ExitReason::Syscall => {
                 syscalls += 1;
+                if task.call(&mut state, &mut elf.memory, linux.vfs.credentials.uid) {
+                    continue;
+                }
                 match linux.dispatch(&mut state, &mut elf.memory, &mut output) {
                     SyscallOutcome::Continue => {}
                     SyscallOutcome::Exit(code) => {
