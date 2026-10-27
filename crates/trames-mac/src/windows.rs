@@ -12,6 +12,7 @@ use trames_wayland::{ImageBuffer, InputEvent, Server, WindowMode, WindowSnapshot
 #[repr(C)]
 struct Image {
     kind: u32,
+    root: u32,
     address: *mut c_void,
     length: usize,
     offset: u32,
@@ -144,6 +145,7 @@ impl Bridge {
                 let (width, height) = image.buffer.dimensions();
                 let mut info = Image {
                     kind: 0,
+                    root: u32::from(image.surface == window.id),
                     address: std::ptr::null_mut(),
                     length: 0,
                     offset: 0,

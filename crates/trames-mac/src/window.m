@@ -2,10 +2,11 @@
 #import <AppKit/AppKit.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
+#import <QuartzCore/CATransaction.h>
 #import <simd/simd.h>
 #include <stdatomic.h>
 #include <stdint.h>
-struct image { uint32_t kind; void *address; size_t length; uint32_t offset,width,height,stride,alpha; int32_t x,y,scale; uint32_t transform; };
+struct image { uint32_t kind,root; void *address; size_t length; uint32_t offset,width,height,stride,alpha; int32_t x,y,scale; uint32_t transform; };
 struct window_info { uint64_t id,revision; uint32_t interaction_serial,interaction_edges; uint32_t width,height,min_width,min_height,max_width,max_height,mode; const char *title; };
 _Static_assert(sizeof(struct image)==64,"Rust image layout");
 _Static_assert(sizeof(struct window_info)==64,"Rust window layout");
@@ -71,6 +72,7 @@ static void wake(CFRunLoopSourceRef source) { CFRunLoopSourceSignal(source); CFR
 @property NSPoint dragMouse;
 @property NSRect dragFrame;
 - (void)drag;
+- (BOOL)isVisible;
 - (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c;
 - (void)cancel;
 - (void)dispose;
@@ -108,11 +110,13 @@ static const uint16_t keys[128]={
 };
 @implementation TramesCanvas
 - (BOOL)isFlipped{return YES;}
+- (BOOL)wantsUpdateLayer{return YES;}
+- (void)updateLayer{self.family.dirty=YES;wake(self.family.ui.source);}
 - (BOOL)acceptsFirstResponder{return YES;}
 - (BOOL)acceptsFirstMouse:(NSEvent *)event{(void)event;return YES;}
 - (CALayer *)makeBackingLayer {
     CAMetalLayer *layer=[CAMetalLayer layer];layer.device=self.family.ui.device;layer.pixelFormat=MTLPixelFormatBGRA8Unorm;
-    layer.opaque=NO;layer.framebufferOnly=YES;layer.maximumDrawableCount=3;layer.allowsNextDrawableTimeout=YES;layer.presentsWithTransaction=NO;CGColorSpaceRef color=CGColorSpaceCreateWithName(kCGColorSpaceSRGB);layer.colorspace=color;CGColorSpaceRelease(color);return layer;
+    layer.opaque=NO;layer.framebufferOnly=YES;layer.maximumDrawableCount=3;layer.allowsNextDrawableTimeout=YES;layer.presentsWithTransaction=YES;CGColorSpaceRef color=CGColorSpaceCreateWithName(kCGColorSpaceSRGB);layer.colorspace=color;CGColorSpaceRelease(color);return layer;
 }
 - (void)updateTrackingAreas {
     for(NSTrackingArea *area in self.trackingAreas)[self removeTrackingArea:area];
@@ -164,7 +168,15 @@ static const uint16_t keys[128]={
 }
 - (void)windowDidMove:(NSNotification *)notification{if(notification.object!=self.window)return;if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac window moved: id=%llu x=%.0f y=%.0f\n",self.identifier,self.window.frame.origin.x,self.window.frame.origin.y);}
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification{(void)notification;self.dirty=YES;wake(self.ui.source);}
-- (void)windowDidChangeOcclusionState:(NSNotification *)notification{if(notification.object!=self.window)return;self.dirty=YES;if(!(self.window.occlusionState&NSWindowOcclusionStateVisible))[self cancel];wake(self.ui.source);}
+- (BOOL)isVisible {
+    if(self.window.miniaturized)return NO;
+    if(self.window.occlusionState&NSWindowOcclusionStateVisible)return YES;
+    // A descendant surface can contain the entire parent. Its drawable still
+    // presents even when WindowServer considers the parent fully occluded.
+    for(NSWindow *overlay in self.overlays.allValues)if(overlay.visible && (overlay.occlusionState&NSWindowOcclusionStateVisible))return YES;
+    return NO;
+}
+- (void)windowDidChangeOcclusionState:(NSNotification *)notification{(void)notification;self.dirty=YES;if(![self isVisible])[self cancel];wake(self.ui.source);}
 - (void)windowDidMiniaturize:(NSNotification *)notification{(void)notification;[self cancel];if(!self.updating){self.mode=1;[self emit:8 x:0 y:0 a:1 b:0 c:0];}}
 - (void)windowDidDeminiaturize:(NSNotification *)notification{(void)notification;self.dirty=YES;if(!self.updating){self.mode=0;[self emit:8 x:0 y:0 a:0 b:0 c:0];}wake(self.ui.source);}
 - (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)frame {
@@ -223,7 +235,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 - (void)tick {
     if(atomic_load_explicit(&finished,memory_order_relaxed)){
         CFRunLoopStop(CFRunLoopGetMain());
-        if(NSApp){[NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:NO];}return;
+        if(NSApp){[NSApp stop:nil];[NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:NO];}return;
     }
     if(self.refreshing){self.refreshAgain=YES;return;}self.refreshing=YES;
     for(TramesFamily *family in self.windows.allValues){
@@ -248,7 +260,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 - (void)dealloc{if(_source){CFRunLoopSourceInvalidate(_source);CFRelease(_source);}}
 @end
 static TramesCanvas *canvas(TramesFamily *family,NSRect rect,NSPoint origin){
-    TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
+    TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
 }
 void *trames_ui_create(const char *shader){
     TramesUI *ui=[TramesUI new];ui.shader=[NSString stringWithUTF8String:shader];
@@ -264,10 +276,7 @@ void trames_ui_finish(void *pointer){TramesUI *ui=(__bridge TramesUI *)pointer;a
 void trames_ui_run(void *pointer){
     TramesUI *ui=(__bridge TramesUI *)pointer;
     while(!atomic_load_explicit(&ui->finished,memory_order_relaxed)){
-        @autoreleasepool{if(!NSApp)CFRunLoopRun();else{
-            NSEvent *event=[NSApp nextEventMatchingMask:NSEventMaskAny untilDate:NSDate.distantFuture inMode:NSDefaultRunLoopMode dequeue:YES];
-            if(event)[NSApp sendEvent:event];[NSApp updateWindows];
-        }}
+        @autoreleasepool{if(!NSApp)CFRunLoopRun();else [NSApp run];}
     }
 }
 void trames_ui_destroy(void *pointer){
@@ -282,7 +291,7 @@ void trames_ui_end(void *pointer){
     if(NSApp && !ui.windows.count){[NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];ui.queue=nil;ui.shmPipeline=nil;ui.texturePipeline=nil;ui.device=nil;}
 }
 int trames_ui_window(void *pointer,const struct window_info *info,const struct image *images,size_t count,void *lease){
-    TramesUI *ui=(__bridge TramesUI *)pointer;TramesFrame *owned=nil;
+    TramesUI *ui=(__bridge TramesUI *)pointer;TramesFrame *owned=nil;id<MTLCommandBuffer> command=nil;
     @try{
         if(![ui startGraphics])return -1;
         NSNumber *key=@(info->id);TramesFamily *family=ui.windows[key];
@@ -299,9 +308,12 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];[family.window makeKeyAndOrderFront:nil];[family.window makeFirstResponder:family.canvas];[NSApp activate];
         }
         family.seen=YES;family.updating=YES;
-        family.window.title=[NSString stringWithUTF8String:info->title]?:@"Linux";
-        family.window.contentMinSize=NSMakeSize(MAX(1,MIN(info->min_width,4096)),MAX(1,MIN(info->min_height,4096)));
-        family.window.contentMaxSize=NSMakeSize(MAX(family.window.contentMinSize.width,info->max_width?MIN(info->max_width,4096):4096),MAX(family.window.contentMinSize.height,info->max_height?MIN(info->max_height,4096):4096));
+        NSString *title=[NSString stringWithUTF8String:info->title]?:@"Linux";
+        if(![family.window.title isEqualToString:title])family.window.title=title;
+        NSSize minimum=NSMakeSize(MAX(1,MIN(info->min_width,4096)),MAX(1,MIN(info->min_height,4096)));
+        NSSize maximum=NSMakeSize(MAX(minimum.width,info->max_width?MIN(info->max_width,4096):4096),MAX(minimum.height,info->max_height?MIN(info->max_height,4096):4096));
+        if(!NSEqualSizes(family.window.contentMinSize,minimum))family.window.contentMinSize=minimum;
+        if(!NSEqualSizes(family.window.contentMaxSize,maximum))family.window.contentMaxSize=maximum;
         if(family.pendingResize && family.hostW==info->width && family.hostH==info->height)family.pendingResize=NO;
         if(!family.pendingResize && family.clientW && (family.clientW!=info->width||family.clientH!=info->height)){
             family.hostW=info->width;family.hostH=info->height;[family.window setContentSize:NSMakeSize(info->width,info->height)];family.dirty=YES;
@@ -316,7 +328,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         }
         family.updating=NO;
         if(info->interaction_serial && info->interaction_serial!=family.interactionSerial){family.interactionSerial=info->interaction_serial;if(family.buttonDown){family.dragEdges=info->interaction_edges?info->interaction_edges:16;[family drag];}}
-        if(info->mode==1 || family.window.miniaturized || !(family.window.occlusionState&NSWindowOcclusionStateVisible))return 0;
+        if(info->mode==1 || ![family isVisible])return 0;
         if(!family.dirty && family.lastRevision==info->revision)return 0;
         if(family.frames.count>=2)return 0;
         NSMutableArray<TramesCanvas *> *views=[NSMutableArray arrayWithObject:family.canvas];
@@ -325,18 +337,22 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             const struct image *image=&images[i];double scale=MAX(1,image->scale);
             NSRect rect=NSMakeRect(image->x,image->y,(image->transform&1?image->height:image->width)/scale,(image->transform&1?image->width:image->height)/scale);
             if(NSContainsRect(root,rect))continue;
+            // The root SHM image can include CSD shadow outside xdg geometry.
+            // Clip that image to the native content rectangle: NSWindow already
+            // owns the outer shadow. Only descendant surfaces need child windows.
+            if(image->root && NSContainsRect(rect,root))continue;
             // Separate popup rectangles avoid one large transparent window
             // intercepting clicks in the empty space between disjoint surfaces.
             NSNumber *index=@(i);[visible addObject:index];NSWindow *overlay=family.overlays[index];
             if(!overlay){overlay=[[TramesOverlay alloc]initWithContentRect:NSZeroRect styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO];overlay.releasedWhenClosed=NO;overlay.opaque=NO;overlay.backgroundColor=NSColor.clearColor;overlay.hasShadow=NO;overlay.delegate=family;overlay.acceptsMouseMovedEvents=YES;family.overlays[index]=overlay;[family.window addChildWindow:overlay ordered:NSWindowAbove];overlay.contentView=canvas(family,NSMakeRect(0,0,rect.size.width,rect.size.height),rect.origin);}
             TramesCanvas *view=(TramesCanvas *)overlay.contentView;view.origin=rect.origin;
             NSRect screen=[family.window convertRectToScreen:[family.canvas convertRect:rect toView:nil]];
-            [overlay setFrame:screen display:YES];[views addObject:view];
+            if(!NSEqualRects(overlay.frame,screen))[overlay setFrame:screen display:YES];[views addObject:view];
         }
         for(NSNumber *index in [family.overlays.allKeys copy])if(![visible containsObject:index]){NSWindow *overlay=family.overlays[index];[family.window removeChildWindow:overlay];[overlay close];[family.overlays removeObjectForKey:index];}
-        // Keep only maximal presentation rectangles. A CSD shadow can cover
-        // the whole root: hide its duplicate layer instead of waiting for a
-        // completely occluded root drawable or rendering the same pixels twice.
+        // Keep only maximal presentation rectangles. A large descendant can
+        // cover the root: omit its duplicate layer instead of waiting for a
+        // completely occluded drawable or rendering the same pixels twice.
         NSMutableArray<TramesCanvas *> *targets=[NSMutableArray new];
         for(TramesCanvas *view in views){
             NSRect rect=NSMakeRect(view.origin.x,view.origin.y,view.bounds.size.width,view.bounds.size.height);BOOL covered=NO;
@@ -344,7 +360,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
                 if(NSContainsRect(box,rect)&&(!NSEqualRects(box,rect)||[views indexOfObject:other]>[views indexOfObject:view])){covered=YES;break;}}
             // The root view must remain available for key and pointer dispatch even
             // when a child rectangle presents all of its pixels.
-            if(view==family.canvas){view.hidden=NO;view.layer.hidden=covered;}
+            if(view==family.canvas){view.hidden=NO;if(view.layer.hidden!=covered)view.layer.hidden=covered;}
             else if(covered)[view.window orderOut:nil];
             else if(!view.window.visible)[view.window orderWindow:NSWindowAbove relativeTo:family.window.windowNumber];
             if(!covered)[targets addObject:view];
@@ -358,10 +374,12 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             if(!source){fprintf(stderr,"trames-mac: cannot import retained display image\n");return -1;}[sources addObject:source];
         }
         NSMutableArray<id<CAMetalDrawable>> *drawables=[NSMutableArray new];
-        id<MTLCommandBuffer> command=[ui.queue commandBuffer];if(!command)return -1;
+        command=[ui.queue commandBuffer];if(!command)return -1;
         for(TramesCanvas *view in views){
             CAMetalLayer *layer=(CAMetalLayer *)view.layer;CGFloat scale=view.window.backingScaleFactor;
-            layer.contentsScale=scale;layer.drawableSize=CGSizeMake(MAX(1,view.bounds.size.width*scale),MAX(1,view.bounds.size.height*scale));
+            if(layer.contentsScale!=scale)layer.contentsScale=scale;
+            CGSize size=CGSizeMake(MAX(1,view.bounds.size.width*scale),MAX(1,view.bounds.size.height*scale));
+            if(!CGSizeEqualToSize(layer.drawableSize,size))layer.drawableSize=size;
             id<CAMetalDrawable> drawable=[layer nextDrawable];if(!drawable)return 0;
             [drawables addObject:drawable];MTLRenderPassDescriptor *pass=[MTLRenderPassDescriptor renderPassDescriptor];
             pass.colorAttachments[0].texture=drawable.texture;pass.colorAttachments[0].loadAction=MTLLoadActionClear;pass.colorAttachments[0].storeAction=MTLStoreActionStore;pass.colorAttachments[0].clearColor=MTLClearColorMake(0,0,0,0);
@@ -376,10 +394,15 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             [encoder endEncoding];
         }
         owned=[[TramesFrame alloc]initWithLease:lease source:ui.source count:drawables.count];[family.frames addObject:owned];
-        for(id<CAMetalDrawable> drawable in drawables){TramesFrame *frame=owned;[drawable addPresentedHandler:^(id<MTLDrawable> shown){[frame shown:shown.presentedTime>0];}];[command presentDrawable:drawable];}
+        for(id<CAMetalDrawable> drawable in drawables){TramesFrame *frame=owned;[drawable addPresentedHandler:^(id<MTLDrawable> shown){[frame shown:shown.presentedTime>0];}];}
         TramesFrame *frame=owned;[command addCompletedHandler:^(id<MTLCommandBuffer> result){if(result.status!=MTLCommandBufferStatusCompleted)fprintf(stderr,"trames-mac: GPU display command failed: %s\n",result.error.description.UTF8String);[frame gpuDone:result.status==MTLCommandBufferStatusCompleted];}];
-        family.lastRevision=info->revision;family.dirty=NO;[command commit];return 1;
-    }@catch(NSException *exception){fprintf(stderr,"trames-mac: window error: %s\n",exception.description.UTF8String);if(owned){[owned cancel];[owned gpuDone:NO];return 2;}return -1;}
+        family.lastRevision=info->revision;family.dirty=NO;
+        // AppKit geometry and Metal pixels share the same main-thread
+        // transaction. Wait only for submission, not GPU completion.
+        [command commit];[command waitUntilScheduled];
+        for(id<CAMetalDrawable> drawable in drawables)[drawable present];
+        [CATransaction flush];return 1;
+    }@catch(NSException *exception){fprintf(stderr,"trames-mac: window error: %s\n",exception.description.UTF8String);if(owned){[owned cancel];if(command.status<MTLCommandBufferStatusCommitted)[owned gpuDone:NO];return 2;}return -1;}
 }
 
 // Linked only by Rust unit tests (dead-stripped from the release entry point).
