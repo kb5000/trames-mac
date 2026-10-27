@@ -383,14 +383,41 @@
     "presentation": {
       "measured_latency_includes_presenter": false,
       "superseded_queue_regression_passed": true,
-      "foreground_visual_acceptance": "pending: test desktop was not the console user session; do not infer display latency from JS acknowledgements",
-      "note": "Presenter backpressure change and opt-in callback diagnostics were added after the CPU/input runs. No new end-to-end display latency claim."
+      "foreground_visual_acceptance": "passed: visible page pixels reached clicks=6 and input=abc; second-page pixels loaded; browser Back restored both values; successful Metal screen callbacks observed",
+      "note": "The four-stage CPU/input runs preceded the presenter change. A separate foreground visual follow-up tested the shipped presenter; timings remain input-to-JS-title, not input-to-screen."
     },
     "limits": [
       "Small sequential warm-profile observation, no native browser baseline, no cold start or tail percentile claim.",
       "Input acknowledgement and actual drawable presentation are separate acceptance gates.",
       "No browser security setting was changed."
     ],
-    "median_ratio": 10.51
+    "median_ratio": 10.51,
+    "foreground_followup": {
+      "date": "2026-10-27",
+      "mac_revision": "1f0a6fcfbead05f01f27e9aa680ab663f093e4c8",
+      "runtime_revision": "be0280a813e8e52fb5db170821929272f8aeb4fc",
+      "click_ms": [
+        280.362,
+        118.073,
+        429.769,
+        63.551,
+        96.747,
+        274.639
+      ],
+      "click_median_ms": 196.356,
+      "key_ms": [
+        186.075,
+        76.673,
+        376.728
+      ],
+      "visible_click_count": 6,
+      "visible_input": "abc",
+      "second_page_pixels_verified": true,
+      "back_preserves_state": true,
+      "metal_successful_screen_callbacks_observed": true,
+      "gpu_failure_callbacks_during_sample": 0,
+      "method": "Same isolated Firefox profile/store and offline page, 4 CPUs and 4096 MiB logical budget. Native input/window diagnostics enabled. Six clicks and three keys; actual foreground rendering and screenshot verification. No browser settings changed.",
+      "limits": "Click/key timings still end at JavaScript title acknowledgement. Foreground rendering/capture adds work, so do not equate the earlier 54 ms observation with displayed-frame latency or derive a speedup across different desktop/session states. No input-to-photon, native-browser baseline, cold-start or P95 result."
+    }
   }
 }

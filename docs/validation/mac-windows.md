@@ -420,10 +420,29 @@ GPU reads finish. A lifecycle regression verifies delayed completion and late
 screen callbacks release each source exactly once. The existing opt-in window
 trace records GPU completion and screen callback state.
 
-Foreground visual acceptance for this presenter change remains pending: the
-Trames macOS desktop was not the active console user session, and captured
-content could stay on an old frame or skip presentation. The CPU/input results
-were collected before the presenter change and cannot prove displayed-frame
-latency. No workaround treats an offscreen/skipped drawable as presented.
-Further display lifecycle validation must use the actual Trames desktop before
-claiming near-native or release-ready Firefox GUI performance.
+The initial visual acceptance attempt ran outside the active console user
+session, where captured content could stay on an old frame or skip presentation.
+The subsequent foreground check below closes this visual acceptance gate. The
+four-stage CPU/input results still cannot prove displayed-frame latency. No
+workaround treats an offscreen/skipped drawable as presented.
+
+#### Foreground visual follow-up (2026-10-27)
+
+The user returned to the Trames desktop, and the shipped Mac `1f0a6fc` with runtime
+`be0280a` was tested without a rebuild. Visible pixels updated to `clicks: 6` and
+`input: abc`; the input box also showed `abc`. The second offline page visibly
+loaded, and browser Back restored the previous count and text. Metal reported
+successful screen-presentation callbacks, with no GPU failure callbacks in the
+observed sample. The previous persistent old-frame symptom was not reproduced
+in this foreground check.
+
+Six native release-to-JavaScript-title samples were 280, 118, 430, 64, 97 and
+275 ms (median 196 ms); key samples were 186, 77 and 377 ms. Actual foreground
+rendering and screenshot capture add workload, so the earlier 54 ms observation
+must not be used as a screen-latency result or directly compared across these
+different desktop/session states. This verifies visible interaction, navigation
+and state preservation; it does not establish input-to-photon latency,
+near-native performance, cold-start/P95 behavior or general Firefox release
+readiness. The filtered measurement record includes the separate follow-up.
+Only validation records changed; unchanged full-CI and hardware results were
+reused.
