@@ -687,3 +687,43 @@ fn guest_code_stores_use_guest_cache_maintenance_across_cpus() {
     drop(reader);
     memory.commit_parallel().unwrap();
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn syscall_arguments_cannot_be_consumed_by_platform_hypercalls() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = Memory::default();
+    memory.map(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    // svc #0; brk #0x123. Reaching BRK means the syscall exit was swallowed.
+    memory
+        .write_array(0x10000, 0xd4000001u32.to_le_bytes())
+        .unwrap();
+    memory
+        .write_array(0x10004, 0xd4202460u32.to_le_bytes())
+        .unwrap();
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    for value in [
+        0xc0fff000,
+        0xc1000000,
+        0xc1000001,
+        0xc1001000,
+        0xc1fff000,
+        0xc1ffffff,
+        0xc2000000,
+        0x84000000,
+        0xc4000000,
+        0xffffffffc1000000,
+        u64::MAX,
+    ] {
+        let mut cpu = state();
+        for (i, register) in cpu.registers.iter_mut().enumerate() {
+            *register = 0xa000000000000000 | i as u64;
+        }
+        cpu.registers[0] = value;
+        cpu.registers[8] = 215;
+        let expected = cpu.registers;
+        svc(&mut executor, &mut cpu, &mut memory);
+        assert_eq!(cpu.pc, 0x10004);
+        assert_eq!(cpu.registers, expected, "syscall argument {value:#x}");
+    }
+}

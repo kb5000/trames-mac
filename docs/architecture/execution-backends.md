@@ -364,3 +364,34 @@ non-session callers. Runnable-count transitions therefore preserve mapping
 metadata and code/alias ownership instead of rebuilding every page. The default
 common hook calls the interpreter's original direct Memory execution, so this
 backend-specific admission does not alter the iPad CPU path.
+
+
+### EL1 exit transport namespace
+
+The exception vector uses private `HVC #0x5452` to report SVC, abort and timer
+state to the host. `HVC #0` is not a transparent register-preserving transport:
+Apple's VM service namespace includes x0 values beginning at `0xc1000000`.
+The virtualization stack can consume such a call, replace x0 and resume EL1
+without returning an exception to this executor. Ordinary Linux pointers and
+syscall arguments can have those same values.
+
+The adapter validates the exit immediate before interpreting the saved EL0
+exception; its separate TLBI helper retains immediate 1. No argument register
+is repurposed to carry an exit tag, and the change adds no extra guest exception
+or ordinary-memory synchronization. Signed hardware tests preserve all general
+registers across SVC for platform service-number values and high-bit aliases.
+The original-musl fixture maps, writes and unmaps pages on both sides of the
+service-number boundary and above 4 GiB.
+
+Apple's [VMAPPLE header](https://github.com/apple/darwin-xnu/blob/main/pexpert/pexpert/arm64/VMAPPLE.h)
+defines the namespace. A [QEMU developer's first-hand report](https://lists.gnu.org/archive/html/qemu-arm/2025-10/msg00553.html)
+also describes the x0=`0xc1000000`, HVC-0 call being handled inside the
+virtualization stack. The local boundary regression demonstrates this behavior
+on the tested Mac rather than assuming that every HVC reaches the VMM.
+
+The Mac product configures 1,024 guest task slots through the shared session
+kernel; the common/iPad default remains 256. These count Linux threads and
+processes, not host CPU workers. Jobs, stacks and memory remain demand allocated,
+the CPU worker setting is unchanged, and the configured guest RAM budget still
+applies. Clone admission, RLIMIT_NPROC and proc task-limit reports use the same
+session capacity.

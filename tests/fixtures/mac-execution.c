@@ -40,6 +40,16 @@ int main(int argc,char **argv) {
     char original[8];assert(pread(fd,original,8,0)==8);assert(!memcmp(original,"original",8));
     assert(!madvise(private,4096,MADV_DONTNEED));assert(!memcmp(private,"original",8));
     assert(!munmap(private,4096));assert(!close(fd));
+    // These ordinary guest addresses used to collide with Apple's HVC #0
+    // service namespace before reaching the userspace Linux kernel.
+    const uintptr_t boundaries[]={0xc0fff000,0xc1000000,0xc1001000,0xc1fff000,0x100000000};
+    for (unsigned i=0;i<sizeof(boundaries)/sizeof(boundaries[0]);i++) {
+        void *page=mmap((void *)boundaries[i],4096,PROT_READ|PROT_WRITE,
+                        MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED_NOREPLACE,-1,0);
+        assert(page==(void *)boundaries[i]);
+        *(volatile uint64_t *)page=boundaries[i];
+        assert(!munmap(page,4096));
+    }
     puts("PASS: demand paging, discard, zero refill, repeated unmap and private file COW");
     return 0;
 }

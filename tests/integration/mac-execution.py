@@ -21,14 +21,15 @@ libc = ctypes.CDLL(None, use_errno=True)
 libc.proc_pid_rusage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
 libc.proc_pid_rusage.restype = ctypes.c_int
 
-def footprint(pid):
+def usage(pid):
     data = ctypes.create_string_buffer(1024)
     assert libc.proc_pid_rusage(pid, 2, data) == 0, ctypes.get_errno()
-    return struct.unpack_from('Q', data.raw, 72)[0]
+    rss, physical = struct.unpack_from('QQ', data.raw, 64)
+    return dict(host_resident_bytes=rss, host_physical_footprint=physical)
 
 report = dict(passed=False, runner_sha256=hashlib.sha256(args.runner.read_bytes()).hexdigest(),
               fixture_sha256=hashlib.sha256(args.fixture.read_bytes()).hexdigest(), samples=[],
-              scope='Actual EL0 hardware guest, unchanged static musl; host kernel physical footprint sampled while the guest waits on stdin. No process restart between allocation cycles.')
+              scope='Actual EL0 hardware guest, unchanged static musl; host RSS and physical footprint sampled while the guest waits on stdin. RSS checks resident mapping release because preserved file-backed guest RAM is not fully charged to physical footprint. No process restart between allocation cycles.')
 try:
     with (args.output / 'stderr.log').open('wb') as error:
         p = subprocess.Popen([str(args.runner.resolve()), '--metrics', '--timeout', '90',
@@ -49,14 +50,19 @@ try:
                 lines.append(line)
                 phase = line.decode().strip()
                 if phase in ['BASELINE', 'POPULATED', 'DISCARDED', 'UNMAPPED']:
-                    charge = footprint(p.pid)
-                    report['samples'].append(dict(phase=phase, host_physical_footprint=charge))
-                    print(phase, round(charge / 1048576, 2), 'MiB', flush=True)
+                    sample = dict(phase=phase, **usage(p.pid))
+                    report['samples'].append(sample)
+                    charge = sample['host_resident_bytes']
+                    print(phase, round(charge / 1048576, 2), 'MiB RSS', flush=True)
                     if phase == 'POPULATED':
                         high = charge
-                        assert charge - report['samples'][0]['host_physical_footprint'] < 96 << 20, ('premature population or duplicate RAM', charge)
+                        # RSS counts multiple aliases of one shared file page.
+                        # Keep the private-footprint bound, and use RSS only
+                        # for the resident-mapping release check below.
+                        physical = sample['host_physical_footprint']
+                        assert physical - report['samples'][0]['host_physical_footprint'] < 96 << 20, ('premature population or duplicate private RAM', physical)
                     elif phase == 'DISCARDED':
-                        assert high is not None and high - charge > 48 << 20, ('physical RAM stayed allocated', high, charge)
+                        assert high is not None and high - charge > 48 << 20, ('resident mappings stayed allocated', high, charge)
                     p.stdin.write(b'x')
                     p.stdin.flush()
             tail, _ = p.communicate(timeout=10)

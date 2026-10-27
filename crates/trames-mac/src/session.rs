@@ -382,6 +382,9 @@ pub fn run(
     }
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
+    // A browser's guest threads are scheduler jobs, not host threads. Keep
+    // enough task slots for normal multiprocess pages without reserving RAM.
+    runtime.linux.task_limit = 1024;
     runtime.cpu_count = cpus;
     trames_hvf::set_resident_limit(resident_limit);
     runtime.profile_syscalls = metrics;

@@ -18,6 +18,8 @@
 #define TABLE_GPA UINT64_C(0x1000000)
 #define ADDRESS_MASK UINT64_C(0x0000fffffffff000)
 #define PAGE 4096
+#define EXIT_HVC_IMMEDIATE 0x5452
+#define TLBI_HVC_IMMEDIATE 1
 
 struct state {
     uint64_t x[31], sp, pc;
@@ -288,7 +290,8 @@ int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct
             (e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
             (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
             (e=hv_vcpu_run(h->cpu))) return (int)e;
-        if (h->exit->reason!=HV_EXIT_REASON_EXCEPTION || h->exit->exception.syndrome>>26!=0x16) return -2;
+        if (h->exit->reason!=HV_EXIT_REASON_EXCEPTION || h->exit->exception.syndrome>>26!=0x16 ||
+            (h->exit->exception.syndrome&0xffff)!=TLBI_HVC_IMMEDIATE) return -2;
         h->tlb_dirty=false;
     }
     for (unsigned i=0;i<31;i++) if ((e=hv_vcpu_set_reg(h->cpu,(hv_reg_t)(HV_REG_X0+i),s->x[i]))) return (int)e;
@@ -329,6 +332,10 @@ int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct
     // A timer can exit after EL0 took SVC/abort, but before the EL1 HVC stub
     // executes. Preserve that saved EL0 exception; never resume an EL1 vector
     // PC as EL0 merely because this exit was reported as a timer/cancellation.
+    // Match the private vector ABI, never treat another platform HVC as an
+    // EL0 syscall/abort. In particular HVC #0 may be handled inside HVF.
+    if (h->exit->reason==HV_EXIT_REASON_EXCEPTION && h->exit->exception.syndrome>>26==0x16 &&
+        (h->exit->exception.syndrome&0xffff)!=EXIT_HVC_IMMEDIATE) return -2;
     bool saved_exception=(h->exit->reason==HV_EXIT_REASON_EXCEPTION && h->exit->exception.syndrome>>26==0x16) ||
         ((raw_pstate&15)==5 && raw_pc>=VECTOR_VA && raw_pc<VECTOR_VA+0x800);
     if (saved_exception) {

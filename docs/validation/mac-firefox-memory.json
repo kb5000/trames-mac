@@ -440,5 +440,41 @@
     },
     "remaining_work": "Snapshot/backing metadata refresh remains prominent after private code publication was removed. Shared backing publication and genuine mapping changes are still conservative.",
     "private_outputs": "Raw stacks, addresses, page contents and diagnostic logs remain in ignored local output."
+  },
+  "hvc_crash_repair": {
+    "date": "2026-10-28",
+    "cause": "EL1 HVC #0 collided with the platform hypercall namespace when an ordinary Linux argument had a 0xc1xxxxxx value. HVF consumed the call and changed x0 without returning the expected exit.",
+    "fix": "Use private HVC immediate 0x5452 for exception-vector exits; validate that immediate separately from the TLBI helper immediate 1. Preserve all Linux general registers.",
+    "task_capacity": {
+      "common_default": 256,
+      "mac": 1024,
+      "allocation": "Demand-allocated guest jobs, unchanged CPU workers and RAM budget. RLIMIT/proc reports and clone admission agree."
+    },
+    "before": {
+      "address_boundary_probe_exit": 139,
+      "concurrent_mapping_stress_exit": 42,
+      "first_failure_address": "0xc1000000"
+    },
+    "after": {
+      "address_boundary_probe_exit": 0,
+      "concurrent_mapping_iterations": 800000,
+      "concurrent_mapping_stress_exit": 0,
+      "signed_hvf_tests": 17,
+      "signed_product_pressure_tests": 1,
+      "interpreter_kernel_passed": 196,
+      "interpreter_kernel_ignored": 3,
+      "real_linux_smp_and_paging": true,
+      "original_musl_address_boundary_and_reclaim": true,
+      "ipad_compilation": true,
+      "online_bilibili": {
+        "memory_mib": 4096,
+        "cpus": 4,
+        "observed_minutes_at_least": 11,
+        "visible_scroll": true,
+        "refresh": true,
+        "previous_crash_log_signatures": 0
+      }
+    },
+    "limits": "Homepage browsing and finite regression coverage only. This is not an all-sites, video-playback, long-term stability or Firefox performance claim. Raw guest stacks, registers, page contents and logs remain in ignored local output."
   }
 }

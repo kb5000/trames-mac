@@ -508,3 +508,56 @@ The [filtered record](mac-firefox-memory.json) includes the method and limits.
 This supports the direction of the code-publication change while identifying
 backing/snapshot refresh as remaining work. The live workloads are not matched
 and these counts are neither CPU percentages nor a Firefox speedup ratio.
+
+
+### Bilibili crash: platform hypercall collision (2026-10-28)
+
+The reported session exited through the guest Firefox crash path. Private logs
+showed failed task creation, deliberate null-write assertions and finally Scudo's
+unmap abort. The decisive reproducer was independent of Firefox: four threads
+repeatedly mapping and unmapping pages began failing when the ordinary allocation
+cursor reached `0xc1000000`. A fixed-address probe returned `0xffffffff` as if it
+were a successful 64-bit pointer, although the corresponding Linux mmap had not
+reached the kernel. Its subsequent write failed. The original probe exited 139;
+the 800,000-iteration mapping stress exited 42.
+
+The EL1 vector used `HVC #0` with Linux arguments still in x0. On the tested Mac,
+the virtualization stack consumed values in the platform's `0xc1xxxxxx`
+namespace, changed x0 and resumed EL1 without the exit expected by the runtime.
+Using private `HVC #0x5452` fixes the transport. The C adapter validates the
+immediate, and the TLBI helper remains on its separate immediate 1. This is a
+Mac backend fix; it adds neither an extra trap nor ordinary-memory tracking.
+The [backend contract](../architecture/execution-backends.md#el1-exit-transport-namespace)
+links primary platform and developer sources.
+
+The fixed-address probe and all 800,000 mapping iterations passed. Seventeen
+signed HVF tests plus one signed product pressure test passed; the new hardware
+regression checks all general registers with platform-number-shaped x0 values,
+including high-bit aliases. The maintained original-musl fixture now covers
+fixed mappings across that boundary and above 4 GiB, alongside discard and file
+COW. Its old observer now keeps the private-footprint bound while checking
+resident-mapping release with RSS: preserved file pages are not fully charged
+to footprint, and RSS can count multiple aliases of one physical page. Neither
+number alone proves the number of unique physical pages.
+
+A separate 256-task capacity was also reached during page startup. The common
+kernel now accepts a product task capacity, and the Mac selects 1,024; the iPad
+and common default stay at 256. This does not allocate stacks or host threads
+up front. Clone admission, RLIMIT_NPROC and proc reports share the configured
+value. Regressions cover 299 shared-VM children at capacity 300, rejection of the
+next task and actual guest getrlimit after the initial Linux context is moved.
+Shared-kernel conformance passed 196 tests with three existing ignored tests;
+iPad compilation, local workflow commands and real Linux SMP/paging acceptance
+also passed. Unchanged memory/reclaim checks were reused. One unrelated loopback
+network test initially observed EAGAIN; its isolated rerun passed, and remaining
+workflow packages were completed separately.
+
+With four CPUs, the same 4 GiB logical RAM budget, outbound networking and Noto
+CJK, original Firefox visibly loaded, scrolled and refreshed the Bilibili
+homepage. It remained live for at least 11 minutes without the former Scudo,
+signal-exit, fork-failure or child-launch log signatures. Shader capability
+warnings and one software-compositor mapping warning still appeared; continued
+visible output was checked separately. This finite check does not establish
+all-site, video-playback or long-term release readiness. The
+[filtered record](mac-firefox-memory.json) retains only method, limits and
+aggregate outcomes. Original traces and page contents remain private.
