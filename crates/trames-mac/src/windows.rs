@@ -408,6 +408,7 @@ mod tests {
         fn trames_ui_test_frame_event(frame: *mut c_void, event: u32);
         fn trames_ui_test_frame_state(frame: *mut c_void) -> u32;
         fn trames_ui_test_frame_drop(frame: *mut c_void);
+        fn trames_ui_test_supersede(a: *mut c_void, b: *mut c_void) -> u32;
     }
     fn frame() -> (*mut c_void, Arc<AtomicUsize>) {
         let dropped = Arc::new(AtomicUsize::new(0));
@@ -449,6 +450,30 @@ mod tests {
             trames_ui_test_frame_drop(frame);
         }
     }
+    #[test]
+    fn newer_scene_retires_stalled_presentation_without_releasing_inflight_gpu_sources() {
+        let (old, old_dropped) = frame();
+        let (pending, pending_dropped) = frame();
+        unsafe {
+            trames_ui_test_frame_event(old, 3);
+            assert_eq!(trames_ui_test_supersede(old, pending), 1);
+            assert_eq!(trames_ui_test_frame_state(old), 1);
+            assert_eq!(old_dropped.load(Ordering::Relaxed), 1);
+            assert_eq!(pending_dropped.load(Ordering::Relaxed), 0);
+            trames_ui_test_frame_event(pending, 3);
+            assert_eq!(trames_ui_test_frame_state(pending), 1);
+            assert_eq!(pending_dropped.load(Ordering::Relaxed), 1);
+            for _ in 0..2 {
+                trames_ui_test_frame_event(old, 1);
+                trames_ui_test_frame_event(pending, 1);
+            }
+            assert_eq!(old_dropped.load(Ordering::Relaxed), 1);
+            assert_eq!(pending_dropped.load(Ordering::Relaxed), 1);
+            trames_ui_test_frame_drop(old);
+            trames_ui_test_frame_drop(pending);
+        }
+    }
+
     #[test]
     fn cancelled_and_skipped_frames_release_only_after_gpu_reads_end() {
         for ending in (2..=5).filter(|n| *n != 3) {

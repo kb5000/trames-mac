@@ -480,3 +480,66 @@ fn one_mapping_change_checks_one_cached_page() {
     assert_eq!(after.retired, before.retired);
     assert_eq!(after.updates - before.updates, 1);
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn serial_and_worker_dispatch_keep_one_snapshot_registration_domain() {
+    use trames_engine::{Cpu as _, SliceOutcome};
+    let mut memory = memory();
+    let mut registry = Registry::default();
+    let mut serial = crate::kernel::Cpu::default();
+    let mut engine = crate::kernel::Engine::default();
+    let (send, receive) = mpsc::sync_channel::<Option<trames_memory::parallel::View>>(0);
+    let (done, joined) = mpsc::sync_channel(0);
+    let worker = std::thread::spawn(move || {
+        let mut executor = Executor::new().unwrap();
+        while let Some(mut view) = receive.recv().unwrap() {
+            let mut task = state();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            loop {
+                assert!(Instant::now() < deadline);
+                if executor
+                    .run_parallel(&mut task, &mut view, Duration::from_millis(2))
+                    .unwrap()
+                    .reason
+                    == ExitReason::Syscall
+                {
+                    break;
+                }
+            }
+            drop(view);
+            done.send(()).unwrap();
+        }
+    });
+    registry.use_hardware();
+    memory.prepare_hardware().unwrap();
+    drop(memory.parallel_view(&mut registry).unwrap());
+    assert_eq!(registry.metrics.full_rebuilds, 1);
+    for round in 0..8 {
+        serial.restore_architectural_state(&state());
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            assert!(Instant::now() < deadline);
+            match serial.run_coordinated(&mut engine, &mut memory, &mut registry, 4096) {
+                SliceOutcome::Syscall { .. } => break,
+                SliceOutcome::Yield { .. } => {}
+                outcome => panic!("unexpected serial outcome: {outcome:?}"),
+            }
+        }
+        let mut view = memory.parallel_view(&mut registry).unwrap();
+        view.enable_hardware();
+        send.send(Some(view)).unwrap();
+        joined.recv_timeout(Duration::from_secs(5)).unwrap();
+        memory.commit_parallel().unwrap();
+        assert_eq!(
+            u64::from_le_bytes(memory.read_array(0x20000).unwrap()),
+            17 + round * 2
+        );
+        assert_eq!(
+            registry.metrics.full_rebuilds, 1,
+            "CPU dispatch changes cannot rebuild the address space"
+        );
+    }
+    send.send(None).unwrap();
+    worker.join().unwrap();
+}

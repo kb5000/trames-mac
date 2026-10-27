@@ -368,3 +368,62 @@ release physical RAM. Cache/history overflow has an explicit conservative path.
 `TRAMES_MAC_INPUT_TRACE` enables local native input/title timestamps only when
 requested; logs contain key codes/titles and belong in private ignored output.
 Normal runs leave this diagnostic disabled.
+
+
+### Resource scope and serial/worker handoff (2026-10-27)
+
+The next round removes namespace/disk work from anonymous inodes and scopes
+linked resize persistence to its owning filesystem. Timer discovery indexes
+live timer objects instead of walking unrelated FDs on every scheduling query.
+Canonical direct data frames update content metadata without rebuilding mapping
+indices. Most importantly, serial and worker CPU dispatch now share the session
+registration domain: changing the runnable CPU count no longer discards a VM's
+complete View through a code/alias-domain mismatch.
+
+The same original Firefox, warm isolated profile, offline page, four CPUs and
+4 GiB logical budget produced these sequential observations:
+
+| Mouse release to JavaScript title acknowledgement | Median, six clicks |
+| --- | ---: |
+| Previous main (`dc508fa`, runtime `c47078b`) | 572 ms |
+| Anonymous-inode/filesystem ownership separation | 507 ms |
+| Plus direct-frame refresh and timer index | 430 ms |
+| Plus shared serial/worker registration domain | 54 ms |
+
+The final six samples were 270, 52, 66, 56, 50 and 53 ms, a 10.51x median
+improvement over this round's baseline. Key-to-title samples were 32, 47 and
+37 ms. Second-page title acknowledgement and clean shutdown also passed.
+These are small warm-profile samples, not a native-browser comparison or a
+cold-start/P95 claim. They exclude drawable presentation and automation latency.
+
+Exploratory CPU samples after domain handoff place View preparation at 9.85%
+(360 ms sampled CPU), versus 39.00% (3,815 ms) in the immediately preceding
+variant. Full-frame preparation and tree insertion no longer dominate the hot
+leaves. The recordings do not represent identical progress, so those totals are
+bottleneck evidence, not an independent throughput factor. The filtered
+[measurement record](mac-firefox-memory.json) retains all four stages.
+
+Signed regression coverage alternates serial execution and a real worker
+thread eight times while requiring one complete snapshot build and correct
+canonical data. Shared-runtime local workflow checks passed in a clean product
+copy, excluding the paused IPC experiment. Mac local workflow checks, 14 signed
+HVF tests, the signed product pressure test and three Linux SMP/paging cases
+passed. Memory passed 122 unit tests; VFS passed 318 with one existing ignore.
+iPad FFI compiled; interpreter kernel conformance passed 194 with three existing
+ignores. Only six sandbox-blocked loopback tests were retried with local socket
+access; the other 188 passes were reused.
+
+Window diagnostics exposed two GPU-complete frames waiting indefinitely for
+screen callbacks. A newer scene can now supersede a capped queue: cancelled
+frames never acknowledge presentation, and their source leases remain until
+GPU reads finish. A lifecycle regression verifies delayed completion and late
+screen callbacks release each source exactly once. The existing opt-in window
+trace records GPU completion and screen callback state.
+
+Foreground visual acceptance for this presenter change remains pending: the
+Trames macOS desktop was not the active console user session, and captured
+content could stay on an old frame or skip presentation. The CPU/input results
+were collected before the presenter change and cannot prove displayed-frame
+latency. No workaround treats an offscreen/skipped drawable as presented.
+Further display lifecycle validation must use the actual Trames desktop before
+claiming near-native or release-ready Firefox GUI performance.

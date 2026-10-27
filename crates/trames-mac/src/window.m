@@ -44,11 +44,17 @@ static void wake(CFRunLoopSourceRef source) { CFRunLoopSourceSignal(source); CFR
     trames_ui_frame_release(lease,shown,(uint32_t)(NSProcessInfo.processInfo.systemUptime*1000));
     wake(_source);
 }
-- (void)gpuDone:(BOOL)success {[_lock lock];_gpuDone=YES;_error=!success;_cancelled|=!success;[self finishLocked];}
-- (void)shown:(BOOL)success {[_lock lock];if(_pending)_pending--;_cancelled|=!success;[self finishLocked];}
+- (void)gpuDone:(BOOL)success {[_lock lock];if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac frame: gpu=%d pending=%lu cancelled=%d\n",success,(unsigned long)_pending,_cancelled);_gpuDone=YES;_error=!success;_cancelled|=!success;[self finishLocked];}
+- (void)shown:(BOOL)success {[_lock lock];if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac frame: shown=%d pending=%lu gpu=%d\n",success,(unsigned long)_pending,_gpuDone);if(_pending)_pending--;_cancelled|=!success;[self finishLocked];}
 - (void)cancel {[_lock lock];_cancelled=YES;[self finishLocked];}
 - (void)dealloc { if(_source)CFRelease(_source); }
 @end
+// A newer scene may supersede drawables whose screen callbacks never arrive
+// (for example, a skipped/offscreen frame). Cancel acknowledgement, retaining
+// every source lease until its GPU reads finish. No timer or polling is needed.
+static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
+    for(TramesFrame *frame in [frames copy]){[frame cancel];if(frame.finished)[frames removeObject:frame];}
+}
 @interface TramesCanvas : NSView
 @property(weak) TramesFamily *family;
 @property NSPoint origin;
@@ -331,6 +337,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         if(info->interaction_serial && info->interaction_serial!=family.interactionSerial){family.interactionSerial=info->interaction_serial;if(family.buttonDown){family.dragEdges=info->interaction_edges?info->interaction_edges:16;[family drag];}}
         if(info->mode==1 || ![family isVisible])return 0;
         if(!family.dirty && family.lastRevision==info->revision)return 0;
+        if(family.frames.count>=2 && family.lastRevision!=info->revision)supersede_frames(family.frames);
         if(family.frames.count>=2)return 0;
         NSMutableArray<TramesCanvas *> *views=[NSMutableArray arrayWithObject:family.canvas];
         NSMutableSet<NSNumber *> *visible=[NSMutableSet new];NSRect root=family.canvas.bounds;
@@ -416,3 +423,5 @@ void *trames_ui_test_frame(void *lease,unsigned count){
 void trames_ui_test_frame_event(void *pointer,unsigned event){TramesFrame *frame=(__bridge TramesFrame *)pointer;switch(event){case 1:[frame shown:YES];break;case 2:[frame shown:NO];break;case 3:[frame gpuDone:YES];break;case 4:[frame gpuDone:NO];break;case 5:[frame cancel];break;}}
 unsigned trames_ui_test_frame_state(void *pointer){TramesFrame *frame=(__bridge TramesFrame *)pointer;return (frame.finished?1:0)|(frame.presented?2:0);}
 void trames_ui_test_frame_drop(void *pointer){id frame=CFBridgingRelease(pointer);(void)frame;}
+
+unsigned trames_ui_test_supersede(void *a,void *b){NSMutableArray *frames=[NSMutableArray arrayWithObjects:(__bridge TramesFrame *)a,(__bridge TramesFrame *)b,nil];supersede_frames(frames);return (unsigned)frames.count;}

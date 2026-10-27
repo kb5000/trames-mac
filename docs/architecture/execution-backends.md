@@ -352,3 +352,15 @@ changes also require an iPad target check and relevant interpreter/native peers;
 HVF-specific mapping tests and AppKit tests stay on Mac. Reuse unchanged passing
 scopes. This documentation change adds no execution backend, device capability
 or unsafe memory implementation; raw experiments remain in ignored local output.
+
+
+### One registration domain across dispatch modes
+
+The common session supplies its `parallel::Registry` to the serial hardware
+CPU hook as well as worker View preparation. The Mac CPU uses that registry
+when admitting a solo execution View, then commits normally at the joined
+boundary. Its standalone `Executor::run` keeps an independent registry for
+non-session callers. Runnable-count transitions therefore preserve mapping
+metadata and code/alias ownership instead of rebuilding every page. The default
+common hook calls the interpreter's original direct Memory execution, so this
+backend-specific admission does not alter the iPad CPU path.

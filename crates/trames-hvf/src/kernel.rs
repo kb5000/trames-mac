@@ -181,6 +181,36 @@ impl trames_engine::Cpu for Cpu {
         );
         self.outcome(result, memory)
     }
+    fn run_coordinated(
+        &mut self,
+        engine: &mut Engine,
+        memory: &mut Memory,
+        registry: &mut trames_memory::parallel::Registry,
+        _: u64,
+    ) -> SliceOutcome {
+        if engine.executor.is_none() {
+            match Executor::new() {
+                Ok(executor) => engine.executor = Some(executor),
+                Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
+            }
+        }
+        let result = (|| {
+            Self::prepare_hardware_memory(memory, registry)?;
+            let mut view = memory
+                .parallel_view(registry)
+                .ok_or(Error::Unsupported("hardware view admission"))?;
+            view.enable_hardware();
+            let result = engine.executor.as_mut().unwrap().run_parallel(
+                &mut self.state,
+                &mut view,
+                Duration::from_millis(2),
+            );
+            drop(view);
+            memory.commit_parallel()?;
+            result
+        })();
+        self.outcome(result, memory)
+    }
     fn prepare_hardware_memory(
         memory: &mut Memory,
         registry: &mut trames_memory::parallel::Registry,

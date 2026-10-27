@@ -139,5 +139,258 @@
     "A final metrics-only filter excludes dead weak aliases from mapped-byte reporting; disabled-metrics Firefox execution is unchanged."
   ],
   "measured_mac_source_diff_sha256": "37127f7b4fe01fb1844dbf50441bcef4100fe8385a1544e5063e7a0c07a35fdc",
-  "shipped_mac_source_diff_sha256": "0e6115257b2ac0236fd3ac613eae860d4546f377165279b28ebd1f9d2bd17795"
+  "shipped_mac_source_diff_sha256": "0e6115257b2ac0236fd3ac613eae860d4546f377165279b28ebd1f9d2bd17795",
+  "resource_scope_round_2026_10_27": {
+    "baseline_mac_revision": "dc508fa1fda1da4ced7207ec97fb242736ffb56d",
+    "baseline_runtime_revision": "c47078ba2ab94c6eece70da66e59eab7005bf1c1",
+    "measured_runtime_revision": "be0280a813e8e52fb5db170821929272f8aeb4fc",
+    "method": "Same original Firefox, isolated warm profile/store, offline JS/Canvas page, 4 CPUs, 4096 MiB logical memory. Sequential six-click runs with native release-to-JS-title timing, excludes drawable presentation and automation round trips. Browser code/settings unchanged.",
+    "stages": {
+      "before": {
+        "click_ms": [
+          519.473,
+          436.033,
+          580.921,
+          905.726,
+          905.027,
+          562.544
+        ],
+        "median_ms": 571.7325000000001,
+        "key_ms": [
+          740.214,
+          498.719,
+          686.857
+        ]
+      },
+      "after-vfs": {
+        "click_ms": [
+          411.292,
+          395.981,
+          553.372,
+          855.568,
+          502.539,
+          510.568
+        ],
+        "median_ms": 506.5535,
+        "key_ms": [
+          545.562,
+          640.415,
+          457.611
+        ]
+      },
+      "after-full": {
+        "click_ms": [
+          503.103,
+          299.574,
+          410.272,
+          703.161,
+          449.268,
+          69.217
+        ],
+        "median_ms": 429.77,
+        "key_ms": [
+          574.56,
+          675.976,
+          646.565
+        ],
+        "note": "Six valid clicks after layout stabilized, counts 2\u20137; exclude earlier misses while a Firefox notification shifted layout."
+      },
+      "after-domain": {
+        "click_ms": [
+          270.182,
+          52.401,
+          66.221,
+          56.06,
+          49.902,
+          52.771
+        ],
+        "median_ms": 54.4155,
+        "key_ms": [
+          31.665,
+          47.046,
+          37.176
+        ]
+      }
+    },
+    "cpu_method": "Exploratory 15-second Time Profiler running-thread samples; windows do not have matched progress/cache state and do not establish a throughput factor. Filtered categories only; raw frames/addresses/logs remain private.",
+    "cpu": {
+      "before": {
+        "recording_seconds": 15.376074917,
+        "sampled_cpu_ms": 6037.0,
+        "categories": {
+          "other_host_work": {
+            "ms": 3495.0,
+            "percent": 57.89
+          },
+          "guest_memory_other": {
+            "ms": 1291.0,
+            "percent": 21.38
+          },
+          "parallel_view_preparation": {
+            "ms": 922.0,
+            "percent": 15.27
+          },
+          "linux_syscall_other": {
+            "ms": 251.0,
+            "percent": 4.16
+          },
+          "page_mapping_other": {
+            "ms": 41.0,
+            "percent": 0.68
+          },
+          "wait_boundary_other": {
+            "ms": 29.0,
+            "percent": 0.48
+          },
+          "vcpu_run": {
+            "ms": 7.0,
+            "percent": 0.12
+          },
+          "hv_protect": {
+            "ms": 1.0,
+            "percent": 0.02
+          }
+        }
+      },
+      "after-vfs": {
+        "recording_seconds": 15.294999917,
+        "sampled_cpu_ms": 7101.0,
+        "categories": {
+          "other_host_work": {
+            "ms": 2906.0,
+            "percent": 40.92
+          },
+          "guest_memory_other": {
+            "ms": 2064.0,
+            "percent": 29.07
+          },
+          "parallel_view_preparation": {
+            "ms": 1609.0,
+            "percent": 22.66
+          },
+          "linux_syscall_other": {
+            "ms": 247.0,
+            "percent": 3.48
+          },
+          "page_mapping_other": {
+            "ms": 99.0,
+            "percent": 1.39
+          },
+          "vcpu_run": {
+            "ms": 91.0,
+            "percent": 1.28
+          },
+          "hv_protect": {
+            "ms": 54.0,
+            "percent": 0.76
+          },
+          "wait_boundary_other": {
+            "ms": 31.0,
+            "percent": 0.44
+          }
+        }
+      },
+      "after-full": {
+        "recording_seconds": 15.332999334,
+        "sampled_cpu_ms": 9783.0,
+        "categories": {
+          "guest_memory_other": {
+            "ms": 3973.0,
+            "percent": 40.61
+          },
+          "parallel_view_preparation": {
+            "ms": 3815.0,
+            "percent": 39.0
+          },
+          "other_host_work": {
+            "ms": 1045.0,
+            "percent": 10.68
+          },
+          "hv_protect": {
+            "ms": 356.0,
+            "percent": 3.64
+          },
+          "page_mapping_other": {
+            "ms": 280.0,
+            "percent": 2.86
+          },
+          "vcpu_run": {
+            "ms": 149.0,
+            "percent": 1.52
+          },
+          "linux_syscall_other": {
+            "ms": 132.0,
+            "percent": 1.35
+          },
+          "wait_boundary_other": {
+            "ms": 33.0,
+            "percent": 0.34
+          }
+        }
+      },
+      "after-domain": {
+        "recording_seconds": 15.358002833,
+        "sampled_cpu_ms": 3655.0,
+        "categories": {
+          "other_host_work": {
+            "ms": 1715.0,
+            "percent": 46.92
+          },
+          "guest_memory_other": {
+            "ms": 411.0,
+            "percent": 11.24
+          },
+          "parallel_view_preparation": {
+            "ms": 360.0,
+            "percent": 9.85
+          },
+          "linux_syscall_other": {
+            "ms": 344.0,
+            "percent": 9.41
+          },
+          "hv_protect": {
+            "ms": 314.0,
+            "percent": 8.59
+          },
+          "vcpu_run": {
+            "ms": 309.0,
+            "percent": 8.45
+          },
+          "page_mapping_other": {
+            "ms": 134.0,
+            "percent": 3.67
+          },
+          "wait_boundary_other": {
+            "ms": 68.0,
+            "percent": 1.86
+          }
+        }
+      }
+    },
+    "validation": {
+      "shared_runtime_local_workflow": true,
+      "memory_unit_tests": 122,
+      "vfs_unit_tests": 318,
+      "vfs_existing_ignored": 1,
+      "signed_hvf_tests": 14,
+      "signed_product_pressure_tests": 1,
+      "linux_smp_paging_cases": 3,
+      "ipad_ffi_target_compiled": true,
+      "ipad_interpreter_conformance_passes": 194,
+      "ipad_existing_ignored": 3,
+      "loopback_sandbox_retries": 6
+    },
+    "presentation": {
+      "measured_latency_includes_presenter": false,
+      "superseded_queue_regression_passed": true,
+      "foreground_visual_acceptance": "pending: test desktop was not the console user session; do not infer display latency from JS acknowledgements",
+      "note": "Presenter backpressure change and opt-in callback diagnostics were added after the CPU/input runs. No new end-to-end display latency claim."
+    },
+    "limits": [
+      "Small sequential warm-profile observation, no native browser baseline, no cold start or tail percentile claim.",
+      "Input acknowledgement and actual drawable presentation are separate acceptance gates.",
+      "No browser security setting was changed."
+    ],
+    "median_ratio": 10.51
+  }
 }
