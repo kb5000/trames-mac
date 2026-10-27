@@ -44,9 +44,10 @@ This does not cap all process RSS. See [hardware execution and paging](docs/arch
 for ownership, temporary backing storage, remaining fork costs and repeatable
 hardware acceptance.
 
-Wayland applications open native Mac windows on demand. Console-only sessions
-keep AppKit and Metal uninitialized. Closing the last window leaves the Linux
-terminal session running; `--no-windows` disables the display service explicitly.
+Wayland applications open native Mac windows on demand. CPU-only console sessions
+leave the presenter uninitialized. Closing the last window leaves the Linux
+terminal session running. `--no-windows` runs the shared kernel directly without
+the Wayland service, presenter run-loop source or separate session thread.
 Build with `scripts/build-mac.sh` and keep its adjacent `Trames.app` bundle beside
 the CLI executable. The bundle supplies macOS application identity and signing;
 the CLI keeps the same PID and standard streams when entering it.
@@ -64,6 +65,16 @@ Physical keyboard, pointer, scroll, native close/zoom/minimize, and client-side
 move/resize requests use the common Wayland seat and shell. Host clipboard and
 IME integration, and the HVF external GPU buffer bridge, remain follow-up work.
 See [native window ownership and validation](docs/validation/mac-windows.md).
+
+Experimental native Vulkan compute and offscreen graphics are available with
+`--vulkan`, independently of windows. Use `--no-windows --vulkan` for a compute
+server. The guest needs the shared Trames ICD and normal Vulkan loader; the host
+needs a compatible native Vulkan library (`TRAMES_VULKAN_LIBRARY` can select a
+Mac MoltenVK dylib). These binaries are not automatically installed or bundled
+by this checkpoint. The shared runtime still owns authorization, resources and
+waits. General zero-copy device-buffer mapping, NPU/Core ML and on-screen Vulkan
+acceptance remain follow-up work. See the
+[native-device checkpoint](docs/validation/mac-windows.md#native-device-transport-checkpoint-2026-10-27).
 
 Hardware acceptance on a real Apple Silicon host:
 

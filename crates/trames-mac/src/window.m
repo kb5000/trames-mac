@@ -263,6 +263,7 @@ static TramesCanvas *canvas(TramesFamily *family,NSRect rect,NSPoint origin){
     TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
 }
 void *trames_ui_create(const char *shader){
+    if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac windows: main run-loop source created\n");
     TramesUI *ui=[TramesUI new];ui.shader=[NSString stringWithUTF8String:shader];
     CFRunLoopSourceContext context={0};context.info=(__bridge void *)ui;context.perform=source_perform;
     ui.source=CFRunLoopSourceCreate(NULL,0,&context);if(!ui.source)return NULL;

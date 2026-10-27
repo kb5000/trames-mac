@@ -39,6 +39,7 @@ try:
         assert result.returncode == 0, result.stderr
         assert result.stdout == b'console-ok\n', result.stdout
         assert b'AppKit' not in result.stderr, result.stderr
+        assert (b'main run-loop source created' in result.stderr) == (not flags), result.stderr
         rows.append(dict(name='console' + ('-disabled' if flags else '-automatic'), passed=True))
     command = ('tar -xf /tmp/libs.tar -C /; '
                'for cycle in 1 2 3; do /tmp/client 120; echo cycle:$cycle; sleep 1; done; '

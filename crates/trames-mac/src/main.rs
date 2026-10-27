@@ -28,7 +28,18 @@ fn main() {
             }
         }
     }
-    match windows::run() {
+    use std::io::IsTerminal;
+    let result = session::Command::parse(std::env::args().skip(1), std::io::stdin().is_terminal())
+        .map_err(|e| e.to_string())
+        .and_then(|command| match command {
+            None => Ok(0),
+            Some(command) if !command.windows => {
+                // No presenter/run-loop source or separate session thread for servers.
+                session::run(None, command).map_err(|e| e.to_string())
+            }
+            Some(command) => windows::run(command),
+        });
+    match result {
         Ok(code) => std::process::exit(code as i32),
         Err(error) => {
             eprintln!("trames-mac: {error}");

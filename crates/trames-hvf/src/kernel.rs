@@ -3,12 +3,13 @@
 use crate::{Error, Executor};
 use std::time::Duration;
 use trames_engine::{CpuFault, DecodeStats, SliceOutcome};
-use trames_execution::{Aarch64State, ExitReason, Features, Registers};
-use trames_memory::{parallel::View, Memory, MemoryError};
+use trames_execution::{Aarch64State, ExecutionExit, ExitReason, Features, Registers};
+use trames_memory::{parallel::View, CpuMemory, Memory, MemoryError};
 
 #[derive(Clone, Default)]
 pub struct Cpu {
     pub state: Aarch64State,
+    vulkan_calls: bool,
 }
 
 #[derive(Default)]
@@ -19,6 +20,47 @@ pub struct Engine {
 impl Engine {
     pub fn mapped_bytes(&self) -> usize {
         self.executor.as_ref().map_or(0, Executor::mapped_bytes)
+    }
+}
+
+impl Cpu {
+    fn outcome(
+        &self,
+        result: Result<ExecutionExit, Error>,
+        memory: &impl CpuMemory,
+    ) -> SliceOutcome {
+        match result {
+            Ok(exit) => match exit.reason {
+                ExitReason::Syscall => SliceOutcome::Syscall { instructions: 0 },
+                ExitReason::Yield => SliceOutcome::Yield { instructions: 0 },
+            },
+            Err(error) => {
+                if self.vulkan_calls
+                    && self.state.x(16) == trames_accel::native::VULKAN_PROFILE
+                    && matches!(&error, Error::Fault { pc, syndrome, .. }
+                        if *pc == self.state.pc && syndrome >> 26 == 0)
+                {
+                    // HLT from EL0 is undefined under HVF. Recognize only the
+                    // negotiated opcode/profile; the common registry still
+                    // authorizes the complete five-word stub and operation.
+                    match memory.fetch_u32(self.state.pc) {
+                        Ok(trames_accel::native::INSTRUCTION) => {
+                            return SliceOutcome::NativeCall {
+                                instructions: 0,
+                                pc: self.state.pc,
+                                module: self.state.x(16),
+                                function: self.state.x(17),
+                            };
+                        }
+                        Err(error) => {
+                            return SliceOutcome::Fault(fault(&self.state, Error::Memory(error)));
+                        }
+                        _ => {}
+                    }
+                }
+                SliceOutcome::Fault(fault(&self.state, error))
+            }
+        }
     }
 }
 
@@ -91,6 +133,7 @@ impl trames_engine::Cpu for Cpu {
                 sp,
                 ..Default::default()
             },
+            vulkan_calls: false,
         }
     }
     fn sp(&self) -> u64 {
@@ -115,7 +158,7 @@ impl trames_engine::Cpu for Cpu {
         assert!(!enabled, "HVF executes the original native instructions");
     }
     fn set_vulkan_calls(&mut self, enabled: bool) {
-        assert!(!enabled, "HVF Vulkan bridge is not enabled");
+        self.vulkan_calls = enabled;
     }
     fn clear_exclusive(&mut self) {}
     fn fault_retired(&self) -> u64 {
@@ -131,17 +174,12 @@ impl trames_engine::Cpu for Cpu {
                 Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
             }
         }
-        match engine.executor.as_mut().unwrap().run(
+        let result = engine.executor.as_mut().unwrap().run(
             &mut self.state,
             memory,
             Duration::from_millis(2),
-        ) {
-            Ok(exit) => match exit.reason {
-                ExitReason::Syscall => SliceOutcome::Syscall { instructions: 0 },
-                ExitReason::Yield => SliceOutcome::Yield { instructions: 0 },
-            },
-            Err(error) => SliceOutcome::Fault(fault(&self.state, error)),
-        }
+        );
+        self.outcome(result, memory)
     }
     fn prepare_hardware_memory(
         memory: &mut Memory,
@@ -165,23 +203,156 @@ impl trames_engine::Cpu for Cpu {
                 Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
             }
         }
-        match engine.executor.as_mut().unwrap().run_parallel(
+        let result = engine.executor.as_mut().unwrap().run_parallel(
             &mut self.state,
             memory,
             Duration::from_millis(2),
-        ) {
-            Ok(exit) => match exit.reason {
-                ExitReason::Syscall => SliceOutcome::Syscall { instructions: 0 },
-                ExitReason::Yield => SliceOutcome::Yield { instructions: 0 },
-            },
-            Err(error) => SliceOutcome::Fault(fault(&self.state, error)),
-        }
+        );
+        self.outcome(result, memory)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use trames_engine::Cpu as _;
+
+    fn native_stub() -> (Cpu, Memory) {
+        let mut memory = Memory::default();
+        memory
+            .map(0x1000, 4096, trames_memory::Permissions::RW)
+            .unwrap();
+        for (index, word) in [
+            0xd28000d0u32,
+            0xf2a00030,
+            0xd2800031,
+            trames_accel::native::INSTRUCTION,
+            0xd65f03c0,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            memory
+                .write_array(0x1000 + index as u64 * 4, word.to_le_bytes())
+                .unwrap();
+        }
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RX)
+            .unwrap();
+        let mut cpu = Cpu::new(0x100c, 0);
+        cpu.set_x(16, trames_accel::native::VULKAN_PROFILE);
+        cpu.set_x(17, 1);
+        (cpu, memory)
+    }
+    fn undefined(pc: u64) -> Result<ExecutionExit, Error> {
+        Err(Error::Fault {
+            pc,
+            address: 0,
+            syndrome: 0,
+        })
+    }
+    #[test]
+    fn native_transport_is_opt_in_and_keeps_common_authorization() {
+        let (mut cpu, mut memory) = native_stub();
+        assert!(matches!(
+            cpu.outcome(undefined(cpu.pc()), &memory),
+            SliceOutcome::Fault(CpuFault::Trap { signal: 4, .. })
+        ));
+        cpu.set_vulkan_calls(true);
+        assert!(matches!(
+            cpu.outcome(undefined(cpu.pc()), &memory),
+            SliceOutcome::NativeCall {
+                pc: 0x100c,
+                module: 0x10006,
+                function: 1,
+                instructions: 0
+            }
+        ));
+        let mut registry = trames_accel::native::Registry::default();
+        assert!(registry
+            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+            .is_ok());
+        // A matching HLT is transport only; a modified prefix grants no host authority.
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RW)
+            .unwrap();
+        memory
+            .write_array(0x1000, 0xd503201fu32.to_le_bytes())
+            .unwrap();
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RX)
+            .unwrap();
+        assert!(registry
+            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+            .is_err());
+        cpu.set_x(16, trames_accel::native::PROFILE);
+        assert!(matches!(
+            cpu.outcome(undefined(cpu.pc()), &memory),
+            SliceOutcome::Fault(_)
+        ));
+    }
+    #[test]
+    fn native_transport_preserves_other_traps_and_execute_permission() {
+        let (mut cpu, mut memory) = native_stub();
+        cpu.set_vulkan_calls(true);
+        assert!(matches!(
+            cpu.outcome(
+                Err(Error::Fault {
+                    pc: cpu.pc(),
+                    address: 0,
+                    syndrome: 0x3c << 26
+                }),
+                &memory
+            ),
+            SliceOutcome::Fault(CpuFault::Trap { signal: 5, .. })
+        ));
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RW)
+            .unwrap();
+        assert!(matches!(
+            cpu.outcome(undefined(cpu.pc()), &memory),
+            SliceOutcome::Fault(CpuFault::Memory { .. })
+        ));
+        memory
+            .write_array(0x100c, 0xd4400000u32.to_le_bytes())
+            .unwrap();
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RX)
+            .unwrap();
+        assert!(matches!(
+            cpu.outcome(undefined(cpu.pc()), &memory),
+            SliceOutcome::Fault(CpuFault::Trap { signal: 4, .. })
+        ));
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn hardware_native_call_returns_through_shared_dispatch_boundary() {
+        let (mut cpu, memory) = native_stub();
+        let mut memory = memory;
+        cpu.set_pc(0x1000);
+        cpu.set_vulkan_calls(true);
+        let mut engine = Engine::default();
+        let result = loop {
+            let result = cpu.run(&mut engine, &mut memory, u64::MAX);
+            if !matches!(result, SliceOutcome::Yield { .. }) {
+                break result;
+            }
+        };
+        assert!(matches!(
+            result,
+            SliceOutcome::NativeCall {
+                pc: 0x100c,
+                module: 0x10006,
+                function: 1,
+                ..
+            }
+        ));
+        let mut registry = trames_accel::native::Registry::default();
+        registry
+            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+            .unwrap();
+    }
+
     #[test]
     fn privileged_system_register_access_delivers_guest_sigill() {
         let state = Aarch64State {

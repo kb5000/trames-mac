@@ -8,7 +8,8 @@ when the last graphical client closes.
 Build with `bash scripts/build-mac.sh`, keeping the generated `Trames.app` beside
 `trames-mac-run`. The minimal agent bundle provides AppKit identity and the
 existing ad-hoc Hypervisor entitlement. Launch through the CLI as usual. AppKit
-and Metal initialize only on the first mapped window. `--no-windows` disables the
+and the Metal presenter initialize only on the first mapped window. Native
+compute can initialize its own driver without a window. `--no-windows` disables the
 Wayland service; console-only sessions also avoid graphics initialization with
 the default automatic mode.
 
@@ -242,3 +243,73 @@ gates. Future comparisons must repeat the same CPU measurements and separately
 measure successful input-to-update latency. No Firefox speedup is claimed by
 this baseline. Raw Instruments traces and stacks remain in ignored local build
 output; only this filtered summary is published.
+
+## Native device transport checkpoint (2026-10-27)
+
+The Mac HVF frontend now recognizes the opt-in Vulkan NativeCall profile and
+returns through the same shared registry, Vulkan backend and task waits used by
+iPad. Full five-word stub/capability/operation authorization remains in the
+common runtime. Other HLT/BRK and execute-permission failures retain their guest
+fault behavior. Pure libc acceleration remains disabled on hardware execution.
+No complete Linux kernel or virtual GPU is involved.
+
+The unchanged Linux AArch64 fixtures and guest ICD were reused from the verified
+iPad/Linux build outputs. Native execution used the official pinned MoltenVK
+1.4.2 archive (SHA-256 `562a15a29bc358446a56a4091c5f7e08f604184187c1d34f712148b61ef17276`)
+and the host Apple GPU. All cases disabled networking and windows:
+
+| Case | vCPUs | Native calls | Result |
+| --- | ---: | ---: | --- |
+| Disabled capability, nonexistent native library | 4 | 0 | Original loader reports incompatible driver; native library never loaded |
+| Compute, explicit mapping synchronization | 1 | 181 | All rounds and offset/remap checks passed |
+| Same compute with concurrent callers | 4 | 181 | Results and compilation peer progress passed |
+| HOST_COHERENT mappings | 4 | 179 | CPU edits, GPU results and remap persistence passed |
+| Descriptor update templates | 4 | 181 | Compute results passed |
+| Headless rasterization | 4 | 128 | Independent barycentric pixel checks passed |
+
+The five enabled cases total 850 authorized NativeCall attempts in this run.
+Retries can change attempt counts; these are not fixed API-call counts. Each
+device teardown reports 0 MB of
+remaining driver allocation at the driver's reporting granularity. This is a
+bounded lifecycle check, not an exhaustive leak/stability proof. No case created
+the presenter run-loop source or a native window. Transfer counters still show
+upload/download work: `direct_fragment_bytes` means direct checked guest-memory
+fragments, not zero-copy guest-to-GPU aliases. Coherent shadow synchronization
+and ordinary hardware host-borrow protection are unchanged. No metadata-only
+export/unsafe region-guard redesign is included in this checkpoint.
+
+The CLI parses host options before selecting its execution entry. An explicit
+`--no-windows` uses the main thread directly; guest arguments containing that text
+do not alter the host mode. Automatic mode retains the existing on-demand
+presenter. All three two-window lifetimes, each requiring 120 real frame callbacks
+per window, passed again and the parent shell accepted a new input afterward.
+This exposed and fixed a common-kernel stdin wait bug: infinite ppoll/pselect/
+epoll input could otherwise be misdiagnosed as deadlock after the last socket
+closed. The fix queries accepted descriptor identities/armed watches and applies
+to both iPad and Mac.
+
+Local format, strict Clippy, workspace unit tests, boundary checks and signed
+release build passed; all eight explicit hardware/pressure tests passed. The
+shared Linux/VFS tests and 194 kernel conformance tests passed (three existing
+conformance cases remain ignored). The iPad `aarch64-apple-ios` FFI check passed.
+Unchanged CPU/complete-Linux acceptance scopes reuse their existing evidence.
+No iPad CPU/device ABI or guest artifact changes are required. General shared
+native device buffers, NPU/Core ML and on-screen Vulkan remain separate gates.
+
+Reproduce using verified fixture outputs and original libraries:
+
+```sh
+python3 tests/integration/mac-native-devices.py \
+  --runner target/release/trames-mac-run \
+  --rootfs /path/to/verified-Alpine.tar.gz \
+  --fixtures /path/to/vulkan-fixtures \
+  --loader /path/to/linux/libvulkan.so.1 \
+  --icd /path/to/libtrames_vulkan_icd.so \
+  --library /path/to/macOS/libMoltenVK.dylib \
+  --output target/native-device-acceptance
+```
+
+[Filtered input hashes and results](mac-native-devices.json) retain only
+acceptance metadata. Raw native output, display transcripts and experimental
+patches stay in ignored local output. Durations are development acceptance
+observations, not comparative performance claims.

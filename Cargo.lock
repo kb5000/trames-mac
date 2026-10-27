@@ -682,6 +682,7 @@ version = "1.3.0"
 dependencies = [
  "cc",
  "libc",
+ "trames-accel",
  "trames-engine",
  "trames-execution",
  "trames-linux",

@@ -1,0 +1,140 @@
+{
+  "passed": true,
+  "rows": [
+    {
+      "name": "disabled",
+      "cpus": 4,
+      "passed": true,
+      "seconds": 0.046,
+      "calls": 0,
+      "upload_bytes": 0,
+      "download_bytes": 0,
+      "direct_fragment_bytes": 0,
+      "buffered_fragment_bytes": 0
+    },
+    {
+      "name": "compute-one",
+      "cpus": 1,
+      "passed": true,
+      "seconds": 0.0899,
+      "calls": 181,
+      "upload_bytes": 7924,
+      "download_bytes": 135414,
+      "direct_fragment_bytes": 143338,
+      "buffered_fragment_bytes": 0
+    },
+    {
+      "name": "compute-four",
+      "cpus": 4,
+      "passed": true,
+      "seconds": 0.0833,
+      "calls": 181,
+      "upload_bytes": 7924,
+      "download_bytes": 135414,
+      "direct_fragment_bytes": 143338,
+      "buffered_fragment_bytes": 0
+    },
+    {
+      "name": "coherent",
+      "cpus": 4,
+      "passed": true,
+      "seconds": 0.0827,
+      "calls": 179,
+      "upload_bytes": 7930,
+      "download_bytes": 151990,
+      "direct_fragment_bytes": 159920,
+      "buffered_fragment_bytes": 0
+    },
+    {
+      "name": "template",
+      "cpus": 4,
+      "passed": true,
+      "seconds": 0.083,
+      "calls": 181,
+      "upload_bytes": 7924,
+      "download_bytes": 135414,
+      "direct_fragment_bytes": 143338,
+      "buffered_fragment_bytes": 0
+    },
+    {
+      "name": "render-headless",
+      "cpus": 4,
+      "passed": true,
+      "seconds": 0.0698,
+      "calls": 128,
+      "upload_bytes": 0,
+      "download_bytes": 439762,
+      "direct_fragment_bytes": 439762,
+      "buffered_fragment_bytes": 0
+    }
+  ],
+  "inputs": {
+    "usr/lib/libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+    "usr/lib/libtrames_vulkan_icd.so": "1bb5010d2982495b609ac7663be778d6508d965394f4e341eef19e39b3f230b7",
+    "tmp/vulkan-compute": "0882321e7ff66388501e108c56167bfe8a4e7ee14ee0855f2fdc03822f3f77b5",
+    "tmp/vulkan-compute.spv": "46a8dfd85c78c7ef9f39212b0699503b4800184a04b1e8a4bd81b07143a44072",
+    "tmp/vulkan-render": "ab2e925a68468f88aa7ea6e67a131a95c5ab9fb75ab26de2438de4573a6f94b6",
+    "tmp/vulkan-render.vert.spv": "2a710d624169328c6d65cad1c4e55b4ef8e0664e94dbbf650cb2568dc2ea21ef",
+    "tmp/vulkan-render.frag.spv": "2a5b5fd35bb932901571f73b2bcc199b823e036397df505f748a9d55eb8757ce"
+  },
+  "runner_sha256": "9c081330336f2b7efd8a849927289b4bb44d77b246f5947b80c77c2cce5517f0",
+  "library_sha256": "a6ad2265bc514c13e88d3f3ba144b009ca3600709dfb3f007182615c59a43f07",
+  "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+  "runtime_revision": "4e5f027fc338aac07249f48319cc49fd289450ec",
+  "scope": "Mac transport/headless prototype; coherent shadow synchronization unchanged; native pixel presentation separate; no NPU backend.",
+  "code_sha256": {
+    "crates/trames-hvf/src/kernel.rs": "b60d8970a690aa749b128df891d6129fabbc9ee141beeb7d9081325d96a71b11",
+    "crates/trames-mac/src/main.rs": "650703eb05058c27e64f1ef9de9db48e7df8d075130f71d5d53d5f9fa2bbd79a",
+    "crates/trames-mac/src/session.rs": "100b634fa6674823ae2364ef8e2f582b74d429df5b2c2b8b75775aeed4d7205d",
+    "crates/trames-mac/src/windows.rs": "de81157e500dbf5d67f4c0b380618410357348747899722bbd53e130cfe55783",
+    "crates/trames-mac/src/window.m": "449047152931abbfc4da35cd4260750ff0ea71dc3566b2071ab5df216ba1664d",
+    "tests/integration/mac-native-devices.py": "858381386820141b58dcf251d733e5b663b0f8edf6324d146fe981b79cf04e3f"
+  },
+  "validation": {
+    "mac_workflow": "format, strict Clippy, workspace units, boundary, signed release",
+    "signed_hardware": {
+      "passed": true,
+      "runtime_revision": "4e5f027fc338aac07249f48319cc49fd289450ec",
+      "rows": [
+        {
+          "target": "trames-mac-run",
+          "executable_sha256": "edb1a00a4fbe7f5c71b994454b6e1430135c4c3992dfea519a6df5e71f77c520",
+          "exit": 0,
+          "passed_tests": 1
+        },
+        {
+          "target": "trames_hvf",
+          "executable_sha256": "62d375255b3c02c8060ea28073fd0cfbfac8979faaf2c1c2180b00eb686f0fd2",
+          "exit": 0,
+          "passed_tests": 7
+        }
+      ]
+    },
+    "shared_kernel": {
+      "passed": 194,
+      "ignored": 3
+    },
+    "ipad": "trames-ffi aarch64-apple-ios check passed",
+    "windows": {
+      "passed": true,
+      "rows": [
+        {
+          "name": "console-automatic",
+          "passed": true
+        },
+        {
+          "name": "console-disabled",
+          "passed": true
+        },
+        {
+          "name": "six-windows-three-cycles-real-frame-callbacks-cli-survives",
+          "passed": true
+        }
+      ],
+      "runner_sha256": "9c081330336f2b7efd8a849927289b4bb44d77b246f5947b80c77c2cce5517f0",
+      "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+      "client_sha256": "821caf12d9ecb82f3a56340266161ede3285c969b5c91e5fa6658f072a06e658",
+      "libraries_sha256": "4f47394c30721e64709572615f140e11e8aaff3390063675f3e8191b617f9d07"
+    }
+  }
+}

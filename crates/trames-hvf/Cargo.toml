@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 trames-engine = { workspace = true }
+trames-accel = { workspace = true }
 trames-execution = { workspace = true }
 trames-memory = { workspace = true }
 

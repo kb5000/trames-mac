@@ -180,8 +180,9 @@ contains exact source/binary/fixture hashes, CI scope and live RSS measurements.
 Owner constraints: a full Linux-kernel VM is excluded. Thin HVF CPU/MMU execution
 is allowed. The shared userspace Linux kernel and native GPU/NPU API integration
 are defining capabilities. Mac changes must preserve iPad compatibility or stay
-behind isolated execution/product backends. The design below is a recommendation,
-not an implemented guest-memory contract or newly enabled GPU transport.
+behind isolated execution/product backends. The memory/device ownership design
+below remains a target; the first Mac NativeCall transport checkpoint is recorded
+in [local validation](../validation/mac-windows.md#native-device-transport-checkpoint-2026-10-27).
 
 Keep one common Linux/resource implementation. Use the existing iPad interpreter
 and a thin Mac HVF executor as CPU frontends. Native instruction rewriting remains
@@ -245,10 +246,13 @@ or a global native-call lock. Completion wakes the existing task queue. Small
 calls run on the calling worker; blocking/async work releases its execution slot.
 Do not introduce a polling bus or new coordinator/service thread.
 
-The common Vulkan ICD/dispatcher already exists, but Mac HVF explicitly rejects
-enabling Vulkan today. It needs an authenticated NativeCall exit transport into
-the existing common dispatcher and compatible buffer import. Pure libc
-acceleration is separate: original ARM64 libc already runs natively under HVF.
+Mac now offers opt-in `--vulkan` transport into the existing common Vulkan
+ICD/dispatcher. The CPU recognizes the negotiated HLT/profile after a hardware
+exception; the common registry still authorizes the complete stub, capability
+snapshot and operation. Unknown opcodes/profiles retain guest traps. No second
+GPU dispatcher or service thread is introduced. Compatible direct buffer import
+remains follow-up work. Pure libc acceleration is separate: original ARM64 libc
+already runs natively under HVF.
 The existing Vulkan HOST_COHERENT path still uses shadow/baseline synchronization;
 general direct CPU aliasing of native device allocations is not implemented.
 Native texture presentation already has a separate no-readback lease path.
@@ -268,9 +272,11 @@ Native compute and presentation are independent capabilities. A headless GPU/NPU
 container must not require a Wayland server, CAMetalLayer, window, or desktop.
 CPU-only servers should create neither device resources nor presenter resources.
 The current automatic Mac mode defers AppKit/Metal presenter setup until the
-first mapped window. `--no-windows` skips Wayland, but the current binary still
-creates a dormant CF run-loop source and a Linux session thread. A pure server
-entry/build can avoid that setup; it must reuse the same common kernel.
+first mapped window. `--no-windows` now skips Wayland and directly runs the same
+session kernel on the main thread, without creating the presenter CF run-loop
+source or a separate Linux session thread. Frameworks remain linked; this is not
+a claim that all GUI framework pages are absent from the process. Native compute
+initializes its own driver on demand, independently of presentation.
 
 GUI cost should scale with visible changed surfaces: retained SHM/native textures,
 coalesced notifications, real presentation completion and actual input. The

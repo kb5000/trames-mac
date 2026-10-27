@@ -167,89 +167,148 @@ impl Drop for RawTerminal {
     }
 }
 
+pub struct Command {
+    rootfs: Option<String>,
+    storage: Option<String>,
+    imports: Vec<String>,
+    network: trames_vfs::NetworkMode,
+    trace: bool,
+    metrics: bool,
+    timeout: u64,
+    limit: usize,
+    cpus: usize,
+    resident_limit: Option<u64>,
+    pub windows: bool,
+    vulkan: bool,
+    pty: bool,
+    argv: Vec<String>,
+}
+impl Command {
+    pub fn parse(
+        arguments: impl Iterator<Item = String>,
+        pty: bool,
+    ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
+        let mut arguments = arguments.peekable();
+        let mut rootfs = None;
+        let mut storage = None;
+        let mut imports = Vec::new();
+        let mut network = trames_vfs::NetworkMode::Full;
+        let mut trace = false;
+        let mut metrics = false;
+        let mut timeout = 86400;
+        let mut limit = 4usize << 30;
+        let mut cpus = std::thread::available_parallelism()
+            .map_or(1, usize::from)
+            .min(8)
+            .min(trames_hvf::max_parallel_cpus());
+        let mut resident_limit = None;
+        let mut windows = true;
+        let mut vulkan = false;
+        let mut pty = pty;
+        while arguments.peek().is_some_and(|a| a.starts_with("--")) {
+            match arguments.next().unwrap().as_str() {
+                "--rootfs" => rootfs = Some(arguments.next().ok_or("missing --rootfs archive")?),
+                "--storage" => storage = Some(arguments.next().ok_or("missing storage directory")?),
+                "--exec-file" => imports.push(arguments.next().ok_or("missing GUEST=HOST import")?),
+                "--network" => {
+                    network = match arguments.next().as_deref() {
+                        Some("off") => trames_vfs::NetworkMode::Off,
+                        Some("loopback") => trames_vfs::NetworkMode::Loopback,
+                        Some("outbound") => trames_vfs::NetworkMode::Outbound,
+                        Some("full") => trames_vfs::NetworkMode::Full,
+                        _ => return Err("invalid network mode".into()),
+                    }
+                }
+                "--timeout" => timeout = arguments.next().ok_or("missing timeout")?.parse()?,
+                "--cpus" => {
+                    cpus = arguments.next().ok_or("missing CPU count")?.parse()?;
+                    if !(1..=trames_hvf::max_parallel_cpus()).contains(&cpus) {
+                        return Err(format!(
+                            "CPU count must be 1..{}",
+                            trames_hvf::max_parallel_cpus()
+                        )
+                        .into());
+                    }
+                }
+                "--resident-mib" => {
+                    resident_limit = Some(
+                        arguments
+                            .next()
+                            .ok_or("missing resident target")?
+                            .parse::<u64>()?
+                            .checked_mul(1 << 20)
+                            .ok_or("resident target overflow")?,
+                    );
+                }
+                "--memory-mib" => {
+                    limit = arguments
+                        .next()
+                        .ok_or("missing memory limit")?
+                        .parse::<usize>()?
+                        .checked_mul(1 << 20)
+                        .ok_or("memory limit overflow")?
+                }
+                "--no-windows" => windows = false,
+                "--vulkan" => vulkan = true,
+                "--trace" => trace = true,
+                "--metrics" => metrics = true,
+                "--pty" => pty = true,
+                "--no-pty" => pty = false,
+                "--" => break,
+                "--help" => {
+                    println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
+                    return Ok(None);
+                }
+                _ => return Err("unknown option".into()),
+            }
+        }
+        let mut argv: Vec<String> = arguments.collect();
+        if argv.is_empty() && (rootfs.is_some() || storage.is_some()) {
+            argv = vec!["/bin/sh".into(), "-l".into()];
+        }
+        Ok(Some(Self {
+            rootfs,
+            storage,
+            imports,
+            network,
+            trace,
+            metrics,
+            timeout,
+            limit,
+            cpus,
+            resident_limit,
+            windows,
+            vulkan,
+            pty,
+            argv,
+        }))
+    }
+}
 pub fn run(
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
+    command: Command,
 ) -> Result<u8, Box<dyn std::error::Error>> {
-    let mut arguments = std::env::args().skip(1).peekable();
-    let mut rootfs = None;
-    let mut storage = None;
-    let mut imports = Vec::new();
-    let mut network = trames_vfs::NetworkMode::Full;
-    let mut trace = false;
-    let mut metrics = false;
-    let mut timeout = 86400;
-    let mut limit = 4usize << 30;
-    let mut cpus = std::thread::available_parallelism()
-        .map_or(1, usize::from)
-        .min(8)
-        .min(trames_hvf::max_parallel_cpus());
-    let mut resident_limit = None;
-    let mut windows = true;
-    let mut pty = io::stdin().is_terminal();
-    while arguments.peek().is_some_and(|a| a.starts_with("--")) {
-        match arguments.next().unwrap().as_str() {
-            "--rootfs" => rootfs = Some(arguments.next().ok_or("missing --rootfs archive")?),
-            "--storage" => storage = Some(arguments.next().ok_or("missing storage directory")?),
-            "--exec-file" => imports.push(arguments.next().ok_or("missing GUEST=HOST import")?),
-            "--network" => {
-                network = match arguments.next().as_deref() {
-                    Some("off") => trames_vfs::NetworkMode::Off,
-                    Some("loopback") => trames_vfs::NetworkMode::Loopback,
-                    Some("outbound") => trames_vfs::NetworkMode::Outbound,
-                    Some("full") => trames_vfs::NetworkMode::Full,
-                    _ => return Err("invalid network mode".into()),
-                }
-            }
-            "--timeout" => timeout = arguments.next().ok_or("missing timeout")?.parse()?,
-            "--cpus" => {
-                cpus = arguments.next().ok_or("missing CPU count")?.parse()?;
-                if !(1..=trames_hvf::max_parallel_cpus()).contains(&cpus) {
-                    return Err(format!(
-                        "CPU count must be 1..{}",
-                        trames_hvf::max_parallel_cpus()
-                    )
-                    .into());
-                }
-            }
-            "--resident-mib" => {
-                resident_limit = Some(
-                    arguments
-                        .next()
-                        .ok_or("missing resident target")?
-                        .parse::<u64>()?
-                        .checked_mul(1 << 20)
-                        .ok_or("resident target overflow")?,
-                );
-            }
-            "--memory-mib" => {
-                limit = arguments
-                    .next()
-                    .ok_or("missing memory limit")?
-                    .parse::<usize>()?
-                    .checked_mul(1 << 20)
-                    .ok_or("memory limit overflow")?
-            }
-            "--no-windows" => windows = false,
-            "--trace" => trace = true,
-            "--metrics" => metrics = true,
-            "--pty" => pty = true,
-            "--no-pty" => pty = false,
-            "--" => break,
-            "--help" => {
-                println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
-                return Ok(0);
-            }
-            _ => return Err("unknown option".into()),
-        }
-    }
-    let mut argv: Vec<String> = arguments.collect();
-    if argv.is_empty() && (rootfs.is_some() || storage.is_some()) {
-        argv = vec!["/bin/sh".into(), "-l".into()];
-    }
+    let Command {
+        rootfs,
+        storage,
+        imports,
+        network,
+        trace,
+        metrics,
+        timeout,
+        limit,
+        cpus,
+        resident_limit,
+        windows,
+        vulkan,
+        pty,
+        argv,
+    } = command;
     let path = argv
         .first()
         .ok_or("an ELF program or --rootfs is required; use --help")?;
     let options = RuntimeOptions {
+        vulkan_accelerator: vulkan,
         memory_limits: MemoryLimits {
             per_process: limit,
             total: limit,
@@ -345,6 +404,10 @@ pub fn run(
             runtime.metrics.cpu_time.as_micros()
         );
         eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
+        eprintln!("trames mac native: calls={} gpu_compiles={} gpu_wait_us={} upload_bytes={} download_bytes={} direct_bytes={} buffered_bytes={}",
+            runtime.metrics.native.calls, runtime.metrics.gpu_compiles, runtime.metrics.gpu_wait_time.as_micros(),
+            runtime.metrics.gpu_transfers.upload_bytes, runtime.metrics.gpu_transfers.download_bytes,
+            runtime.metrics.gpu_transfers.direct_bytes, runtime.metrics.gpu_transfers.buffered_bytes);
         eprintln!("trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"instruction_count\":null}}", runtime.metrics.syscalls, runtime.metrics.context_switches, runtime.engine.mapped_bytes(), runtime.memory.resident_bytes());
     }
     runtime.linux.vfs.sync()?;
@@ -354,6 +417,25 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn headless_selection_uses_parsed_host_options_only() {
+        let parse = |args: &[&str]| {
+            Command::parse(args.iter().map(|s| (*s).to_owned()), false)
+                .unwrap()
+                .unwrap()
+        };
+        let headless = parse(&["--network", "off", "--no-windows", "--vulkan", "/bin/sh"]);
+        assert!(!headless.windows && headless.vulkan);
+        assert!(parse(&["--storage", "--no-windows", "/bin/sh"]).windows);
+        assert!(parse(&["/bin/echo", "--no-windows"]).windows);
+        assert!(parse(&["--", "/bin/echo", "--no-windows"]).windows);
+        assert!(parse(&["/bin/sh"]).windows);
+        assert!(Command::parse(
+            ["--vulkan", "--unknown"].into_iter().map(str::to_owned),
+            false
+        )
+        .is_err());
+    }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn pressure_notification_only_latches_until_joined_control_reclaims() {

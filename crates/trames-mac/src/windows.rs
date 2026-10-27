@@ -348,7 +348,7 @@ extern "C" fn event(
         Err(_) => bridge.fail("native input callback panicked"),
     }
 }
-pub fn run() -> Result<u8, String> {
+pub fn run(command: super::session::Command) -> Result<u8, String> {
     let shader = CString::new(include_str!("window.metal")).unwrap();
     let native = unsafe { trames_ui_create(shader.as_ptr()) };
     if native.is_null() {
@@ -371,7 +371,7 @@ pub fn run() -> Result<u8, String> {
         .name("trames-linux".into())
         .spawn(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                super::session::run(Some(worker_bridge)).map_err(|e| e.to_string())
+                super::session::run(Some(worker_bridge), command).map_err(|e| e.to_string())
             }))
             .unwrap_or_else(|_| Err("Linux session panicked".into()));
             unsafe {
