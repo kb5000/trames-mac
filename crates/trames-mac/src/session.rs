@@ -11,6 +11,7 @@ struct Output {
     deadline: Instant,
     window: Option<(u16, u16)>,
     pressure_target: Option<u64>,
+    bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
 impl Output {
     fn observe_pressure(&mut self) -> io::Result<()> {
@@ -44,10 +45,12 @@ fn window_size() -> Option<(u16, u16)> {
 impl GuestOutput for Output {
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
-        Ok(Instant::now() >= self.deadline || self.pressure_target.is_some())
+        Ok(self.bridge.as_ref().is_some_and(|b| b.stopped())
+            || Instant::now() >= self.deadline
+            || self.pressure_target.is_some())
     }
     fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
-        if Instant::now() >= self.deadline {
+        if self.bridge.as_ref().is_some_and(|b| b.stopped()) || Instant::now() >= self.deadline {
             return Ok(false);
         }
         self.observe_pressure()?;
@@ -164,7 +167,9 @@ impl Drop for RawTerminal {
     }
 }
 
-pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
+pub fn run(
+    bridge: Option<std::sync::Arc<super::windows::Bridge>>,
+) -> Result<u8, Box<dyn std::error::Error>> {
     let mut arguments = std::env::args().skip(1).peekable();
     let mut rootfs = None;
     let mut storage = None;
@@ -179,6 +184,7 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
         .min(8)
         .min(trames_hvf::max_parallel_cpus());
     let mut resident_limit = None;
+    let mut windows = true;
     let mut pty = io::stdin().is_terminal();
     while arguments.peek().is_some_and(|a| a.starts_with("--")) {
         match arguments.next().unwrap().as_str() {
@@ -223,13 +229,14 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
                     .checked_mul(1 << 20)
                     .ok_or("memory limit overflow")?
             }
+            "--no-windows" => windows = false,
             "--trace" => trace = true,
             "--metrics" => metrics = true,
             "--pty" => pty = true,
             "--no-pty" => pty = false,
             "--" => break,
             "--help" => {
-                println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
+                println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
                 return Ok(0);
             }
             _ => return Err("unknown option".into()),
@@ -293,12 +300,27 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
         vfs.import_executable(b"/program", bytes.clone())?;
         bytes
     };
-    let envp = vec![
+    let server = if windows {
+        Some(vfs.enable_wayland(b"/run/user/0")?)
+    } else {
+        None
+    };
+    if let (Some(bridge), Some(server)) = (&bridge, &server) {
+        bridge.attach(server.clone());
+    }
+    let mut envp = vec![
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".into(),
         "HOME=/root".into(),
         "LANG=C.UTF-8".into(),
         "TERM=xterm-256color".into(),
     ];
+    if server.is_some() {
+        envp.extend([
+            "XDG_RUNTIME_DIR=/run/user/0".into(),
+            "WAYLAND_DISPLAY=wayland-0".into(),
+            "GDK_BACKEND=wayland".into(),
+        ]);
+    }
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
     runtime.cpu_count = cpus;
@@ -311,6 +333,7 @@ pub fn run() -> Result<u8, Box<dyn std::error::Error>> {
     let mut output = Output {
         deadline: Instant::now() + Duration::from_secs(timeout),
         pressure_target: None,
+        bridge,
         window: None,
     };
     let result = runtime.run(&mut output, u64::MAX);
@@ -376,6 +399,7 @@ mod tests {
             deadline: Instant::now() + Duration::from_secs(5),
             window: None,
             pressure_target: None,
+            bridge: None,
         };
         let mut vfs = trames_vfs::Vfs::default();
         trames_hvf::take_memory_pressure().unwrap();

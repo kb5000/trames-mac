@@ -9,7 +9,7 @@ use std::{
         Condvar, Mutex, Weak,
     },
 };
-use trames_memory::{HardwareStorage, HardwareWait};
+use trames_memory::{HardwareStorage, HardwareWait, SharedMapping};
 
 unsafe extern "C" {
     fn trames_hvf_pressure_supported() -> i32;
@@ -105,6 +105,7 @@ pub(super) struct Machine {
     file: Mutex<FileSpace>,
     blocks: Mutex<BTreeMap<u64, Weak<Physical>>>,
     allocation: Mutex<BTreeMap<u64, Weak<Physical>>>,
+    imports: Mutex<BTreeMap<usize, Weak<Physical>>>,
     mapped: AtomicU64,
     outs: AtomicU64,
     ins: AtomicU64,
@@ -141,6 +142,7 @@ impl Machine {
             file: Mutex::new(file),
             blocks: Mutex::new(BTreeMap::new()),
             allocation: Mutex::new(BTreeMap::new()),
+            imports: Mutex::new(BTreeMap::new()),
             mapped: AtomicU64::new(0),
             outs: AtomicU64::new(0),
             ins: AtomicU64::new(0),
@@ -208,6 +210,7 @@ impl Machine {
                 pointer: NonNull::new(ptr.cast()).unwrap(),
                 gpa,
                 offset,
+                external: None,
                 length: self.granule,
                 machine: Arc::downgrade(self),
                 used: AtomicU8::new(0),
@@ -248,6 +251,74 @@ impl Machine {
             }
         }
         drop(allocation);
+        let limit = RESIDENT_LIMIT.load(Ordering::Relaxed);
+        if limit != u64::MAX {
+            self.trim_to(limit, slot.block.gpa)?;
+        }
+        Ok(slot)
+    }
+    pub fn import(
+        self: &Arc<Self>,
+        mapping: SharedMapping,
+    ) -> Result<Arc<dyn HardwareStorage>, Error> {
+        let address = mapping.pointer() as usize;
+        let base = address & !(self.granule - 1);
+        let allocation = mapping.allocation_pointer() as usize;
+        if !address.is_multiple_of(PAGE_SIZE as usize)
+            || base < allocation
+            || base
+                .checked_add(self.granule)
+                .is_none_or(|end| end > allocation.saturating_add(mapping.allocation_len()))
+        {
+            return Err(Error::Unsupported(
+                "shared mapping has no complete host granule",
+            ));
+        }
+        let mut imports = self.imports.lock().unwrap();
+        let block = if let Some(block) = imports.get(&base).and_then(Weak::upgrade) {
+            block
+        } else {
+            imports.retain(|_, p| p.strong_count() != 0);
+            let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
+            if let Err(error) = check(unsafe {
+                trames_hvf_map(std::ptr::null_mut(), base as *mut c_void, gpa, self.granule)
+            }) {
+                unsafe {
+                    trames_hvf_release(self.pointer.as_ptr(), gpa);
+                }
+                return Err(error);
+            }
+            // This original file mapping stays put. Display/GPU readers use raw
+            // pointers under protocol leases; Rust CPU borrows use this gate.
+            let block = Arc::new(Physical {
+                pointer: NonNull::new(base as *mut u8).unwrap(),
+                gpa,
+                offset: 0,
+                external: Some(mapping),
+                length: self.granule,
+                machine: Arc::downgrade(self),
+                used: AtomicU8::new(15),
+                touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
+                gate: Mutex::new(Gate {
+                    executable: 0,
+                    hosts: 0,
+                    mapped: true,
+                    owner: None,
+                    waiters: Vec::new(),
+                }),
+            });
+            self.mapped
+                .fetch_add(self.granule as u64, Ordering::Relaxed);
+            self.blocks
+                .lock()
+                .unwrap()
+                .insert(gpa, Arc::downgrade(&block));
+            imports.insert(base, Arc::downgrade(&block));
+            block
+        };
+        let index = (address - base) / PAGE_SIZE as usize;
+        drop(imports);
+        let slot = Arc::new(Slot { block, index });
         let limit = RESIDENT_LIMIT.load(Ordering::Relaxed);
         if limit != u64::MAX {
             self.trim_to(limit, slot.block.gpa)?;
@@ -415,6 +486,7 @@ struct Physical {
     pointer: NonNull<u8>,
     gpa: u64,
     offset: u64,
+    external: Option<SharedMapping>,
     length: usize,
     machine: Weak<Machine>,
     used: AtomicU8,
@@ -435,10 +507,14 @@ impl Drop for Physical {
             unsafe {
                 trames_hvf_release(vm.pointer.as_ptr(), self.gpa);
             }
-            vm.file.lock().unwrap().free.push(self.offset);
+            if self.external.is_none() {
+                vm.file.lock().unwrap().free.push(self.offset);
+            }
         }
-        unsafe {
-            libc::munmap(self.pointer.as_ptr().cast(), self.length);
+        if self.external.is_none() {
+            unsafe {
+                libc::munmap(self.pointer.as_ptr().cast(), self.length);
+            }
         }
     }
 }
@@ -461,6 +537,10 @@ unsafe impl HardwareStorage for Slot {
     }
     fn is_live(&self) -> bool {
         self.block.machine.strong_count() != 0
+    }
+    fn shared_mapping(&self) -> Option<SharedMapping> {
+        let mapping = self.block.external.as_ref()?;
+        mapping.with_offset(self.pointer() as usize - mapping.allocation_pointer() as usize)
     }
     fn begin_host_access(&self) {
         let mut gate = self.block.gate.lock().unwrap();
@@ -512,6 +592,9 @@ unsafe impl HardwareStorage for Slot {
 }
 impl Drop for Slot {
     fn drop(&mut self) {
+        if self.block.external.is_some() {
+            return;
+        }
         let previous = self
             .block
             .used

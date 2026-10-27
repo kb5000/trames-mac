@@ -11,6 +11,8 @@ path = "src/main.rs"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
 trames-session = { workspace = true }
+trames-wayland = { workspace = true }
+trames-shared = { workspace = true }
 libc = "=0.2.190"
 trames-execution = { workspace = true }
 trames-hvf = { path = "../trames-hvf" }
@@ -19,6 +21,9 @@ trames-memory = { workspace = true }
 trames-elf = { workspace = true }
 trames-vfs = { workspace = true }
 trames-distro = { workspace = true }
+
+[build-dependencies]
+cc = "=1.8.0"
 
 [lints]
 workspace = true

@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-27",
+  "runtime_revision": "ef184a408f10b70fab419fefd85365789a89463b",
+  "full_linux_ci": {
+    "passed": true,
+    "steps": 81,
+    "ipad_revision": "c33b1c82fc2644c58e7ff421260cf2d1f7fd4a73",
+    "runtime_revision": "b0c44d54414dada2b75d60a80d5f397234f211d3",
+    "summary_sha256": "4c2b330e09774c9bd103159e12551c00fba6a82e95da6376c9069411422de903"
+  },
+  "runtime_delta": {
+    "wayland_unit": true,
+    "wayland_strict_clippy": true,
+    "original_c_clients_passed": 5,
+    "ipad_ffi_target": "aarch64-apple-ios",
+    "ipad_ffi_check": true
+  },
+  "mac_hardware": {
+    "passed": true,
+    "runtime_revision": "ef184a408f10b70fab419fefd85365789a89463b",
+    "rows": [
+      {
+        "target": "trames-mac-run",
+        "executable_sha256": "9c3869c3265c93f5c6c2f4e15de3752b11fda03ff5cb85581b1a682b3df7d786",
+        "exit": 0,
+        "passed_tests": 1
+      },
+      {
+        "target": "trames_hvf",
+        "executable_sha256": "677c00f0a7c35f184f284512212984d83cd3eb14411b7fe66687ce6c82271a87",
+        "exit": 0,
+        "passed_tests": 6
+      }
+    ]
+  },
+  "mac_session": {
+    "passed": true,
+    "runner_sha256": "88779da53d8942366b264cdeaf3b51ed089d4af85f6f4ad112ee29822c5c18a7",
+    "fixture_sha256": "685f9c667253bafc9902ade812c24ffcf7454e4b2256ce38aaa42def16b23b2f",
+    "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+    "rows": [
+      {
+        "name": "process-threads",
+        "passed": true
+      },
+      {
+        "name": "shell-processes",
+        "passed": true
+      },
+      {
+        "name": "script",
+        "passed": true
+      },
+      {
+        "name": "storage-write",
+        "passed": true
+      },
+      {
+        "name": "storage-read",
+        "passed": true
+      },
+      {
+        "name": "interactive-job-control-resize-restore",
+        "passed": true
+      }
+    ]
+  },
+  "mac_workspace_tests": true,
+  "mac_strict_clippy": true,
+  "mac_signed_release_build": true,
+  "final_runner_sha256": "8576429c75ef4198e915629cdf6bff53ef156fe7bd31eb9a72c3538f4dd8b2f4",
+  "visual_observations": {
+    "two_windows_frames": 120,
+    "native_zoom_dimensions": [
+      [
+        240,
+        160
+      ],
+      [
+        1920,
+        928
+      ]
+    ],
+    "native_close_keeps_parent_shell": true,
+    "original_weston_terminal_version": "14.0.2-r1",
+    "guest_persistent_file_bytes": "windowok\n"
+  },
+  "pending_desktop_checks": [
+    "root layer input fix",
+    "client-side interactive move and resize",
+    "three native window lifetimes with real presentation callbacks"
+  ],
+  "desktop_blocker": "macOS locked; manual unlock requested",
+  "log_sha256": {
+    "lifetime-tests.log": "5f9972000aa260fb126532598a863ac935b78495b00da7e737f4ad6d0574ce96",
+    "final-clippy.log": "d15ca6b8b2c07470dd6f5f2dbb42cf3a14aea5190baa87dfcc03de5ac0ca0aa5",
+    "final-build.log": "f01024491f6304bae3eb4dd7edbff086945b094d0525123ed5c6e29b53688eac",
+    "wayland-native-full.log": "55f8d9815723e0216e4d35dd8b3d8d1a9c298baf0d2965328fc9c39bd25ba119",
+    "ipad-check.log": "7568d6a21bef14f1fba78893f961b40e1ecffc5f975ede6176048ca06f7ccbe4",
+    "bundled-window.log": "46355e0cfab15625ba59b2ad6e7dc844cbc0d30603a9e0087e158d175c85a6e3",
+    "weston.log": "5092880e0ce73c395e439048bd7d5c1b05dc3d44707781f7a131e52d7ea8123b",
+    "gui-written-file.log": "4cb806bbc22fb7fe280e906f968209c3741fe75fe6016a7145986d017accdd60"
+  }
+}

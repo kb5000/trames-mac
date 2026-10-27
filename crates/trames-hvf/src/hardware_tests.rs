@@ -162,3 +162,73 @@ fn simultaneous_vm_owners_wait_for_last_owner_teardown() {
         thread.join().unwrap();
     }
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn shared_file_pixels_survive_import_eviction_and_vm_replacement() {
+    let mut linux = trames_linux::Linux::new(0);
+    let fd = linux.vfs.memfd_create(b"display-pixels", 0).unwrap();
+    linux.vfs.truncate_fd(fd, 4 * PAGE_SIZE).unwrap();
+    let file = linux.vfs.shared_file(fd).unwrap();
+    let native = file.map(0, (4 * PAGE_SIZE) as usize).unwrap();
+    file.write_at(PAGE_SIZE, &15u64.to_le_bytes()).unwrap();
+    file.write_at(2 * PAGE_SIZE, &15u64.to_le_bytes()).unwrap();
+    let mut memory = memory();
+    memory
+        .map_backed(
+            0x20000,
+            linux
+                .vfs
+                .mapping_pages(fd, 0, 4 * PAGE_SIZE, true, true)
+                .unwrap(),
+            true,
+            Permissions::RW,
+            true,
+        )
+        .unwrap();
+    for expected in [16u64, 18, 20] {
+        let mut executor = Executor::new().unwrap();
+        let mut cpu = state();
+        cpu.registers[0] = 0x21000;
+        svc(&mut executor, &mut cpu, &mut memory);
+        let mapped = paging_stats().mapped_bytes;
+        let mut other = state();
+        other.registers[0] = 0x22000;
+        svc(&mut executor, &mut other, &mut memory);
+        assert_eq!(
+            paging_stats().mapped_bytes,
+            mapped,
+            "neighbor file pages must share their host granule"
+        );
+        assert_eq!(
+            unsafe {
+                native
+                    .pointer()
+                    .add(PAGE_SIZE as usize)
+                    .cast::<u64>()
+                    .read_unaligned()
+            },
+            expected
+        );
+        reclaim(u64::MAX).unwrap();
+        cpu.pc = 0x10000;
+        svc(&mut executor, &mut cpu, &mut memory);
+        other.pc = 0x10000;
+        svc(&mut executor, &mut other, &mut memory);
+        assert_eq!(
+            memory.read_array::<8>(0x21000).unwrap(),
+            (expected + 1).to_le_bytes()
+        );
+        assert_eq!(
+            unsafe {
+                native
+                    .pointer()
+                    .add(2 * PAGE_SIZE as usize)
+                    .cast::<u64>()
+                    .read_unaligned()
+            },
+            expected + 1
+        );
+        drop(executor);
+    }
+}

@@ -44,9 +44,26 @@ This does not cap all process RSS. See [hardware execution and paging](docs/arch
 for ownership, temporary backing storage, remaining fork costs and repeatable
 hardware acceptance.
 
-Wayland protocol services are shared; a native Mac presenter and external GPU
-buffer exports remain separate gates. Windows will be created on demand for
-guest Wayland toplevels, with the terminal session surviving the last window.
+Wayland applications open native Mac windows on demand. Console-only sessions
+keep AppKit and Metal uninitialized. Closing the last window leaves the Linux
+terminal session running; `--no-windows` disables the display service explicitly.
+Build with `scripts/build-mac.sh` and keep its adjacent `Trames.app` bundle beside
+the CLI executable. The bundle supplies macOS application identity and signing;
+the CLI keeps the same PID and standard streams when entering it.
+
+For example, inside the Alpine shell, install a normal Wayland software client:
+
+```sh
+apk add weston-terminal font-dejavu
+weston-terminal &
+```
+
+The host supplies `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`. Shared-memory pixels
+are presented through Metal, with no remote desktop server or complete Linux VM.
+Physical keyboard, pointer, scroll, native close/zoom/minimize, and client-side
+move/resize requests use the common Wayland seat and shell. Host clipboard and
+IME integration, and the HVF external GPU buffer bridge, remain follow-up work.
+See [native window ownership and validation](docs/validation/mac-windows.md).
 
 Hardware acceptance on a real Apple Silicon host:
 

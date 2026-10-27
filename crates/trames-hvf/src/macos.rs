@@ -195,17 +195,27 @@ impl Executor {
         }
         // SAFETY: the scheduler admits every View in hardware mode and joins
         // before coordinator mutation. Canonical exports gate all host borrows.
-        let mut allocation_error = None;
+        let allocation_error = std::cell::Cell::new(None);
         let exported = unsafe {
-            memory.export_hardware_page(va, access, |bytes| {
-                self.machine.allocate(bytes).map_err(|error| {
-                    allocation_error = Some(error);
-                    MemoryError::BackingIo(5)
-                })
-            })
+            memory.export_hardware_page_with_mapping(
+                va,
+                access,
+                |bytes| {
+                    self.machine.allocate(bytes).map_err(|error| {
+                        allocation_error.set(Some(error));
+                        MemoryError::BackingIo(5)
+                    })
+                },
+                |mapping| {
+                    self.machine.import(mapping).map_err(|error| {
+                        allocation_error.set(Some(error));
+                        MemoryError::BackingIo(5)
+                    })
+                },
+            )
         };
         let (storage, info) =
-            exported.map_err(|error| allocation_error.unwrap_or(Error::Memory(error)))?;
+            exported.map_err(|error| allocation_error.take().unwrap_or(Error::Memory(error)))?;
         let flags = Self::flags(info)?;
         if info.permissions.execute {
             self.machine.publish_code(storage.physical_address())?;

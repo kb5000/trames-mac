@@ -60,10 +60,13 @@ There is no additional resource-service thread or polling message bus.
 
 Hardware views bypass old native MMU aliases. The joined preparation boundary
 invalidates cached native translations before releasing those aliases. Storage
-transfer happens once under all region bits. External raw GPU/pinned mappings
-are rejected until they have a compatible ownership protocol; shared providers
-without canonical `shared_page()` exports are rejected as well. Ordinary shared
-file and anonymous mappings are supported. See the common runtime's
+transfer happens once under all region bits. File-backed mappings with explicit retained allocation geometry can be imported
+at their original addresses. All 4KiB pages within a host granule share one
+physical mapping and borrow gate; the descriptor preserves display aliases when
+a VM is replaced. Opaque raw GPU/pinned mappings are still rejected until they
+have a compatible ownership protocol; shared providers without canonical
+`shared_page()` exports are rejected as well. Ordinary shared file and anonymous
+mappings are supported. See the common runtime's
 [region-memory contract](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/region-memory.md).
 
 ## Physical paging
@@ -127,17 +130,44 @@ Existing session/signals tests cover external commands, PTY/job control,
 persistence, signal frames and precise fault recovery.
 
 Run `python3 scripts/check-hardware.py` to build and sign both explicit test
-binaries, then execute the six hardware/pressure checks.
+binaries, then execute the seven hardware/pressure checks.
 
 Ignored tests in the signed HVF test binary cover host-borrow parking, live dirty
 page-out/page-in, retained storage across VM replacement, partial-granule reuse,
-and concurrent VM teardown. The signed Mac product test binary additionally
+concurrent VM teardown, and retained file pixels across eviction and VM replacement.
+The signed Mac product test binary additionally
 injects process-local pressure metadata to verify latch-only polling followed by
 joined eviction. It does not put other Mac applications under artificial memory
 pressure. Hosted build CI does not claim nested Hypervisor access.
 
-Native Wayland presentation, the external GPU buffer ownership protocol and
-physical iPad release acceptance remain separate product gates.
+## Native Wayland presentation
+
+The main thread owns a blocking CF/AppKit event loop. The existing Linux session
+runs on one thread with its existing execution workers; vCPUs stay on their
+creator threads. A coalesced compositor snapshot subscription signals the main
+run-loop source after releasing the scene lock. There is no UI polling thread.
+AppKit and Metal initialize only when the first mapped toplevel appears. Each
+toplevel owns a native window; outlying subsurfaces and popups use bounded child
+rectangles instead of a desktop-sized transparent input surface. The last
+window releases cached Metal setup and removes the Dock presence without
+stopping Linux or its terminal.
+
+Metal reads retained file-backed SHM mappings directly. No Rust byte slice or
+copy of the guest framebuffer is introduced by the presenter. A snapshot lease
+owns the source until GPU reads finish. Positive frame acknowledgement also
+waits for every drawable's actual presentation; skipped, cancelled, and occluded
+frames receive no successful presentation acknowledgement. Invalidated run-loop
+sources remain retained until pending GPU callbacks finish, so teardown cannot
+call a freed UI context. Frame cancellation and multi-drawable completion have
+unit coverage independent of Hypervisor access.
+
+Native input uses the common Wayland seat. Interactive move/resize is admitted
+only with a live press serial belonging to the same toplevel. Native close sends
+`xdg_toplevel.close`; the client controls its shutdown and other Linux processes
+continue. Cmd-W closes the focused window; Cmd-Q ends the Linux session.
+Host clipboard/IME integration and hardware external GPU exports remain separate
+product gates. See the [window acceptance record](../validation/mac-windows.md).
+Physical iPad release acceptance remains a separate product check.
 
 The [recorded acceptance summary](../validation/hvf-smp-paging-summary.json)
 contains exact source/binary/fixture hashes, CI scope and live RSS measurements.

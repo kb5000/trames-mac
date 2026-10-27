@@ -713,6 +713,7 @@ dependencies = [
 name = "trames-mac"
 version = "1.3.0"
 dependencies = [
+ "cc",
  "libc",
  "trames-distro",
  "trames-elf",
@@ -721,7 +722,9 @@ dependencies = [
  "trames-linux",
  "trames-memory",
  "trames-session",
+ "trames-shared",
  "trames-vfs",
+ "trames-wayland",
 ]
 
 [[package]]
