@@ -546,3 +546,14 @@ input-to-JavaScript and successful presentation latency, then verify real sites.
 Report copied/scanned bytes and work amplification as well as elapsed time. No
 implementation or performance improvement is claimed by this review. Runtime
 source is unchanged, so existing acceptance results remain applicable.
+
+## Implemented mapping and range checkpoint (2026-10-28)
+
+The first two opportunities in the review above are now implemented in the
+shared runtime: stable file providers no longer connect independent local VM
+commits, and bounded changed-range history selects affected file-offset aliases.
+Unknown providers and nonlocal layout/EOF changes retain conservative checks.
+The [mapping-scope checkpoint](../validation/mac-windows.md#local-mapping-scope-and-backing-ranges-2026-10-28)
+records the fixed-work Linux comparison, concurrency/EOF/COW regressions and
+Mac/iPad acceptance. This does not implement register residency, lazy fork COW,
+file persistence redesign or native Firefox GPU acceleration.

@@ -411,7 +411,7 @@ pub fn run(
             runtime.metrics.native.calls, runtime.metrics.gpu_compiles, runtime.metrics.gpu_wait_time.as_micros(),
             runtime.metrics.gpu_transfers.upload_bytes, runtime.metrics.gpu_transfers.download_bytes,
             runtime.metrics.gpu_transfers.direct_bytes, runtime.metrics.gpu_transfers.buffered_bytes);
-        eprintln!("trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"instruction_count\":null}}", runtime.metrics.syscalls, runtime.metrics.context_switches, runtime.engine.mapped_bytes(), runtime.memory.resident_bytes());
+        eprintln!("trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"vm_checkpoint_groups\":{},\"vm_checkpoint_spaces\":{},\"backing_domain_checks\":{},\"backing_page_checks\":{},\"parallel_memory_us\":{},\"instruction_count\":null}}", runtime.metrics.syscalls, runtime.metrics.context_switches, runtime.engine.mapped_bytes(), runtime.memory.resident_bytes(), runtime.metrics.vm_checkpoint_groups, runtime.metrics.vm_checkpoint_spaces, runtime.metrics.parallel_snapshots.backing_domain_checks, runtime.metrics.parallel_snapshots.backing_page_checks, runtime.metrics.parallel_memory_time.as_micros());
     }
     runtime.linux.vfs.sync()?;
     result.map(|exit| exit.code).map_err(Into::into)

@@ -1,0 +1,217 @@
+{
+  "method": "Three alternating fresh-session pairs; fixed static Linux ELF, 4 vCPUs, 4096 MiB logical budget, no network I/O or profiler, two busy peer processes. No other acceptance jobs were running; existing desktop Firefox was left untouched. Microbenchmark, not browser latency.",
+  "baseline_mac_revision": "a9230a4dddb51663c9e3aa6051df40ac9660c0b8",
+  "baseline_runtime_revision": "c388da8d343518d6976c6bdbd71d1a88094e8584",
+  "optimized_runtime_revision": "dc49cbfed76fa5876dcc1ac2eb0e49100b464c26",
+  "fixture": "tests/fixtures/mapping-scope.c",
+  "fixture_source_sha256": "e8675b7fe78d4bc8c62cb42399697107f82dc381b5f29f1d1738c4d829ac3047",
+  "fixture_elf_sha256": "0a70b1473cb22e8de234b904eb8f69d67959d408b7321b7f7c20346e0056b0ca",
+  "compiler": "Apple Clang, aarch64-linux-musl, -O2 -march=armv8-a -ffixed-x18 -pthread; static musl and Linux AArch64 libgcc; same ELF in both variants",
+  "runner_sha256": {
+    "baseline": "4a6e643fcebdf2646c17bc8f98a1b7f42693e44a83abca483cfd614cac2ce57e",
+    "optimized": "83021a094b2fe635c98e5e8c887983b63d4173092a8c91af2cce00acf81b83ba"
+  },
+  "configuration": {
+    "vcpus": 4,
+    "logical_memory_mib": 4096,
+    "network": "default full policy; fixture performs no network I/O",
+    "profiler": false,
+    "repeats": 3,
+    "scope_rounds": 400,
+    "scope_syscalls_per_round": 3,
+    "busy_peer_processes": 2,
+    "mapped_file_pages": 1024,
+    "range_writes": 128,
+    "bytes_per_range_write": 1
+  },
+  "rows": [
+    {
+      "variant": "baseline",
+      "repeat": 0,
+      "elapsed": 2.259046083,
+      "scope_ms": 2185.529708,
+      "range_ms": 5.597708,
+      "peer_progress": [
+        4364388244,
+        2958445121
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 3519,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 0,
+      "elapsed": 0.15078995799999984,
+      "scope_ms": 14.209125,
+      "range_ms": 2.01675,
+      "peer_progress": [
+        26059536,
+        21277651
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 1503,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "vm_checkpoint_groups": 1200,
+        "vm_checkpoint_spaces": 1200,
+        "backing_domain_checks": 916,
+        "backing_page_checks": 458,
+        "parallel_memory_us": 3624,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 1,
+      "elapsed": 0.06708824999999985,
+      "scope_ms": 14.850417,
+      "range_ms": 1.972334,
+      "peer_progress": [
+        23950375,
+        24325069
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 1502,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "vm_checkpoint_groups": 1200,
+        "vm_checkpoint_spaces": 1200,
+        "backing_domain_checks": 928,
+        "backing_page_checks": 464,
+        "parallel_memory_us": 3939,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "baseline",
+      "repeat": 1,
+      "elapsed": 2.2860363749999997,
+      "scope_ms": 2229.700334,
+      "range_ms": 5.258083,
+      "peer_progress": [
+        4558563961,
+        3058100754
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 3547,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "baseline",
+      "repeat": 2,
+      "elapsed": 2.2962761249999994,
+      "scope_ms": 2240.337833,
+      "range_ms": 5.585584,
+      "peer_progress": [
+        4453876707,
+        3112779213
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 3577,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 2,
+      "elapsed": 0.06746133399999987,
+      "scope_ms": 14.315125,
+      "range_ms": 1.972459,
+      "peer_progress": [
+        22199053,
+        24840711
+      ],
+      "metrics": {
+        "syscalls": 1495,
+        "context_switches": 1499,
+        "hardware_mapped_bytes": 4243456,
+        "guest_resident_bytes": 4259840,
+        "vm_checkpoint_groups": 1200,
+        "vm_checkpoint_spaces": 1200,
+        "backing_domain_checks": 2682,
+        "backing_page_checks": 1341,
+        "parallel_memory_us": 3981,
+        "instruction_count": null
+      }
+    }
+  ],
+  "medians": {
+    "baseline": {
+      "scope_ms": 2229.700334,
+      "range_ms": 5.585584
+    },
+    "optimized": {
+      "scope_ms": 14.315125,
+      "range_ms": 1.972459
+    }
+  },
+  "acceptance": {
+    "runtime_workspace": "passed",
+    "kernel_conformance": {
+      "passed": 198,
+      "ignored": 3,
+      "unchanged_passing_cases_reused": true
+    },
+    "mapped_vfs": {
+      "passed": 320,
+      "ignored": 1
+    },
+    "thread_sanitizer": {
+      "passed": 7,
+      "target": "aarch64-apple-darwin",
+      "rebuilt_standard_library": true
+    },
+    "signed_hvf": {
+      "passed": 17
+    },
+    "signed_pressure": {
+      "passed": 1
+    },
+    "smp_paging": [
+      "four CPUs",
+      "four CPUs and 16 MiB resident target",
+      "one CPU and 16 MiB resident target"
+    ],
+    "ipad_target": "aarch64-apple-ios core/distro/ffi compile passed",
+    "static_checks": "affected runtime, Mac workspace and iPad core/ffi passed",
+    "live_firefox": "Bilibili loaded and keyboard page-down visibly presented; no input latency or speedup claim"
+  },
+  "range_invariants": {
+    "file_pages": [
+      8,
+      256,
+      1024
+    ],
+    "checked_mappings_after_one_page_write": [
+      3,
+      3,
+      3
+    ],
+    "includes": "shared alias and detached private COW alias",
+    "full_eof_checks": [
+      10,
+      258,
+      1026
+    ],
+    "history_limit": 128,
+    "fallback": "layout/EOF, generation gaps, expired history and unknown providers"
+  },
+  "limits": [
+    "Mechanism-focused microbenchmark; no native-browser comparison, Firefox speedup, page-load percentile, video or long-term stability claim.",
+    "Private raw logs, stacks, process identifiers, local paths and page contents are not published."
+  ]
+}

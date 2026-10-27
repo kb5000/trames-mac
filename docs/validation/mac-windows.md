@@ -561,3 +561,61 @@ visible output was checked separately. This finite check does not establish
 all-site, video-playback or long-term release readiness. The
 [filtered record](mac-firefox-memory.json) retains only method, limits and
 aggregate outcomes. Original traces and page contents remain private.
+
+### Local mapping scope and backing ranges (2026-10-28)
+
+The common runtime now distinguishes backing content invalidation from pause
+dependencies. Nonvolatile VFS mappings with retained canonical storage can
+commit local address-space changes while other address spaces execute. Same-mm
+threads and unknown coupled providers retain their existing pause boundary;
+nonlocal layout/EOF operations still join. Backing refresh uses a bounded range
+journal and file-offset alias index, with full fallback for layout/source changes,
+expired history and providers without range support. Ordinary shared bytes retain
+hardware visibility and the existing raw-access/borrow contract.
+
+A fixed static ARM64 Linux ELF exercises 400 mmap/mprotect/munmap rounds while
+two peer processes run, then 128 one-byte writes to a 4 MiB mapped file. Three
+alternating fresh-session pairs use the same ELF, four vCPUs, 4096 MiB logical
+budget, no network I/O and no profiler. Other acceptance jobs had completed; the
+existing desktop browser was left running. Timings are guest CLOCK_MONOTONIC
+phase measurements, excluding startup and fork setup.
+
+| Fixed work, median of three | Previous binary | Updated binary |
+| --- | ---: | ---: |
+| 400 local mapping rounds with two peers | 2229.70 ms | 14.32 ms |
+| 128 one-byte mapped-file updates | 5.59 ms | 1.97 ms |
+
+Each variant executes 1495 guest syscalls with the same reported resident-byte
+charge. Updated runs record 1200 local checkpoint groups and 1200 address spaces:
+one space per mapping checkpoint. Separate regressions verify that readonly-library
+peers and active canonical shared-file writers continue during a blocked local
+commit, while CLONE_VM threads and coupled custom providers stop. At 8, 256 and
+1024 mapped file pages, a one-page write checks exactly three mappings, including
+shared and detached-COW aliases; truncation still checks all aliases and faults
+past EOF. An old whole-file write cannot widen subsequent small updates forever.
+
+Local checks passed: the common runtime workspace; 198 interpreter kernel cases
+with three ignored; seven concurrency cases under ThreadSanitizer with a rebuilt
+ARM64 macOS standard library; Mac unit/static checks; 17 signed HVF cases and the
+signed pressure case; all three SMP/paging configurations; and iPad core/distro/FFI
+compilation. Unchanged passing cases were reused; no CPU implementation, guest
+artifact or native allocator change requires a repeated unrelated CPU/allocator
+campaign. The updated Firefox visibly loaded Bilibili and presented a keyboard
+page-down. This finite smoke check does not measure browser input latency.
+
+The timing ratios apply only to this deliberately amplified mapping workload.
+They are not Firefox speedup ratios, native-browser comparisons, all-site/video
+acceptance or long-term release readiness. Registers still take the full HVF
+round trip; fork still has eager writable detachment. Those remain separate work.
+The [filtered record](mac-mapping-scope.json) includes source/binary hashes,
+individual timings, counters and limits. Raw logs, addresses and page contents
+remain private.
+
+The [fixture](../../tests/fixtures/mapping-scope.c) can also be built with a static
+AArch64 musl toolchain (`musl-gcc -O2 -static -pthread`). Run its ELF with:
+
+```sh
+target/release/trames-mac-run --rootfs /path/to/verified-Alpine.tar.gz \
+  --no-pty --metrics --cpus 4 --memory-mib 4096 \
+  --exec-file /mapping-scope=/path/to/mapping-scope /mapping-scope
+```
