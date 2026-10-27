@@ -472,8 +472,39 @@ web page contents and diagnostic output remain private in ignored output.
 These observations do not establish a new browser latency or speedup result.
 
 A first-write-fault prototype passed 16 signed HVF tests, but remains a private
-comparison and is not part of main. Architecture review is examining removal
-of redundant content-coherence bookkeeping for canonical hardware memory,
-rather than treating that bookkeeping as an inherent hardware requirement.
-The ordinary-data, address-space lifetime/permission and file/device boundary
-contracts must be evaluated separately. Runtime/iPad code is unchanged.
+comparison and is not part of main. The selected architecture keeps the thin HVF
+CPU/MMU executor and shared userspace Linux kernel. It removes redundant work
+from canonical memory, while preserving mapping lifetime, permissions and
+file/device semantics. Native GPU/NPU services remain independent of windowing.
+
+### Private code publication (2026-10-27)
+
+The former policy treated every admitted private RWX page as written at each
+joined epoch. That advanced code generations and caused metadata reconstruction
+and host instruction-cache publication even when guest code had not changed.
+Private canonical code now uses the existing one-VM dirty notice, just as private
+data does. Actual host writes publish their range at the producer; guest writes
+use the architectural IC/DC protocol. Shared providers keep their persistence
+hooks. This does not add write-fault tracking or change iPad interpreter writes.
+
+Local validation passed the complete runtime and Mac workflow commands, 123
+memory unit tests, 16 signed HVF tests and one signed product pressure test.
+The added hardware tests cover 64 joined RWX rounds without metadata/PTE churn
+and a guest code writer publishing four instruction replacements to another
+vCPU with guest cache maintenance. Existing host code publication, permissions,
+storage replacement, COW and reclaim checks remain covered. Real Linux SMP and
+paging acceptance also passed in four-CPU and one-CPU configurations.
+
+The real online Firefox check uses the same isolated profile, outbound network,
+four CPUs, 4 GiB logical budget and installed Noto CJK fonts. Stack samples are
+wall/blocked observations, not CPU percentages; live page content and scheduling
+also vary. No end-to-end Firefox speedup percentage follows from the metadata
+regression tests. Raw traces and page contents remain in ignored local output.
+
+The exploratory samples observed `sys_icache_invalidate` at 1,178 collapsed
+leaves before and 22 after; `update_parallel_snapshot` remained at 2,369 and
+2,257 leaves respectively (including helper names containing that symbol).
+The [filtered record](mac-firefox-memory.json) includes the method and limits.
+This supports the direction of the code-publication change while identifying
+backing/snapshot refresh as remaining work. The live workloads are not matched
+and these counts are neither CPU percentages nor a Firefox speedup ratio.

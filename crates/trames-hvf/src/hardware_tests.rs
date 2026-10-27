@@ -543,3 +543,147 @@ fn serial_and_worker_dispatch_keep_one_snapshot_registration_domain() {
     send.send(None).unwrap();
     worker.join().unwrap();
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn private_writable_code_reuses_metadata_across_joined_epochs() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    memory
+        .protect(
+            0x10000,
+            PAGE_SIZE,
+            Permissions {
+                read: true,
+                write: true,
+                execute: true,
+            },
+        )
+        .unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    let warm = executor.translations;
+    let original = memory.hardware_page_info(0x10000).unwrap();
+    for _ in 0..64 {
+        svc(&mut executor, &mut state(), &mut memory);
+        assert_eq!(memory.hardware_page_info(0x10000).unwrap(), original);
+    }
+    assert!(executor
+        .spaces
+        .values()
+        .all(|space| space.publications.is_empty()));
+    assert_eq!(executor.translations.inspections, warm.inspections);
+    assert_eq!(executor.translations.exports, warm.exports);
+    assert_eq!(executor.translations.updates, warm.updates);
+    assert_eq!(executor.translations.retired, warm.retired);
+    assert_eq!(u64::from_le_bytes(memory.read_array(0x20000).unwrap()), 80);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn guest_code_stores_use_guest_cache_maintenance_across_cpus() {
+    let mut memory = Memory::default();
+    memory
+        .map(
+            0x10000,
+            PAGE_SIZE,
+            Permissions {
+                read: true,
+                write: true,
+                execute: true,
+            },
+        )
+        .unwrap();
+    // isb; mov x0,#7; svc #0. The receiving CPU supplies its own ISB.
+    for (i, word) in [0xd5033fdfu32, 0xd28000e0, 0xd4000001]
+        .into_iter()
+        .enumerate()
+    {
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.map(0x30000, PAGE_SIZE, Permissions::RW).unwrap();
+    // str w1,[x0]; dc cvau,x0; dsb ish; ic ivau,x0; dsb ish; isb; svc #0.
+    // Encodings assembled from the architectural instructions with clang.
+    for (i, word) in [
+        0xb9000001u32,
+        0xd50b7b20,
+        0xd5033b9f,
+        0xd50b7520,
+        0xd5033b9f,
+        0xd5033fdf,
+        0xd4000001,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        memory
+            .write_array(0x30000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x30000, PAGE_SIZE, Permissions::RX).unwrap();
+    memory.prepare_hardware().unwrap();
+    let mut registry = Registry::default();
+    registry.use_hardware();
+    let mut reader = memory.parallel_view(&mut registry).unwrap();
+    reader.enable_hardware();
+    let writer = reader.clone();
+    let mut executor = Executor::new().unwrap();
+    let run = |executor: &mut Executor, view: &mut View, cpu: &mut Aarch64State| {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            assert!(Instant::now() < deadline);
+            if executor
+                .run_parallel(cpu, view, Duration::from_millis(2))
+                .unwrap()
+                .reason
+                == ExitReason::Syscall
+            {
+                break;
+            }
+        }
+    };
+    let mut cpu = state();
+    run(&mut executor, &mut reader, &mut cpu);
+    assert_eq!(cpu.registers[0], 7);
+    let revision = reader
+        .hardware_page_info(0x10000)
+        .unwrap()
+        .instruction_revision;
+    let (request, requests) = mpsc::channel();
+    let (complete, completions) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let mut writer = writer;
+        let mut executor = Executor::new().unwrap();
+        for expected in requests {
+            let mut cpu = state();
+            cpu.pc = 0x30000;
+            cpu.registers[0] = 0x10004;
+            cpu.registers[1] = (0xd2800000u32 | (expected as u32) << 5) as u64;
+            run(&mut executor, &mut writer, &mut cpu);
+            complete.send(()).unwrap();
+        }
+    });
+    for expected in [9u64, 13, 15, 17] {
+        request.send(expected).unwrap();
+        completions.recv_timeout(Duration::from_secs(5)).unwrap();
+        let mut cpu = state();
+        run(&mut executor, &mut reader, &mut cpu);
+        assert_eq!(cpu.registers[0], expected);
+        assert_eq!(
+            reader
+                .hardware_page_info(0x10000)
+                .unwrap()
+                .instruction_revision,
+            revision
+        );
+        assert!(executor
+            .spaces
+            .values()
+            .all(|space| space.publications.is_empty()));
+    }
+    drop(request);
+    worker.join().unwrap();
+    drop(reader);
+    memory.commit_parallel().unwrap();
+}

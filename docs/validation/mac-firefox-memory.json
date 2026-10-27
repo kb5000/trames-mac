@@ -419,5 +419,26 @@
       "method": "Same isolated Firefox profile/store and offline page, 4 CPUs and 4096 MiB logical budget. Native input/window diagnostics enabled. Six clicks and three keys; actual foreground rendering and screenshot verification. No browser settings changed.",
       "limits": "Click/key timings still end at JavaScript title acknowledgement. Foreground rendering/capture adds work, so do not equate the earlier 54 ms observation with displayed-frame latency or derive a speedup across different desktop/session states. No input-to-photon, native-browser baseline, cold-start or P95 result."
     }
+  },
+  "private_code_publication": {
+    "method": "Two exploratory real online Firefox wall/blocked stack samples, requested 45 seconds at a 2 ms interval. Same isolated profile, outbound network, four CPUs, 4096 MiB budget and Noto CJK. Live page state, interactions and concurrent host work differ. Counts below are collapsed leaf observations, not CPU percentages, completed calls, latency or throughput. They do not establish a browser speedup ratio.",
+    "baseline_runtime_revision": "be0280a813e8e52fb5db170821929272f8aeb4fc",
+    "updated_runtime_revision": "2f7affd0c28325e689a12522fb44e5c1daaf8c79",
+    "collapsed_leaf_observations": {
+      "before": {
+        "sys_icache_invalidate": 1178,
+        "update_parallel_snapshot": 2369,
+        "publish_code": 206,
+        "hardware_page_info": 843
+      },
+      "after": {
+        "sys_icache_invalidate": 22,
+        "update_parallel_snapshot": 2257,
+        "publish_code": 6,
+        "hardware_page_info": 325
+      }
+    },
+    "remaining_work": "Snapshot/backing metadata refresh remains prominent after private code publication was removed. Shared backing publication and genuine mapping changes are still conservative.",
+    "private_outputs": "Raw stacks, addresses, page contents and diagnostic logs remain in ignored local output."
   }
 }
