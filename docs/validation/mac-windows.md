@@ -313,3 +313,58 @@ python3 tests/integration/mac-native-devices.py \
 acceptance metadata. Raw native output, display transcripts and experimental
 patches stay in ignored local output. Durations are development acceptance
 observations, not comparative performance claims.
+
+
+### Raw guest memory and persistent translations (2026-10-27)
+
+The shared runtime now separates metadata retention, raw guest transfers and
+explicit Rust byte borrowing. Mac tables persist per Linux address space on each
+worker. Bounded mapping deltas replace unchanged-image scans, contents do not
+retire translations, and actual host code writers publish their code range.
+Canonical private data uses one VM generation notification per joined epoch;
+shared providers and code keep their required publication hooks.
+
+An independently rebuilt old `main` (Mac `9b843ae`, runtime `4e5f027`) received
+only the same generic input/title timing instrumentation. Both variants ran the
+original Alpine Firefox and the same isolated profile, offline JS/Canvas page,
+four CPUs and 4 GiB logical budget. No browser code or settings were changed.
+
+| Mouse release to JavaScript title acknowledgement | Old main | Updated |
+| --- | ---: | ---: |
+| Independent clicks | 3 | 6 |
+| Median | 3,081 ms | 726 ms |
+| Range | 1,652–15,060 ms | 326–868 ms |
+
+This small sequential warm-profile comparison gives a 4.24x median improvement.
+It excludes drawable presentation and automation round-trip time. It is not a
+native-browser comparison, cold-start benchmark or tail-percentile estimate.
+Updated key-to-title samples were 359, 508 and 643 ms. Second-page navigation and
+clean runner shutdown were observed. Interaction is still too slow to claim
+near-native Firefox performance.
+
+Exploratory 15-second CPU recordings place permission changes plus other mapping
+maintenance at 67.60% of old process CPU and 10.75% of updated process CPU. The
+windows do not represent identical workload progress; this is evidence of a
+changed bottleneck, not an overall throughput factor. Updated View preparation
+accounts for 23.98%; filesystem checkpoint/VFS/resource preparation remain
+visible host costs. Raw samples and addresses stay private in ignored output.
+The filtered [measurement record](mac-firefox-memory.json) preserves categories,
+input samples, revisions and interpretation limits.
+
+Full shared-runtime and Mac workflow checks passed locally: boundaries, format,
+strict clippy, workspace tests and release builds; the shared reclaim example
+also passed. Signed acceptance passed 13 HVF tests plus one product pressure
+test. Three Linux SMP/paging cases passed atomic counts, 64 MiB checksums,
+fork/COW and 16 MiB working-set eviction/page-in. The iPad FFI target compiled,
+and its interpreter kernel conformance passed 194 tests with three existing
+ignores. A final cold execution-mode token fix passed memory regressions and
+its affected Mac/iPad checks; unchanged full-CI results were reused.
+
+Structural regressions require unchanged address-space switches to perform zero
+new exports or cached-page inspections, a one-page protection change to inspect
+one cached page, raw reads to coexist with hardware writes without a borrow
+wait, code writes to execute without consumer rescans, and inactive caches to
+release physical RAM. Cache/history overflow has an explicit conservative path.
+`TRAMES_MAC_INPUT_TRACE` enables local native input/title timestamps only when
+requested; logs contain key codes/titles and belong in private ignored output.
+Normal runs leave this diagnostic disabled.

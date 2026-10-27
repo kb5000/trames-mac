@@ -155,7 +155,7 @@ static const uint16_t keys[128]={
 }
 @end
 @implementation TramesFamily
-- (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c { if(kind==1)self.ui.focus=self.identifier; if(self.ui.event)self.ui.event(self.ui.context,self.identifier,kind,x,y,a,b,c); }
+- (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c { if(kind==1)self.ui.focus=self.identifier; if((kind==3||kind==5)&&getenv("TRAMES_MAC_INPUT_TRACE"))fprintf(stderr,"trames mac input: time=%.9f id=%llu kind=%u a=%u b=%u\n",NSProcessInfo.processInfo.systemUptime,self.identifier,kind,a,b); if(self.ui.event)self.ui.event(self.ui.context,self.identifier,kind,x,y,a,b,c); }
 - (BOOL)windowShouldClose:(NSWindow *)sender{(void)sender;if(self.closing)return YES;[self emit:7 x:0 y:0 a:0 b:0 c:0];return NO;}
 - (void)windowDidBecomeKey:(NSNotification *)notification{(void)notification;self.dirty=YES;[self emit:1 x:0 y:0 a:0 b:0 c:0];wake(self.ui.source);}
 - (void)windowDidResize:(NSNotification *)notification {
@@ -310,7 +310,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         }
         family.seen=YES;family.updating=YES;
         NSString *title=[NSString stringWithUTF8String:info->title]?:@"Linux";
-        if(![family.window.title isEqualToString:title])family.window.title=title;
+        if(![family.window.title isEqualToString:title]){family.window.title=title;if(getenv("TRAMES_MAC_INPUT_TRACE"))fprintf(stderr,"trames mac title: time=%.9f id=%llu title=%s\n",NSProcessInfo.processInfo.systemUptime,info->id,info->title);}
         NSSize minimum=NSMakeSize(MAX(1,MIN(info->min_width,4096)),MAX(1,MIN(info->min_height,4096)));
         NSSize maximum=NSMakeSize(MAX(minimum.width,info->max_width?MIN(info->max_width,4096):4096),MAX(minimum.height,info->max_height?MIN(info->max_height,4096):4096));
         if(!NSEqualSizes(family.window.contentMinSize,minimum))family.window.contentMinSize=minimum;

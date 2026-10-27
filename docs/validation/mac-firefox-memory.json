@@ -1,0 +1,143 @@
+{
+  "method": "Same original Alpine Firefox 142.0-r0, existing isolated profile/store, offline JS/Canvas page, four CPUs, 4096 MiB logical guest budget, network off. No Firefox patch or settings workaround.",
+  "measured_runtime_revision": "2c28e0fac56ad9dc2c54b4285765f3db0035b769",
+  "shipped_runtime_revision": "c47078ba2ab94c6eece70da66e59eab7005bf1c1",
+  "baseline_mac_revision": "9b843ae36a0cb24a281bb9545e2f93a0d1a537f9",
+  "baseline_runtime_revision": "4e5f027fc338aac07249f48319cc49fd289450ec",
+  "input": {
+    "metric": "Native mouse release delivered to Trames through observed JavaScript title acknowledgement; excludes drawable presentation and automation round-trip time.",
+    "baseline": {
+      "samples": 3,
+      "milliseconds": [
+        15059.692,
+        1652.4,
+        3081.354
+      ],
+      "median_ms": 3081.354,
+      "min_ms": 1652.4,
+      "max_ms": 15059.692
+    },
+    "updated": {
+      "samples": 6,
+      "milliseconds": [
+        867.852,
+        699.473,
+        325.699,
+        753.14,
+        648.053,
+        779.922
+      ],
+      "median_ms": 726.306,
+      "min_ms": 325.699,
+      "max_ms": 867.852
+    },
+    "median_ratio": 4.24,
+    "updated_key_ms": [
+      358.619,
+      507.647,
+      642.8
+    ],
+    "navigation_to_second_page": true
+  },
+  "cpu": {
+    "method": "1 ms Time Profiler running-thread samples, disjoint categories across all process threads. Exploratory 15 s windows; progress/cache state is not matched. These percentages are not UI latency or a throughput speedup. vCPU includes HVF entry/exit.",
+    "baseline": {
+      "recording_seconds": 15.393999584,
+      "sampled_cpu_ms": 18592.0,
+      "categories": {
+        "hv_protect": {
+          "ms": 8228.0,
+          "percent": 44.26
+        },
+        "page_mapping_other": {
+          "ms": 4339.0,
+          "percent": 23.34
+        },
+        "vcpu_run": {
+          "ms": 2814.0,
+          "percent": 15.14
+        },
+        "guest_memory_other": {
+          "ms": 1542.0,
+          "percent": 8.29
+        },
+        "other_host_work": {
+          "ms": 1224.0,
+          "percent": 6.58
+        },
+        "parallel_view_preparation": {
+          "ms": 217.0,
+          "percent": 1.17
+        },
+        "linux_syscall_other": {
+          "ms": 180.0,
+          "percent": 0.97
+        },
+        "wait_boundary_other": {
+          "ms": 48.0,
+          "percent": 0.26
+        }
+      }
+    },
+    "updated": {
+      "recording_seconds": 15.367334333,
+      "sampled_cpu_ms": 12410.0,
+      "categories": {
+        "other_host_work": {
+          "ms": 3934.0,
+          "percent": 31.7
+        },
+        "parallel_view_preparation": {
+          "ms": 2976.0,
+          "percent": 23.98
+        },
+        "guest_memory_other": {
+          "ms": 1654.0,
+          "percent": 13.33
+        },
+        "linux_syscall_other": {
+          "ms": 1472.0,
+          "percent": 11.86
+        },
+        "vcpu_run": {
+          "ms": 976.0,
+          "percent": 7.86
+        },
+        "page_mapping_other": {
+          "ms": 881.0,
+          "percent": 7.1
+        },
+        "hv_protect": {
+          "ms": 453.0,
+          "percent": 3.65
+        },
+        "wait_boundary_other": {
+          "ms": 64.0,
+          "percent": 0.52
+        }
+      }
+    }
+  },
+  "validation": {
+    "full_runtime_ci": true,
+    "full_mac_ci": true,
+    "hardware_tests": 14,
+    "smp_paging_cases": 3,
+    "ipad_cross_compile": true,
+    "interpreter_kernel_passed": 194,
+    "interpreter_kernel_existing_ignored": 3,
+    "mode_boundary_regression": true,
+    "common_memory_passed": 122,
+    "common_vfs_passed": 312
+  },
+  "limitations": [
+    "Small sequential warm-profile sample; no cold-cache randomization or native Firefox reference. No tail-percentile or near-native performance claim.",
+    "The final extra commit only retires software snapshots on entering hardware mode; its affected checks passed separately, while unchanged full-CI results are reused.",
+    "Scoped guest Rust references and atomic callbacks still require exclusion. Writable provider/code pages still need conservative publication.",
+    "The remaining sampled cost includes View preparation, filesystem checkpoints and VFS/resource preparation.",
+    "Per-worker translation cache is bounded; expired history, cache eviction and full snapshots can still require reconciliation. Fork eager detachment remains.",
+    "A final metrics-only filter excludes dead weak aliases from mapped-byte reporting; disabled-metrics Firefox execution is unchanged."
+  ],
+  "measured_mac_source_diff_sha256": "37127f7b4fe01fb1844dbf50441bcef4100fe8385a1544e5063e7a0c07a35fdc",
+  "shipped_mac_source_diff_sha256": "0e6115257b2ac0236fd3ac613eae860d4546f377165279b28ebd1f9d2bd17795"
+}

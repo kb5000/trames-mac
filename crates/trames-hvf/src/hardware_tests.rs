@@ -232,3 +232,251 @@ fn shared_file_pixels_survive_import_eviction_and_vm_replacement() {
         drop(executor);
     }
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn warm_address_spaces_switch_without_reexport_or_page_walks() {
+    let mut executor = Executor::new().unwrap();
+    let mut a = memory();
+    let mut b = memory();
+    b.write_array(0x20000, 1000u64.to_le_bytes()).unwrap();
+    svc(&mut executor, &mut state(), &mut a);
+    svc(&mut executor, &mut state(), &mut b);
+    let warm = executor.translations;
+    assert!(executor
+        .spaces
+        .values()
+        .all(|space| space.publications.is_empty() && space.private_writable == 1));
+    for _ in 0..64 {
+        svc(&mut executor, &mut state(), &mut a);
+        svc(&mut executor, &mut state(), &mut b);
+    }
+    assert_eq!(u64::from_le_bytes(a.read_array(0x20000).unwrap()), 80);
+    assert_eq!(u64::from_le_bytes(b.read_array(0x20000).unwrap()), 1065);
+    let after = executor.translations;
+    assert_eq!(after.exports, warm.exports, "{after:?}");
+    assert_eq!(after.inspections, warm.inspections, "{after:?}");
+    assert_eq!(after.updates, warm.updates, "{after:?}");
+    assert_eq!(after.retired, warm.retired, "{after:?}");
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn retained_roots_observe_code_protection_replacement_and_eviction() {
+    let mut executor = Executor::new().unwrap();
+    let mut a = memory();
+    let mut b = memory();
+    svc(&mut executor, &mut state(), &mut a);
+    svc(&mut executor, &mut state(), &mut b);
+    let old_gpa = executor.spaces[&a.instruction_identity().0].pages[&0x10000].gpa;
+    a.protect(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    a.write_array(0x10004, 0x91000c21u32.to_le_bytes()).unwrap(); // add x1,x1,#3
+    a.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    svc(&mut executor, &mut state(), &mut a);
+    assert_eq!(u64::from_le_bytes(a.read_array(0x20000).unwrap()), 19);
+    assert_eq!(
+        executor.spaces[&a.instruction_identity().0].pages[&0x10000].gpa,
+        old_gpa
+    );
+    let content = executor.translations;
+    assert_eq!(
+        content.retired, 0,
+        "content-only changes retain translations"
+    );
+    a.protect(0x20000, PAGE_SIZE, Permissions::R).unwrap();
+    let result = executor.run(&mut state(), &mut a, Duration::from_millis(20));
+    assert!(matches!(
+        result,
+        Err(Error::Memory(MemoryError::Permission {
+            access: Access::Write,
+            ..
+        }))
+    ));
+    assert!(executor.translations.updates > content.updates);
+    a.unmap(0x20000, PAGE_SIZE).unwrap();
+    a.map(0x20000, PAGE_SIZE, Permissions::RW).unwrap();
+    a.write_array(0x20000, 100u64.to_le_bytes()).unwrap();
+    svc(&mut executor, &mut state(), &mut a);
+    assert_eq!(u64::from_le_bytes(a.read_array(0x20000).unwrap()), 103);
+    assert!(executor.translations.retired > content.retired);
+    let pages_before = executor.translations.exports;
+    reclaim(u64::MAX).unwrap();
+    svc(&mut executor, &mut state(), &mut b);
+    assert_eq!(
+        executor.translations.exports, pages_before,
+        "physical page-in keeps stage-one mappings"
+    );
+    assert_eq!(u64::from_le_bytes(b.read_array(0x20000).unwrap()), 17);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn address_space_cache_is_bounded_and_does_not_retain_physical_ram() {
+    let mut executor = Executor::new().unwrap();
+    let mut memories: Vec<_> = (0..CACHED_SPACES + 4).map(|_| memory()).collect();
+    for expected in 16..19u64 {
+        for memory in &mut memories {
+            svc(&mut executor, &mut state(), memory);
+            assert_eq!(
+                u64::from_le_bytes(memory.read_array(0x20000).unwrap()),
+                expected
+            );
+            assert!(executor.spaces.len() <= CACHED_SPACES);
+        }
+    }
+    drop(memories);
+    assert_eq!(
+        executor.mapped_bytes(),
+        0,
+        "dead weak aliases are not mapped RAM"
+    );
+    assert_eq!(
+        paging_stats().mapped_bytes,
+        0,
+        "cached PTE metadata must not own guest RAM"
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn raw_host_reads_can_race_hardware_without_gate_or_torn_aligned_words() {
+    let _owner = Executor::new().unwrap();
+    let mut memory = memory();
+    // mvn x1,x1; str x1,[x0]; b -8. Registers alternate two full 64-bit words.
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    for (i, word) in [0xaa2103e1u32, 0xf9000001, 0x17fffffe]
+        .into_iter()
+        .enumerate()
+    {
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    memory
+        .write_array(0x20000, 0x55aa55aa55aa55aau64.to_le_bytes())
+        .unwrap();
+    let mut registry = Registry::default();
+    registry.use_hardware();
+    memory.prepare_hardware().unwrap();
+    let mut view = memory.parallel_view(&mut registry).unwrap();
+    view.enable_hardware();
+    let reader = view.clone();
+    let (tx, rx) = mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let mut executor = Executor::new().unwrap();
+        let mut state = state();
+        state.registers[1] = 0x55aa55aa55aa55aa;
+        tx.send(()).unwrap();
+        for _ in 0..100 {
+            executor
+                .run_parallel(&mut state, &mut view, Duration::from_millis(1))
+                .unwrap();
+            assert!(
+                executor.take_wait().is_none(),
+                "raw reads must not park hardware"
+            );
+        }
+    });
+    rx.recv().unwrap();
+    for _ in 0..10000 {
+        let bytes = reader.read_array::<8>(0x20000).unwrap();
+        let word = u64::from_le_bytes(bytes);
+        assert!(
+            word == 0x55aa55aa55aa55aa || word == 0xaa55aa55aa55aa55,
+            "torn aligned word: {word:x}"
+        );
+    }
+    drop(reader);
+    worker.join().unwrap();
+    memory.commit_parallel().unwrap();
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn host_code_writes_publish_only_their_range_without_consumer_rescans() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = Memory::default();
+    memory
+        .map(
+            0x10000,
+            PAGE_SIZE,
+            Permissions {
+                read: true,
+                write: true,
+                execute: true,
+            },
+        )
+        .unwrap();
+    memory
+        .write_array(0x10000, 0xd28000e0u32.to_le_bytes())
+        .unwrap(); // mov x0,#7
+    memory
+        .write_array(0x10004, 0xd4000001u32.to_le_bytes())
+        .unwrap();
+    memory.prepare_hardware().unwrap();
+    let mut registry = Registry::default();
+    registry.use_hardware();
+    let mut view = memory.parallel_view(&mut registry).unwrap();
+    view.enable_hardware();
+    let mut writer = view.clone();
+    for expected in [7, 9, 13, 15, 17] {
+        writer
+            .write_array(
+                0x10000,
+                (0xd2800000u32 | (expected as u32) << 5).to_le_bytes(),
+            )
+            .unwrap();
+        let mut state = state();
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            assert!(Instant::now() < deadline);
+            if executor
+                .run_parallel(&mut state, &mut view, Duration::from_millis(2))
+                .unwrap()
+                .reason
+                == ExitReason::Syscall
+            {
+                break;
+            }
+        }
+        assert_eq!(state.registers[0], expected);
+    }
+    assert_eq!(
+        executor.translations.inspections, 0,
+        "raw code writes publish at the producer"
+    );
+    assert_eq!(executor.translations.exports, 1);
+    drop(writer);
+    drop(view);
+    memory.commit_parallel().unwrap();
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn one_mapping_change_checks_one_cached_page() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    memory
+        .map(0x40000, PAGE_SIZE * 32, Permissions::RW)
+        .unwrap();
+    for page in 0..32 {
+        let mut cpu = state();
+        cpu.registers[0] = 0x40000 + page * PAGE_SIZE;
+        svc(&mut executor, &mut cpu, &mut memory);
+    }
+    let before = executor.translations;
+    memory.protect(0x4f000, PAGE_SIZE, Permissions::R).unwrap();
+    let mut cpu = state();
+    cpu.registers[0] = 0x40000;
+    svc(&mut executor, &mut cpu, &mut memory);
+    let after = executor.translations;
+    assert_eq!(
+        after.inspections - before.inspections,
+        1,
+        "single-range delta must not walk the image"
+    );
+    assert_eq!(after.exports, before.exports);
+    assert_eq!(after.retired, before.retired);
+    assert_eq!(after.updates - before.updates, 1);
+}

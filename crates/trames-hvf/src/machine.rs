@@ -214,9 +214,9 @@ impl Machine {
                 length: self.granule,
                 machine: Arc::downgrade(self),
                 used: AtomicU8::new(0),
+                executable: AtomicU8::new(0),
                 touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
                 gate: Mutex::new(Gate {
-                    executable: 0,
                     hosts: 0,
                     mapped: true,
                     owner: None,
@@ -298,9 +298,9 @@ impl Machine {
                 length: self.granule,
                 machine: Arc::downgrade(self),
                 used: AtomicU8::new(15),
+                executable: AtomicU8::new(0),
                 touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
                 gate: Mutex::new(Gate {
-                    executable: 0,
                     hosts: 0,
                     mapped: true,
                     owner: None,
@@ -335,8 +335,8 @@ impl Machine {
             .and_then(Weak::upgrade)
             .ok_or(Error::Unsupported("unowned executable page"))?;
         let index = (address - gpa) as usize / PAGE_SIZE as usize;
-        let mut gate = block.gate.lock().unwrap();
-        gate.executable |= 1 << index;
+        let _gate = block.gate.lock().unwrap();
+        block.executable.fetch_or(1 << index, Ordering::Relaxed);
         // Cache operations do not construct a byte reference. Initial code and
         // later page-in publish only actual executable slots, not untouched RAM.
         unsafe {
@@ -370,7 +370,7 @@ impl Machine {
             return Ok(Some(wait));
         }
         if !gate.mapped {
-            let code = gate.executable;
+            let code = block.executable.load(Ordering::Relaxed);
             for index in 0..4 {
                 if code & (1 << index) != 0 {
                     unsafe {
@@ -474,9 +474,6 @@ impl Drop for Machine {
     }
 }
 struct Gate {
-    // Monotonic for this granule: reused slots that once held code still get
-    // cache publication on page-in. The mapping mutex orders publication.
-    executable: u8,
     hosts: usize,
     mapped: bool,
     owner: Option<Arc<Machine>>,
@@ -490,6 +487,8 @@ struct Physical {
     length: usize,
     machine: Weak<Machine>,
     used: AtomicU8,
+    // Monotonic: former code slots still publish on reuse/page-in.
+    executable: AtomicU8,
     touched: AtomicU64,
     gate: Mutex<Gate>,
 }
@@ -541,6 +540,16 @@ unsafe impl HardwareStorage for Slot {
     fn shared_mapping(&self) -> Option<SharedMapping> {
         let mapping = self.block.external.as_ref()?;
         mapping.with_offset(self.pointer() as usize - mapping.allocation_pointer() as usize)
+    }
+    fn publish_host_write(&self, offset: usize, len: usize) {
+        if len != 0 && self.block.executable.load(Ordering::Relaxed) & (1 << self.index) != 0 {
+            // The owning slot keeps this initialized host VA valid even while
+            // stage two is evicted. Actual code writers publish their range;
+            // consumers never flush every executable page on a global epoch.
+            unsafe {
+                trames_hvf_icache(self.pointer().add(offset).cast(), len);
+            }
+        }
     }
     fn begin_host_access(&self) {
         let mut gate = self.block.gate.lock().unwrap();

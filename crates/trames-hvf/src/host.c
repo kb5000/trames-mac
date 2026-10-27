@@ -39,6 +39,11 @@ struct machine {
     bool asids[256];
     struct free_gpa *free_gpas;
 };
+struct address_space {
+    struct table *tables;
+    uint64_t *root, root_gpa;
+    struct address_space *next;
+};
 struct host {
     struct machine *machine;
     bool owns_machine;
@@ -47,8 +52,7 @@ struct host {
     hv_vcpu_exit_t *exit;
     bool cpu_created, tlb_dirty;
     size_t granule;
-    struct table *tables;
-    uint64_t *root, root_gpa;
+    struct address_space *space, *spaces;
 };
 extern const char trames_hvf_vectors_begin[], trames_hvf_vectors_end[];
 extern const char trames_hvf_tlbi_begin[], trames_hvf_tlbi_end[];
@@ -77,7 +81,7 @@ void trames_hvf_release(struct machine *m, uint64_t gpa) {
     pthread_mutex_unlock(&m->addresses);
 }
 static uint64_t *table_for(struct host *h, uint64_t gpa) {
-    for (struct table *t=h->tables; t; t=t->next)
+    for (struct table *t=h->space->tables; t; t=t->next)
         if (gpa >= t->gpa && gpa < t->gpa+h->granule)
             return (uint64_t *)((char *)t->memory + gpa-t->gpa);
     return NULL;
@@ -92,11 +96,11 @@ static uint64_t *new_table(struct host *h, uint64_t *gpa) {
         trames_hvf_release(h->machine,t->gpa);
         munmap(t->memory,h->granule); free(t); return NULL;
     }
-    t->next=h->tables; h->tables=t; *gpa=t->gpa;
+    t->next=h->space->tables; h->space->tables=t; *gpa=t->gpa;
     return t->memory;
 }
 static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
-    uint64_t *table=h->root;
+    uint64_t *table=h->space->root;
     for (unsigned level=0; level<3; level++) {
         unsigned index=(unsigned)((va>>(39-level*9))&511);
         if (!(table[index]&1)) {
@@ -110,7 +114,7 @@ static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
     return &table[(va>>12)&511];
 }
 static int remove_page(struct host *h, uint64_t va) {
-    uint64_t *chain[4]={h->root}, gpas[4]={h->root_gpa}; unsigned indexes[3];
+    uint64_t *chain[4]={h->space->root}, gpas[4]={h->space->root_gpa}; unsigned indexes[3];
     for (unsigned level=0; level<3; level++) {
         indexes[level]=(unsigned)((va>>(39-level*9))&511);
         uint64_t descriptor=chain[level][indexes[level]];
@@ -124,7 +128,7 @@ static int remove_page(struct host *h, uint64_t va) {
         for (unsigned i=0;i<512;i++) if (chain[level][i]) {empty=false;break;}
         if (!empty) break;
         chain[level-1][indexes[level-1]]=0;
-        struct table **link=&h->tables;
+        struct table **link=&h->space->tables;
         while (*link && (*link)->gpa!=gpas[level]) link=&(*link)->next;
         if (!*link) return -1;
         struct table *t=*link;
@@ -137,17 +141,60 @@ int trames_hvf_page(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
     if (!flags) return remove_page(h,va);
     uint64_t *p=leaf(h,va,flags!=0);
     if (!p) return flags ? -1 : 0;
-    if (!flags) *p=0;
-    else {
-        // flags: read=1, write=2, execute=4, EL1-only=8.
-        uint64_t ap=(flags&8) ? 0 : (flags&2) ? 1 : 3;
-        *p=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
-        if (!(flags&8)) *p|=UINT64_C(1)<<53;
-        if (!(flags&4) || (flags&8)) *p|=UINT64_C(1)<<54;
-        if ((flags&8) && (flags&4)) *p&=~(UINT64_C(1)<<53);
-    }
-    h->tlb_dirty=true; return 0;
+    // flags: read=1, write=2, execute=4, EL1-only=8.
+    uint64_t ap=(flags&8) ? 0 : (flags&2) ? 1 : 3;
+    uint64_t descriptor=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
+    if (!(flags&8)) descriptor|=UINT64_C(1)<<53;
+    if (!(flags&4) || (flags&8)) descriptor|=UINT64_C(1)<<54;
+    if ((flags&8) && (flags&4)) descriptor&=~(UINT64_C(1)<<53);
+    if (*p!=descriptor) { *p=descriptor; h->tlb_dirty=true; }
+    return 0;
 }
+
+// Address-space tables persist independently of the worker's current task.
+// One ASID remains allocated per vCPU. Switching roots always flushes that ASID
+// through the existing EL1 trampoline before EL0 resumes, including ASID reuse.
+static int free_tables(struct host *h, struct address_space *space) {
+    while (space->tables) {
+        struct table *t=space->tables;
+        hv_return_t error=hv_vm_unmap(t->gpa,h->granule);
+        if (error) return (int)error;
+        space->tables=t->next; trames_hvf_release(h->machine,t->gpa);
+        munmap(t->memory,h->granule); free(t);
+    }
+    return 0;
+}
+struct address_space *trames_hvf_space_create(struct host *h, int *error) {
+    struct address_space *space=calloc(1,sizeof(*space));
+    if (!space) { *error=-1; return NULL; }
+    struct address_space *previous=h->space;
+    h->space=space;
+    space->root=new_table(h,&space->root_gpa);
+    *error=space->root ? 0 : -1;
+    for (size_t offset=0; !*error && offset<h->granule; offset+=PAGE)
+        *error=trames_hvf_page(h,VECTOR_VA+offset,VECTOR_GPA+offset,1|4|8);
+    h->space=previous;
+    if (*error) { free_tables(h,space); free(space); return NULL; }
+    space->next=h->spaces; h->spaces=space;
+    return space;
+}
+struct address_space *trames_hvf_space_current(struct host *h) { return h->space; }
+int trames_hvf_space_select(struct host *h, struct address_space *space) {
+    if (h->space==space) return 0;
+    hv_return_t error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,space->root_gpa|((uint64_t)h->asid<<48));
+    if (error) return (int)error;
+    h->space=space; h->tlb_dirty=true;
+    return 0;
+}
+int trames_hvf_space_destroy(struct host *h, struct address_space *space) {
+    if (space==h->space) return -1;
+    struct address_space **link=&h->spaces;
+    while (*link && *link!=space) link=&(*link)->next;
+    if (!*link) return -1;
+    int error=free_tables(h,space); if (error) return error;
+    *link=space->next; free(space); return 0;
+}
+
 int trames_hvf_map(struct host *h, void *memory, uint64_t gpa, size_t size) {
     // Data RAM must remain demand-zero. I-cache maintenance can populate its
     // host backing before the guest touches it; publish only actual code pages.
@@ -189,10 +236,9 @@ fail:
 void trames_hvf_cpu_destroy(struct host *h) {
     if (!h) return;
     if (h->cpu_created) hv_vcpu_destroy(h->cpu);
-    while (h->tables) {
-        struct table *t=h->tables; h->tables=t->next;
-        hv_vm_unmap(t->gpa,h->granule); trames_hvf_release(h->machine,t->gpa);
-        munmap(t->memory,h->granule); free(t);
+    while (h->spaces) {
+        struct address_space *space=h->spaces; h->spaces=space->next;
+        free_tables(h,space); free(space);
     }
     pthread_mutex_lock(&h->machine->addresses); h->machine->asids[h->asid]=false; pthread_mutex_unlock(&h->machine->addresses);
     free(h);
@@ -205,13 +251,11 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
     for (unsigned i=1;i<256;i++) if (!m->asids[i]) { m->asids[i]=true; h->asid=i; break; }
     pthread_mutex_unlock(&m->addresses);
     if (!h->asid) { *error=-1; goto fail; }
-    h->root=new_table(h,&h->root_gpa);
-    if (!h->root) { *error=-1; goto fail; }
-    for (size_t offset=0; offset<h->granule; offset+=PAGE)
-        if (trames_hvf_page(h,VECTOR_VA+offset,VECTOR_GPA+offset,1|4|8)) { *error=-1; goto fail; }
+    h->space=trames_hvf_space_create(h,error);
+    if (!h->space) goto fail;
     *error=(int)hv_vcpu_create(&h->cpu,&h->exit,NULL); if (*error) goto fail;
     h->cpu_created=true;
-    if ((*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,h->root_gpa|((uint64_t)h->asid<<48))) ||
+    if ((*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,h->space->root_gpa|((uint64_t)h->asid<<48))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TCR_EL1,16|(1<<8)|(1<<10)|(3<<12)|(1<<23)|(UINT64_C(2)<<32)|(UINT64_C(1)<<37))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_MAIR_EL1,0xff)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_VBAR_EL1,VECTOR_VA)) ||

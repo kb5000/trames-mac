@@ -10,11 +10,13 @@ product integration gates.
 ## VM and CPU ownership
 
 There is one HVF VM per host process. Each existing execution worker lazily
-creates its own thread-affine vCPU and private stage-one tables. Movable Linux
+creates its own thread-affine vCPU. Stage-one roots persist per Linux address
+space on that worker, across task switches and syscall/epoch boundaries. Movable Linux
 task state includes all general/SIMD registers, NZCV, stack and TLS; it never
 moves a vCPU between threads. A distinct ASID and non-global PTEs isolate each
-worker's virtual translations. Table updates invalidate that ASID, rather than
-all peers' translations. ASID encoding and TLBI operands follow the ARM64 layout
+worker's virtual translations. A root switch always invalidates that worker's
+ASID before EL0 resumes; cached roots consume no additional ASIDs. Table updates
+invalidate that ASID, rather than all peers' translations. ASID encoding and TLBI operands follow the ARM64 layout
 also used by [Linux](https://github.com/torvalds/linux/blob/v6.12/arch/arm64/include/asm/mmu_context.h).
 
 All CPUs share canonical physical storage exported from the common frozen
@@ -31,6 +33,21 @@ The VM lifetime factory acknowledges final teardown before allowing a new VM.
 Host byte borrows retain the VM. vCPU destruction occurs on its creator thread;
 idle PTE caches hold weak storage references and invalidate them before reuse.
 Retained data can be rebound after the previous VM has permanently ended.
+
+The cache retains at most eight roots and 131,072 cached leaf descriptors per
+worker, evicting inactive least-recently-used roots first. A single active space
+can exceed the metadata target; the limit does not invalidate its working set.
+Cached leaves hold weak physical owners, so dead address spaces cannot pin guest
+RAM. Their bounded page-table metadata is freed on eviction or vCPU destruction.
+
+Mapping tokens and bounded address-range deltas come from the shared runtime.
+Unchanged mappings do not trigger a page inspection. A one-page permission
+change checks that page and updates its descriptor in place. Missing/replaced
+storage retires the leaf; content-only changes preserve it. Expired history or a
+full snapshot replacement requires full reconciliation. Conservative dirty
+publication runs once per joined write epoch. Canonical private data uses one
+VM-dirty notification; only provider/code hooks need per-page indices. It remains
+conservative, not hardware dirty-bit tracking. Fork still has the existing eager writable detachment limitation.
 
 ## Linux register access
 
@@ -49,6 +66,13 @@ on HVF with one or four execution slots. See the
 [compatibility and CoreMark checkpoint](../validation/mac-compat-coremark.md).
 
 ## Host borrows
+
+Ordinary guest transfers use audited raw instructions through the common memory
+API, without creating guest Rust references or toggling stage-two permissions.
+Metadata-only export retains the existing physical handle without a byte gate.
+Actual host code writes publish the changed range; guest IC/DC maintenance,
+initial executable mapping and page-in keep their existing cache responsibilities.
+A process-global code epoch no longer makes each CPU flush its executable image.
 
 Before a syscall/native/VFS callback can expose a Rust byte slice, its physical
 host granule loses stage-two hardware access. The original 64-byte region locks
@@ -130,7 +154,7 @@ Existing session/signals tests cover external commands, PTY/job control,
 persistence, signal frames and precise fault recovery.
 
 Run `python3 scripts/check-hardware.py` to build and sign both explicit test
-binaries, then execute the seven hardware/pressure checks.
+binaries, then execute the hardware/pressure checks.
 
 Ignored tests in the signed HVF test binary cover host-borrow parking, live dirty
 page-out/page-in, retained storage across VM replacement, partial-granule reuse,
@@ -212,19 +236,18 @@ state should belong to the Linux address space, with actual mapping, permission,
 COW and reclamation changes applied incrementally. Cache retention must be
 bounded, including inactive address spaces and ASID reuse.
 
-Code-content freshness is distinct from translation identity. The current full
-`HardwarePageInfo` comparison can retire executable translations after a shared
-code epoch changes; its contribution to observed churn still needs measurement.
+Code-content freshness is distinct from translation identity. The hardware
+backend now preserves translations across content changes and uses producer-side
+code publication rather than a global code epoch to refresh all executable pages.
 Fork should eventually detach private storage on first write rather than eagerly
 at View admission. None of these changes may introduce per-load bookkeeping or
 new ordinary-memory barriers.
 
 Guest bytes and host Rust objects need distinct access contracts. Metadata-only
-handle retention must not imply byte borrowing. Bounded copy-in/out or audited
-raw ARM operations are candidates for concurrent guest bytes; existing APIs
+handle retention does not imply byte borrowing. Audited raw copy-in/out now
+handles ordinary concurrent guest transfers; existing APIs
 that create guest Rust slices must continue excluding conflicting hardware
-access until their contract is changed and validated. This review does not
-remove those gates. Physical lifetime, truncation and architectural ordering
+access until their contract is changed and validated. Physical lifetime, truncation and architectural ordering
 remain necessary, using the same guest permission/concurrency model on both
 products.
 

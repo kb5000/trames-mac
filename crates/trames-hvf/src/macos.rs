@@ -29,6 +29,10 @@ struct HostExit {
 }
 unsafe extern "C" {
     fn trames_hvf_max_vcpus() -> u32;
+    fn trames_hvf_space_current(host: *mut c_void) -> *mut c_void;
+    fn trames_hvf_space_create(host: *mut c_void, error: *mut i32) -> *mut c_void;
+    fn trames_hvf_space_select(host: *mut c_void, space: *mut c_void) -> i32;
+    fn trames_hvf_space_destroy(host: *mut c_void, space: *mut c_void) -> i32;
     fn trames_hvf_page(host: *mut c_void, va: u64, gpa: u64, flags: u32) -> i32;
     fn trames_hvf_map(host: *mut c_void, memory: *mut c_void, gpa: u64, size: usize) -> i32;
     fn trames_hvf_unmap(host: *mut c_void, gpa: u64, size: usize) -> i32;
@@ -74,13 +78,54 @@ struct Page {
     storage: Weak<dyn HardwareStorage>,
     gpa: u64,
     info: HardwarePageInfo,
+    write: Option<trames_memory::HardwareWriteFrame>,
 }
-/// A thread-affine vCPU with private stage-one tables in the process-wide VM.
+// Bound inactive metadata without retaining guest RAM. Each worker keeps one
+// ASID, flushing it on root changes; cached roots never consume extra ASIDs.
+const CACHED_SPACES: usize = 8;
+const CACHED_PAGES: usize = 131_072;
+struct AddressSpace {
+    host: NonNull<c_void>,
+    pages: BTreeMap<u64, Page>,
+    version: Option<(u64, u64)>,
+    used: u64,
+    publications: BTreeMap<u64, trames_memory::HardwareWriteFrame>,
+    private_writable: usize,
+}
+impl AddressSpace {
+    fn track_write(
+        &mut self,
+        va: u64,
+        old: Option<trames_memory::HardwareWriteFrame>,
+        new: Option<trames_memory::HardwareWriteFrame>,
+    ) {
+        self.private_writable -= usize::from(old.is_some_and(|write| !write.needs_publication()));
+        self.private_writable += usize::from(new.is_some_and(|write| !write.needs_publication()));
+        if let Some(write) = new.filter(|write| write.needs_publication()) {
+            self.publications.insert(va, write);
+        } else {
+            self.publications.remove(&va);
+        }
+    }
+}
+#[cfg(test)]
+#[derive(Default, Debug, Clone, Copy)]
+struct TranslationStats {
+    inspections: usize,
+    exports: usize,
+    updates: usize,
+    retired: usize,
+}
+/// A thread-affine vCPU with persistent address-space tables in the shared VM.
 /// Canonical physical pages, VFS and native access share one byte authority.
 pub struct Executor {
     host: NonNull<c_void>,
     machine: Arc<Machine>,
-    pages: BTreeMap<u64, Page>,
+    spaces: BTreeMap<u64, AddressSpace>,
+    active: u64,
+    clock: u64,
+    #[cfg(test)]
+    translations: TranslationStats,
     registry: Registry,
     wait: Option<Arc<HardwareWait>>,
     _same_thread: PhantomData<Rc<()>>,
@@ -95,7 +140,22 @@ impl Executor {
         Ok(Self {
             host,
             machine,
-            pages: BTreeMap::new(),
+            spaces: BTreeMap::from([(
+                0,
+                AddressSpace {
+                    host: NonNull::new(unsafe { trames_hvf_space_current(host.as_ptr()) })
+                        .expect("initial tables"),
+                    pages: BTreeMap::new(),
+                    version: None,
+                    used: 0,
+                    publications: BTreeMap::new(),
+                    private_writable: 0,
+                },
+            )]),
+            active: 0,
+            clock: 0,
+            #[cfg(test)]
+            translations: TranslationStats::default(),
             registry,
             wait: None,
             _same_thread: PhantomData,
@@ -109,8 +169,10 @@ impl Executor {
     }
     pub fn mapped_bytes(&self) -> usize {
         let granule = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as u64 };
-        self.pages
+        self.spaces
             .values()
+            .flat_map(|space| space.pages.values())
+            .filter(|page| page.storage.strong_count() != 0)
             .map(|p| p.gpa & !(granule - 1))
             .collect::<BTreeSet<_>>()
             .len()
@@ -138,32 +200,147 @@ impl Executor {
         if !memory.parallel_views_quiescent() {
             return Err(Error::Unsupported("active execution Views"));
         }
-        let addresses: Vec<_> = self.pages.keys().copied().collect();
+        let identity = memory.instruction_identity().0;
+        if !self.spaces.contains_key(&identity) {
+            return Ok(());
+        }
+        self.activate(identity)?;
+        let addresses: Vec<_> = self.spaces[&identity].pages.keys().copied().collect();
         for va in addresses {
             self.pte(va, 0, 0)?;
-            self.pages.remove(&va);
+        }
+        let space = self.spaces.get_mut(&identity).unwrap();
+        space.pages.clear();
+        space.publications.clear();
+        space.private_writable = 0;
+        space.version = None;
+        Ok(())
+    }
+    fn activate(&mut self, identity: u64) -> Result<(), Error> {
+        if self.active != identity {
+            check(unsafe {
+                trames_hvf_space_select(self.host.as_ptr(), self.spaces[&identity].host.as_ptr())
+            })?;
+            self.active = identity;
+        }
+        self.clock = self.clock.wrapping_add(1);
+        self.spaces.get_mut(&identity).unwrap().used = self.clock;
+        Ok(())
+    }
+    fn select_view(&mut self, memory: &View) -> Result<(), Error> {
+        let identity = memory.instruction_identity().0;
+        if !self.spaces.contains_key(&identity) {
+            let space = if let Some(space) = self.spaces.remove(&0) {
+                space
+            } else {
+                let mut error = 0;
+                let host = unsafe { trames_hvf_space_create(self.host.as_ptr(), &mut error) };
+                check(error)?;
+                AddressSpace {
+                    host: NonNull::new(host).ok_or(Error::Host(-1))?,
+                    pages: BTreeMap::new(),
+                    version: None,
+                    used: 0,
+                    publications: BTreeMap::new(),
+                    private_writable: 0,
+                }
+            };
+            self.spaces.insert(identity, space);
+        }
+        self.activate(identity)?;
+        // Evict only inactive roots. They retain weak physical aliases and must
+        // be revalidated before selection; evicting metadata cannot pin RAM.
+        while self.spaces.len() > CACHED_SPACES
+            || self.spaces.values().map(|s| s.pages.len()).sum::<usize>() > CACHED_PAGES
+        {
+            let Some((&oldest, space)) = self
+                .spaces
+                .iter()
+                .filter(|(id, _)| **id != identity)
+                .min_by_key(|(_, s)| s.used)
+            else {
+                break;
+            };
+            check(unsafe { trames_hvf_space_destroy(self.host.as_ptr(), space.host.as_ptr()) })?;
+            self.spaces.remove(&oldest);
         }
         Ok(())
     }
     fn synchronize_view(&mut self, memory: &View) -> Result<(), Error> {
-        let retired: Vec<_> = self
-            .pages
-            .iter()
-            .filter_map(|(&va, p)| {
-                (p.storage.strong_count() == 0
-                    || memory.hardware_page_info(va).ok() != Some(p.info))
-                .then_some(va)
-            })
-            .collect();
-        for va in retired {
-            self.pte(va, 0, 0)?;
-            self.pages.remove(&va);
-        }
-        for (&va, page) in &self.pages {
-            if page.info.writable {
-                memory.mark_hardware_write(va)?;
+        self.select_view(memory)?;
+        let version = memory.hardware_view_version();
+        let space = self.spaces.get_mut(&self.active).unwrap();
+        if space.version.map(|v| v.0) != Some(version.0) {
+            let addresses: BTreeSet<_> = space
+                .version
+                .and_then(|v| memory.hardware_mapping_changes(v.0))
+                .map_or_else(
+                    || space.pages.keys().copied().collect(),
+                    |changes| changes.collect(),
+                );
+            let mut retired = Vec::new();
+            for va in addresses {
+                let Some(page) = space.pages.get_mut(&va) else {
+                    continue;
+                };
+                #[cfg(test)]
+                {
+                    self.translations.inspections += 1;
+                }
+                let info = memory.hardware_page_info(va).ok();
+                let Some(info) = info.filter(|info| {
+                    page.storage.strong_count() != 0 && info.storage_id == page.info.storage_id
+                }) else {
+                    retired.push(va);
+                    continue;
+                };
+                let flags = Self::flags(info)?;
+                if flags != Self::flags(page.info)? {
+                    check(unsafe { trames_hvf_page(self.host.as_ptr(), va, page.gpa, flags) })?;
+                    #[cfg(test)]
+                    {
+                        self.translations.updates += 1;
+                    }
+                }
+                // Contents and code freshness do not change a translation.
+                if info.permissions.execute
+                    && (!page.info.permissions.execute
+                        || info.instruction_revision != page.info.instruction_revision
+                        || info.backing_version != page.info.backing_version)
+                {
+                    self.machine.publish_code(page.gpa)?;
+                }
+                let previous = page.write;
+                page.write = if info.writable {
+                    Some(memory.hardware_write_frame(va)?)
+                } else {
+                    None
+                };
+                page.info = info;
+                let write = page.write;
+                space.track_write(va, previous, write);
+            }
+            for va in retired {
+                check(unsafe { trames_hvf_page(self.host.as_ptr(), va, 0, 0) })?;
+                let old = space.pages.remove(&va).unwrap();
+                space.track_write(va, old.write, None);
+                #[cfg(test)]
+                {
+                    self.translations.retired += 1;
+                }
             }
         }
+        // Conservative hardware dirty publication is once per joined epoch,
+        // rather than a page walk at every short syscall in that epoch.
+        if space.version != Some(version) {
+            if space.private_writable != 0 {
+                memory.mark_hardware_private_writes();
+            }
+            for &write in space.publications.values() {
+                memory.mark_hardware_frame_write(write)?;
+            }
+        }
+        space.version = Some(version);
         Ok(())
     }
     fn fault(&mut self, memory: &View, event: &HostExit) -> Result<(), Error> {
@@ -221,14 +398,26 @@ impl Executor {
             self.machine.publish_code(storage.physical_address())?;
         }
         self.pte(va, storage.physical_address(), flags)?;
-        self.pages.insert(
+        #[cfg(test)]
+        {
+            self.translations.exports += 1;
+        }
+        let write = if info.writable {
+            Some(memory.hardware_write_frame(va)?)
+        } else {
+            None
+        };
+        let space = self.spaces.get_mut(&self.active).unwrap();
+        let old = space.pages.insert(
             va,
             Page {
                 gpa: storage.physical_address(),
                 storage: Arc::downgrade(&storage),
                 info,
+                write,
             },
         );
+        space.track_write(va, old.and_then(|page| page.write), write);
         Ok(())
     }
     pub fn run(
