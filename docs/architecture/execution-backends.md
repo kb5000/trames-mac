@@ -32,6 +32,22 @@ Host byte borrows retain the VM. vCPU destruction occurs on its creator thread;
 idle PTE caches hold weak storage references and invalidate them before reuse.
 Retained data can be rebound after the previous VM has permanently ended.
 
+## Linux register access
+
+EL0 can read `CNTVCT_EL0` and `CNTFRQ_EL0` directly, using the hardware counter
+and its real frequency across vCPUs and scheduler slices. `CNTKCTL_EL1` enables
+only the virtual counter, following [Linux's ARM64 timer setup](https://github.com/torvalds/linux/blob/v6.12/drivers/clocksource/arm_arch_timer.c#L921-L942); guest code cannot
+control the scheduler's timer. Counter reads require no emulation or added
+synchronization. Trapped privileged system-register accesses become recoverable
+Linux `SIGILL` with the faulting PC, allowing the guest's own signal handler to
+continue. They no longer terminate the execution backend.
+
+The static-musl `cpu-access.c` fixture checks four concurrent readers, elapsed
+time against `CLOCK_MONOTONIC` across sleep, and three privileged instructions
+with edited signal contexts. The identical ELF passes on native ARM64 Linux and
+on HVF with one or four execution slots. See the
+[compatibility and CoreMark checkpoint](../validation/mac-compat-coremark.md).
+
 ## Host borrows
 
 Before a syscall/native/VFS callback can expose a Rust byte slice, its physical

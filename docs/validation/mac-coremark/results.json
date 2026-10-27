@@ -1,0 +1,1393 @@
+{
+  "passed": true,
+  "upstream": {
+    "repository": "https://github.com/eembc/coremark",
+    "commit": "1f483d5b8316753a742cbf5590caf5bd0a4e4777",
+    "files": {
+      "core_main.c": "17884c93c5b94378eb0ff02b4df3725756cf2addb9b8cbcaa6200a4649ff5ca7",
+      "core_list_join.c": "ca00e4e010ece47d7f040cb92aa50a95345a00d3171b59d088f6b243be06ce7b",
+      "core_matrix.c": "ecdff717b5a5c4907d221a606760e25499899cbf617582c05d40db71c91351e4",
+      "core_state.c": "f4b84bb0a3452c45a4daa664ab502bfdccbd31cb57d93e9ac490c60937717a4e",
+      "core_util.c": "a3fbfcb9bb943b638624b8ece01c5836dd56a96d7bcde2697b248d077447327f",
+      "coremark.h": "42642b9a06c7ed2b3bd9eda971b7c3868c4f5d27bf7ef6c4bba11291a0c2598a",
+      "posix/core_portme.c": "f2b48f062058d528a5907e339ffd05d98f64d59e7c40d500fe05563eb5247ad0",
+      "posix/core_portme.h": "a40e90ef4c5a5626d438afee1f8da628c2800105d4c3b5318e8810b34be554f2",
+      "posix/core_portme_posix_overrides.h": "1dc67b5c1b9c773cccc740b911d708333d3bf154c3313f77b8a52e18209eda59"
+    }
+  },
+  "flags": [
+    "-O2",
+    "-fno-lto",
+    "-mcpu=generic",
+    "-march=armv8-a",
+    "-ffixed-x18",
+    "-fomit-frame-pointer"
+  ],
+  "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+  "host": "macOS-27.0.1-arm64-arm-64bit",
+  "cpu": "Apple M6",
+  "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+  "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+  "sysroot_libc_sha256": "59c9f0aee2c32083e4b6e30f581dcf8bb8ed71bf75d3ad0f9a9875f8480f03aa",
+  "builtins_sha256": "4bc354241987926aa0489ba1d925e8b10356556323307944f08209f370a28ad6",
+  "binaries": {
+    "1": {
+      "native": "2cf3765a693cd64594d6800c104fbffeacb5f1fd1a27c650073735e5c1f852cd",
+      "hvf": "aaa8ef1a665d6001212ce39c7f6cb667be19aabc48354968fb1cb483f8e86bc8"
+    },
+    "4": {
+      "native": "1d7f08effe5fbaab5d1d2c7082787806b9a2983467889aa87fcdd370b8b27770",
+      "hvf": "087e73d21b17c9469a448cfb4e67b4c639fedcb0470c6fee26cfbc74ead8dec0"
+    }
+  },
+  "scheduling": "macOS scheduled, no affinity; serial alternating native/HVF runs",
+  "environment_note": "Project native ARM64 Linux CI VM stopped before all timed runs; no concurrent builds. Both targets explicitly use generic CPU tuning and omit frame pointers.",
+  "rows": [
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 10000,
+      "seconds": 0.189,
+      "iterations_per_second": 52910.05291,
+      "wall_seconds": 0.4261253329999999,
+      "scored": false,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0",
+        "0",
+        "0x66",
+        "10000"
+      ],
+      "stdout_sha256": "be616afadf8d21d4cad8a33fa37484536ba3505a3413763f0a31a85974b98363"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 10000,
+      "seconds": 0.167,
+      "iterations_per_second": 59880.239521,
+      "wall_seconds": 0.19858645800000008,
+      "scored": false,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "10000"
+      ],
+      "stdout_sha256": "14dd72e242b1999e9eec0421efe11ebb471873da0fe9e95661f869add0ae7c18"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 13.809,
+      "iterations_per_second": 56484.901151,
+      "wall_seconds": 13.810817833,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "144b3c0797e34082d0b93f1d8e3403ab10b5e9edfaf373d6dd475cec8935b464"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 14.052,
+      "iterations_per_second": 55508.112724,
+      "wall_seconds": 14.084324041,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "a9b386682b2f4314ca5224f50fa0c56e0bcee51f4b92de6b18ae8658351eade2"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 13.255,
+      "iterations_per_second": 58845.718597,
+      "wall_seconds": 13.287766041999998,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "92d35e36d5d8efcca42129cf265cb4521962659b1b17cf7e22503f75ad6fa4f2"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 13.158,
+      "iterations_per_second": 59279.525764,
+      "wall_seconds": 13.160553499999999,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "ab900754c612379743373ba8ce590e3b6891fcc585f285f551d1b6da3c95945e"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 13.011,
+      "iterations_per_second": 59949.273691,
+      "wall_seconds": 13.01390604200001,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "e82078754f8795a17ea73594ba61ce914669db3b5f43bb9930989f9d6c45a2cd"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "performance",
+      "iterations": 780000,
+      "seconds": 13.13,
+      "iterations_per_second": 59405.940594,
+      "wall_seconds": 13.161675958000004,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "8ea13fe98cf929fecb9cb89c8cae2034ddaa3687ef17d964f9e648def2ea2e9f"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.165,
+      "iterations_per_second": 59248.006077,
+      "wall_seconds": 13.167657290999998,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "a85ba3eafc0aa1c38c64427611c3bdf34f65e95bc5daceb3ca8e45bf366fe0d0"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.196,
+      "iterations_per_second": 59108.820855,
+      "wall_seconds": 13.227597375000002,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "273d659a3128a22c5e349ed95dbedae2d593c01bd91f97cf442831ff98ecc4fe"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.211,
+      "iterations_per_second": 59041.707668,
+      "wall_seconds": 13.242905915999998,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "ed046529318ef2debda8f4112cdfc626187e2f9689c60506b47d7488db9bdfc2"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.147,
+      "iterations_per_second": 59329.124515,
+      "wall_seconds": 13.149094957999992,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "183a113967776e394113547aa855d35ae08ec38e3645efbe25760e558b58491a"
+    },
+    {
+      "target": "native",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.295,
+      "iterations_per_second": 58668.672433,
+      "wall_seconds": 13.296888082999999,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-1",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "79346a72d78de3b69e4c6204e86c5d003c7291f5a74c02a73437489efb6d4735"
+    },
+    {
+      "target": "hvf",
+      "threads": 1,
+      "mode": "validation",
+      "iterations": 780000,
+      "seconds": 13.199,
+      "iterations_per_second": 59095.386014,
+      "wall_seconds": 13.23056600000001,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "1",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-1",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "780000"
+      ],
+      "stdout_sha256": "b7f629da93563a37fe9b6b41c626a3b9cf0630d56d7306598cab063821cd2405"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 10000,
+      "seconds": 0.233,
+      "iterations_per_second": 171673.819742,
+      "wall_seconds": 0.7144473750000202,
+      "scored": false,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0",
+        "0",
+        "0x66",
+        "10000"
+      ],
+      "stdout_sha256": "e346a831f230d1ea6192882dd1c162650e99c7e75b9cfa90d0de5fc24f2979b7"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 10000,
+      "seconds": 0.218,
+      "iterations_per_second": 183486.238532,
+      "wall_seconds": 0.25033562499999107,
+      "scored": false,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "10000"
+      ],
+      "stdout_sha256": "f4cd3ef087d397f2c4996a8e04dbc30efe7df1b22b67cf53f163d023438e182d"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.574,
+      "iterations_per_second": 207361.327112,
+      "wall_seconds": 11.575415249999992,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "ed2d43127386119b22f41b2dbdef127fba4ff830b77415b4f619e115e99798a0"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.594,
+      "iterations_per_second": 207003.622563,
+      "wall_seconds": 11.627910583000016,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "38440b9fbab4d1f9da276976ab9721c105351b6096c7a66f1c1e8c4a228b1cc6"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.563,
+      "iterations_per_second": 207558.592061,
+      "wall_seconds": 11.596836957999983,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "ed77b2823ac8236e346299decde36733dfbfe42aa608ad3ed4ccd1630eaaed65"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.557,
+      "iterations_per_second": 207666.349399,
+      "wall_seconds": 11.55900274999999,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "4d385744b0665010080a9af25e0b05b12e5a115501d61753375e70598508e984"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.543,
+      "iterations_per_second": 207918.218834,
+      "wall_seconds": 11.545529749999986,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "1e169693d066e6a18d697c6f540d0ec3ff1b748383387a8774c3607bc5db1374"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "performance",
+      "iterations": 600000,
+      "seconds": 11.573,
+      "iterations_per_second": 207379.244794,
+      "wall_seconds": 11.606868249999991,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0",
+        "0",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "832cf1b613f04f56da9ee7ec2bf628a93317726effc7a7016c602c05d635a54c"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.668,
+      "iterations_per_second": 205690.778197,
+      "wall_seconds": 11.669671833999985,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "3a35846f13a4fba73f0ee94870538aa5b4ee722586697e33bdae1e26327fc915"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.669,
+      "iterations_per_second": 205673.151084,
+      "wall_seconds": 11.702875625000019,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "a3c2372dbbbcc3c9deb72e686ec0c6d12c7ebcf60e9962dcdfab6e0d583efc6d"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.652,
+      "iterations_per_second": 205973.223481,
+      "wall_seconds": 11.685733916999993,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "b58076d52c69cc47feeee49c9c10701542bb4f7c145fba37c97e7bf47a67ab58"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.649,
+      "iterations_per_second": 206026.268349,
+      "wall_seconds": 11.65086554100003,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "18d57a7a3993d3dc9c99e347f0a87f747a11bbb750cbd6ce29e82b441ef9a94e"
+    },
+    {
+      "target": "native",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.633,
+      "iterations_per_second": 206309.636379,
+      "wall_seconds": 11.63522258300003,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-native-4",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "c06d7018a908523f3a6a8e96194c7315bbcd1214d579ac14d56675ea809d816a"
+    },
+    {
+      "target": "hvf",
+      "threads": 4,
+      "mode": "validation",
+      "iterations": 600000,
+      "seconds": 11.665,
+      "iterations_per_second": 205743.677668,
+      "wall_seconds": 11.698780875000011,
+      "scored": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "command": [
+        "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+        "--rootfs",
+        "/Users/main/dev/trames/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz",
+        "--network",
+        "off",
+        "--no-pty",
+        "--cpus",
+        "4",
+        "--memory-mib",
+        "4096",
+        "--timeout",
+        "120",
+        "--metrics",
+        "--exec-file",
+        "/coremark=/Users/main/dev/trames/target/mac-compat-coremark/benchmark-controlled/coremark-linux-4",
+        "/coremark",
+        "0x3415",
+        "0x3415",
+        "0x66",
+        "600000"
+      ],
+      "stdout_sha256": "1939dada9b2feaadff1928f82f30cffd8047962994901d8e264a8d6a7cf9f9b5"
+    }
+  ],
+  "summary": [
+    {
+      "threads": 1,
+      "mode": "performance",
+      "median_iterations_per_second": {
+        "native": 59279.525764,
+        "hvf": 58845.718597
+      },
+      "hvf_over_native": 0.9926820067905562
+    },
+    {
+      "threads": 1,
+      "mode": "validation",
+      "median_iterations_per_second": {
+        "native": 59248.006077,
+        "hvf": 59095.386014
+      },
+      "hvf_over_native": 0.9974240472700188
+    },
+    {
+      "threads": 4,
+      "mode": "performance",
+      "median_iterations_per_second": {
+        "native": 207666.349399,
+        "hvf": 207379.244794
+      },
+      "hvf_over_native": 0.9986174717000087
+    },
+    {
+      "threads": 4,
+      "mode": "validation",
+      "median_iterations_per_second": {
+        "native": 206026.268349,
+        "hvf": 205743.677668
+      },
+      "hvf_over_native": 0.9986283754820948
+    }
+  ],
+  "recorded_utc": "2026-10-27T02:19:55.622124+00:00",
+  "source": {
+    "commit": "79a37b50498193b92963bfec7883d06805e79d0f",
+    "runtime": "fa0310b84bc34788d2c01b15c6923f4acfd3301c",
+    "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+    "files_sha256": {
+      "crates/trames-hvf/src/host.c": "034e39300943864e3afd62ad494ff3ccf53ae3862b9280c2bc2905d9973e35d9",
+      "crates/trames-hvf/src/kernel.rs": "4537836671fd989f000a27f85157cf4ef01c6c7ef27741dad1ec2733fc812bb1",
+      "tests/fixtures/cpu-access.c": "b273e2513c53e80ffa398b3d24afae1b6e2d471e82e0ca87d0437d753cc38feb",
+      "tests/integration/mac-cpu-access.py": "2edf2a4e5dcb3589969e86596132c19aa39454d35df16e822d3fe9baa394dd99",
+      "tests/performance/coremark.py": "d2325a150a37d59f90b3a01720d5e8a0998bf5b6a3e140b6ba7bc96a493e8df1",
+      "tests/performance/coremark-upstream.json": "cfa828504e939a1dd2a2669e8801f347b8569308bb58eb044ac46a64e18fe7e4"
+    }
+  },
+  "compatibility_before": [
+    {
+      "mode": "counter",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "trames mac parallel: peak=2 chunks=4 cpu_time_us=3636\ntrames mac paging: PagingStats { mapped_bytes: 49152, backing_bytes: 1048576, page_out_bytes: 0, page_ins: 0 }\ntrames mac metrics: {\"syscalls\":9,\"context_switches\":10,\"hardware_mapped_bytes\":49152,\"guest_resident_bytes\":40960,\"instruction_count\":null}\ntrames-mac: execution backend: Fault { pc: 2164192, address: 2164168, syndrome: 1647638817 }\n"
+    },
+    {
+      "mode": "privileged",
+      "exit": 1,
+      "stdout": "",
+      "stderr": "trames mac parallel: peak=0 chunks=0 cpu_time_us=1728\ntrames mac paging: PagingStats { mapped_bytes: 32768, backing_bytes: 1048576, page_out_bytes: 0, page_ins: 0 }\ntrames mac metrics: {\"syscalls\":3,\"context_switches\":4,\"hardware_mapped_bytes\":32768,\"guest_resident_bytes\":36864,\"instruction_count\":null}\ntrames-mac: execution backend: Fault { pc: 2163948, address: 2175860, syndrome: 1647508455 }\n"
+    }
+  ],
+  "validation": {
+    "register_access": {
+      "passed": true,
+      "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+      "fixture_sha256": "841606e8190ee6f0e077c79d73e2a6e9f48542a736cfa5f6b431153037c24cc3",
+      "rows": [
+        {
+          "cpus": 1,
+          "mode": "counter",
+          "command": [
+            "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+            "--cpus",
+            "1",
+            "--no-pty",
+            "--timeout",
+            "10",
+            "--metrics",
+            "/Users/main/dev/trames/target/mac-compat-coremark/cpu-access",
+            "counter"
+          ],
+          "exit": 0,
+          "passed": true
+        },
+        {
+          "cpus": 1,
+          "mode": "privileged",
+          "command": [
+            "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+            "--cpus",
+            "1",
+            "--no-pty",
+            "--timeout",
+            "10",
+            "--metrics",
+            "/Users/main/dev/trames/target/mac-compat-coremark/cpu-access",
+            "privileged"
+          ],
+          "exit": 0,
+          "passed": true
+        },
+        {
+          "cpus": 4,
+          "mode": "counter",
+          "command": [
+            "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+            "--cpus",
+            "4",
+            "--no-pty",
+            "--timeout",
+            "10",
+            "--metrics",
+            "/Users/main/dev/trames/target/mac-compat-coremark/cpu-access",
+            "counter"
+          ],
+          "exit": 0,
+          "passed": true
+        },
+        {
+          "cpus": 4,
+          "mode": "privileged",
+          "command": [
+            "/Users/main/dev/trames-mac/target/release/trames-mac-run",
+            "--cpus",
+            "4",
+            "--no-pty",
+            "--timeout",
+            "10",
+            "--metrics",
+            "/Users/main/dev/trames/target/mac-compat-coremark/cpu-access",
+            "privileged"
+          ],
+          "exit": 0,
+          "passed": true
+        }
+      ]
+    },
+    "signed_hardware": {
+      "passed": true,
+      "runtime_revision": "fa0310b84bc34788d2c01b15c6923f4acfd3301c",
+      "rows": [
+        {
+          "target": "trames-mac-run",
+          "executable_sha256": "ee80ecca6af5855c0c92edafebb366f3951da52928b9cbda7f2c8669ba5ccf6f",
+          "exit": 0,
+          "passed_tests": 1
+        },
+        {
+          "target": "trames_hvf",
+          "executable_sha256": "81549cc9065da63bc6f5f429784f03c52503739d2d3fcace11b9059de4a7ddb7",
+          "exit": 0,
+          "passed_tests": 5
+        }
+      ]
+    },
+    "linux_sessions": {
+      "passed": true,
+      "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+      "fixture_sha256": "685f9c667253bafc9902ade812c24ffcf7454e4b2256ce38aaa42def16b23b2f",
+      "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+      "rows": [
+        {
+          "name": "process-threads",
+          "passed": true
+        },
+        {
+          "name": "shell-processes",
+          "passed": true
+        },
+        {
+          "name": "script",
+          "passed": true
+        },
+        {
+          "name": "storage-write",
+          "passed": true
+        },
+        {
+          "name": "storage-read",
+          "passed": true
+        },
+        {
+          "name": "interactive-job-control-resize-restore",
+          "passed": true
+        }
+      ]
+    },
+    "smp_paging": {
+      "passed": true,
+      "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+      "fixture_sha256": "44d59d8a85fe632af83887a3bef6ef3df70df8f86286f64a63aa74131668b462",
+      "cases": [
+        {
+          "name": "smp",
+          "cpus": 4,
+          "resident_target_mib": null,
+          "samples": [
+            {
+              "phase": "BASELINE",
+              "rss": 48267264,
+              "physical_footprint": 40895112
+            },
+            {
+              "phase": "POPULATED",
+              "rss": 205553664,
+              "physical_footprint": 63816664
+            },
+            {
+              "phase": "VERIFIED",
+              "rss": 209403904,
+              "physical_footprint": 67650520
+            },
+            {
+              "phase": "UNMAPPED",
+              "rss": 64307200,
+              "physical_footprint": 32048088
+            }
+          ],
+          "passed": true,
+          "exit": 0,
+          "seconds": 0.7713795419999999
+        },
+        {
+          "name": "paging",
+          "cpus": 4,
+          "resident_target_mib": 16,
+          "samples": [
+            {
+              "phase": "BASELINE",
+              "rss": 48332800,
+              "physical_footprint": 40927832
+            },
+            {
+              "phase": "POPULATED",
+              "rss": 103284736,
+              "physical_footprint": 63325096
+            },
+            {
+              "phase": "VERIFIED",
+              "rss": 90947584,
+              "physical_footprint": 67208104
+            },
+            {
+              "phase": "UNMAPPED",
+              "rss": 64307200,
+              "physical_footprint": 32015272
+            }
+          ],
+          "passed": true,
+          "exit": 0,
+          "seconds": 2.9780415
+        },
+        {
+          "name": "single-paging",
+          "cpus": 1,
+          "resident_target_mib": 16,
+          "samples": [
+            {
+              "phase": "BASELINE",
+              "rss": 48234496,
+              "physical_footprint": 40895064
+            },
+            {
+              "phase": "POPULATED",
+              "rss": 96501760,
+              "physical_footprint": 56787664
+            },
+            {
+              "phase": "VERIFIED",
+              "rss": 80953344,
+              "physical_footprint": 56853200
+            },
+            {
+              "phase": "UNMAPPED",
+              "rss": 54263808,
+              "physical_footprint": 21627528
+            }
+          ],
+          "passed": true,
+          "exit": 0,
+          "seconds": 2.9222980420000004
+        }
+      ]
+    },
+    "signal_oracles": {
+      "passed": true,
+      "runner_sha256": "755712a1a852384cb358b99db5a08de1479c2fd0b7c4b288f7b8333258238610",
+      "rows": [
+        {
+          "fixture": "cpu-signals",
+          "arguments": [],
+          "fixture_sha256": "fbd88226b9871493cf59cbe65073eb92d5ec7a52b77ff79adef76dada25c31ac",
+          "oracle_stdout_sha256": "cf72bdc614b10580f66e38c2e13f632d56001d830f49722efa48909f504a891a",
+          "returncode": 0,
+          "passed": true
+        },
+        {
+          "fixture": "signal-leaf-stack",
+          "arguments": [],
+          "fixture_sha256": "1e78251bb5581e5c94daa0bde3721cd5c32285190146e58f032b345f11b953cd",
+          "oracle_stdout_sha256": "9bf8b6addab624f569a6416f9b03e1d38e1a8ab413869648030ca7174668ed27",
+          "returncode": 0,
+          "passed": true
+        },
+        {
+          "fixture": "task-signals",
+          "arguments": [],
+          "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+          "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+          "returncode": 0,
+          "passed": true
+        },
+        {
+          "fixture": "task-signals",
+          "arguments": [
+            "autodisarm"
+          ],
+          "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+          "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+          "returncode": 0,
+          "passed": true
+        }
+      ]
+    }
+  },
+  "native_linux_register_oracle": {
+    "unchanged_elf_sha256": "841606e8190ee6f0e077c79d73e2a6e9f48542a736cfa5f6b431153037c24cc3",
+    "counter_passed": true,
+    "privileged_passed": true,
+    "observed_before_hvf_fix": true
+  },
+  "reused_common_runtime_validation": {
+    "runtime_revision": "fa0310b84bc34788d2c01b15c6923f4acfd3301c",
+    "production_unchanged_this_checkpoint": true,
+    "native_linux_ci_passed_stages": 81,
+    "evidence": "https://github.com/kb5000/trames-mac/blob/4fd0da03ef955e4366d60ac98777818b3582a73b/docs/validation/hvf-smp-paging-summary.json"
+  },
+  "score_spread": [
+    {
+      "threads": 1,
+      "mode": "performance",
+      "target": "native",
+      "minimum": 56484.901151,
+      "maximum": 59949.273691,
+      "coefficient_of_variation": 0.025616395460481646
+    },
+    {
+      "threads": 1,
+      "mode": "performance",
+      "target": "hvf",
+      "minimum": 55508.112724,
+      "maximum": 59405.940594,
+      "coefficient_of_variation": 0.02970783766828286
+    },
+    {
+      "threads": 1,
+      "mode": "validation",
+      "target": "native",
+      "minimum": 58668.672433,
+      "maximum": 59329.124515,
+      "coefficient_of_variation": 0.004977677360126889
+    },
+    {
+      "threads": 1,
+      "mode": "validation",
+      "target": "hvf",
+      "minimum": 59041.707668,
+      "maximum": 59108.820855,
+      "coefficient_of_variation": 0.0004907474740108028
+    },
+    {
+      "threads": 4,
+      "mode": "performance",
+      "target": "native",
+      "minimum": 207361.327112,
+      "maximum": 207918.218834,
+      "coefficient_of_variation": 0.0010965399469618983
+    },
+    {
+      "threads": 4,
+      "mode": "performance",
+      "target": "hvf",
+      "minimum": 207003.622563,
+      "maximum": 207558.592061,
+      "coefficient_of_variation": 0.0011154118447957782
+    },
+    {
+      "threads": 4,
+      "mode": "validation",
+      "target": "native",
+      "minimum": 205690.778197,
+      "maximum": 206309.636379,
+      "coefficient_of_variation": 0.0012278417060713235
+    },
+    {
+      "threads": 4,
+      "mode": "validation",
+      "target": "hvf",
+      "minimum": 205673.151084,
+      "maximum": 205973.223481,
+      "coefficient_of_variation": 0.0006225058596687178
+    }
+  ]
+}

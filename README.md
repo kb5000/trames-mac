@@ -68,3 +68,9 @@ of nested Hypervisor execution. See `SOURCE.json` for extraction provenance.
 Run `python3 scripts/check-hardware.py` for the explicit local HVF/pressure tests.
 The [acceptance record](docs/validation/hvf-smp-paging-summary.json) includes the
 full native Linux CI result and live-page integrity/RSS samples.
+
+Linux counter/register compatibility and a controlled native/HVF CoreMark
+comparison are documented in the
+[compatibility and performance checkpoint](docs/validation/mac-compat-coremark.md).
+The paired benchmark uses one Apple Clang with explicit shared CPU tuning and
+checks both standard inputs, CRCs, thread counts and minimum runtime.
