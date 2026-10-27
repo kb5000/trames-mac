@@ -395,3 +395,154 @@ processes, not host CPU workers. Jobs, stacks and memory remain demand allocated
 the CPU worker setting is unchanged, and the configured guest RAM budget still
 applies. Clone admission, RLIMIT_NPROC and proc task-limit reports use the same
 session capacity.
+
+## Global optimization review (2026-10-28)
+
+This is a code-based ordering of architectural opportunities, not a measured
+ranking of current Firefox CPU time or a promised speedup. The selected design
+remains a thin HVF executor over the shared userspace Linux kernel. Common
+memory, scheduler and VFS changes must also support the iPad interpreter; HVF
+register residency and AppKit presentation stay behind backend boundaries.
+
+A passive check of the post-crash-fix browser, with no automated input or
+navigation, used 11.78 ms of host-accounted process CPU in 10.01 s without a
+profiler. A separate 20.70 s stack sample mostly observed blocked threads.
+Neither interval measures active browsing, page-load latency, guest instruction
+throughput or displayed-frame latency. Earlier active profiles predate the
+platform-hypercall repair and must not be presented as post-fix CPU shares.
+Private raw samples remain outside the repository.
+
+### 1. Separate local address-space edits from backing-layout changes
+
+The current run queue starts a mapping checkpoint with the caller's address
+space, then computes a transitive closure through every exported backing key.
+`BackingIndex::commit_domains` includes all versioned backing domains, including
+read-only mapped files. `Domains::closure` can therefore connect processes
+through a shared library even when the pending operation only changes a local
+anonymous mapping. `vm_checkpoint` joins and prepares every participating space.
+This is a verified amplification mechanism; its frequency in active browsing
+has not yet been measured.
+
+Classify effects before choosing the pause set: local mapping/permission edits
+need their own address space; actual provider layout, EOF or storage replacement
+needs affected aliases; ordinary shared-byte writes use canonical storage and
+hardware coherence. Retained storage ownership must make those distinctions
+safe. Simply deleting backing keys would break the existing lifetime and
+provider-rebinding boundary.
+
+Validate with independent processes sharing a read-only library: a local
+anonymous mmap/mprotect/munmap must leave peers executing, while truncate and
+storage replacement retain correct live-alias behavior. Record requested versus
+quiesced address spaces, peer pause duration and progress outside the pause set.
+
+### 2. Make backing refresh proportional to changed ranges
+
+A changed mapping-domain generation still adds all that domain's mapped pages
+to the snapshot candidate set. Each candidate gets a version/EOF check. Stable
+direct data frames can refresh metadata without replacement, but the scan
+remains. `FileMapping::changed` advances both page and file-domain generations;
+content, layout and persistence invalidation still overlap.
+
+Separate allocation/layout/EOF changes, code/monitor invalidation and durability
+dirtiness. A bounded per-backing changed-range journal can reuse the existing
+incremental snapshot and hardware mapping-delta mechanisms, with a full fallback
+only when history expires or a provider cannot describe changes. Ordinary
+canonical data needs no software publication to become visible. Preserve
+executable aliases, interpreter cache rules, truncation and actual writeback.
+
+Acceptance should hold mapped-file size constant while varying changed pages,
+and then hold changed pages constant while increasing mapped-file size. Reuse
+`backing_domain_checks`, `backing_page_checks`, `incremental_pages` and mapping
+reconciliation counters to verify that unchanged pages do not dominate work.
+
+### 3. Keep the active task's registers resident on its vCPU
+
+`trames_hvf_run` currently sets and gets all 31 general and 32 SIMD registers on
+every run: 126 framework register calls before counting system/FP state. A short
+worker-local syscall still pays this full round trip. Persistent worker vCPUs
+already provide the necessary ownership location.
+
+For same-task continuation, materialize syscall inputs and changed results,
+while leaving unaffected registers resident. Full state must still be available
+for task switches/migration, signals and ucontext edits, fork, debugging and
+joined ownership transfers. TLB maintenance and cancellation must respect that
+resident-state contract. Keep the common CPU interface's fully materialized
+fallback for the interpreter and other backends.
+
+Measure framework register calls per syscall, same-task continuation rate and
+active syscall-heavy throughput. Include all-register signal/migration tests;
+the existing platform-number-shaped x0 regression must continue to pass.
+
+### 4. Defer private fork copies and distinguish physical accounting
+
+Fork currently charges each child's resident pages to its new address-space
+account. Shared writable private storage can detach during parallel preparation,
+before any actual child write. `can_fork` conservatively requires another full
+parent resident charge. The 4 GiB setting remains a logical budget, not eagerly
+allocated RAM or a measurement of unique physical storage.
+
+A retained physical-allocation owner can share private pages until a real write;
+HVF can use read-only COW mappings, while the interpreter keeps compatible
+software write admission. This is a semantic first-write fault, distinct from
+reintroducing artificial dirty faults each execution epoch. Keep per-space
+logical limits separate from any aggregate unique-allocation policy; do not
+silently redefine the existing budget. Release a physical charge only when its
+last mapping/device owner ends.
+
+Measure actual copy bytes and unique retained allocations for fork-without-write
+and sparse-child-write workloads. Check guest COW isolation, quota failures,
+reclamation and retained native-device leases, rather than treating aliased RSS
+as a unique physical-page count.
+
+### 5. Unify file storage and increment persistence work
+
+Native shared files already provide direct mappings. Ordinary persistent files
+can still create heap-backed mapped pages, then copy dirty pages back to their
+underlying file. The non-overlay filesystem checkpoint also serializes the
+whole namespace. Existing exclusions for unlinked and temporary files should
+be retained.
+
+Prefer a common retained allocation/cache owner for mmap and file I/O where the
+storage backend supports it. Track dirty ranges and namespace deltas, with
+periodic manifest snapshots. Large blocking transfers should release execution
+slots through the existing service mechanism. Preserve append ordering, partial
+I/O, error reporting and explicit fsync durability. Ordinary network and Unix
+byte-stream operations already run on workers; remaining gather/scatter copies
+are a separate ownership optimization, not a reason to add a resource thread.
+
+### 6. Separate presentation costs from native rendering capability
+
+The presenter already reads retained SHM/native textures without mandatory pixel
+readback and uses coalesced notifications. It still creates no-copy Metal buffer
+wrappers per frame and waits for command scheduling. Cache imports by allocation
+and layout lifetime; investigate submission changes only while preserving actual
+presentation acknowledgements, completion leases and resize/occlusion behavior.
+Damage updates need retained content: arbitrary drawables cannot be assumed to
+preserve earlier pixels.
+
+The observed Firefox path remains software rendering. Metal presentation alone
+does not establish native GPU WebRender support, and the current native Vulkan
+compute path does not establish Firefox EGL/GL compatibility. Separately extend
+the browser graphics API path and capability coverage. Native device allocations
+that can also back guest mappings would remove the current HOST_COHERENT Vulkan
+baseline scans; require compatible alignment, lifetime and guest-access contracts.
+Keep native compute available without starting windows.
+
+### Follow-up order and measurement boundary
+
+Start with pause scope and backing-change classification together, since they
+remove repeated cross-process work in both GUI and server workloads. Register
+residency is the next isolated Mac executor opportunity; real COW and physical
+accounting are a larger common-memory change. File persistence and native browser
+graphics remain distinct projects with their own durability/capability gates.
+
+For headless scaling, also audit the existing owner idle path's task/FD scans
+and short sleeps. Extend existing wake subscriptions and deadlines instead of
+introducing polling or a new coordinator thread. Attribute passive wakeups before
+calling them a bottleneck.
+
+Use a fixed offline browser workload to separate process CPU, pause time,
+input-to-JavaScript and successful presentation latency, then verify real sites.
+Report copied/scanned bytes and work amplification as well as elapsed time. No
+implementation or performance improvement is claimed by this review. Runtime
+source is unchanged, so existing acceptance results remain applicable.
