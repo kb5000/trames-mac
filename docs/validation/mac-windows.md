@@ -446,3 +446,34 @@ near-native performance, cold-start/P95 behavior or general Firefox release
 readiness. The filtered measurement record includes the separate follow-up.
 Only validation records changed; unchanged full-CI and hardware results were
 reused.
+
+
+### Online browsing and CJK fonts (2026-10-27)
+
+The test window initially used explicit `--network off`, which prevented other
+websites from loading. It was restarted with `--network outbound`, four CPUs,
+a 4 GiB logical budget, a 24-hour session limit and per-event diagnostics off.
+Original Firefox visibly loaded HTTPS Example Domain and Google, including
+search results. No certificate-validation bypass or Firefox security setting
+change was used. The CLI's normal network default was already `full`; no
+network implementation change was needed for this configuration issue.
+
+The original guest lacked CJK glyph coverage. Installing Alpine's signed
+`font-noto-cjk` package and running `fc-cache -fv` made fontconfig enumerate the
+CJK faces. After restarting Firefox, Japanese Google labels and result text
+rendered as glyphs rather than missing-character boxes. The README now provides
+repeatable online browsing and font-installation commands.
+
+The owner still reports slow overall browsing. System stack samples from actual
+online pages show substantial runtime metadata/mapping and code-publication
+work. They include blocked threads and are not Time Profiler CPU percentages;
+the attempted Time Profiler attachment did not complete. Raw stacks, addresses,
+web page contents and diagnostic output remain private in ignored output.
+These observations do not establish a new browser latency or speedup result.
+
+A first-write-fault prototype passed 16 signed HVF tests, but remains a private
+comparison and is not part of main. Architecture review is examining removal
+of redundant content-coherence bookkeeping for canonical hardware memory,
+rather than treating that bookkeeping as an inherent hardware requirement.
+The ordinary-data, address-space lifetime/permission and file/device boundary
+contracts must be evaluated separately. Runtime/iPad code is unchanged.

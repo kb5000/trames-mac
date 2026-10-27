@@ -66,6 +66,24 @@ move/resize requests use the common Wayland seat and shell. Host clipboard and
 IME integration, and the HVF external GPU buffer bridge, remain follow-up work.
 See [native window ownership and validation](docs/validation/mac-windows.md).
 
+For Firefox browsing, use a network-enabled guest session. `--network off`
+explicitly disables Internet access and is intended for isolated tests:
+
+```sh
+target/release/trames-mac-run --storage /path/to/guest-store --network outbound --cpus 4 --memory-mib 4096
+# Inside the guest shell:
+apk add --no-cache firefox dbus font-dejavu font-noto-cjk
+fc-cache -f
+dbus-run-session -- firefox --no-remote https://example.com/
+```
+
+The [Alpine Noto CJK package](https://pkgs.alpinelinux.org/package/v3.22/community/aarch64/font-noto-cjk)
+provides Chinese, Japanese and Korean glyphs. Refresh the font cache after
+installation and restart Firefox. Browser certificate validation remains enabled.
+Real-site interaction performance is still under investigation; the offline
+input acknowledgements in the validation record are not a general browser
+performance or release-readiness result.
+
 Experimental native Vulkan compute and offscreen graphics are available with
 `--vulkan`, independently of windows. Use `--no-windows --vulkan` for a compute
 server. The guest needs the shared Trames ICD and normal Vulkan loader; the host
