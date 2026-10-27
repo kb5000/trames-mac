@@ -174,3 +174,115 @@ Physical iPad release acceptance remains a separate product check.
 
 The [recorded acceptance summary](../validation/hvf-smp-paging-summary.json)
 contains exact source/binary/fixture hashes, CI scope and live RSS measurements.
+
+## Whole-system backend selection review (2026-10-27)
+
+This is a design review, not an implemented memory-contract change. The working
+recommendation is to keep the shared Linux userspace runtime and redesign its
+HVF memory integration for the Mac product. Native ARM64 execution with syscall
+rewriting remains a bounded alternative experiment. A full Linux VM is a valid
+separate product strategy when broad kernel compatibility outweighs sharing the
+iPad kernel and directly controlling guest resources.
+
+The decision includes memory, process isolation, storage, networking, display,
+and maintenance. An empty syscall benchmark alone cannot select the backend.
+The existing [CoreMark comparison](../validation/mac-compat-coremark.md) establishes
+near-native compute for that workload; [Firefox CPU sampling](../validation/mac-windows.md#cpu-baseline)
+finds most CPU in permission changes and mapping maintenance. Neither measures
+the intrinsic cost of an otherwise unchanged HVF syscall exit in isolation.
+
+| Candidate | Whole-system implication |
+| --- | --- |
+| Redesigned HVF with the shared runtime | Hardware guest address spaces and ordinary ARM execution, with current shared VFS/socket objects and iPad kernel reuse; host crossings remain. |
+| Native ARM64 with syscall rewriting | Removes virtualization crossings, but overlapping guest address spaces require separate host processes or address translation; resource and code-lifetime models must change. |
+| Same-ISA dynamic translation | Can retain one host process and call the runtime directly; must account for address translation, code cache, indirect branches and JIT invalidation. |
+| Full Linux VM | Linux owns process, filesystem and network semantics; requires new host integration and cooperative memory return, with different kernel implementations on Mac and iPad. |
+
+### Memory and process ownership
+
+The target is no hardware permission toggle for routine metadata retention or
+ordinary bounded syscall transfers, and no full cached-PTE walk on an unchanged
+address space. Stable physical mappings should last while resident; persistent
+translation state should belong to a Linux address space, with actual mapping,
+permission, COW and reclamation changes applied incrementally. A content/code
+revision is distinct from translation identity. The current complete
+`HardwarePageInfo` comparison can retire executable translations after a shared
+code epoch changes; its contribution to observed churn still needs measurement.
+
+Guest bytes and host Rust objects need distinct access contracts. Metadata-only
+handle retention must not imply byte borrowing. Bounded copy-in/out or audited
+raw ARM operations are candidates for concurrent guest bytes; existing APIs
+that create guest Rust slices must continue excluding conflicting hardware
+access until their contract is changed and validated. This review does not
+authorize simply deleting those gates. Actual mapping lifetime, first-write COW,
+file truncation and architectural synchronization remain necessary. Fork should
+eventually detach private storage on the first write rather than eagerly during
+View admission.
+
+Native execution in a host process per guest address space obtains host VM
+isolation, but current in-process Arc/Mutex resource objects cannot be shared
+unchanged across those processes. Some sharing can move to inherited host file
+descriptors; virtual namespace ownership, Linux-specific state and cross-process
+coordination still need a design. Same-process native code instead needs a way
+to represent overlapping Linux virtual addresses and preserve the guest/host
+memory boundary. A syscall trampoline alone does not supply that mechanism.
+
+Reclamation acceptance must distinguish logical allocation, live resident data,
+host RSS/physical footprint, caches and backing-file disk usage. Reserving a
+4 GiB guest budget is not the same as populating it. Unmapping or advising away
+guest pages should release ownership; pressure reclamation of live dirty bytes
+must preserve their data. The current backing file reuses freed offsets but
+retains its disk high-water mark until teardown, and synchronous page-out can
+create disk stalls. Memory savings must therefore be measured alongside backing
+space and I/O. Allocator-retained guest heap is not automatically known free.
+
+### Storage and networking
+
+Keep one byte authority for file I/O and shared mmap, including truncate/EOF,
+open-unlinked files, permissions, quotas and durability. Existing direct file
+capabilities already use shared open-file objects and host handles; mapped
+files intentionally leave stale direct-disk paths. CPU backend replacement does
+not remove these coherence rules or current gather/scatter copies. Small I/O
+should use bounded reusable buffers; large operations need an explicit retained
+buffer/pinning/cancellation design before a zero-copy claim. Blocking disk work
+must release execution slots through existing scheduling facilities.
+
+FileProvider export and staged writeback remain an explicit synchronization
+boundary. Exposing internal object files as an independently writable host tree
+would bypass namespace/mmap authority. A full VM would need an export/writeback
+agent or protocol for its internal Linux filesystem. A host directory exposed
+through [virtiofs](https://developer.apple.com/documentation/virtualization/vzvirtiofilesystemdeviceconfiguration)
+is a separate shared mount, not automatic host access to a guest block rootfs.
+
+Ordinary root TCP/UDP already use nonblocking host BSD sockets. There is no
+packet-stack/NAT hop to eliminate on that path. Preserve direct shared object
+access and readiness-based parking; reserve packet processing for explicit
+virtual network semantics. Linux socket options, AF_UNIX/descriptor passing,
+epoll, namespaces and DNS behavior remain compatibility work whichever CPU
+backend is used. A full VM delegates those semantics to Linux and uses a device
+boundary for external traffic.
+
+A full VM need not imply unavoidable double disk caching: Apple's
+[disk image cache modes](https://developer.apple.com/documentation/virtualization/vzdiskimagecachingmode)
+include uncached operation. Durability/synchronization must still be preserved.
+Its [memory balloon](https://developer.apple.com/documentation/virtualization/vzvirtiotraditionalmemoryballoondevice)
+requests guest cooperation; the SDK explicitly says the guest may not handle
+the request. Configured RAM alone proves neither fixed host RSS nor immediate
+reclamation. These require the same real footprint measurements as other routes.
+
+### Selection gates
+
+Compare unchanged-mapping HVF syscall exits against native trampolines, then
+measure whole operations: multiple address spaces at identical VAs; shared
+mmap/futex/FD/socket behavior; fork and first-write COW; JIT RW/RX aliases;
+random 4 KiB and large sequential I/O; fsync/rename durability; mmap/truncate;
+TCP and AF_UNIX throughput and tail latency; epoll wakeups; display/input and
+FileProvider conflict handling. Record CPU and blocked time separately, as well
+as peak/retained footprint, backing-space use, and reclamation/recovery latency.
+Native promotion requires these gates, not just a faster empty syscall loop.
+
+The current SDK has 4 KiB process-page and custom-x18 ABI interfaces, so old
+blanket claims that native execution is impossible are inappropriate. Capability,
+signing, signals and JIT integration remain unproven for this product. No new
+backend or unsafe guest-memory implementation is selected by publishing this
+review; raw experiments and traces stay in ignored local build output.
