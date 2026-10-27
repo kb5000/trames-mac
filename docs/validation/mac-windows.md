@@ -150,3 +150,42 @@ clients are the accepted rendering scope; the HVF Vulkan/external GPU ownership
 bridge and Xwayland product integration are separate gates. Native chrome/CSD
 polish and app-specific compatibility require further acceptance. This checkpoint
 does not claim Firefox readiness or a signed iPad release.
+
+## Firefox investigation (2026-10-27)
+
+The original Alpine 3.22.6 ARM64 Firefox 142.0-r0 package was tested in an
+independent guest store with four CPUs, a 4 GiB guest budget, normal Firefox
+settings, Wayland, and an offline HTML page. Desktop dependencies include the
+original EGL/GLES libraries, fonts, a D-Bus session and machine ID. The page's
+JavaScript title marker and green Canvas were observed in both diagnostic and
+clean signed builds. This is a limited rendering smoke test, not full browser
+acceptance: reliable input, navigation and shutdown still require validation,
+and some subsequent runs terminated with status 139. Later bounded runs with
+both clock behaviors did not reproduce that exit, so its cause remains open.
+
+A locked/fully occluded native window is intentionally not presented. Its
+Wayland frame requests remain pending until real presentation is possible.
+A small independent Wayland client reproduced that wait; after unlocking, the
+same client completed two windows and ten actual frame acknowledgements each.
+Remote desktop automation being available does not imply WindowServer marks a
+Metal window visible.
+
+Host sampling of a clean build found an avoidable resident-image scan in
+`Memory::prepare_hardware`. The runtime now skips it when the fixed-buffer pin
+table is empty, retaining checks for live mapped pins. In seven local synthetic
+trials with 16,384 resident pages and 2,048 admissions, median admission time
+fell from 37.068 ms to 0.205 ms. This measures that operation only; it is not a
+Firefox startup or overall browser speedup claim.
+
+Input and frame acknowledgements also now share the guest monotonic clock.
+Forwarding host uptime directly is incompatible with GTK's reconstruction of
+Wayland input timestamps from guest `CLOCK_MONOTONIC`. The shared server binds
+its clock once per guest namespace and timestamps receipt before queueing.
+Independent native peers retain their existing timestamp contract.
+
+The memory suite, clock-domain regression, original native C Wayland peers,
+shared process conformance, signed HVF/pressure tests, and Mac CLI/storage/PTY
+checks passed locally. iPad FFI cross-compilation also passed. Unchanged CPU,
+network and graphics acceptance results are reused. Raw browser logs, sampled
+addresses, stacks and screenshots remain private under ignored build output;
+no browser-specific diagnostic code is shipped.
