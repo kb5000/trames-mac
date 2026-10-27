@@ -1,6 +1,6 @@
 {
   "date": "2026-10-27",
-  "runtime_revision": "ef184a408f10b70fab419fefd85365789a89463b",
+  "runtime_revision": "1f2d613fc6f8fa1abf4be7f8b3d816cb43f21898",
   "full_linux_ci": {
     "passed": true,
     "steps": 81,
@@ -68,7 +68,7 @@
   "mac_workspace_tests": true,
   "mac_strict_clippy": true,
   "mac_signed_release_build": true,
-  "final_runner_sha256": "32c7286f083aff81d01b9e08c1b535345bf8ac9f897f6eb687550cd35d67fe30",
+  "final_runner_sha256": "41c9ee4a340fb4964ef08fb4b856559b69d57650540d37c453671db9c1a7cf59",
   "visual_observations": {
     "two_windows_frames": 120,
     "native_zoom_dimensions": [
@@ -99,9 +99,16 @@
     "release-clippy.log": "cc551d8a775a0bc763e68122cf138dbeb8d84a3323ba4b2bc2e02d35f099298d",
     "release-build.log": "98bc282327a680d77c46f678e4bf65b540502a846e1676fe6811f8cc15d1295e",
     "keyboard-file-check.log": "a11783360ca2f4a42d5f3060e040d502b77991b6fce2ccc105bf81931f2a0f5a",
-    "repeated-windows/windows.log": "804d490c0133a62051e819c15b2d95e1445ff38e7f5f5b3cbecd382d06ea29b3"
+    "repeated-windows/windows.log": "804d490c0133a62051e819c15b2d95e1445ff38e7f5f5b3cbecd382d06ea29b3",
+    "activation-unit.log": "b81b977558002881338828af6ae1f11585a54501d2164e6a47213ca5f3a68dec",
+    "activation-clippy.log": "601d4dc135f0e0ac68cd4155fd2d8279d37a3f0c455f45371523c6bdf5e137b3",
+    "activation-native.log": "9f4b6dcb743f5d22d7e065f45135c74c3508d0f13c78b0e9b84fd601e8b8a4f6",
+    "activation-ipad-check.log": "fc22b54ca4a1fd8eda40433fb8f6940cf580bb3a5086a3510c1342dee6f30337",
+    "activation-build.log": "775b25099de1b9280be5c9c836b4f282728ba375435e5bf154014a5a2e4a2691",
+    "activation-mac-tests.log": "7d9fa4386d330dbdcebea747e51dd129aac5bc93cea4a23826779027476d3941",
+    "activation-mac-clippy.log": "9f445fb9de63f0fd654540fa63efe5f94ec169e33813aa6967e24ae866ad7fca",
+    "activation-repeated-windows/windows.log": "ad500a24e7267b46d433475fff59358692af3afd93b29391784b840d12159724"
   },
-  "mac_code_revision": "52734401978165c1fb61ff9b1612c79b87cb42d2",
   "native_window_acceptance": {
     "passed": true,
     "rows": [
@@ -118,7 +125,7 @@
         "passed": true
       }
     ],
-    "runner_sha256": "32c7286f083aff81d01b9e08c1b535345bf8ac9f897f6eb687550cd35d67fe30",
+    "runner_sha256": "41c9ee4a340fb4964ef08fb4b856559b69d57650540d37c453671db9c1a7cf59",
     "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
     "client_sha256": "4ab2fea1cd66558676294df0e7baa21afb224dc3ef074c5590742aa1914c839f",
     "libraries_sha256": "4f47394c30721e64709572615f140e11e8aaff3390063675f3e8191b617f9d07"
@@ -136,5 +143,18 @@
     "full_linux_ci": "b0c44d54 production changes; ef184a40 Wayland interaction delta checked separately",
     "mac_hardware": "HVF and shared memory production code unchanged since seven signed checks",
     "mac_session": "headless Linux/PTY/storage production code unchanged since six session checks"
+  },
+  "mac_presentation_code_revision": "52734401978165c1fb61ff9b1612c79b87cb42d2",
+  "activation_followup": {
+    "runtime_revision": "1f2d613fc6f8fa1abf4be7f8b3d816cb43f21898",
+    "ipad_pin_revision": "8bdb5b8",
+    "wayland_unit": true,
+    "wayland_strict_clippy": true,
+    "original_native_c_clients_passed": 5,
+    "inactive_active_inactive_configure_assertions": true,
+    "ipad_ffi_check": true,
+    "mac_workflow": true,
+    "owner_confirmed_focused_solid_blinking_inactive_hollow": true,
+    "fixture_source_sha256": "0eb8d39cfa9e1b5ab0b5855b57c1d8695eea6bb3e03e13623b0346469cf8c4a1"
   }
 }

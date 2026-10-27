@@ -61,6 +61,13 @@ Wayland input and shell paths. Move/resize requests require the active same-wind
 button serial. Outlying popup/shadow rectangles retain their own bounded child
 windows and share their parent's guest input coordinates.
 
+Keyboard focus also updates the containing toplevel's `activated` configure
+state. Switching between windows deactivates the old one and activates the new
+one; losing host focus removes activation. Moving focus within the same
+subsurface/popup tree preserves activation. This lets original clients render
+focused decorations and a solid blinking terminal cursor, with a hollow cursor
+when inactive, without changing keyboard routing.
+
 ## Local evidence, 2026-10-27
 
 - A clean snapshot at iPad `c33b1c82` / runtime `b0c44d54` passed all **81** steps
@@ -103,6 +110,17 @@ manual build differed only by temporary frame diagnostics, subsequently removed)
 - The final signed release, strict Clippy, formatting, project-boundary check,
   and all non-ignored workspace tests passed. Explicit hardware and Linux session
   results above are reused for unchanged HVF/memory/session production code.
+
+A subsequent activation follow-up uses runtime `1f2d613f`:
+
+- The original C client verifies each of two windows receives an inactive,
+  active, then inactive configure sequence. All five native C-client tests,
+  Wayland unit tests and strict Clippy passed.
+- The paired iPad target check and final Mac workflow passed. The three-cycle
+  real-display/terminal-survival test also passed with the new runtime pin.
+- The owner confirmed the final focused cursor is solid and blinking, and
+  becomes hollow after switching away. The original Weston's protocol trace
+  confirms the corresponding `xdg_toplevel.configure` state array is sent.
 
 Exact binary/fixture hashes and source-scope reuse are recorded in
 [the machine-readable evidence](mac-windows.json). The repeatable display check is:

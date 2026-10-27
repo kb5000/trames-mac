@@ -18,7 +18,7 @@ struct window {
     struct xdg_surface *xdg;
     struct xdg_toplevel *top;
     struct wl_buffer *buffer;
-    int width,height,frames;
+    int width,height,frames,number;
     uint32_t color;
 };
 static struct wl_display *display;
@@ -63,7 +63,9 @@ static void configured(void *data,struct xdg_surface *surface,uint32_t serial) {
 }
 static const struct xdg_surface_listener surface_listener={configured};
 static void top_configure(void *data,struct xdg_toplevel *top,int32_t width,int32_t height,struct wl_array *states) {
-    (void)top;(void)states;struct window *w=data;if(width>0&&height>0){w->width=width;w->height=height;}
+    (void)top;struct window *w=data;if(width>0&&height>0){w->width=width;w->height=height;}
+    int activated=0;uint32_t *state;wl_array_for_each(state,states)if(*state==XDG_TOPLEVEL_STATE_ACTIVATED)activated=1;
+    printf("wayland-window-state window=%d activated=%d\n",w->number,activated);fflush(stdout);
 }
 static void top_close(void *data,struct xdg_toplevel *top){(void)data;(void)top;closed=1;}
 static const struct xdg_toplevel_listener top_listener={.configure=top_configure,.close=top_close};
@@ -84,7 +86,7 @@ int main(int argc,char **argv) {
     display=wl_display_connect(NULL);assert(display);
     struct wl_registry *registry=wl_display_get_registry(display);wl_registry_add_listener(registry,&registry_listener,NULL);
     assert(wl_display_roundtrip(display)>=0);assert(compositor&&shm&&shell);
-    struct window windows[2]={{.width=240,.height=160,.color=0xff224466},{.width=160,.height=120,.color=0xffaa6633}};
+    struct window windows[2]={{.width=240,.height=160,.number=1,.color=0xff224466},{.width=160,.height=120,.number=2,.color=0xffaa6633}};
     for(int i=0;i<2;i++) {
         struct window *w=&windows[i];w->surface=wl_compositor_create_surface(compositor);
         w->xdg=xdg_wm_base_get_xdg_surface(shell,w->surface);xdg_surface_add_listener(w->xdg,&surface_listener,w);
