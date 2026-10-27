@@ -44,6 +44,16 @@ retains the existing worker scheduler. No UI polling or resource-service thread
 is added. The final window releases cached Metal setup, while the Linux session
 and its standard streams remain alive.
 
+The native view uses AppKit's layer-update path rather than its default drawing
+cache. Geometry changes and Metal presentation share a Core Animation transaction;
+command submission is scheduled before the drawable is presented, without waiting
+for GPU completion on the main thread. This follows Apple's
+[`presentsWithTransaction` contract](https://developer.apple.com/documentation/quartzcore/cametallayer/presentswithtransaction)
+and [`wantsUpdateLayer` contract](https://developer.apple.com/documentation/appkit/nsview/wantsupdatelayer).
+Unchanged title, size constraints and drawable geometry are not reapplied per frame.
+The toplevel's external CSD shadow is clipped to its window geometry; macOS owns
+the native outer shadow. Descendant surfaces retain outlying popup rectangles.
+
 Native close sends `xdg_toplevel.close`. Cmd-W closes the focused graphical
 client; Cmd-Q ends the session. Physical keyboard, modifiers, pointer buttons,
 scroll, host resize, minimize/zoom and client-side move/resize use the common
@@ -77,13 +87,25 @@ windows and share their parent's guest input coordinates.
   persistent store and read the same bytes. Ctrl-D exited the graphical shell
   and runner successfully.
 
-The final desktop pass is still pending. The Mac locked during input testing.
-An input fix keeps the root view available while hiding only its duplicate
-pixel layer; this must be checked on the unlocked desktop, together with
-client-side drag/resize and repeated window lifetimes. Do not interpret the
-successful earlier visual checks as final acceptance of those later UI edits.
+The final desktop pass completed against Mac code `52734401` (the owner's
+manual build differed only by temporary frame diagnostics, subsequently removed):
 
-A repeatable real-display acceptance is provided for the remaining pass:
+- The owner tested the reopened terminal directly and confirmed normal behavior.
+  Native movement logs record the manual window drags; the compositor continued
+  publishing and successfully presenting hundreds of subsequent scene revisions.
+- Real key input created `/root/finalmarker` and `/root/keymarker`; a separate
+  headless CLI reopened the same transactional store and verified both files.
+  Command execution and persistence were checked independently of screen capture.
+- `mac-windows.py` passed console-only startup in automatic and disabled modes,
+  then **three two-window lifetimes**, each requiring 120 real frame callbacks.
+  All six native windows closed, and the parent Linux shell accepted a new input
+  line and exited successfully. AppKit initialized only once across the cycles.
+- The final signed release, strict Clippy, formatting, project-boundary check,
+  and all non-ignored workspace tests passed. Explicit hardware and Linux session
+  results above are reused for unchanged HVF/memory/session production code.
+
+Exact binary/fixture hashes and source-scope reuse are recorded in
+[the machine-readable evidence](mac-windows.json). The repeatable display check is:
 
 ```sh
 python3 tests/integration/mac-windows.py \

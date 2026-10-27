@@ -147,8 +147,8 @@ runs on one thread with its existing execution workers; vCPUs stay on their
 creator threads. A coalesced compositor snapshot subscription signals the main
 run-loop source after releasing the scene lock. There is no UI polling thread.
 AppKit and Metal initialize only when the first mapped toplevel appears. Each
-toplevel owns a native window; outlying subsurfaces and popups use bounded child
-rectangles instead of a desktop-sized transparent input surface. The last
+toplevel owns a native window. Its external CSD shadow is clipped to the native
+content geometry; outlying subsurfaces and popups use bounded child rectangles instead of a desktop-sized transparent input surface. The last
 window releases cached Metal setup and removes the Dock presence without
 stopping Linux or its terminal.
 
@@ -158,7 +158,10 @@ owns the source until GPU reads finish. Positive frame acknowledgement also
 waits for every drawable's actual presentation; skipped, cancelled, and occluded
 frames receive no successful presentation acknowledgement. Invalidated run-loop
 sources remain retained until pending GPU callbacks finish, so teardown cannot
-call a freed UI context. Frame cancellation and multi-drawable completion have
+call a freed UI context. The Metal-backed view opts into AppKit layer updates.
+Native geometry and drawable presentation share a Core Animation transaction;
+the main thread waits for submission scheduling, not GPU completion. AppKit's
+native run/stop lifecycle handles events after the initial headless CF loop. Frame cancellation and multi-drawable completion have
 unit coverage independent of Hypervisor access.
 
 Native input uses the common Wayland seat. Interactive move/resize is admitted

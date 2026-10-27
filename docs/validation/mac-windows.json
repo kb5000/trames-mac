@@ -68,7 +68,7 @@
   "mac_workspace_tests": true,
   "mac_strict_clippy": true,
   "mac_signed_release_build": true,
-  "final_runner_sha256": "8576429c75ef4198e915629cdf6bff53ef156fe7bd31eb9a72c3538f4dd8b2f4",
+  "final_runner_sha256": "32c7286f083aff81d01b9e08c1b535345bf8ac9f897f6eb687550cd35d67fe30",
   "visual_observations": {
     "two_windows_frames": 120,
     "native_zoom_dimensions": [
@@ -85,12 +85,7 @@
     "original_weston_terminal_version": "14.0.2-r1",
     "guest_persistent_file_bytes": "windowok\n"
   },
-  "pending_desktop_checks": [
-    "root layer input fix",
-    "client-side interactive move and resize",
-    "three native window lifetimes with real presentation callbacks"
-  ],
-  "desktop_blocker": "macOS locked; manual unlock requested",
+  "pending_desktop_checks": [],
   "log_sha256": {
     "lifetime-tests.log": "5f9972000aa260fb126532598a863ac935b78495b00da7e737f4ad6d0574ce96",
     "final-clippy.log": "d15ca6b8b2c07470dd6f5f2dbb42cf3a14aea5190baa87dfcc03de5ac0ca0aa5",
@@ -99,6 +94,47 @@
     "ipad-check.log": "7568d6a21bef14f1fba78893f961b40e1ecffc5f975ede6176048ca06f7ccbe4",
     "bundled-window.log": "46355e0cfab15625ba59b2ad6e7dc844cbc0d30603a9e0087e158d175c85a6e3",
     "weston.log": "5092880e0ce73c395e439048bd7d5c1b05dc3d44707781f7a131e52d7ea8123b",
-    "gui-written-file.log": "4cb806bbc22fb7fe280e906f968209c3741fe75fe6016a7145986d017accdd60"
+    "gui-written-file.log": "4cb806bbc22fb7fe280e906f968209c3741fe75fe6016a7145986d017accdd60",
+    "release-tests.log": "f8d553518bbe0e83ce5cb62098b189c0277e60a7dde7196c009d0e9465de4017",
+    "release-clippy.log": "cc551d8a775a0bc763e68122cf138dbeb8d84a3323ba4b2bc2e02d35f099298d",
+    "release-build.log": "98bc282327a680d77c46f678e4bf65b540502a846e1676fe6811f8cc15d1295e",
+    "keyboard-file-check.log": "a11783360ca2f4a42d5f3060e040d502b77991b6fce2ccc105bf81931f2a0f5a",
+    "repeated-windows/windows.log": "804d490c0133a62051e819c15b2d95e1445ff38e7f5f5b3cbecd382d06ea29b3"
+  },
+  "mac_code_revision": "52734401978165c1fb61ff9b1612c79b87cb42d2",
+  "native_window_acceptance": {
+    "passed": true,
+    "rows": [
+      {
+        "name": "console-automatic",
+        "passed": true
+      },
+      {
+        "name": "console-disabled",
+        "passed": true
+      },
+      {
+        "name": "six-windows-three-cycles-real-frame-callbacks-cli-survives",
+        "passed": true
+      }
+    ],
+    "runner_sha256": "32c7286f083aff81d01b9e08c1b535345bf8ac9f897f6eb687550cd35d67fe30",
+    "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+    "client_sha256": "4ab2fea1cd66558676294df0e7baa21afb224dc3ef074c5590742aa1914c839f",
+    "libraries_sha256": "4f47394c30721e64709572615f140e11e8aaff3390063675f3e8191b617f9d07"
+  },
+  "manual_desktop_acceptance": {
+    "owner_confirmed": true,
+    "native_window_movement_observed": true,
+    "guest_created_files_verified": [
+      "/root/finalmarker",
+      "/root/keymarker"
+    ],
+    "trace_cleanup_only_after_manual_build": true
+  },
+  "reused_validation": {
+    "full_linux_ci": "b0c44d54 production changes; ef184a40 Wayland interaction delta checked separately",
+    "mac_hardware": "HVF and shared memory production code unchanged since seven signed checks",
+    "mac_session": "headless Linux/PTY/storage production code unchanged since six session checks"
   }
 }
