@@ -158,10 +158,11 @@ independent guest store with four CPUs, a 4 GiB guest budget, normal Firefox
 settings, Wayland, and an offline HTML page. Desktop dependencies include the
 original EGL/GLES libraries, fonts, a D-Bus session and machine ID. The page's
 JavaScript title marker and green Canvas were observed in both diagnostic and
-clean signed builds. This is a limited rendering smoke test, not full browser
-acceptance: reliable input, navigation and shutdown still require validation,
-and some subsequent runs terminated with status 139. Later bounded runs with
-both clock behaviors did not reproduce that exit, so its cause remains open.
+clean signed builds. The owner confirmed that the page button and input update,
+but interaction is extremely slow. This is not full browser acceptance: input
+latency, navigation and shutdown still require validation, and some subsequent
+runs terminated with status 139. Later bounded runs with both clock behaviors
+did not reproduce that exit, so its cause remains open.
 
 A locked/fully occluded native window is intentionally not presented. Its
 Wayland frame requests remain pending until real presentation is possible.
@@ -189,3 +190,55 @@ checks passed locally. iPad FFI cross-compilation also passed. Unchanged CPU,
 network and graphics acceptance results are reused. Raw browser logs, sampled
 addresses, stacks and screenshots remain private under ignored build output;
 no browser-specific diagnostic code is shipped.
+
+### CPU baseline
+
+Two Time Profiler recordings used the published runtime `6cf9481f` and Mac
+`c77cb857`, with no guest instruction trace, syscall metrics, or experimental
+IPC batching. The first recording covers approximately 18–34 seconds after
+launch; the second covers approximately 213–234 seconds, after the page loaded,
+and includes a native button-click attempt. The latter is a post-load workload
+sample, not a completed click-latency measurement.
+
+Time Profiler recorded only running threads at a 1 ms sampling interval. The
+15.71 s and 20.70 s recordings contain 18,647 and 23,577 running-thread samples,
+respectively. These sum to 18.647 and 23.577 sampled CPU seconds across all
+process threads. Each sample is assigned to one category; percentages use that
+whole-process CPU denominator, not elapsed time or end-to-end input latency.
+
+| Disjoint CPU category | Early run | Post-load click attempt |
+| --- | ---: | ---: |
+| HVF permission changes (`hv_vm_protect`) | 52.87% | 64.05% |
+| Other page mapping, table maintenance and view reconciliation | 19.27% | 17.65% |
+| vCPU execution path, including entry/exit | 16.15% | 11.44% |
+| Remaining host work | 11.71% | 6.86% |
+
+The vCPU category cannot separate guest instructions from opaque HVF entry/exit
+work. It must not be described as pure guest compute. Main-thread and Wayland
+CPU together account for only 0.77% and 0.23% of the two totals; this does not
+measure GPU utilization or exclude all possible presentation latency.
+
+Within permission changes, moving Hypervisor.framework's mapped-range metadata
+accounts for 36.91% and 47.30% of total process CPU. These are framework range
+array updates, not copies of framebuffer pixels. Permission changes reached
+through repeated physical-page export account for 42.54% and 44.40% of total
+CPU. Reading the export path explains why: even retaining an already live
+storage handle starts and ends a host byte-access gate, which revokes and
+restores hardware access.
+
+An independent three-second stack sample after the second recording contains
+6,564 snapshots across four workers. Permission changes occupy 40.01% of worker
+stack residency, other mapping work 15.74%, vCPU run 3.15%, and other waits
+40.08%. Those figures include off-CPU lock/queue waits and have a different
+denominator from the CPU table. They corroborate contention but must not be
+added to, or substituted for, the CPU percentages.
+
+The data ranks redundant export permission transitions first, page-table and
+view-maintenance churn second, and repeated syscall metadata borrows after
+those. A storage-handle-only export requires a separate concurrency/lifetime
+review before implementation; no change to that unsafe boundary is included
+in this baseline. Actual byte reads and writes still need the existing access
+gates. Future comparisons must repeat the same CPU measurements and separately
+measure successful input-to-update latency. No Firefox speedup is claimed by
+this baseline. Raw Instruments traces and stacks remain in ignored local build
+output; only this filtered summary is published.
