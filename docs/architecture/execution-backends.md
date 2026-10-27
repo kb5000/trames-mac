@@ -177,112 +177,149 @@ contains exact source/binary/fixture hashes, CI scope and live RSS measurements.
 
 ## Whole-system backend selection review (2026-10-27)
 
-This is a design review, not an implemented memory-contract change. The working
-recommendation is to keep the shared Linux userspace runtime and redesign its
-HVF memory integration for the Mac product. Native ARM64 execution with syscall
-rewriting remains a bounded alternative experiment. A full Linux VM is a valid
-separate product strategy when broad kernel compatibility outweighs sharing the
-iPad kernel and directly controlling guest resources.
+Owner constraints: a full Linux-kernel VM is excluded. Thin HVF CPU/MMU execution
+is allowed. The shared userspace Linux kernel and native GPU/NPU API integration
+are defining capabilities. Mac changes must preserve iPad compatibility or stay
+behind isolated execution/product backends. The design below is a recommendation,
+not an implemented guest-memory contract or newly enabled GPU transport.
 
-The decision includes memory, process isolation, storage, networking, display,
-and maintenance. An empty syscall benchmark alone cannot select the backend.
+Keep one common Linux/resource implementation. Use the existing iPad interpreter
+and a thin Mac HVF executor as CPU frontends. Native instruction rewriting remains
+an alternate Mac frontend experiment; selecting it must not require a second
+Linux kernel or an unconditional resource-service IPC layer. HVF does create a
+hardware virtualization context, but no Linux kernel or virtual device OS is
+booted. Native device APIs execute in the host process, not in a virtual GPU.
+
+| Layer | Shared responsibility | Product/backend isolation |
+| --- | --- | --- |
+| Linux runtime | Tasks, signals, namespaces, FD/OFD, VFS, sockets, futex, quotas | Host adapters where OS mechanisms differ |
+| Memory/resources | Byte identity, permissions, COW, allocation lifetime, device leases, completion | HVF GPA/page tables, interpreter translations, native API allocation requirements |
+| Native calls | Negotiated guest ABI, authorization, opaque handles, command semantics, waits | Interpreter event, HVF exit, or future native trampoline transport |
+| Presentation | Wayland scene/input protocol and retained image capabilities | UIKit on iPad; AppKit/Metal presentation on Mac |
+
 The existing [CoreMark comparison](../validation/mac-compat-coremark.md) establishes
-near-native compute for that workload; [Firefox CPU sampling](../validation/mac-windows.md#cpu-baseline)
-finds most CPU in permission changes and mapping maintenance. Neither measures
-the intrinsic cost of an otherwise unchanged HVF syscall exit in isolation.
+near-native compute for its workload. [Firefox CPU sampling](../validation/mac-windows.md#cpu-baseline)
+finds most CPU in permission changes and mapping maintenance. Neither isolates
+the intrinsic cost of an unchanged-mapping HVF syscall/device-call exit.
 
-| Candidate | Whole-system implication |
-| --- | --- |
-| Redesigned HVF with the shared runtime | Hardware guest address spaces and ordinary ARM execution, with current shared VFS/socket objects and iPad kernel reuse; host crossings remain. |
-| Native ARM64 with syscall rewriting | Removes virtualization crossings, but overlapping guest address spaces require separate host processes or address translation; resource and code-lifetime models must change. |
-| Same-ISA dynamic translation | Can retain one host process and call the runtime directly; must account for address translation, code cache, indirect branches and JIT invalidation. |
-| Full Linux VM | Linux owns process, filesystem and network semantics; requires new host integration and cooperative memory return, with different kernel implementations on Mac and iPad. |
+### Common memory and native device contract
 
-### Memory and process ownership
-
-The target is no hardware permission toggle for routine metadata retention or
+The target is no hardware permission toggle for metadata-only retention or
 ordinary bounded syscall transfers, and no full cached-PTE walk on an unchanged
-address space. Stable physical mappings should last while resident; persistent
-translation state should belong to a Linux address space, with actual mapping,
-permission, COW and reclamation changes applied incrementally. A content/code
-revision is distinct from translation identity. The current complete
+address space. Stable physical mappings should last while resident; translation
+state should belong to the Linux address space, with actual mapping, permission,
+COW and reclamation changes applied incrementally. Cache retention must be
+bounded, including inactive address spaces and ASID reuse.
+
+Code-content freshness is distinct from translation identity. The current full
 `HardwarePageInfo` comparison can retire executable translations after a shared
 code epoch changes; its contribution to observed churn still needs measurement.
+Fork should eventually detach private storage on first write rather than eagerly
+at View admission. None of these changes may introduce per-load bookkeeping or
+new ordinary-memory barriers.
 
 Guest bytes and host Rust objects need distinct access contracts. Metadata-only
 handle retention must not imply byte borrowing. Bounded copy-in/out or audited
 raw ARM operations are candidates for concurrent guest bytes; existing APIs
 that create guest Rust slices must continue excluding conflicting hardware
 access until their contract is changed and validated. This review does not
-authorize simply deleting those gates. Actual mapping lifetime, first-write COW,
-file truncation and architectural synchronization remain necessary. Fork should
-eventually detach private storage on the first write rather than eagerly during
-View admission.
+remove those gates. Physical lifetime, truncation and architectural ordering
+remain necessary, using the same guest permission/concurrency model on both
+products.
 
-Native execution in a host process per guest address space obtains host VM
-isolation, but current in-process Arc/Mutex resource objects cannot be shared
-unchanged across those processes. Some sharing can move to inherited host file
-descriptors; virtual namespace ownership, Linux-specific state and cross-process
-coordination still need a design. Same-process native code instead needs a way
-to represent overlapping Linux virtual addresses and preserve the guest/host
-memory boundary. A syscall trampoline alone does not supply that mechanism.
+For device memory, prefer compatible host allocation first, then map that storage
+into the guest. A common descriptor should retain allocation identity, full
+geometry/alignment, offset/range, guest mappings, native owner, accounting and
+in-flight completion leases. Guest ABI handles are capabilities, never raw host
+object/function pointers. Small control records become owned host values; large
+payloads use retained storage where the API permits it. Arbitrary scattered
+guest pages are not automatically one native buffer: Metal's
+[bytesNoCopy contract](https://developer.apple.com/documentation/metal/mtldevice/makebuffer(bytesnocopy:length:options:deallocator:))
+requires page-aligned geometry inside a single host VM region.
 
-Reclamation acceptance must distinguish logical allocation, live resident data,
-host RSS/physical footprint, caches and backing-file disk usage. Reserving a
-4 GiB guest budget is not the same as populating it. Unmapping or advising away
-guest pages should release ownership; pressure reclamation of live dirty bytes
-must preserve their data. The current backing file reuses freed offsets but
-retains its disk high-water mark until teardown, and synchronous page-out can
-create disk stalls. Memory savings must therefore be measured alongside backing
-space and I/O. Allocator-retained guest heap is not automatically known free.
+Submissions retain only affected resources until actual completion. Logical
+unmap must not recycle storage still used by a device. Reclaim idle/unleased
+storage normally; account live device memory separately. Use original API
+barriers, queue order, fences and object synchronization, not a whole-guest pause
+or a global native-call lock. Completion wakes the existing task queue. Small
+calls run on the calling worker; blocking/async work releases its execution slot.
+Do not introduce a polling bus or new coordinator/service thread.
 
-### Storage and networking
+The common Vulkan ICD/dispatcher already exists, but Mac HVF explicitly rejects
+enabling Vulkan today. It needs an authenticated NativeCall exit transport into
+the existing common dispatcher and compatible buffer import. Pure libc
+acceleration is separate: original ARM64 libc already runs natively under HVF.
+The existing Vulkan HOST_COHERENT path still uses shadow/baseline synchronization;
+general direct CPU aliasing of native device allocations is not implemented.
+Native texture presentation already has a separate no-readback lease path.
+Changing the CPU frontend alone does not remove coherent-buffer transfers.
+
+Batch command recording where API semantics allow, flushing before required
+observable results and synchronization. Measure crossings per submission and
+parameter conversion, not only execution time on the GPU. NPU/Core ML integration
+is currently planned, not a production device backend. Prefer a model/execution
+provider boundary; Core ML's
+[compute-unit selection](https://developer.apple.com/documentation/coreml/mlcomputeunits)
+does not promise that every model/operator executes on ANE or avoids conversion.
+
+### Windowed, headless and container costs
+
+Native compute and presentation are independent capabilities. A headless GPU/NPU
+container must not require a Wayland server, CAMetalLayer, window, or desktop.
+CPU-only servers should create neither device resources nor presenter resources.
+The current automatic Mac mode defers AppKit/Metal presenter setup until the
+first mapped window. `--no-windows` skips Wayland, but the current binary still
+creates a dormant CF run-loop source and a Linux session thread. A pure server
+entry/build can avoid that setup; it must reuse the same common kernel.
+
+GUI cost should scale with visible changed surfaces: retained SHM/native textures,
+coalesced notifications, real presentation completion and actual input. The
+current presenter already consumes retained SHM/native textures without mandatory
+pixel readback. Cache imports/pipelines where lifetime permits and avoid
+recreating unchanged native wrappers or submitting unchanged frames. A display
+lease ends only after required GPU/presentation completion; hiding a window must
+not block unrelated server tasks.
+
+Containers are namespace/resource objects in the same runtime, not a CPU pool,
+presenter, full RAM allocation or native-service process per container. Reuse
+immutable image/file data and shared resources; separate writable state and
+accounting. Idle-container overhead should be bounded metadata; verify that
+wakeups and mapping work track active/changed objects rather than scanning every
+container at each short call. GPU model/resource caches need explicit owners,
+budgets and release rules rather than one uncontrolled cache per container.
+
+### Disk, network and frontend selection
 
 Keep one byte authority for file I/O and shared mmap, including truncate/EOF,
-open-unlinked files, permissions, quotas and durability. Existing direct file
-capabilities already use shared open-file objects and host handles; mapped
-files intentionally leave stale direct-disk paths. CPU backend replacement does
-not remove these coherence rules or current gather/scatter copies. Small I/O
-should use bounded reusable buffers; large operations need an explicit retained
-buffer/pinning/cancellation design before a zero-copy claim. Blocking disk work
-must release execution slots through existing scheduling facilities.
+open-unlinked lifetimes, quotas and durability. CPU backend replacement does not
+remove gather/scatter or file-cache coherence. Small I/O can use reusable bounded
+buffers; large I/O needs a retained-buffer/pinning/cancellation contract. Eligible
+bulk reads already offload through the existing scheduler. Large writes, growth,
+append, sync and namespace commits retain owner/service paths; releasing execution
+slots for their potentially blocking work is a target, not completed coverage.
+FileProvider retains streaming export, staged edits and conditional writeback;
+external writers must not bypass live namespace/mapping ownership.
 
-FileProvider export and staged writeback remain an explicit synchronization
-boundary. Exposing internal object files as an independently writable host tree
-would bypass namespace/mmap authority. A full VM would need an export/writeback
-agent or protocol for its internal Linux filesystem. A host directory exposed
-through [virtiofs](https://developer.apple.com/documentation/virtualization/vzvirtiofilesystemdeviceconfiguration)
-is a separate shared mount, not automatic host access to a guest block rootfs.
+Ordinary root TCP/UDP already use nonblocking host BSD sockets, with no extra
+packet-stack/NAT hop. Preserve shared OFD/socket objects and readiness parking;
+explicit isolated container networks retain their own packet/network semantics.
+Native per-guest Mac processes could inherit some host FDs, but current Arc/Mutex
+objects, namespace ownership and device capabilities cannot be shared unchanged.
+They require process-safe state or IPC. Same-process native execution instead
+needs a way to represent overlapping guest virtual addresses. A syscall
+trampoline alone solves neither issue.
 
-Ordinary root TCP/UDP already use nonblocking host BSD sockets. There is no
-packet-stack/NAT hop to eliminate on that path. Preserve direct shared object
-access and readiness-based parking; reserve packet processing for explicit
-virtual network semantics. Linux socket options, AF_UNIX/descriptor passing,
-epoll, namespaces and DNS behavior remain compatibility work whichever CPU
-backend is used. A full VM delegates those semantics to Linux and uses a device
-boundary for external traffic.
+Select an alternate frontend only with whole-workload evidence: headless idle
+and loaded containers, syscall/AF_UNIX/futex wake tail latency, shared FD/mmap,
+fork/COW, disk durability/bulk transfer, native compute submission/completion,
+JIT, visible-window input/presentation, and post-completion reclamation. Record
+CPU and blocked time separately, plus native crossings, copied bytes, retained
+device bytes, RSS/footprint, backing disk use and recovery latency. Current
+backing storage retains its disk high-water mark until teardown, so RAM savings
+must be measured alongside disk space and page-out stalls.
 
-A full VM need not imply unavoidable double disk caching: Apple's
-[disk image cache modes](https://developer.apple.com/documentation/virtualization/vzdiskimagecachingmode)
-include uncached operation. Durability/synchronization must still be preserved.
-Its [memory balloon](https://developer.apple.com/documentation/virtualization/vzvirtiotraditionalmemoryballoondevice)
-requests guest cooperation; the SDK explicitly says the guest may not handle
-the request. Configured RAM alone proves neither fixed host RSS nor immediate
-reclamation. These require the same real footprint measurements as other routes.
-
-### Selection gates
-
-Compare unchanged-mapping HVF syscall exits against native trampolines, then
-measure whole operations: multiple address spaces at identical VAs; shared
-mmap/futex/FD/socket behavior; fork and first-write COW; JIT RW/RX aliases;
-random 4 KiB and large sequential I/O; fsync/rename durability; mmap/truncate;
-TCP and AF_UNIX throughput and tail latency; epoll wakeups; display/input and
-FileProvider conflict handling. Record CPU and blocked time separately, as well
-as peak/retained footprint, backing-space use, and reclamation/recovery latency.
-Native promotion requires these gates, not just a faster empty syscall loop.
-
-The current SDK has 4 KiB process-page and custom-x18 ABI interfaces, so old
-blanket claims that native execution is impossible are inappropriate. Capability,
-signing, signals and JIT integration remain unproven for this product. No new
-backend or unsafe guest-memory implementation is selected by publishing this
-review; raw experiments and traces stay in ignored local build output.
+Both products must pass the affected common semantic tests. Common ABI/memory
+changes also require an iPad target check and relevant interpreter/native peers;
+HVF-specific mapping tests and AppKit tests stay on Mac. Reuse unchanged passing
+scopes. This documentation change adds no execution backend, device capability
+or unsafe memory implementation; raw experiments remain in ignored local output.

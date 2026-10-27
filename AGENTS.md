@@ -37,6 +37,20 @@
 - 不因文档、记录或测试等待方式的调整重复触发完整 CPU、Linux、网络和图形验收。
 - 完整检查留到合入或正式发版节点。测试 IPA 可以使用已验证且源码未变的 guest 产物。
 
+## Product architecture
+
+Owner clarification, 2026-10-27:
+
+- Do not replace the userspace Linux kernel with a full Linux-kernel VM.
+  A thin HVF CPU/MMU executor is allowed; Linux semantics and native services
+  remain in the shared host userspace runtime.
+- Share one Linux kernel implementation with trames-ipad wherever possible.
+  Common changes must remain iPad-compatible. Mac-specific execution, windowing,
+  lifecycle and SDK mechanisms belong behind isolated backend/product boundaries.
+- Native GPU/NPU API integration is a defining product capability. Keep native
+  compute independent of window creation, so headless containers can use devices
+  without starting a presenter or desktop environment.
+
 ## Development flow
 
 - Keep one development line per repository on `main`. Merge validated changes
