@@ -216,6 +216,8 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_MAIR_EL1,0xff)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_VBAR_EL1,VECTOR_VA)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,3<<20)) ||
+        // Match Linux: EL0 may read CNTVCT/CNTFRQ, but cannot control timers.
+        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTKCTL_EL1,1<<1)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)))) goto fail;
     *error=0; return h;
 fail:

@@ -45,7 +45,9 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
         },
         Error::Fault { pc, syndrome, .. } => {
             let (signal, code, address) = match syndrome >> 26 {
-                0 => (4, 1, pc),
+                // Undefined instructions and trapped privileged system-register
+                // accesses are recoverable Linux SIGILL, not backend failures.
+                0 | 0x18 => (4, 1, pc),
                 0x3c => (5, 1, pc),
                 0x22 | 0x26 => {
                     return CpuFault::Memory {
@@ -180,6 +182,29 @@ impl trames_engine::Cpu for Cpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn privileged_system_register_access_delivers_guest_sigill() {
+        let state = Aarch64State {
+            pc: 0x1000,
+            ..Default::default()
+        };
+        assert!(matches!(
+            fault(
+                &state,
+                Error::Fault {
+                    pc: state.pc,
+                    address: 0xdead,
+                    syndrome: 0x18 << 26,
+                }
+            ),
+            CpuFault::Trap {
+                pc: 0x1000,
+                signal: 4,
+                code: 1,
+                ..
+            }
+        ));
+    }
     #[test]
     fn stack_alignment_keeps_instruction_pc_separate_from_fault_address() {
         let state = Aarch64State {
