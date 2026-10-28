@@ -144,26 +144,32 @@ identity, and last-owner unmap/reclamation remains immediate. The signed
 reuse among retained peers and zero mapped/backing bytes while TLS hints live.
 
 Private canonical storage uses anonymous macOS VM arenas. One arena reserves
-1 MiB of virtual addresses; only a used 16 KiB host granule is mapped into HVF.
-Unused arena bytes are not prefaulted, wired or charged as guest RAM. The pool
-retains weak arena handles, reuses partial granules first, and returns retired
-whole granules with MADV_FREE_REUSABLE only after their final byte/HVF owner has
-ended. Reuse ends that state before publication and zeroes newly assigned 4 KiB
-slots. The last physical owner unmaps the entire arena. Explicit shared-file
-imports retain their original owner and alias geometry.
+1 MiB of host virtual and linear IPA addresses. HVF registers that address range
+in one call; registration does not populate untouched host pages on the tested
+macOS build. Physical byte ownership and initialization remain per used 16 KiB
+host granule, with no guest page descriptors, data charge or readable guest PTEs
+for untouched arena slots. The pool retains weak arena handles and reuses partial
+granules first. Explicit shared-file imports retain their original owner and
+alias geometry; page tables/imports use a separate granule-size address pool.
 
-Each anonymous arena reserves one linear IPA address range with the same offset
-geometry as its host VA range. This reserves addresses only. Page tables and
-shared imports use a separate granule-size address pool, so their allocations
-cannot interleave holes throughout a live data arena. Unused IPA slots have no
-HVF mapping or physical RAM. Each reached 16 KiB granule still maps/unmaps on
-demand, with the same byte owner, pressure gate and final reclamation. The arena
-returns its entire address reservation only after the last contained Physical
-has withdrawn HVF; weak VM identity prevents returning it into a replacement VM.
-The signed test interleaves 256 page-table allocations with data growth, verifies
-linear private GPAs, one-granule initial RAM, zero retained RAM after release and
-address-only arena reuse. Mapping operations remain per used host granule; this
-is not eager VMA population or a cache of free wired pages.
+An arena bitmap distinguishes HVF address registration from byte ownership.
+Per-granule pressure/final release still withdraws its stage-two mapping, then
+preserves live data through the native pager or marks dead storage reusable.
+Reaching an unmapped hole registers only that granule; it cannot disturb a live
+peer. Last-owner teardown coalesces remaining untouched registrations before
+releasing the host range and IPA reservation. Failed withdrawal preserves the
+allocation/address reservation rather than allowing a dangling HVF alias.
+Whole-arena registration runs outside the allocator mutex, and no idle strong
+pool owner retains RAM or a dead VM.
+
+A bounded direct HVF probe registered 128 MiB with zero data pages resident,
+then observed one 16 KiB granule after a host/guest access. A partial unmap kept
+neighbor mappings usable. Signed acceptance measures one resident granule after
+initial 1 MiB registration, checks partial free/reuse and pressure holes/page-in,
+complete data, linear addresses across table growth and zero live-byte counters
+after final release. This is lazy address registration, not eager VMA population
+or a cache of free wired pages. Paging behavior is measured on the installed OS;
+Apple's mapping API specifies address ranges, not physical-residency guarantees.
 
 Reclamation withdraws the stage-two mapping and uses Darwin MADV_DONTNEED to
 deactivate residency while retaining live contents at the same host address.
@@ -176,8 +182,9 @@ hint permits reclaim; it does not guarantee an immediate RSS reduction.
 See [XNU's implementation](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/vm/vm_map.c).
 
 `backing_bytes` now counts live private host-granule storage, including padding;
-it is neither disk usage nor exact host residency. `mapped_bytes` counts active
-HVF bindings, `page_out_bytes` withdrawn bindings and `page_ins` rebindings.
+it is neither disk usage nor exact host residency. `mapped_bytes` counts used
+host granules currently bound to HVF, excluding untouched address registrations;
+`page_out_bytes` counts withdrawn used bindings and `page_ins` their rebindings.
 Logical guest-page accounting remains in the common runtime. Virtual VMA length
 and protection changes do not consume an explicit guest RAM budget; actual file
 access and physical hardware exports do. Dense accessible-page metadata has a

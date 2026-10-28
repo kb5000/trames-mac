@@ -37,6 +37,7 @@ pub fn set_resident_limit(bytes: Option<u64>) {
 }
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PagingStats {
+    /// Used live granules bound to HVF, excluding untouched arena address registrations.
     pub mapped_bytes: u64,
     /// Live private VM storage, including host-granule padding; not disk bytes.
     pub backing_bytes: u64,
@@ -148,13 +149,7 @@ impl Machine {
                 let arena = self.allocate_arena()?;
                 let ptr = arena.pointer();
                 let gpa = arena.physical_address();
-                #[cfg(feature = "diagnostics")]
-                let measured = diagnostics::start(diagnostics::Work::Map);
-                check(unsafe {
-                    trames_hvf_map(std::ptr::null_mut(), ptr.cast(), gpa, self.granule)
-                })?;
-                #[cfg(feature = "diagnostics")]
-                diagnostics::end(diagnostics::Work::Map, measured);
+                arena.ensure_mapped()?;
                 self.backing
                     .fetch_add(self.granule as u64, Ordering::Relaxed);
                 let block = Arc::new(Physical {
@@ -221,8 +216,10 @@ impl Machine {
                     }
                 }
                 None => {
-                    // Reserve VA only. HVF maps and wires one used host granule
-                    // at a time; untouched arena bytes have no physical owner.
+                    // HVF address registration is lazy. Register one arena at
+                    // once, outside the allocator lock; only used host granules
+                    // gain byte owners or physical backing on actual access.
+                    drop(arenas);
                     let pointer = unsafe {
                         libc::mmap(
                             std::ptr::null_mut(),
@@ -236,13 +233,24 @@ impl Machine {
                     if pointer == libc::MAP_FAILED {
                         return Err(Error::Io(std::io::Error::last_os_error()));
                     }
-                    break Arc::new(Arena {
+                    let arena = Arc::new(Arena {
                         pointer: NonNull::new(pointer.cast()).unwrap(),
                         gpa: unsafe { trames_hvf_reserve_arena(self.pointer.as_ptr(), ARENA_LEN) },
                         machine: Arc::downgrade(self),
                         free: AtomicU64::new(u64::MAX),
                         reusable: AtomicU64::new(0),
+                        mapped: AtomicU64::new(0),
                     });
+                    #[cfg(feature = "diagnostics")]
+                    let measured = diagnostics::start(diagnostics::Work::Map);
+                    check(unsafe {
+                        trames_hvf_map(std::ptr::null_mut(), pointer, arena.gpa, ARENA_LEN)
+                    })?;
+                    #[cfg(feature = "diagnostics")]
+                    diagnostics::end(diagnostics::Work::Map, measured);
+                    arena.mapped.store(u64::MAX, Ordering::Relaxed);
+                    arenas = self.arenas.lock().unwrap();
+                    break arena;
                 }
             }
         };
@@ -369,6 +377,36 @@ impl Machine {
         }
         Ok(())
     }
+    #[cfg(test)]
+    pub(super) fn arena_residency(&self, address: u64) -> (u32, usize) {
+        let base = address & !(self.granule as u64 - 1);
+        let block = self
+            .blocks
+            .lock()
+            .unwrap()
+            .get(&base)
+            .unwrap()
+            .upgrade()
+            .unwrap();
+        let arena = &block._arena.as_ref().unwrap().arena;
+        let mut pages = vec![0u8; ARENA_LEN / self.granule];
+        // Metadata-only residency query. Retained owners keep this complete
+        // host range alive; no Rust reference is created to guest data.
+        assert_eq!(
+            unsafe {
+                libc::mincore(
+                    arena.pointer.as_ptr().cast(),
+                    ARENA_LEN,
+                    pages.as_mut_ptr().cast(),
+                )
+            },
+            0
+        );
+        (
+            arena.mapped.load(Ordering::Relaxed).count_ones(),
+            pages.iter().filter(|&&p| p & 1 != 0).count() * self.granule,
+        )
+    }
     pub fn resume(&self, address: u64) -> Result<Option<Arc<HardwareWait>>, Error> {
         let gpa = address & !(self.granule as u64 - 1);
         let block = self
@@ -411,6 +449,9 @@ impl Machine {
                     block.length,
                 )
             })?;
+            if let Some(arena) = &block._arena {
+                arena.set_mapped(true);
+            }
             gate.mapped = true;
             self.mapped
                 .fetch_add(block.length as u64, Ordering::Relaxed);
@@ -462,6 +503,9 @@ impl Machine {
             // Never discard anonymous contents or perform synchronous disk I/O.
             check(unsafe { trames_hvf_unmap(std::ptr::null_mut(), block.gpa, block.length) })?;
             gate.mapped = false;
+            if let Some(arena) = &block._arena {
+                arena.set_mapped(false);
+            }
             // Darwin DONTNEED uses VM_SYNC_DEACTIVATE, not KILLPAGES: retain
             // every byte and let the native pager reclaim inactive residency.
             // See apple-oss-distributions/xnu/osfmk/vm/vm_map.c. This file is
@@ -502,6 +546,9 @@ struct Arena {
     machine: Weak<Machine>,
     free: AtomicU64,
     reusable: AtomicU64,
+    // Address registrations, including untouched groups. Distinct from live
+    // byte ownership/free bits and the used-granule working-set counters.
+    mapped: AtomicU64,
 }
 // SAFETY: immutable VA ownership. Only the arena pool lock edits group metadata;
 // actual byte access uses disjoint Physical owners and their existing gates.
@@ -509,12 +556,31 @@ unsafe impl Send for Arena {}
 unsafe impl Sync for Arena {}
 impl Drop for Arena {
     fn drop(&mut self) {
-        unsafe { libc::munmap(self.pointer.as_ptr().cast(), ARENA_LEN) };
-        // Every contained Physical has already withdrawn its stage-two map.
-        // A weak VM identity cannot return addresses into a replacement VM.
+        // All byte owners have retired. Withdraw remaining untouched address
+        // registrations as contiguous runs; never unmap/release a live peer.
         if let Some(machine) = self.machine.upgrade() {
+            let mut mapped = *self.mapped.get_mut();
+            while mapped != 0 {
+                let first = mapped.trailing_zeros();
+                let count = (mapped >> first).trailing_ones();
+                let length = count as usize * machine.granule;
+                if unsafe {
+                    trames_hvf_unmap(
+                        std::ptr::null_mut(),
+                        self.gpa + first as u64 * machine.granule as u64,
+                        length,
+                    )
+                } != 0
+                {
+                    // Exceptional failed withdrawal: preserve host memory and
+                    // its IPA reservation rather than leave a dangling alias.
+                    return;
+                }
+                mapped &= !(u64::MAX >> (64 - count) << first);
+            }
             unsafe { trames_hvf_release_arena(machine.pointer.as_ptr(), self.gpa) };
         }
+        unsafe { libc::munmap(self.pointer.as_ptr().cast(), ARENA_LEN) };
     }
 }
 struct ArenaSlot {
@@ -531,6 +597,32 @@ impl ArenaSlot {
             .pointer
             .as_ptr()
             .wrapping_add(self.index * 4 * PAGE_SIZE as usize)
+    }
+    fn set_mapped(&self, mapped: bool) {
+        let bit = 1 << self.index;
+        if mapped {
+            self.arena.mapped.fetch_or(bit, Ordering::Relaxed);
+        } else {
+            self.arena.mapped.fetch_and(!bit, Ordering::Relaxed);
+        }
+    }
+    fn ensure_mapped(&self) -> Result<(), Error> {
+        if self.arena.mapped.load(Ordering::Relaxed) & (1 << self.index) == 0 {
+            #[cfg(feature = "diagnostics")]
+            let measured = diagnostics::start(diagnostics::Work::Map);
+            check(unsafe {
+                trames_hvf_map(
+                    std::ptr::null_mut(),
+                    self.pointer().cast(),
+                    self.physical_address(),
+                    4 * PAGE_SIZE as usize,
+                )
+            })?;
+            #[cfg(feature = "diagnostics")]
+            diagnostics::end(diagnostics::Work::Map, measured);
+            self.set_mapped(true);
+        }
+        Ok(())
     }
 }
 impl Drop for ArenaSlot {
@@ -606,18 +698,27 @@ impl Drop for Physical {
             if self.gate.get_mut().unwrap().mapped {
                 #[cfg(feature = "diagnostics")]
                 let measured = diagnostics::start(diagnostics::Work::Unmap);
-                unsafe {
-                    trames_hvf_unmap(std::ptr::null_mut(), self.gpa, self.length);
-                }
+                let status =
+                    unsafe { trames_hvf_unmap(std::ptr::null_mut(), self.gpa, self.length) };
                 #[cfg(feature = "diagnostics")]
                 diagnostics::end(diagnostics::Work::Unmap, measured);
+                if status != 0 {
+                    // Preserve both storage and IPA reservation after failed
+                    // withdrawal; no dangling HVF alias or address reuse.
+                    std::mem::forget(self.external.take());
+                    std::mem::forget(self._arena.take());
+                    return;
+                }
+                if let Some(arena) = &self._arena {
+                    arena.set_mapped(false);
+                }
                 vm.mapped.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
             if self.external.is_some() {
                 unsafe { trames_hvf_release(vm.pointer.as_ptr(), self.gpa) };
             }
             // Private addresses belong to the containing arena until its last
-            // granule retires. Unused IPA slots never map or wire host memory.
+            // granule retires. Untouched IPA registrations own no physical bytes.
             if self.external.is_none() {
                 vm.backing.fetch_sub(self.length as u64, Ordering::Relaxed);
             }

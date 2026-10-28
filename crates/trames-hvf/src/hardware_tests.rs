@@ -1288,3 +1288,41 @@ fn demand_faults_continue_the_same_timer_and_complete_register_bank() {
         "a fresh timer is not programmed for every demand fault: {after:?}"
     );
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn lazy_arena_registration_preserves_sparse_ram_holes_reclaim_and_reuse() {
+    let _executor = Executor::new().unwrap();
+    let machine = Machine::shared().unwrap();
+    let first = machine.allocate(None).unwrap();
+    let base = first.physical_address();
+    assert_eq!(
+        machine.arena_residency(base),
+        (64, 16384),
+        "one 1MiB address registration only populates the used 16KiB host granule"
+    );
+    let mut pages = vec![first];
+    for _ in 1..8 {
+        pages.push(machine.allocate(None).unwrap());
+    }
+    let peer = pages[4].physical_address();
+    pages.drain(..4);
+    assert_eq!(machine.arena_residency(peer).0, 63);
+    assert_eq!(machine.stats().backing_bytes, 16384);
+    assert_eq!(machine.stats().mapped_bytes, 16384);
+    let reused = machine.allocate(None).unwrap();
+    assert_eq!(reused.physical_address(), base);
+    assert_eq!(machine.arena_residency(peer).0, 64);
+    assert_eq!(reclaim(u64::MAX).unwrap(), 32768);
+    assert_eq!(machine.arena_residency(peer).0, 62);
+    assert!(machine.resume(base).unwrap().is_none());
+    assert_eq!(machine.arena_residency(peer).0, 63);
+    assert_eq!(machine.stats().mapped_bytes, 16384);
+    drop(pages);
+    drop(reused);
+    assert_eq!(machine.stats().backing_bytes, 0);
+    assert_eq!(machine.stats().mapped_bytes, 0);
+    let fresh = machine.allocate(None).unwrap();
+    assert_eq!(fresh.physical_address(), base);
+    assert_eq!(machine.arena_residency(base), (64, 16384));
+}
