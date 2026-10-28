@@ -829,7 +829,7 @@
       "Single-slot short reuse phase retains several milliseconds of fixed overhead; 800-pass median is 1.4% slower",
       "Native pager hints permit reclaim but do not guarantee immediate process RSS reduction",
       "IP_RECVERR subset supports system DNS only; general native UDP ICMP error queues remain unsupported",
-      "Final interval fix has not yet been measured at 12 slots; the earlier 12-slot diagnostic completed computations slowly and failed upload, so it is not a score"
+      "Final 12-slot clean multi score 3971 is below 4-slot 4857; PDF/Photo Library/Text Processing degrade severely while compute-heavy components scale. SMP throughput is not solved."
     ],
     "geekbench_runs": [
       {
@@ -1029,6 +1029,179 @@
           "native_single_ratio": 0.7492418940984371,
           "native_multi_ratio": 0.260904598195101,
           "native_multi_is_equal_core_comparison": false
+        }
+      },
+      {
+        "runner_sha256": "f24695cf82e56dbbbe2609a405e0fea4e492b39c4249da3f62d9953fc011cd46",
+        "code_mac": "36d62f8369b9f0e201f46a70542108fed38514f4",
+        "code_runtime": "773083005cb5553aaaa400278c4f53192f27a548",
+        "variant": "trames-4096mib-12cpu-final",
+        "memory_mib": 4096,
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793186979.967468,
+        "upload_authorized": true,
+        "exit": 0,
+        "seconds": 797.951934375,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19402164"
+        ],
+        "single_core": 3164,
+        "multi_core": 3971,
+        "version": "Geekbench 6.7.1 Preview for Linux AArch64",
+        "source": "https://browser.geekbench.com/v6/cpu/19402164",
+        "read_method": "Published result page accessibility tree in the in-app browser",
+        "clean_performance_sample": true,
+        "sampler_used": false,
+        "completed_workloads": 32,
+        "workloads": [
+          {
+            "name": "File Compression",
+            "single_core": 2142,
+            "multi_core": 2596,
+            "single_vs_four_slots": 0.9618320610687023,
+            "multi_vs_four_slots": 0.979253112033195,
+            "multi_over_single": 1.2119514472455648
+          },
+          {
+            "name": "Navigation",
+            "single_core": 1320,
+            "multi_core": 1750,
+            "single_vs_four_slots": 1.0022779043280183,
+            "multi_vs_four_slots": 0.9803921568627451,
+            "multi_over_single": 1.3257575757575757
+          },
+          {
+            "name": "HTML5 Browser",
+            "single_core": 4079,
+            "multi_core": 3742,
+            "single_vs_four_slots": 0.9714217670874018,
+            "multi_vs_four_slots": 0.8670064874884152,
+            "multi_over_single": 0.9173817112037264
+          },
+          {
+            "name": "PDF Renderer",
+            "single_core": 3393,
+            "multi_core": 651,
+            "single_vs_four_slots": 0.905282817502668,
+            "multi_vs_four_slots": 0.2036921151439299,
+            "multi_over_single": 0.1918656056587091
+          },
+          {
+            "name": "Photo Library",
+            "single_core": 3281,
+            "multi_core": 715,
+            "single_vs_four_slots": 0.9948453608247423,
+            "multi_vs_four_slots": 0.24245506951508985,
+            "multi_over_single": 0.21792136543736665
+          },
+          {
+            "name": "Clang",
+            "single_core": 4437,
+            "multi_core": 20893,
+            "single_vs_four_slots": 1.0139396709323583,
+            "multi_vs_four_slots": 1.9331051073279053,
+            "multi_over_single": 4.708812260536399
+          },
+          {
+            "name": "Text Processing",
+            "single_core": 3337,
+            "multi_core": 388,
+            "single_vs_four_slots": 1.010293672419013,
+            "multi_vs_four_slots": 0.1660958904109589,
+            "multi_over_single": 0.11627210068924183
+          },
+          {
+            "name": "Asset Compression",
+            "single_core": 3453,
+            "multi_core": 17291,
+            "single_vs_four_slots": 0.9928119608970672,
+            "multi_vs_four_slots": 2.0877807292924415,
+            "multi_over_single": 5.007529684332464
+          },
+          {
+            "name": "Object Detection",
+            "single_core": 3056,
+            "multi_core": 3757,
+            "single_vs_four_slots": 0.9785462696125521,
+            "multi_vs_four_slots": 0.555851457316171,
+            "multi_over_single": 1.2293848167539267
+          },
+          {
+            "name": "Background Blur",
+            "single_core": 3376,
+            "multi_core": 11430,
+            "single_vs_four_slots": 0.9903197418597829,
+            "multi_vs_four_slots": 1.5358774522977694,
+            "multi_over_single": 3.3856635071090047
+          },
+          {
+            "name": "Horizon Detection",
+            "single_core": 3955,
+            "multi_core": 15669,
+            "single_vs_four_slots": 1.0125448028673836,
+            "multi_vs_four_slots": 1.6021472392638036,
+            "multi_over_single": 3.961820480404551
+          },
+          {
+            "name": "Object Remover",
+            "single_core": 4568,
+            "multi_core": 14711,
+            "single_vs_four_slots": 1.000438020148927,
+            "multi_vs_four_slots": 1.3224559510967278,
+            "multi_over_single": 3.220446584938704
+          },
+          {
+            "name": "HDR",
+            "single_core": 3679,
+            "multi_core": 4490,
+            "single_vs_four_slots": 1.0084978070175439,
+            "multi_vs_four_slots": 0.8046594982078853,
+            "multi_over_single": 1.220440337048111
+          },
+          {
+            "name": "Photo Filter",
+            "single_core": 2062,
+            "multi_core": 1778,
+            "single_vs_four_slots": 0.9622025198320112,
+            "multi_vs_four_slots": 0.922677737415672,
+            "multi_over_single": 0.8622696411251213
+          },
+          {
+            "name": "Ray Tracer",
+            "single_core": 3634,
+            "multi_core": 21771,
+            "single_vs_four_slots": 0.9989004947773502,
+            "multi_vs_four_slots": 1.9684448462929476,
+            "multi_over_single": 5.990919097413319
+          },
+          {
+            "name": "Structure from Motion",
+            "single_core": 3685,
+            "multi_core": 12218,
+            "single_vs_four_slots": 0.9808357732233165,
+            "multi_vs_four_slots": 1.5624040920716114,
+            "multi_over_single": 3.315603799185889
+          }
+        ],
+        "comparison": {
+          "same_binary_as_four_slots": true,
+          "same_logical_memory_mib": 4096,
+          "single_vs_four_slots": 0.9850560398505604,
+          "multi_vs_four_slots": 0.8175828700844142,
+          "wall_vs_four_slots": 2.1870998620335484,
+          "multi_over_single": 1.2550568900126422,
+          "native_single_ratio": 0.7380452530907394,
+          "native_multi_ratio": 0.21331113021057155,
+          "native_core_counts_equal": true,
+          "native_memory_budget_and_os_equal": false
         }
       }
     ],

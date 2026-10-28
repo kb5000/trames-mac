@@ -415,3 +415,42 @@ Photo Filter still score lower in multi-core than single-core within Trames.
 Do not call SMP scaling solved or infer whole-application native performance
 from the former near-native CoreMark loop. Dense guest/snapshot/PTE metadata and
 conservative fork accounting remain material memory/performance work.
+
+
+### Clean twelve-slot completion and remaining scaling limit
+
+[The final twelve-slot result](https://browser.geekbench.com/v6/cpu/19402164)
+uses the exact same signed binary (`f24695cf82e56dbbbe2609a405e0fea4e492b39c4249da3f62d9953fc011cd46`),
+4096 MiB, and no sampling/tracing/builds. It completed all 32 workloads, exited
+zero and uploaded normally in 797.95 seconds, with nominal thermal state and
+low-power mode off before/after. Navigation and PDF now finish at the original
+4 GiB budget; the prior mapping-limit failure and upload blocker do not recur.
+One completion validates this case, not long-term application stability.
+
+| Metric/component | 4 slots | 12 slots |
+| --- | ---: | ---: |
+| Single-core score | 3212 | 3164 |
+| Multi-core score | 4857 | 3971 |
+| Complete run wall time | 364.84 s | 797.95 s |
+| PDF Renderer multi-core | 3196 | 651 |
+| Photo Library multi-core | 2949 | 715 |
+| Text Processing multi-core | 2336 | 388 |
+| Object Detection multi-core | 6759 | 3757 |
+| Clang multi-core | 10808 | 20893 |
+| Asset Compression multi-core | 8282 | 17291 |
+| Ray Tracer multi-core | 11060 | 21771 |
+
+Twelve slots score 18.2% below four slots overall. The single-core totals differ
+by only 1.5%, while compute-heavy components gain roughly 2x and several
+memory/lifecycle-heavy components collapse. This supports investigating shared
+VM/metadata/checkpoint and mapping/reclamation work rather than assuming raw CPU
+execution alone is the bottleneck; it is not a measured attribution of all lost
+time. Interval history removes one demonstrated amplification but does not solve
+all SMP costs. Dense page/snapshot/PTE descriptors, per-page mapping/retirement
+operations and conservative fork copies/charges remain candidates for measured
+follow-up. Do not increase product CPU defaults based on this result.
+
+The twelve-slot multi score is 21.3% of the earlier native 18616 result with the
+same host core count. Guest Linux versus native macOS builds and 4 GiB versus
+24 GiB reported RAM still differ, so this ratio is whole-benchmark behavior under
+these configurations, not the cost of an individual HVF instruction/trap.
