@@ -43,8 +43,9 @@ RAM. Their bounded page-table metadata is freed on eviction or vCPU destruction.
 Mapping tokens and bounded address-range deltas come from the shared runtime.
 Unchanged mappings do not trigger a page inspection. A one-page permission
 change checks that page and updates its descriptor in place. Missing/replaced
-storage retires the leaf; content-only changes preserve it. Expired history or a
-full snapshot replacement requires full reconciliation. Conservative dirty
+storage retires the leaf; content-only changes preserve it. Expired history uses
+persistent chunk stamps to narrow revalidation; a full snapshot replacement
+changes all live stamps. Conservative dirty
 publication runs once per joined write epoch. Canonical private data uses one
 VM-dirty notification; only provider/code hooks need per-page indices. It remains
 conservative, not hardware dirty-bit tracking. Fork still has the existing eager writable detachment limitation.
@@ -114,11 +115,15 @@ neighbors, and retains the same permission, code-publication and ownership hooks
 Hardware mapping history stores coalesced address intervals. A contiguous change
 larger than 4096 pages no longer discards incremental history. Each CPU intersects
 those intervals with its own cached leaves, merging overlaps; it never enumerates
-untouched pages or builds another full ordered page set. History still expires
-after bounded updates/interval metadata and falls back to complete revalidation.
-The signed 32 MiB unused-VMA regression checks zero unrelated inspections and
-retains exact one-page permission invalidation. This metadata path is inactive
-for software interpreter Views.
+untouched pages or builds another full ordered page set. When bounded history
+expires, a CPU compares persistent 2 MiB chunk stamps and inspects only cached
+leaves in changed chunks. This avoids a whole-mm walk merely because a worker
+was parked, migrated or delayed by peers. New leaves cannot acknowledge changes
+to unchecked old leaves. Empty chunks retain no stamp/physical owner; full
+snapshot replacement invalidates every live chunk. Signed acceptance checks
+both precise interval invalidation and an 80-update gap with zero unrelated
+leaf checks, followed by exact protection, unmap and address-reuse behavior.
+The shared runtime builds no chunk stamps for the iPad software interpreter.
 
 ## Physical paging
 
@@ -126,6 +131,16 @@ The default 4096MiB guest limit is a logical allocation budget, not preallocated
 RAM. Only accessed pages acquire physical slots. Four unrelated 4KiB guest pages
 can share one 16KiB host granule, and partially freed granules are reused before
 allocating another. Mapping addresses need not be contiguous.
+
+Each host execution thread keeps one weak partial-granule hint. Atomic slot
+claims arbitrate it against the weak shared pool; an acquire claim pairs with
+the previous slot's release on ownership handoff. Only the shared pool metadata
+uses its short mutex. HVF mapping and disjoint 4 KiB initialization run after
+that lock is released, so unrelated CPUs do not queue behind either operation.
+No idle cache pins RAM or a dead VM. Hints are checked against the current VM
+identity, and last-owner unmap/reclamation remains immediate. The signed
+12-thread test verifies unique live physical addresses, complete page contents,
+reuse among retained peers and zero mapped/backing bytes while TLS hints live.
 
 Private canonical storage uses anonymous macOS VM arenas. One arena reserves
 1 MiB of virtual addresses; only a used 16 KiB host granule is mapped into HVF.
@@ -636,3 +651,27 @@ The [register-context checkpoint](../validation/mac-windows.md#batched-register-
 records hardware, real Linux and fixed-work evidence. Additional resident-reload
 prototypes did not show reliable benefit beyond batching in this workload and
 were not included. The complete-state contract is retained.
+
+
+## Opt-in HVF diagnostics
+
+Default builds compile out the instrumentation. For attribution, build with
+`--features trames-hvf/diagnostics`, ad-hoc sign the resulting executable with
+`apps/macos/Trames.entitlements`, and set `TRAMES_HVF_PROFILE=1`. Each executing
+host thread emits cumulative JSON to stderr at most once per active second and
+on thread teardown. There is no shared counter lock, monitor thread or guest
+load/store instrumentation. Profiling changes timings; use a normal signed
+build without samplers for performance scores.
+
+`wall_ns`, `cpu_ns` and `calls` follow this order: translation synchronization,
+HVF run/adapter, stage-one fault, stage-two resume, allocation-pool lock wait,
+HVF data map, slot initialization, final data unmap, arena recycling. Thread CPU
+accounting includes host kernel time, not guest instruction retirement, and is
+measured only for synchronization, run, fault, unmap and recycling. Other CPU
+entries are unmeasured zeroes. Fault timings include nested allocation/map work;
+do not add them as independent totals.
+
+`counts` records journal fallback, interval synchronization, inspected cached
+leaves, installed leaves, stage-one faults, retired leaves, root switches, peak
+cached leaves per thread and fallback chunk-stamp checks. Compare cumulative
+deltas over workload boundaries; sum only final per-thread records for totals.

@@ -14,6 +14,9 @@ use trames_memory::{
     Access, CpuMemory, HardwarePageInfo, HardwareStorage, HardwareWait, Memory, MemoryError,
     PAGE_SIZE,
 };
+#[cfg(feature = "diagnostics")]
+#[path = "diagnostics.rs"]
+mod diagnostics;
 #[path = "machine.rs"]
 mod machine;
 use machine::Machine;
@@ -137,15 +140,30 @@ struct Page {
 // ASID, flushing it on root changes; cached roots never consume extra ASIDs.
 const CACHED_SPACES: usize = 8;
 const CACHED_PAGES: usize = 131_072;
+struct CachedChunk {
+    pages: usize,
+    version: Option<u64>,
+}
 struct AddressSpace {
     host: NonNull<c_void>,
     pages: BTreeMap<u64, Page>,
+    chunks: BTreeMap<u64, CachedChunk>,
     version: Option<(u64, u64)>,
     used: u64,
     publications: BTreeMap<u64, trames_memory::HardwareWriteFrame>,
     private_writable: usize,
 }
 impl AddressSpace {
+    fn remove_page(&mut self, va: u64) -> Option<Page> {
+        let page = self.pages.remove(&va)?;
+        let key = va / trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+        let chunk = self.chunks.get_mut(&key).expect("cached page chunk");
+        chunk.pages -= 1;
+        if chunk.pages == 0 {
+            self.chunks.remove(&key);
+        }
+        Some(page)
+    }
     fn track_write(
         &mut self,
         va: u64,
@@ -200,6 +218,7 @@ impl Executor {
                     host: NonNull::new(unsafe { trames_hvf_space_current(host.as_ptr()) })
                         .expect("initial tables"),
                     pages: BTreeMap::new(),
+                    chunks: BTreeMap::new(),
                     version: None,
                     used: 0,
                     publications: BTreeMap::new(),
@@ -268,6 +287,7 @@ impl Executor {
         }
         let space = self.spaces.get_mut(&identity).unwrap();
         space.pages.clear();
+        space.chunks.clear();
         space.publications.clear();
         space.private_writable = 0;
         space.version = None;
@@ -275,6 +295,8 @@ impl Executor {
     }
     fn activate(&mut self, identity: u64) -> Result<(), Error> {
         if self.active != identity {
+            #[cfg(feature = "diagnostics")]
+            diagnostics::count(diagnostics::Count::RootSwitch, 1);
             check(unsafe {
                 trames_hvf_space_select(self.host.as_ptr(), self.spaces[&identity].host.as_ptr())
             })?;
@@ -296,6 +318,7 @@ impl Executor {
                 AddressSpace {
                     host: NonNull::new(host).ok_or(Error::Host(-1))?,
                     pages: BTreeMap::new(),
+                    chunks: BTreeMap::new(),
                     version: None,
                     used: 0,
                     publications: BTreeMap::new(),
@@ -324,31 +347,67 @@ impl Executor {
         Ok(())
     }
     fn synchronize_view(&mut self, memory: &View) -> Result<(), Error> {
+        #[cfg(feature = "diagnostics")]
+        let measured = diagnostics::start(diagnostics::Work::Sync);
         self.select_view(memory)?;
         let version = memory.hardware_view_version();
         let space = self.spaces.get_mut(&self.active).unwrap();
         if space.version.map(|v| v.0) != Some(version.0) {
-            let addresses: Vec<_> = if let Some(changes) = space
+            let (addresses, mut chunks): (Vec<_>, Vec<_>) = if let Some(changes) = space
                 .version
                 .and_then(|v| memory.hardware_mapping_ranges(v.0))
             {
+                #[cfg(feature = "diagnostics")]
+                diagnostics::count(diagnostics::Count::Delta, 1);
                 let mut ranges: Vec<_> = changes.collect();
                 ranges.sort_unstable_by_key(|range| range.start);
                 let mut addresses = Vec::new();
+                let mut chunks = Vec::new();
                 let mut end = 0;
                 for range in ranges {
                     let start = range.start.max(end);
                     if start < range.end {
                         addresses.extend(space.pages.range(start..range.end).map(|(&va, _)| va));
+                        let first = start / trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+                        let last = (range.end - 1) / trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+                        chunks.extend(space.chunks.range(first..=last).map(|(&key, _)| key));
                     }
                     end = end.max(range.end);
                 }
-                addresses
+                (addresses, chunks)
             } else {
-                // Lost history still checks every retained leaf. Keys are
-                // already unique; do not allocate another ordered tree.
-                space.pages.keys().copied().collect()
+                #[cfg(feature = "diagnostics")]
+                {
+                    diagnostics::count(diagnostics::Count::Fallback, 1);
+                    diagnostics::count(diagnostics::Count::ChunkChecks, space.chunks.len());
+                }
+                // A CPU can miss arbitrarily many updates while parked or
+                // running another mm. Compare persistent coarse stamps, then
+                // inspect leaves only in changed chunks. No history-length
+                // threshold may turn a tiny change into a full-mm page walk.
+                let chunks: Vec<_> = space
+                    .chunks
+                    .iter()
+                    .filter_map(|(&key, chunk)| {
+                        let base = key * trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+                        (chunk.version != memory.hardware_mapping_chunk_version(base))
+                            .then_some(key)
+                    })
+                    .collect();
+                let mut addresses = Vec::new();
+                for &key in &chunks {
+                    let base = key * trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+                    addresses.extend(
+                        space
+                            .pages
+                            .range(base..base + trames_memory::HARDWARE_MAPPING_CHUNK_SIZE)
+                            .map(|(&va, _)| va),
+                    );
+                }
+                (addresses, chunks)
             };
+            #[cfg(feature = "diagnostics")]
+            diagnostics::count(diagnostics::Count::Inspect, addresses.len());
             let mut retired = Vec::new();
             for va in addresses {
                 let Some(page) = space.pages.get_mut(&va) else {
@@ -391,13 +450,23 @@ impl Executor {
                 let write = page.write;
                 space.track_write(va, previous, write);
             }
+            #[cfg(feature = "diagnostics")]
+            diagnostics::count(diagnostics::Count::Retire, retired.len());
             for va in retired {
                 check(unsafe { trames_hvf_page(self.host.as_ptr(), va, 0, 0) })?;
-                let old = space.pages.remove(&va).unwrap();
+                let old = space.remove_page(va).unwrap();
                 space.track_write(va, old.write, None);
                 #[cfg(test)]
                 {
                     self.translations.retired += 1;
+                }
+            }
+            chunks.dedup();
+            for key in chunks {
+                if let Some(chunk) = space.chunks.get_mut(&key) {
+                    chunk.version = memory.hardware_mapping_chunk_version(
+                        key * trames_memory::HARDWARE_MAPPING_CHUNK_SIZE,
+                    );
                 }
             }
         }
@@ -412,9 +481,13 @@ impl Executor {
             }
         }
         space.version = Some(version);
+        #[cfg(feature = "diagnostics")]
+        diagnostics::end(diagnostics::Work::Sync, measured);
         Ok(())
     }
     fn fault(&mut self, memory: &View, event: &HostExit) -> Result<(), Error> {
+        #[cfg(feature = "diagnostics")]
+        diagnostics::count(diagnostics::Count::Fault, 1);
         #[cfg(test)]
         {
             self.translations.faults += 1;
@@ -522,7 +595,25 @@ impl Executor {
                 write,
             },
         );
+        if old.is_none() {
+            let key = va / trames_memory::HARDWARE_MAPPING_CHUNK_SIZE;
+            space
+                .chunks
+                .entry(key)
+                .or_insert_with(|| CachedChunk {
+                    pages: 0,
+                    version: memory.hardware_mapping_chunk_version(va),
+                })
+                .pages += 1;
+        }
+        // Installing one leaf cannot acknowledge changes to other old leaves
+        // in the chunk. Only synchronize_view advances an existing stamp.
         space.track_write(va, old.and_then(|page| page.write), write);
+        #[cfg(feature = "diagnostics")]
+        {
+            diagnostics::count(diagnostics::Count::Export, 1);
+            diagnostics::count(diagnostics::Count::PeakLeaves, space.pages.len());
+        }
         Ok(())
     }
     pub fn run(
@@ -566,6 +657,8 @@ impl Executor {
             }
             // SAFETY: retained VM/physical owners, creator-thread vCPU, bounded
             // timer and exact C register layout. No Rust slice spans this call.
+            #[cfg(feature = "diagnostics")]
+            let measured = diagnostics::start(diagnostics::Work::Run);
             check(unsafe {
                 trames_hvf_run(
                     self.host.as_ptr(),
@@ -574,6 +667,8 @@ impl Executor {
                     &mut event,
                 )
             })?;
+            #[cfg(feature = "diagnostics")]
+            diagnostics::end(diagnostics::Work::Run, measured);
             match event.kind {
                 0 | 1 => {
                     return Ok(ExecutionExit {
@@ -585,9 +680,20 @@ impl Executor {
                         instructions: InstructionCount::Unavailable,
                     })
                 }
-                2 => self.fault(memory, &event)?,
+                2 => {
+                    #[cfg(feature = "diagnostics")]
+                    let measured = diagnostics::start(diagnostics::Work::Fault);
+                    self.fault(memory, &event)?;
+                    #[cfg(feature = "diagnostics")]
+                    diagnostics::end(diagnostics::Work::Fault, measured);
+                }
                 4 => {
-                    if let Some(wait) = self.machine.resume(event.address)? {
+                    #[cfg(feature = "diagnostics")]
+                    let measured = diagnostics::start(diagnostics::Work::Resume);
+                    let wait = self.machine.resume(event.address)?;
+                    #[cfg(feature = "diagnostics")]
+                    diagnostics::end(diagnostics::Work::Resume, measured);
+                    if let Some(wait) = wait {
                         self.wait = Some(wait);
                         return Ok(ExecutionExit {
                             reason: ExitReason::Yield,

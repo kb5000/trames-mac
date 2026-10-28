@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+default = []
+diagnostics = []
+
 [dependencies]
 trames-engine = { workspace = true }
 trames-accel = { workspace = true }

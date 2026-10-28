@@ -22,6 +22,11 @@ static MACHINE: Mutex<Option<Weak<Machine>>> = Mutex::new(None);
 static MACHINE_CHANGED: Condvar = Condvar::new();
 static RESIDENT_LIMIT: AtomicU64 = AtomicU64::new(u64::MAX);
 static CLOCK: AtomicU64 = AtomicU64::new(0);
+thread_local! {
+    // A magazine is a weak hint, never an idle RAM/VM owner. At most the
+    // currently useful granule is retained as metadata on each execution thread.
+    static LOCAL: std::cell::RefCell<Weak<Physical>> = const { std::cell::RefCell::new(Weak::new()) };
+}
 const ARENA_LEN: usize = 1 << 20;
 /// Optional working-set target, independent of the guest's logical RAM limit.
 /// macOS memory pressure can also reclaim live, dirty guest pages below it.
@@ -102,71 +107,96 @@ impl Machine {
         self: &Arc<Self>,
         bytes: Option<&[u8]>,
     ) -> Result<Arc<dyn HardwareStorage>, Error> {
-        let mut allocation = self.allocation.lock().unwrap();
-        let available = loop {
-            let Some((_, candidate)) = allocation.pop_first() else {
-                break None;
-            };
-            if let Some(block) = candidate
-                .upgrade()
-                .filter(|b| b.used.load(Ordering::Relaxed) != 15)
-            {
-                break Some(block);
+        let local = LOCAL.with(|cache| {
+            let block = cache.borrow().upgrade()?;
+            // Retained data can outlive an earlier VM. Its storage must never
+            // enter the replacement VM's allocator via a thread-local hint.
+            if block.machine.as_ptr() != Arc::as_ptr(self) {
+                return None;
             }
-        };
-        let block = if let Some(block) = available {
-            block
+            block.claim().map(|index| (block, index))
+        });
+        let (block, index) = if let Some(local) = local {
+            local
         } else {
-            let arena = self.allocate_arena()?;
-            let ptr = arena.pointer();
-            let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
-            if let Err(e) = check(unsafe {
-                trames_hvf_map(std::ptr::null_mut(), ptr.cast(), gpa, self.granule)
-            }) {
-                unsafe {
-                    trames_hvf_release(self.pointer.as_ptr(), gpa);
+            #[cfg(feature = "diagnostics")]
+            let measured = diagnostics::start(diagnostics::Work::AllocateWait);
+            let mut allocation = self.allocation.lock().unwrap();
+            #[cfg(feature = "diagnostics")]
+            diagnostics::end(diagnostics::Work::AllocateWait, measured);
+            let available = loop {
+                let Some((_, candidate)) = allocation.pop_first() else {
+                    break None;
+                };
+                if let Some(block) = candidate.upgrade() {
+                    if let Some(index) = block.claim() {
+                        if block.used.load(Ordering::Relaxed) != 15 {
+                            allocation.insert(block.gpa, Arc::downgrade(&block));
+                        }
+                        break Some((block, index));
+                    }
                 }
-                return Err(e);
+            };
+            // Pool metadata has finished. Neither host VM mapping nor byte
+            // initialization may serialize unrelated allocators under this lock.
+            drop(allocation);
+            if let Some(available) = available {
+                available
+            } else {
+                let arena = self.allocate_arena()?;
+                let ptr = arena.pointer();
+                let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
+                #[cfg(feature = "diagnostics")]
+                let measured = diagnostics::start(diagnostics::Work::Map);
+                if let Err(e) = check(unsafe {
+                    trames_hvf_map(std::ptr::null_mut(), ptr.cast(), gpa, self.granule)
+                }) {
+                    unsafe { trames_hvf_release(self.pointer.as_ptr(), gpa) };
+                    return Err(e);
+                }
+                #[cfg(feature = "diagnostics")]
+                diagnostics::end(diagnostics::Work::Map, measured);
+                self.backing
+                    .fetch_add(self.granule as u64, Ordering::Relaxed);
+                let block = Arc::new(Physical {
+                    pointer: NonNull::new(ptr.cast()).unwrap(),
+                    gpa,
+                    external: None,
+                    _arena: Some(arena),
+                    length: self.granule,
+                    machine: Arc::downgrade(self),
+                    used: AtomicU8::new(1),
+                    executable: AtomicU8::new(0),
+                    touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
+                    gate: Mutex::new(Gate {
+                        hosts: 0,
+                        mapped: true,
+                        owner: None,
+                        waiters: Vec::new(),
+                    }),
+                });
+                self.mapped
+                    .fetch_add(self.granule as u64, Ordering::Relaxed);
+                self.blocks
+                    .lock()
+                    .unwrap()
+                    .insert(gpa, Arc::downgrade(&block));
+                self.allocation
+                    .lock()
+                    .unwrap()
+                    .insert(gpa, Arc::downgrade(&block));
+                (block, 0)
             }
-            self.backing
-                .fetch_add(self.granule as u64, Ordering::Relaxed);
-            let block = Arc::new(Physical {
-                pointer: NonNull::new(ptr.cast()).unwrap(),
-                gpa,
-                external: None,
-                _arena: Some(arena),
-                length: self.granule,
-                machine: Arc::downgrade(self),
-                used: AtomicU8::new(0),
-                executable: AtomicU8::new(0),
-                touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
-                gate: Mutex::new(Gate {
-                    hosts: 0,
-                    mapped: true,
-                    owner: None,
-                    waiters: Vec::new(),
-                }),
-            });
-            self.mapped
-                .fetch_add(self.granule as u64, Ordering::Relaxed);
-            self.blocks
-                .lock()
-                .unwrap()
-                .insert(gpa, Arc::downgrade(&block));
-            block
         };
-        let used = block.used.load(Ordering::Relaxed);
-        let index = (!used & 15).trailing_zeros() as usize;
-        block.used.fetch_or(1 << index, Ordering::Acquire);
+        LOCAL.with(|cache| *cache.borrow_mut() = Arc::downgrade(&block));
         block
             .touched
             .store(CLOCK.fetch_add(1, Ordering::Relaxed), Ordering::Relaxed);
-        if block.used.load(Ordering::Relaxed) != 15 {
-            allocation.insert(block.gpa, Arc::downgrade(&block));
-        }
         let slot = Arc::new(Slot { block, index });
         // SAFETY: newly claimed disjoint 4K slot. No previous page/table owner
         // survives reuse. Other hardware actors can access only other slots.
+        #[cfg(feature = "diagnostics")]
+        let measured = diagnostics::start(diagnostics::Work::Initialize);
         unsafe {
             if let Some(bytes) = bytes {
                 std::ptr::copy_nonoverlapping(bytes.as_ptr(), slot.pointer(), PAGE_SIZE as usize);
@@ -174,7 +204,8 @@ impl Machine {
                 std::ptr::write_bytes(slot.pointer(), 0, PAGE_SIZE as usize);
             }
         }
-        drop(allocation);
+        #[cfg(feature = "diagnostics")]
+        diagnostics::end(diagnostics::Work::Initialize, measured);
         let limit = RESIDENT_LIMIT.load(Ordering::Relaxed);
         if limit != u64::MAX {
             self.trim_to(limit, slot.block.gpa)?;
@@ -496,6 +527,8 @@ impl Drop for ArenaSlot {
         let Some(machine) = self.machine.upgrade() else {
             return;
         };
+        #[cfg(feature = "diagnostics")]
+        let measured = diagnostics::start(diagnostics::Work::Recycle);
         let mut arenas = machine.arenas.lock().unwrap();
         // Physical::drop has withdrawn HVF before this field is retired. There
         // are no surviving byte owners in the full aligned 16KiB group.
@@ -516,6 +549,8 @@ impl Drop for ArenaSlot {
             self.arena.pointer.as_ptr() as usize,
             Arc::downgrade(&self.arena),
         );
+        #[cfg(feature = "diagnostics")]
+        diagnostics::end(diagnostics::Work::Recycle, measured);
     }
 }
 struct Gate {
@@ -537,15 +572,34 @@ struct Physical {
     touched: AtomicU64,
     gate: Mutex<Gate>,
 }
+impl Physical {
+    fn claim(&self) -> Option<usize> {
+        // Only slot ownership, not guest data ordering. Release on the final
+        // previous Slot pairs with Acquire before zero/copy and publication.
+        // Local and shared-pool candidates can race; only the CAS winner owns
+        // that 4KiB range. A full granule returns immediately, never waits.
+        self.used
+            .try_update(Ordering::Acquire, Ordering::Relaxed, |used| {
+                let free = !used & 15;
+                (free != 0).then(|| used | (1 << free.trailing_zeros()))
+            })
+            .ok()
+            .map(|used| (!used & 15).trailing_zeros() as usize)
+    }
+}
 unsafe impl Send for Physical {}
 unsafe impl Sync for Physical {}
 impl Drop for Physical {
     fn drop(&mut self) {
         if let Some(vm) = self.machine.upgrade() {
             if self.gate.get_mut().unwrap().mapped {
+                #[cfg(feature = "diagnostics")]
+                let measured = diagnostics::start(diagnostics::Work::Unmap);
                 unsafe {
                     trames_hvf_unmap(std::ptr::null_mut(), self.gpa, self.length);
                 }
+                #[cfg(feature = "diagnostics")]
+                diagnostics::end(diagnostics::Work::Unmap, measured);
                 vm.mapped.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
             unsafe {

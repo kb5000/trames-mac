@@ -146,6 +146,79 @@ fn unrelated_guest_pages_reuse_partial_physical_granules() {
 
 #[test]
 #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn concurrent_slot_allocation_preserves_live_bytes_and_releases_idle_ram() {
+    const THREADS: usize = 12;
+    const ROUNDS: usize = 8;
+    const BATCH: usize = 64;
+    let machine = Machine::shared().unwrap();
+    let barrier = Arc::new(std::sync::Barrier::new(THREADS + 1));
+    let (tx, rx) = mpsc::channel();
+    std::thread::scope(|scope| {
+        for worker in 0..THREADS {
+            let (machine, barrier, tx) = (machine.clone(), barrier.clone(), tx.clone());
+            scope.spawn(move || {
+                for round in 0..ROUNDS {
+                    barrier.wait();
+                    let pages: Vec<_> = (0..BATCH)
+                        .map(|index| {
+                            let value =
+                                (worker * ROUNDS * BATCH + round * BATCH + index + 1) as u64;
+                            let page = machine.allocate(None).unwrap();
+                            // SAFETY: only this test worker owns this unpublished
+                            // slot. No byte references or hardware actors exist.
+                            for offset in (0..PAGE_SIZE as usize).step_by(8) {
+                                unsafe { page.pointer().add(offset).cast::<u64>().write(value) };
+                            }
+                            (page, value)
+                        })
+                        .collect();
+                    tx.send(pages).unwrap();
+                    barrier.wait();
+                }
+                // Keep the TLS hint alive until the final zero-residency check.
+                barrier.wait();
+            });
+        }
+        let mut retained = Vec::new();
+        for _ in 0..ROUNDS {
+            barrier.wait();
+            let mut pages = std::mem::take(&mut retained);
+            for _ in 0..THREADS {
+                pages.extend(rx.recv_timeout(Duration::from_secs(5)).unwrap());
+            }
+            let mut addresses = std::collections::BTreeSet::new();
+            for (page, value) in &pages {
+                assert!(
+                    addresses.insert(page.physical_address()),
+                    "overlapping live slots"
+                );
+                for offset in (0..PAGE_SIZE as usize).step_by(8) {
+                    // SAFETY: the channel transfers ownership and publishes the
+                    // worker writes; every worker waits at the barrier.
+                    assert_eq!(
+                        unsafe { page.pointer().add(offset).cast::<u64>().read() },
+                        *value
+                    );
+                }
+            }
+            // Leave holes among live peers, so both partial-granule reuse and
+            // whole-granule retirement race with the next allocation batch.
+            retained = pages
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, p)| (i % 17 == 0).then_some(p))
+                .collect();
+            barrier.wait();
+        }
+        drop(retained);
+        assert_eq!(machine.stats().mapped_bytes, 0);
+        assert_eq!(machine.stats().backing_bytes, 0);
+        barrier.wait();
+    });
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
 fn simultaneous_vm_owners_wait_for_last_owner_teardown() {
     let threads: Vec<_> = (0..4)
         .map(|_| {
@@ -1018,4 +1091,75 @@ fn large_untouched_vmas_do_not_rescan_unrelated_cached_hardware_pages() {
     memory.protect(0x40000, PAGE_SIZE, Permissions::R).unwrap();
     svc(&mut executor, &mut state(), &mut memory);
     assert_eq!(executor.translations.inspections, before.inspections + 1);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn late_worker_revalidates_only_changed_chunks_after_journal_expiry() {
+    const CHANGED: u64 = 0x400000;
+    const COLD: u64 = 0x80000000;
+    let mut memory = memory();
+    for base in [0x40000, CHANGED] {
+        memory.map(base, 64 * PAGE_SIZE, Permissions::RW).unwrap();
+    }
+    memory.map(COLD, PAGE_SIZE, Permissions::RW).unwrap();
+    let mut executor = Executor::new().unwrap();
+    for base in [0x40000, CHANGED] {
+        for page in 0..64 {
+            let mut cpu = state();
+            cpu.registers[0] = base + page * PAGE_SIZE;
+            svc(&mut executor, &mut cpu, &mut memory);
+        }
+    }
+    let before = executor.translations;
+    let resident = memory.resident_bytes();
+    let update_cold = |memory: &mut Memory, executor: &mut Executor| {
+        for i in 0..80 {
+            memory
+                .protect(
+                    COLD,
+                    PAGE_SIZE,
+                    if i % 2 == 0 {
+                        Permissions::R
+                    } else {
+                        Permissions::RW
+                    },
+                )
+                .unwrap();
+            drop(memory.parallel_view(&mut executor.registry).unwrap());
+            memory.commit_parallel().unwrap();
+        }
+    };
+    update_cold(&mut memory, &mut executor);
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(executor.translations.inspections, before.inspections);
+    memory.protect(CHANGED, PAGE_SIZE, Permissions::R).unwrap();
+    update_cold(&mut memory, &mut executor);
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(executor.translations.inspections, before.inspections + 64);
+    let mut cpu = state();
+    cpu.registers[0] = CHANGED;
+    assert!(matches!(
+        executor.run(&mut cpu, &mut memory, Duration::from_millis(20)),
+        Err(Error::Memory(MemoryError::Permission { .. }))
+    ));
+    memory.unmap(CHANGED, 64 * PAGE_SIZE).unwrap();
+    update_cold(&mut memory, &mut executor);
+    svc(&mut executor, &mut state(), &mut memory);
+    let mut cpu = state();
+    cpu.registers[0] = CHANGED;
+    assert!(matches!(
+        executor.run(&mut cpu, &mut memory, Duration::from_millis(20)),
+        Err(Error::Memory(MemoryError::Unmapped(_)))
+    ));
+    memory.map(CHANGED, PAGE_SIZE, Permissions::RW).unwrap();
+    update_cold(&mut memory, &mut executor);
+    let mut cpu = state();
+    cpu.registers[0] = CHANGED;
+    svc(&mut executor, &mut cpu, &mut memory);
+    assert_eq!(
+        cpu.registers[1], 1,
+        "old bytes/permissions cannot survive remap"
+    );
+    assert!(memory.resident_bytes() <= resident);
 }
