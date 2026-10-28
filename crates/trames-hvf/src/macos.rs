@@ -328,13 +328,27 @@ impl Executor {
         let version = memory.hardware_view_version();
         let space = self.spaces.get_mut(&self.active).unwrap();
         if space.version.map(|v| v.0) != Some(version.0) {
-            let addresses: BTreeSet<_> = space
+            let addresses: Vec<_> = if let Some(changes) = space
                 .version
-                .and_then(|v| memory.hardware_mapping_changes(v.0))
-                .map_or_else(
-                    || space.pages.keys().copied().collect(),
-                    |changes| changes.collect(),
-                );
+                .and_then(|v| memory.hardware_mapping_ranges(v.0))
+            {
+                let mut ranges: Vec<_> = changes.collect();
+                ranges.sort_unstable_by_key(|range| range.start);
+                let mut addresses = Vec::new();
+                let mut end = 0;
+                for range in ranges {
+                    let start = range.start.max(end);
+                    if start < range.end {
+                        addresses.extend(space.pages.range(start..range.end).map(|(&va, _)| va));
+                    }
+                    end = end.max(range.end);
+                }
+                addresses
+            } else {
+                // Lost history still checks every retained leaf. Keys are
+                // already unique; do not allocate another ordered tree.
+                space.pages.keys().copied().collect()
+            };
             let mut retired = Vec::new();
             for va in addresses {
                 let Some(page) = space.pages.get_mut(&va) else {

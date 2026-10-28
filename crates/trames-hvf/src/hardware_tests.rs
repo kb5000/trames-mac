@@ -990,3 +990,32 @@ fn anonymous_arenas_reuse_only_retired_granules_and_zero_new_slots() {
     assert_eq!(machine.stats().backing_bytes, before.backing_bytes);
     assert_eq!(machine.stats().mapped_bytes, before.mapped_bytes);
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn large_untouched_vmas_do_not_rescan_unrelated_cached_hardware_pages() {
+    let mut memory = memory();
+    memory
+        .map(0x40000, 64 * PAGE_SIZE, Permissions::RW)
+        .unwrap();
+    let mut executor = Executor::new().unwrap();
+    for page in 0..64 {
+        let mut state = state();
+        state.registers[0] = 0x40000 + page * PAGE_SIZE;
+        svc(&mut executor, &mut state, &mut memory);
+    }
+    let before = executor.translations;
+    let resident = memory.resident_bytes();
+    memory
+        .map(0x100000, 8192 * PAGE_SIZE, Permissions::RW)
+        .unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(executor.translations.inspections, before.inspections);
+    assert_eq!(memory.resident_bytes(), resident);
+    memory.unmap(0x100000, 8192 * PAGE_SIZE).unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(executor.translations.inspections, before.inspections);
+    memory.protect(0x40000, PAGE_SIZE, Permissions::R).unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(executor.translations.inspections, before.inspections + 1);
+}

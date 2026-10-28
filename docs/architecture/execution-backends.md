@@ -111,6 +111,15 @@ missing PTEs from already resident, already charged hardware owners in the same
 bounded 1 MiB virtual block. This never loads, allocates or charges untouched
 neighbors, and retains the same permission, code-publication and ownership hooks.
 
+Hardware mapping history stores coalesced address intervals. A contiguous change
+larger than 4096 pages no longer discards incremental history. Each CPU intersects
+those intervals with its own cached leaves, merging overlaps; it never enumerates
+untouched pages or builds another full ordered page set. History still expires
+after bounded updates/interval metadata and falls back to complete revalidation.
+The signed 32 MiB unused-VMA regression checks zero unrelated inspections and
+retains exact one-page permission invalidation. This metadata path is inactive
+for software interpreter Views.
+
 ## Physical paging
 
 The default 4096MiB guest limit is a logical allocation budget, not preallocated
