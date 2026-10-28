@@ -660,3 +660,107 @@ passed CPU/network/graphics suites were reused for unchanged paths. Unrelated
 dirty network and integration-test work was excluded and preserved. See the
 [filtered JSON evidence](mac-geekbench.json) for all 16 components, policy proofs,
 diagnostic boundaries, binary identities and scope details.
+
+
+### Demand-fault continuation, publication and lazy arena registration
+
+Final Mac source `01b808c4ea03e450c96266ae1f9438cba9f285a7` uses unchanged shared runtime
+`87a4f2036453226e6f8a779e6ae1616ba008461c`. The original-workload diagnostic build on the preceding
+source recorded 9,450,744 stage-one faults: 97.6% exported new storage,
+97.5% were writes, and zero allocations were 96.1% of
+faults. Repeated CPU translation of retained backing is therefore a minority of
+faults. Approximate single Navigation deltas include 603,806 new-storage faults,
+7.14 run/adapter thread-CPU seconds and 0.47 handler thread-CPU seconds. Run time
+includes actual guest computation; this is not an exclusive overhead split.
+Multi Photo Library/Filter still showed substantial HVF map wait. The profile
+completed and uploaded in 305.81 s; it is not a clean score.
+
+Immediate fault continuation now retains the paused EL1 context and original
+absolute timer. New invalid-to-valid descriptors use DSB ISHST / ISB publication
+without TLBI, including new table branches. Existing valid translations,
+permissions, removals, root switches and ASID reuse retain invalidation; pending
+maintenance is never downgraded. Complete materialized task state remains
+available on all exits. No guest population or quota charge was added.
+The first-touch fixture improved single-CPU total wall time about 9.6%, while
+four/twelve-CPU improvements were about 3–4%. The intermediate clean twelve-slot
+score was 3418/8083 in 297.18 s:
+[public intermediate](https://browser.geekbench.com/v6/cpu/19403097).
+
+A direct, bounded HVF probe established an additional mechanism: registering
+128 MiB leaves zero data pages resident. Host/guest access then populated only
+one 16 KiB granule, and withdrawing one granule kept its neighbor usable.
+The allocator now registers each existing 1 MiB arena once, outside its mutex,
+instead of registering every newly reached 16 KiB group. Registration is address
+metadata; physical ownership, initialization, byte permission, host gates and
+charges remain demand-driven. Used groups still unmap individually on reclaim
+or final release; reaching a hole remaps just that group. Final arena teardown
+withdraws remaining untouched registrations in contiguous runs. A failed
+withdrawal preserves storage and address reservation. This behavior is measured
+on the installed OS, rather than claimed as an Apple residency guarantee.
+
+The isolated arena A/B used equal 1.5 GiB, two recreate rounds, opposite order,
+matching values/checksums, no builds/profilers and the same explicit 4 GiB cap:
+
+| Workload / CPUs | Before mean | Arena mean | Wall reduction |
+| --- | ---: | ---: | ---: |
+| All words / 4 | 2497.81 ms | 1857.33 ms | 25.6% |
+| All words / 12 | 2289.90 ms | 2194.39 ms | 4.2% |
+| First word/page / 4 | 2346.08 ms | 1786.76 ms | 23.8% |
+| First word/page / 12 | 2227.62 ms | 2150.08 ms | 3.5% |
+
+Final four/twelve-slot runs used identical normal signed bytes, SHA-256
+`39651812d1483d1a769dfe330eaaa36b3f6ec06e6bca2f8fc6bdc7c9f8d999b1`, original Geekbench 6.7.1 Preview Linux instructions/data
+and 4096 MiB. Diagnostics were compiled out; Firefox/CI were stopped and no
+builds, samplers or probes ran. Both completed all 32 workloads, exited zero and
+uploaded with nominal thermal state and low-power off before/after. Each slot
+count has one clean sample; ordinary desktop apps remained.
+
+| Metric / multi component | Before 12 | Fault fixes 12 | Final 4 | Final 12 |
+| --- | ---: | ---: | ---: | ---: |
+| Single score | 3238 | 3418 | 3425 | 3388 |
+| Multi score | 7797 | 8083 | 6492 | 8181 |
+| Complete wall | 302.05 s | 297.18 s | 291.31 s | 294.18 s |
+| Navigation | 1861 | 2151 | 2137 | 2248 |
+| PDF Renderer | 5716 | 6171 | 6315 | 6242 |
+| Photo Library | 5348 | 6067 | 6944 | 6172 |
+| Text Processing | 3027 | 3010 | 3757 | 3188 |
+| Photo Filter | 2984 | 2874 | 4638 | 3423 |
+| Clang | 23700 | 23406 | 10795 | 24294 |
+| Ray Tracer | 21236 | 21454 | 10373 | 21715 |
+
+Public final results: [four slots](https://browser.geekbench.com/v6/cpu/19403168), [twelve slots](https://browser.geekbench.com/v6/cpu/19403147).
+Twelve-slot single/multi are +4.6% /
++4.9% versus the preceding clean 4 GiB twelve-slot
+control. Twelve/four-slot multi ratio is 1.260 on the
+same final binary. Relative to the earlier public 3241/7938 twelve-slot control,
+final single/multi improve 4.5%/3.1%; that earlier control predates the host-memory
+follow-up too. Whole-run single/multi are 79.0% /
+43.9% of the earlier native macOS score; OS/binary
+and reported 4/24 GiB RAM differ. This is not an individual trap-cost estimate.
+
+The bounded instrumented dense fixture also confirms fewer actual mapping calls:
+170,479 before these changes versus
+44,883 afterward (73.7% fewer). Summed map wall time
+fell from 8.45 to
+2.51 thread-seconds. These overlap handler
+time, include scheduler/reuse variation, and are not an exclusive speedup split.
+
+Scaling remains incomplete. On the same final binary, twelve-slot Photo Library,
+Text Processing and Photo Filter are below four slots by
+11.1%,
+15.1% and
+26.2%.
+Clang and Ray Tracer scale about 2.25x and 2.09x. The next structural investigation
+should separate host handling of first-touch pages from joined shared-mm and
+per-page metadata work; merely adding workers or raising RAM is insufficient.
+
+Local Mac boundaries, format, all-target/all-feature lint, 11 workspace tests,
+32 signed HVF tests, one app pressure test and normal signed release passed.
+New acceptance checks one resident granule for a registered 1 MiB arena, hole
+free/reuse, pressure withdrawal/page-in, final release, new table branches,
+interrupted publication, complete registers and bounded timer reprogramming.
+The unchanged shared runtime's preceding Linux/iPad validation is reused.
+Per-page first-touch export, joined mm changes, dense metadata, the 16 GiB VMA
+descriptor guard and conservative fork accounting remain. No Firefox recovery
+or long-term stability claim follows from these CPU runs. Detailed filtered
+evidence, all components and the probe records are in [JSON](mac-geekbench.json).
