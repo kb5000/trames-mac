@@ -575,3 +575,88 @@ instruction overhead. Firefox remains closed; no interactive performance or
 long-term release stability claim follows from the benchmark. The filtered
 [JSON evidence](mac-geekbench.json) preserves all 16 component comparisons,
 source/binary identities, diagnostics and scoped compatibility checks.
+
+
+### Host-managed memory and removal of redundant resume/alias work
+
+Product source is `da088d70a65b5fc4ceb8d723bb35a659a5e85c14`, shared runtime
+`87a4f2036453226e6f8a779e6ae1616ba008461c`. The Mac default now uses host-managed memory,
+without a product resident-byte quota. On this 24 GiB Mac, guest `/proc/meminfo`
+reports 25,165,824 KiB total and live host free/available estimates; data/RSS/AS
+rlimits and `/proc/self/limits` address-space limits are unlimited. Mach metadata
+queries are confined to memory reporting, outside ordinary byte access. Explicit
+`--memory-mib N` caps retain the prior guest-budget reports. A 16 MiB test passes
+in auto mode and exits 137 with an 8 MiB cap. The normal PTY path reports the same
+policy. No physical pool is reserved up front; existing used-granule mapping,
+pressure reclamation and the macOS pager remain in use. The separate 16 GiB
+accessible-VMA descriptor bound per address space and conservative fork/file
+accounting remain; this does not claim unlimited sparse address metadata. iPad's
+bounded default is unchanged.
+
+An original-workload diagnostic baseline completed in 308.63 s.
+Approximate per-workload cumulative thread deltas include 604,558 stage-one faults
+in single Navigation and 525,416 in single Photo Filter. Multi Photo Library
+spent 6.59 summed thread-seconds in HVF data mapping within 9.65 fault-handler
+thread-seconds; multi Photo Filter spent 5.17 within 7.85. These nested, wall-time
+thread sums overlap and are not an exclusive division of complete elapsed time.
+A 3 s Photo Filter stack sample found framework mapping/unmapping work and
+worker waits. A separate bounded original Navigation sample also found repeated
+software CPU-window creation in snapshot preparation; its intentional timeout is
+not a complete benchmark result.
+
+Two mechanisms were removed. Hardware admission now keeps unused coordinator
+software CPU aliases disabled across mapping changes and fork; cached byte
+pointers are still invalidated and true COW is preserved. The EL1 restore prelude
+performs pending TLB maintenance and register restoration in the same hypervisor
+entry. A single leaf uses VA+ASID invalidation, with full-ASID maintenance for
+roots, intermediate tables or multiple different leaves. Original page-table
+barriers remain; ordinary guest accesses gain no new barriers or locks.
+
+An equal-total-1.5-GiB lifecycle fixture, two recreate/touch/check/unmap rounds,
+used two opposite-order runs per case and verified complete bytes/checksums.
+Four-slot mean wall time fell from 2724.31 to 2558.13 ms (6.1%); twelve-slot mean
+fell from 2624.55 to 2480.90 ms (5.5%), with visible twelve-slot variance. These
+targeted results do not establish a comparable complete-application gain.
+
+Both clean final runs used the identical normal signed executable, SHA-256
+`ff823da9b98fe59da830aab72d063d7a2b0154d473c80302a9e9306b07ce56d4`, original Geekbench 6.7.1 Preview Linux instructions/data,
+and twelve slots. Diagnostics were compiled out, Firefox and Linux CI were
+stopped, and no builds/profilers/sampling ran. Both completed 32 workloads,
+exited zero and uploaded with nominal thermal state and low-power off
+before/after. Ordinary desktop apps remained; each policy has one clean sample.
+
+| Metric / multi component | Prior 4 GiB | Current 4 GiB | Current host auto |
+| --- | ---: | ---: | ---: |
+| Single-core score | 3241 | 3238 | 3351 |
+| Multi-core score | 7938 | 7797 | 8009 |
+| Complete wall time | 306.68 s | 302.05 s | 299.78 s |
+| Navigation | 2006 | 1861 | 1980 |
+| PDF Renderer | 5722 | 5716 | 5826 |
+| Photo Library | 5254 | 5348 | 5681 |
+| Text Processing | 2978 | 3027 | 3131 |
+| Photo Filter | 2613 | 2984 | 2901 |
+| Clang | 22403 | 23700 | 23961 |
+| Ray Tracer | 21245 | 21236 | 21721 |
+
+Public results: [controlled 4 GiB](https://browser.geekbench.com/v6/cpu/19402951),
+[default host memory](https://browser.geekbench.com/v6/cpu/19402993). The controlled total is
+-0.1% single and
+-1.8% multi versus the prior twelve-slot
+result. There is no demonstrated overall Geekbench speedup from this round;
+component changes go in both directions. Auto verifies the new memory policy
+with 24 GiB reported RAM and is not a memory-matched optimization A/B.
+First-touch exits, per-granule HVF map/unmap, joined shared-mm commits and dense
+metadata remain follow-up priorities. Scores compare Linux and macOS benchmark
+builds, not isolated instruction or trap costs. No interactive Firefox or
+long-term release-stability claim follows from these runs.
+
+Local validation passed: Mac workflow, 11 workspace tests, 30 signed HVF tests
+and one pressure test; 788 macOS shared-runtime tests including 136 memory tests;
+787 native ARM Linux runtime tests plus format/lint from a fresh archive of the
+tracked runtime commit; 258 iPad host tests/lints and device/simulator target
+checks. The two host-memory reporting unit tests run through iPad's host harness;
+the standalone shared session crate disables its own lib-test target. Previously
+passed CPU/network/graphics suites were reused for unchanged paths. Unrelated
+dirty network and integration-test work was excluded and preserved. See the
+[filtered JSON evidence](mac-geekbench.json) for all 16 components, policy proofs,
+diagnostic boundaries, binary identities and scope details.
