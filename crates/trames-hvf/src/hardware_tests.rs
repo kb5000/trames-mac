@@ -835,3 +835,158 @@ fn el0_cannot_read_write_or_execute_the_private_context() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn sparse_page_table_growth_removal_and_reused_gpas_remain_exact() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    svc(&mut executor, &mut state(), &mut memory);
+    let a = executor.machine.allocate(None).unwrap();
+    let b = executor.machine.allocate(None).unwrap();
+    for (page, value) in [(&a, 41u64), (&b, 901)] {
+        page.begin_host_access();
+        // SAFETY: this test owns the complete slot; its host gate excludes HVF.
+        unsafe { page.pointer().cast::<u64>().write(value) };
+        page.end_host_access();
+    }
+    // Each address requires a different leaf table. Include reuse, random order,
+    // both ends of the sparse span and root teardown with many tables still live.
+    const COUNT: u64 = 1024;
+    let address = |index: u64| 0x2000_0000_0000 + index * (2 << 20);
+    for index in 0..COUNT {
+        executor
+            .pte(address(index), a.physical_address(), 3)
+            .unwrap();
+    }
+    for index in (0..COUNT).step_by(2) {
+        executor.pte(address(index), 0, 0).unwrap();
+    }
+    for index in (0..COUNT).rev().filter(|index| index % 2 == 0) {
+        executor
+            .pte(address(index), b.physical_address(), 3)
+            .unwrap();
+    }
+    let mut expected = [41u64, 901];
+    for index in (0..COUNT).map(|index| (index * 509) % COUNT) {
+        let which = usize::from(index % 2 == 0);
+        let mut registers = state();
+        registers.registers[0] = address(index);
+        svc(&mut executor, &mut registers, &mut memory);
+        expected[which] += 1;
+        assert_eq!(registers.registers[1], expected[which]);
+    }
+    for index in (0..COUNT).map(|index| (index * 509) % COUNT) {
+        executor.pte(address(index), 0, 0).unwrap();
+    }
+    let mut registers = state();
+    registers.registers[0] = address(COUNT - 1);
+    assert!(matches!(
+        executor.run(&mut registers, &mut memory, Duration::from_millis(20)),
+        Err(Error::Memory(MemoryError::Unmapped(_)))
+    ));
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn anonymous_pager_preserves_host_edits_and_releases_final_storage() {
+    let machine = Machine::shared().unwrap();
+    let before = machine.stats();
+    let pages: Vec<_> = (0..8).map(|_| machine.allocate(None).unwrap()).collect();
+    assert_eq!(machine.stats().backing_bytes, before.backing_bytes + 32768);
+    for round in 0..8u64 {
+        reclaim(u64::MAX).unwrap();
+        for (index, page) in pages.iter().enumerate() {
+            page.begin_host_access();
+            // SAFETY: retained live slot and synchronous host exclusion gate.
+            unsafe {
+                let pointer = page.pointer().cast::<u64>();
+                let expected = if round == 0 { 0 } else { round + index as u64 };
+                assert_eq!(pointer.read(), expected);
+                pointer.write(round + index as u64 + 1);
+            }
+            page.end_host_access();
+            assert!(machine.resume(page.physical_address()).unwrap().is_none());
+        }
+    }
+    drop(pages);
+    assert_eq!(machine.stats().backing_bytes, before.backing_bytes);
+    assert_eq!(machine.stats().mapped_bytes, before.mapped_bytes);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn migrating_workers_reuse_resident_translation_blocks_without_new_page_faults() {
+    let mut memory = memory();
+    memory
+        .map(0x40000, PAGE_SIZE * 64, Permissions::RW)
+        .unwrap();
+    let mut first = Executor::new().unwrap();
+    for page in 0..64 {
+        let mut registers = state();
+        registers.registers[0] = 0x40000 + page * PAGE_SIZE;
+        svc(&mut first, &mut registers, &mut memory);
+        assert_eq!(registers.registers[1], 1);
+    }
+    let before = paging_stats().backing_bytes;
+    let resident = memory.resident_bytes();
+    let _machine = first.machine.clone();
+    drop(first); // Hypervisor allows one live vCPU on its creator thread.
+    let mut second = Executor::new().unwrap();
+    let mut registers = state();
+    registers.registers[0] = 0x40000;
+    svc(&mut second, &mut registers, &mut memory);
+    let faults = second.translations.faults;
+    for page in 1..64 {
+        let mut registers = state();
+        registers.registers[0] = 0x40000 + page * PAGE_SIZE;
+        svc(&mut second, &mut registers, &mut memory);
+        assert_eq!(registers.registers[1], 2);
+    }
+    assert_eq!(second.translations.faults, faults);
+    assert_eq!(paging_stats().backing_bytes, before);
+    assert_eq!(memory.resident_bytes(), resident);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn anonymous_arenas_reuse_only_retired_granules_and_zero_new_slots() {
+    let machine = Machine::shared().unwrap();
+    let before = machine.stats();
+    let mut pages: Vec<_> = (0..256)
+        .map(|_| Some(machine.allocate(None).unwrap()))
+        .collect();
+    let base = pages[0].as_ref().unwrap().pointer() as usize;
+    for (index, page) in pages.iter().enumerate() {
+        let page = page.as_ref().unwrap();
+        assert_eq!(page.pointer() as usize, base + index * PAGE_SIZE as usize);
+        page.begin_host_access();
+        // SAFETY: the owned slot's gate excludes hardware byte access.
+        unsafe { page.pointer().cast::<u64>().write(index as u64 + 1) };
+        page.end_host_access();
+    }
+    for page in &mut pages[128..132] {
+        *page = None;
+    }
+    let reused: Vec<_> = (0..4).map(|_| machine.allocate(None).unwrap()).collect();
+    for (index, page) in reused.iter().enumerate() {
+        assert_eq!(
+            page.pointer() as usize,
+            base + (128 + index) * PAGE_SIZE as usize
+        );
+        page.begin_host_access();
+        unsafe { assert_eq!(page.pointer().cast::<u64>().read(), 0) };
+        page.end_host_access();
+    }
+    for (index, page) in pages.iter().enumerate() {
+        if let Some(page) = page {
+            page.begin_host_access();
+            unsafe { assert_eq!(page.pointer().cast::<u64>().read(), index as u64 + 1) };
+            page.end_host_access();
+        }
+    }
+    drop(reused);
+    drop(pages);
+    assert_eq!(machine.stats().backing_bytes, before.backing_bytes);
+    assert_eq!(machine.stats().mapped_bytes, before.mapped_bytes);
+}

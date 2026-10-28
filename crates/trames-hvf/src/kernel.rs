@@ -122,6 +122,12 @@ impl trames_engine::Cpu for Cpu {
         hwcap2: 0,
     };
     const FEATURE_NAMES: &'static str = "fp asimd";
+    fn features() -> Features {
+        crate::features()
+    }
+    fn feature_names() -> &'static str {
+        crate::feature_names()
+    }
     // Every worker owns its thread-affine vCPU; physical bytes are shared
     // through the common frozen View and its hardware host-borrow gate.
     const PARALLEL: bool = true;

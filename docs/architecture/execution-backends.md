@@ -93,6 +93,24 @@ have a compatible ownership protocol; shared providers without canonical
 mappings are supported. See the common runtime's
 [region-memory contract](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/region-memory.md).
 
+## Backend capabilities and retained translations
+
+The generic CPU interface supplies runtime feature masks with conservative
+constant defaults, preserving interpreter/iPad behavior. HVF reads the vCPU
+configuration's ID registers and advertises only supported extensions whose
+state fits the existing GPR/128-bit SIMD/FPCR/FPSR migration and signal model:
+FP/ASIMD, AES/PMULL/SHA/CRC, LSE, FP16, RDM, dot-product, FHM, I8MM and BF16.
+Unsupported entries stay absent. CPUID, SVE, SME, PAC and extra PSTATE state are
+not advertised. The instruction fixture executes every advertised subset and
+checks results; physical-host capabilities alone are not an admission oracle.
+
+Page-table ownership uses an address-space-local GPA hash index rather than a
+linear list walk. Sparse removal and reused GPAs update the index and cleanup
+list together. No shared guest execution lock is added. A migrated task can fill
+missing PTEs from already resident, already charged hardware owners in the same
+bounded 1 MiB virtual block. This never loads, allocates or charges untouched
+neighbors, and retains the same permission, code-publication and ownership hooks.
+
 ## Physical paging
 
 The default 4096MiB guest limit is a logical allocation budget, not preallocated
@@ -100,18 +118,33 @@ RAM. Only accessed pages acquire physical slots. Four unrelated 4KiB guest pages
 can share one 16KiB host granule, and partially freed granules are reused before
 allocating another. Mapping addresses need not be contiguous.
 
-Canonical storage uses one unlinked, mode-0600, close-on-exec temporary file.
-Disk space is reserved in checked 1MiB extents before writable pages are
-published. Freed file offsets are reused; file size reflects the session's high
-water mark and is released when its final mapping/owner ends. Host volume
-protection applies; Trames does not add separate backing-file encryption.
+Private canonical storage uses anonymous macOS VM arenas. One arena reserves
+1 MiB of virtual addresses; only a used 16 KiB host granule is mapped into HVF.
+Unused arena bytes are not prefaulted, wired or charged as guest RAM. The pool
+retains weak arena handles, reuses partial granules first, and returns retired
+whole granules with MADV_FREE_REUSABLE only after their final byte/HVF owner has
+ended. Reuse ends that state before publication and zeroes newly assigned 4 KiB
+slots. The last physical owner unmaps the entire arena. Explicit shared-file
+imports retain their original owner and alias geometry.
 
-Reclamation withdraws the stage-two mapping, preserves dirty data with
-`MS_SYNC`, then invalidates host residency. The stable MAP_SHARED host address
-remains valid. Hardware access remaps the granule; native access faults the same
-file-backed bytes in through the OS. Final host borrows of evicted granules also
-release their restored host residency. Failed backing I/O does not discard the
-only live data copy, and initial backing allocation failures remain host errors.
+Reclamation withdraws the stage-two mapping and uses Darwin MADV_DONTNEED to
+deactivate residency while retaining live contents at the same host address.
+Darwin maps this hint to VM_SYNC_DEACTIVATE, without VM_SYNC_KILLPAGES; it must
+not be ported to Linux's destructive anonymous DONTNEED semantics. The native
+macOS pager can compress/swap these pages, and later host/HVF access restores
+them. Trames no longer preallocates an application page file or performs
+synchronous MS_SYNC writeback when reclaiming ordinary guest RAM. A successful
+hint permits reclaim; it does not guarantee an immediate RSS reduction.
+See [XNU's implementation](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/vm/vm_map.c).
+
+`backing_bytes` now counts live private host-granule storage, including padding;
+it is neither disk usage nor exact host residency. `mapped_bytes` counts active
+HVF bindings, `page_out_bytes` withdrawn bindings and `page_ins` rebindings.
+Logical guest-page accounting remains in the common runtime. Virtual VMA length
+and protection changes do not consume the guest's 4 GiB RAM budget; actual file
+access and physical hardware exports do. Dense accessible-page metadata has a
+separate 16 GiB ceiling and still consumes host memory. Fork accounting remains
+conservative per VM rather than unique-physical-page/PSS accounting.
 
 The supported Dispatch memory-pressure source latches only level metadata on a
 shared system utility queue. The existing joined session-control hook performs
@@ -343,9 +376,9 @@ and loaded containers, syscall/AF_UNIX/futex wake tail latency, shared FD/mmap,
 fork/COW, disk durability/bulk transfer, native compute submission/completion,
 JIT, visible-window input/presentation, and post-completion reclamation. Record
 CPU and blocked time separately, plus native crossings, copied bytes, retained
-device bytes, RSS/footprint, backing disk use and recovery latency. Current
-backing storage retains its disk high-water mark until teardown, so RAM savings
-must be measured alongside disk space and page-out stalls.
+device bytes, RSS/footprint and recovery latency. The anonymous native-pager
+path removes the former application page-file high-water mark; OS compression
+and swap remain host-wide resources, not guest quota measurements.
 
 Both products must pass the affected common semantic tests. Common ABI/memory
 changes also require an iPad target check and relevant interpreter/native peers;

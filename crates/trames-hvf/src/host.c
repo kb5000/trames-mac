@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <os/object.h>
 #include <unistd.h>
 
 #define VECTOR_GPA UINT64_C(0x800000)
@@ -22,6 +23,37 @@
 #define PAGE 4096
 #define EXIT_HVC_IMMEDIATE 0x5452
 #define TLBI_HVC_IMMEDIATE 1
+
+// Advertise only extensions using the saved GPR/128-bit SIMD state. The HVF
+// configuration is authoritative; native host features alone are insufficient.
+void trames_hvf_features(uint64_t *hwcap, uint64_t *hwcap2) {
+    *hwcap=3; *hwcap2=0;
+    hv_vcpu_config_t config=hv_vcpu_config_create();
+    if (!config) return;
+    uint64_t isar0=0, isar1=0, pfr0=0;
+    if (!hv_vcpu_config_get_feature_reg(config,HV_FEATURE_REG_ID_AA64ISAR0_EL1,&isar0)) {
+        unsigned aes=(unsigned)((isar0>>4)&15);
+        if (aes>=1 && aes!=15) *hwcap|=UINT64_C(1)<<3;
+        if (aes>=2 && aes!=15) *hwcap|=UINT64_C(1)<<4;
+        if ((isar0>>8)&15) *hwcap|=UINT64_C(1)<<5;
+        if ((isar0>>12)&15) *hwcap|=UINT64_C(1)<<6;
+        if ((isar0>>16)&15) *hwcap|=UINT64_C(1)<<7;
+        if (((isar0>>20)&15)>=2) *hwcap|=UINT64_C(1)<<8;
+        if ((isar0>>28)&15) *hwcap|=UINT64_C(1)<<12;
+        if ((isar0>>44)&15) *hwcap|=UINT64_C(1)<<20;
+        if ((isar0>>48)&15) *hwcap|=UINT64_C(1)<<23;
+    }
+    if (!hv_vcpu_config_get_feature_reg(config,HV_FEATURE_REG_ID_AA64ISAR1_EL1,&isar1)) {
+        if ((isar1>>52)&15) *hwcap2|=UINT64_C(1)<<13;
+        if ((isar1>>44)&15) *hwcap2|=UINT64_C(1)<<14;
+    }
+    if (!hv_vcpu_config_get_feature_reg(config,HV_FEATURE_REG_ID_AA64PFR0_EL1,&pfr0)) {
+        if (((pfr0>>16)&15)==1) *hwcap|=UINT64_C(1)<<9;
+        if (((pfr0>>20)&15)==1) *hwcap|=UINT64_C(1)<<10;
+    }
+    // CPUID, SVE, SME, PAC and additional PSTATE state are deliberately absent.
+    os_release(config);
+}
 
 struct state {
     uint64_t x[31], sp, pc;
@@ -45,7 +77,7 @@ _Static_assert(offsetof(struct context, address) == 824, "adapter FAR offset");
 _Static_assert(offsetof(struct context, complete) == 832, "adapter completion offset");
 struct result { uint64_t kind, syndrome, address, pc; };
 struct register_stats { uint64_t mailbox, fallback, completions; };
-struct table { void *memory; uint64_t gpa; struct table *next; };
+struct table { void *memory; uint64_t gpa; struct table *next, *previous, *indexed; };
 struct free_gpa { uint64_t value; struct free_gpa *next; };
 struct machine {
     size_t granule;
@@ -57,6 +89,8 @@ struct machine {
 };
 struct address_space {
     struct table *tables;
+    struct table **index;
+    size_t capacity, count;
     uint64_t *root, root_gpa;
     struct address_space *next;
 };
@@ -100,13 +134,48 @@ void trames_hvf_release(struct machine *m, uint64_t gpa) {
     entry->next=m->free_gpas; m->free_gpas=entry;
     pthread_mutex_unlock(&m->addresses);
 }
-static uint64_t *table_for(struct host *h, uint64_t gpa) {
-    for (struct table *t=h->space->tables; t; t=t->next)
-        if (gpa >= t->gpa && gpa < t->gpa+h->granule)
-            return (uint64_t *)((char *)t->memory + gpa-t->gpa);
+// A vCPU alone owns its address spaces. This index is metadata for cold page
+// installation/removal, not a lock or another guest memory-consistency layer.
+static size_t table_bucket(uint64_t gpa, size_t granule, size_t capacity) {
+    uint64_t slot=gpa/granule;
+    slot^=slot>>17; slot*=UINT64_C(0x9e3779b97f4a7c15);
+    return (size_t)(slot^(slot>>32))&(capacity-1);
+}
+static bool grow_table_index(struct host *h) {
+    struct address_space *space=h->space;
+    if (space->capacity && space->count<space->capacity*2) return true;
+    size_t capacity=space->capacity ? space->capacity*2 : 16;
+    if (capacity<space->capacity || capacity>SIZE_MAX/sizeof(struct table *)) return false;
+    struct table **index=calloc(capacity,sizeof(*index));
+    if (!index) return false;
+    for (struct table *t=space->tables; t; t=t->next) {
+        size_t bucket=table_bucket(t->gpa,h->granule,capacity);
+        t->indexed=index[bucket]; index[bucket]=t;
+    }
+    free(space->index); space->index=index; space->capacity=capacity;
+    return true;
+}
+static void unindex_table(struct host *h, struct address_space *space, struct table *t) {
+    size_t bucket=table_bucket(t->gpa,h->granule,space->capacity);
+    struct table **link=&space->index[bucket];
+    while (*link && *link!=t) link=&(*link)->indexed;
+    if (*link) { *link=t->indexed; space->count--; }
+}
+static struct table *table_owner(struct host *h, uint64_t gpa) {
+    struct address_space *space=h->space;
+    if (!space->capacity) return NULL;
+    uint64_t base=gpa&~((uint64_t)h->granule-1);
+    size_t bucket=table_bucket(base,h->granule,space->capacity);
+    for (struct table *t=space->index[bucket]; t; t=t->indexed)
+        if (base==t->gpa) return t;
     return NULL;
 }
+static uint64_t *table_for(struct host *h, uint64_t gpa) {
+    struct table *t=table_owner(h,gpa);
+    return t ? (uint64_t *)((char *)t->memory+gpa-t->gpa) : NULL;
+}
 static uint64_t *new_table(struct host *h, uint64_t *gpa) {
+    if (!grow_table_index(h)) return NULL;
     struct table *t=calloc(1,sizeof(*t));
     if (!t) return NULL;
     t->memory=anonymous(h->granule);
@@ -116,7 +185,12 @@ static uint64_t *new_table(struct host *h, uint64_t *gpa) {
         trames_hvf_release(h->machine,t->gpa);
         munmap(t->memory,h->granule); free(t); return NULL;
     }
-    t->next=h->space->tables; h->space->tables=t; *gpa=t->gpa;
+    t->next=h->space->tables;
+    if (t->next) t->next->previous=t;
+    h->space->tables=t;
+    size_t bucket=table_bucket(t->gpa,h->granule,h->space->capacity);
+    t->indexed=h->space->index[bucket]; h->space->index[bucket]=t;
+    h->space->count++; *gpa=t->gpa;
     return t->memory;
 }
 static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
@@ -148,12 +222,14 @@ static int remove_page(struct host *h, uint64_t va) {
         for (unsigned i=0;i<512;i++) if (chain[level][i]) {empty=false;break;}
         if (!empty) break;
         chain[level-1][indexes[level-1]]=0;
-        struct table **link=&h->space->tables;
-        while (*link && (*link)->gpa!=gpas[level]) link=&(*link)->next;
-        if (!*link) return -1;
-        struct table *t=*link;
+        struct table *t=table_owner(h,gpas[level]);
+        if (!t) return -1;
         hv_return_t e=hv_vm_unmap(t->gpa,h->granule); if (e) return (int)e;
-        *link=t->next;trames_hvf_release(h->machine,t->gpa);munmap(t->memory,h->granule);free(t);
+        if (t->previous) t->previous->next=t->next;
+        else h->space->tables=t->next;
+        if (t->next) t->next->previous=t->previous;
+        unindex_table(h,h->space,t);
+        trames_hvf_release(h->machine,t->gpa);munmap(t->memory,h->granule);free(t);
     }
     return 0;
 }
@@ -178,9 +254,13 @@ static int free_tables(struct host *h, struct address_space *space) {
         struct table *t=space->tables;
         hv_return_t error=hv_vm_unmap(t->gpa,h->granule);
         if (error) return (int)error;
-        space->tables=t->next; trames_hvf_release(h->machine,t->gpa);
+        space->tables=t->next;
+        if (space->tables) space->tables->previous=NULL;
+        unindex_table(h,space,t);
+        trames_hvf_release(h->machine,t->gpa);
         munmap(t->memory,h->granule); free(t);
     }
+    free(space->index); space->index=NULL; space->capacity=0;
     return 0;
 }
 struct address_space *trames_hvf_space_create(struct host *h, int *error) {

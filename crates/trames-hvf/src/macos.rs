@@ -28,6 +28,7 @@ struct HostExit {
     pc: u64,
 }
 unsafe extern "C" {
+    fn trames_hvf_features(hwcap: *mut u64, hwcap2: *mut u64);
     fn trames_hvf_register_stats(host: *mut c_void, stats: *mut RegisterStats);
     fn trames_hvf_max_vcpus() -> u32;
     fn trames_hvf_space_current(host: *mut c_void) -> *mut c_void;
@@ -44,6 +45,49 @@ unsafe extern "C" {
         nanos: u64,
         result: *mut HostExit,
     ) -> i32;
+}
+pub fn features() -> Features {
+    static FEATURES: std::sync::OnceLock<Features> = std::sync::OnceLock::new();
+    *FEATURES.get_or_init(|| {
+        let mut result = Features {
+            hwcap: 3,
+            hwcap2: 0,
+        };
+        // SAFETY: the C helper writes two local u64s using HVF's configuration
+        // query and never retains the pointers or creates a running vCPU.
+        unsafe { trames_hvf_features(&mut result.hwcap, &mut result.hwcap2) };
+        result
+    })
+}
+pub fn feature_names() -> &'static str {
+    static NAMES: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    NAMES.get_or_init(|| {
+        let feature = features();
+        let mut names = vec!["fp", "asimd"];
+        for (bit, name) in [
+            (3, "aes"),
+            (4, "pmull"),
+            (5, "sha1"),
+            (6, "sha2"),
+            (7, "crc32"),
+            (8, "atomics"),
+            (9, "fphp"),
+            (10, "asimdhp"),
+            (12, "asimdrdm"),
+            (20, "asimddp"),
+            (23, "asimdfhm"),
+        ] {
+            if feature.hwcap & (1 << bit) != 0 {
+                names.push(name);
+            }
+        }
+        for (bit, name) in [(13, "i8mm"), (14, "bf16")] {
+            if feature.hwcap2 & (1 << bit) != 0 {
+                names.push(name);
+            }
+        }
+        names.join(" ")
+    })
 }
 /// Thread-local transport counts, read only on the owning executor thread.
 #[repr(C)]
@@ -120,6 +164,7 @@ impl AddressSpace {
 #[cfg(test)]
 #[derive(Default, Debug, Clone, Copy)]
 struct TranslationStats {
+    faults: usize,
     inspections: usize,
     exports: usize,
     updates: usize,
@@ -177,10 +222,7 @@ impl Executor {
         stats
     }
     pub fn features(&self) -> Features {
-        Features {
-            hwcap: 3,
-            hwcap2: 0,
-        }
+        features()
     }
     pub fn mapped_bytes(&self) -> usize {
         let granule = unsafe { libc::sysconf(libc::_SC_PAGESIZE) as u64 };
@@ -359,6 +401,10 @@ impl Executor {
         Ok(())
     }
     fn fault(&mut self, memory: &View, event: &HostExit) -> Result<(), Error> {
+        #[cfg(test)]
+        {
+            self.translations.faults += 1;
+        }
         let ec = event.syndrome >> 26;
         let status = event.syndrome & 63;
         if status == 0x21 {
@@ -388,17 +434,20 @@ impl Executor {
         // SAFETY: the scheduler admits every View in hardware mode and joins
         // before coordinator mutation. Canonical exports gate all host borrows.
         let allocation_error = std::cell::Cell::new(None);
+        let created = std::cell::Cell::new(false);
         let exported = unsafe {
             memory.export_hardware_page_with_mapping(
                 va,
                 access,
                 |bytes| {
+                    created.set(true);
                     self.machine.allocate(bytes).map_err(|error| {
                         allocation_error.set(Some(error));
                         MemoryError::BackingIo(5)
                     })
                 },
                 |mapping| {
+                    created.set(true);
                     self.machine.import(mapping).map_err(|error| {
                         allocation_error.set(Some(error));
                         MemoryError::BackingIo(5)
@@ -408,6 +457,33 @@ impl Executor {
         };
         let (storage, info) =
             exported.map_err(|error| allocation_error.take().unwrap_or(Error::Memory(error)))?;
+        self.install_page(memory, va, &storage, info)?;
+        if !created.get() {
+            // A migrated task already has canonical RAM. Fill only retained
+            // neighbors in a bounded 1MiB block; never fault in unused mappings.
+            let start = va & !((1 << 20) - 1);
+            for address in (start..start + (1 << 20)).step_by(PAGE_SIZE as usize) {
+                if (VECTOR_VA..VECTOR_VA + 65536).contains(&address)
+                    || self.spaces[&self.active].pages.contains_key(&address)
+                {
+                    continue;
+                }
+                if let Some((storage, info)) = memory.retained_hardware_page(address) {
+                    if info.permissions.read {
+                        self.install_page(memory, address, &storage, info)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    fn install_page(
+        &mut self,
+        memory: &View,
+        va: u64,
+        storage: &Arc<dyn HardwareStorage>,
+        info: HardwarePageInfo,
+    ) -> Result<(), Error> {
         let flags = Self::flags(info)?;
         if info.permissions.execute {
             self.machine.publish_code(storage.physical_address())?;
@@ -427,7 +503,7 @@ impl Executor {
             va,
             Page {
                 gpa: storage.physical_address(),
-                storage: Arc::downgrade(&storage),
+                storage: Arc::downgrade(storage),
                 info,
                 write,
             },

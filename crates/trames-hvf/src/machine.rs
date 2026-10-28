@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! One process VM, sparse pageable physical granules, and scoped host borrows.
 use super::*;
-use std::{
-    fs::File,
-    os::fd::{AsRawFd, FromRawFd},
-    sync::{
-        atomic::{AtomicU64, AtomicU8, Ordering},
-        Condvar, Mutex, Weak,
-    },
+use std::sync::{
+    atomic::{AtomicU64, AtomicU8, Ordering},
+    Condvar, Mutex, Weak,
 };
 use trames_memory::{HardwareStorage, HardwareWait, SharedMapping};
 
@@ -26,8 +22,7 @@ static MACHINE: Mutex<Option<Weak<Machine>>> = Mutex::new(None);
 static MACHINE_CHANGED: Condvar = Condvar::new();
 static RESIDENT_LIMIT: AtomicU64 = AtomicU64::new(u64::MAX);
 static CLOCK: AtomicU64 = AtomicU64::new(0);
-const EXTENT: u64 = 1024 * 1024;
-
+const ARENA_LEN: usize = 1 << 20;
 /// Optional working-set target, independent of the guest's logical RAM limit.
 /// macOS memory pressure can also reclaim live, dirty guest pages below it.
 pub fn set_resident_limit(bytes: Option<u64>) {
@@ -36,75 +31,18 @@ pub fn set_resident_limit(bytes: Option<u64>) {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PagingStats {
     pub mapped_bytes: u64,
+    /// Live private VM storage, including host-granule padding; not disk bytes.
     pub backing_bytes: u64,
     pub page_out_bytes: u64,
     pub page_ins: u64,
 }
-struct FileSpace {
-    file: File,
-    next: u64,
-    free: Vec<u64>,
-    allocated: u64,
-}
-impl FileSpace {
-    fn new() -> Result<Self, Error> {
-        let mut path = std::env::temp_dir()
-            .join("trames-ram-XXXXXX")
-            .as_os_str()
-            .as_encoded_bytes()
-            .to_vec();
-        path.push(0);
-        // SAFETY: writable NUL-terminated mkstemp template. Unlinked immediately;
-        // mode 0600 and CLOEXEC keep guest data private to this process.
-        let fd = unsafe { libc::mkstemp(path.as_mut_ptr().cast()) };
-        if fd < 0 {
-            return Err(Error::Io(std::io::Error::last_os_error()));
-        }
-        unsafe {
-            libc::unlink(path.as_ptr().cast());
-            libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC);
-        }
-        Ok(Self {
-            file: unsafe { File::from_raw_fd(fd) },
-            next: 0,
-            free: Vec::new(),
-            allocated: 0,
-        })
-    }
-    fn reserve(&mut self, length: usize) -> Result<u64, Error> {
-        if let Some(offset) = self.free.pop() {
-            return Ok(offset);
-        }
-        let offset = self.next;
-        if offset + length as u64 > self.allocated {
-            // Reserve disk space before publishing a writable page. A full disk
-            // returns a backend error rather than a later mmap SIGBUS/data loss.
-            let mut store = libc::fstore_t {
-                fst_flags: libc::F_ALLOCATEALL,
-                fst_posmode: libc::F_PEOFPOSMODE,
-                fst_offset: 0,
-                fst_length: EXTENT as i64,
-                fst_bytesalloc: 0,
-            };
-            if unsafe { libc::fcntl(self.file.as_raw_fd(), libc::F_PREALLOCATE, &mut store) } < 0 {
-                return Err(Error::Io(std::io::Error::last_os_error()));
-            }
-            self.file
-                .set_len(self.allocated + EXTENT)
-                .map_err(Error::Io)?;
-            self.allocated += EXTENT;
-        }
-        self.next += length as u64;
-        Ok(offset)
-    }
-}
-
 pub(super) struct Machine {
     pointer: NonNull<c_void>,
     granule: usize,
-    file: Mutex<FileSpace>,
+    backing: AtomicU64,
     blocks: Mutex<BTreeMap<u64, Weak<Physical>>>,
     allocation: Mutex<BTreeMap<u64, Weak<Physical>>>,
+    arenas: Mutex<BTreeMap<usize, Weak<Arena>>>,
     imports: Mutex<BTreeMap<usize, Weak<Physical>>>,
     mapped: AtomicU64,
     outs: AtomicU64,
@@ -132,16 +70,16 @@ impl Machine {
                 "hardware physical allocator requires 16KiB host granules",
             ));
         }
-        let file = FileSpace::new()?;
         let mut error = 0;
         let pointer =
             NonNull::new(unsafe { trames_hvf_vm_create(&mut error) }).ok_or(Error::Host(error))?;
         let vm = Arc::new(Self {
             pointer,
             granule: unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize },
-            file: Mutex::new(file),
+            backing: AtomicU64::new(0),
             blocks: Mutex::new(BTreeMap::new()),
             allocation: Mutex::new(BTreeMap::new()),
+            arenas: Mutex::new(BTreeMap::new()),
             imports: Mutex::new(BTreeMap::new()),
             mapped: AtomicU64::new(0),
             outs: AtomicU64::new(0),
@@ -179,38 +117,24 @@ impl Machine {
         let block = if let Some(block) = available {
             block
         } else {
-            let mut file = self.file.lock().unwrap();
-            let offset = file.reserve(self.granule)?;
-            let ptr = unsafe {
-                libc::mmap(
-                    std::ptr::null_mut(),
-                    self.granule,
-                    libc::PROT_READ | libc::PROT_WRITE,
-                    libc::MAP_SHARED,
-                    file.file.as_raw_fd(),
-                    offset as libc::off_t,
-                )
-            };
-            if ptr == libc::MAP_FAILED {
-                file.free.push(offset);
-                return Err(Error::Io(std::io::Error::last_os_error()));
-            }
+            let arena = self.allocate_arena()?;
+            let ptr = arena.pointer();
             let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
-            if let Err(e) =
-                check(unsafe { trames_hvf_map(std::ptr::null_mut(), ptr, gpa, self.granule) })
-            {
+            if let Err(e) = check(unsafe {
+                trames_hvf_map(std::ptr::null_mut(), ptr.cast(), gpa, self.granule)
+            }) {
                 unsafe {
-                    libc::munmap(ptr, self.granule);
                     trames_hvf_release(self.pointer.as_ptr(), gpa);
                 }
-                file.free.push(offset);
                 return Err(e);
             }
+            self.backing
+                .fetch_add(self.granule as u64, Ordering::Relaxed);
             let block = Arc::new(Physical {
                 pointer: NonNull::new(ptr.cast()).unwrap(),
                 gpa,
-                offset,
                 external: None,
+                _arena: Some(arena),
                 length: self.granule,
                 machine: Arc::downgrade(self),
                 used: AtomicU8::new(0),
@@ -257,6 +181,68 @@ impl Machine {
         }
         Ok(slot)
     }
+    fn allocate_arena(self: &Arc<Self>) -> Result<ArenaSlot, Error> {
+        let mut arenas = self.arenas.lock().unwrap();
+        let arena = loop {
+            match arenas.pop_first() {
+                Some((_, candidate)) => {
+                    if let Some(arena) = candidate.upgrade() {
+                        break arena;
+                    }
+                }
+                None => {
+                    // Reserve VA only. HVF maps and wires one used host granule
+                    // at a time; untouched arena bytes have no physical owner.
+                    let pointer = unsafe {
+                        libc::mmap(
+                            std::ptr::null_mut(),
+                            ARENA_LEN,
+                            libc::PROT_READ | libc::PROT_WRITE,
+                            libc::MAP_PRIVATE | libc::MAP_ANON,
+                            -1,
+                            0,
+                        )
+                    };
+                    if pointer == libc::MAP_FAILED {
+                        return Err(Error::Io(std::io::Error::last_os_error()));
+                    }
+                    break Arc::new(Arena {
+                        pointer: NonNull::new(pointer.cast()).unwrap(),
+                        free: AtomicU64::new(u64::MAX),
+                        reusable: AtomicU64::new(0),
+                    });
+                }
+            }
+        };
+        let free = arena.free.load(Ordering::Relaxed);
+        assert_ne!(free, 0);
+        let index = free.trailing_zeros() as usize;
+        let bit = 1 << index;
+        arena.free.store(free & !bit, Ordering::Relaxed);
+        if arena.reusable.fetch_and(!bit, Ordering::Relaxed) & bit != 0 {
+            // SAFETY: the arena lock owns this entire unused host granule.
+            // End its reusable state before publishing any new HVF/byte owner.
+            assert_eq!(
+                unsafe {
+                    libc::madvise(
+                        arena.pointer.as_ptr().add(index * self.granule).cast(),
+                        self.granule,
+                        libc::MADV_FREE_REUSE,
+                    )
+                },
+                0,
+                "reactivate anonymous RAM before mapping a granule"
+            );
+        }
+        if free & !bit != 0 {
+            arenas.insert(arena.pointer.as_ptr() as usize, Arc::downgrade(&arena));
+        }
+        Ok(ArenaSlot {
+            arena,
+            index,
+            machine: Arc::downgrade(self),
+        })
+    }
     pub fn import(
         self: &Arc<Self>,
         mapping: SharedMapping,
@@ -293,8 +279,8 @@ impl Machine {
             let block = Arc::new(Physical {
                 pointer: NonNull::new(base as *mut u8).unwrap(),
                 gpa,
-                offset: 0,
                 external: Some(mapping),
+                _arena: None,
                 length: self.granule,
                 machine: Arc::downgrade(self),
                 used: AtomicU8::new(15),
@@ -413,7 +399,7 @@ impl Machine {
     pub fn stats(&self) -> PagingStats {
         PagingStats {
             mapped_bytes: self.mapped.load(Ordering::Relaxed),
-            backing_bytes: self.file.lock().unwrap().allocated,
+            backing_bytes: self.backing.load(Ordering::Relaxed),
             page_out_bytes: self.outs.load(Ordering::Relaxed),
             page_ins: self.ins.load(Ordering::Relaxed),
         }
@@ -439,21 +425,24 @@ impl Machine {
                 continue;
             }
             // hv_vm_unmap completes stage-two invalidation before any eviction.
-            // The stable host MAP_SHARED VA remains valid for later OS page-in.
+            // The stable host VM object retains bytes. Once HVF releases the
+            // mapping, macOS can compress/page it through its native pager.
+            // Never discard anonymous contents or perform synchronous disk I/O.
             check(unsafe { trames_hvf_unmap(std::ptr::null_mut(), block.gpa, block.length) })?;
             gate.mapped = false;
-            self.mapped
-                .fetch_sub(block.length as u64, Ordering::Relaxed);
-            if unsafe {
-                libc::msync(
+            // Darwin DONTNEED uses VM_SYNC_DEACTIVATE, not KILLPAGES: retain
+            // every byte and let the native pager reclaim inactive residency.
+            // See apple-oss-distributions/xnu/osfmk/vm/vm_map.c. This file is
+            // macOS-only; Linux's destructive DONTNEED semantics do not apply.
+            unsafe {
+                libc::madvise(
                     block.pointer.as_ptr().cast(),
                     block.length,
-                    libc::MS_SYNC | libc::MS_INVALIDATE,
-                )
-            } != 0
-            {
-                return Err(Error::Io(std::io::Error::last_os_error()));
+                    libc::MADV_DONTNEED,
+                );
             }
+            self.mapped
+                .fetch_sub(block.length as u64, Ordering::Relaxed);
             mapped -= block.length as u64;
             reclaimed += block.length as u64;
         }
@@ -473,6 +462,62 @@ impl Drop for Machine {
         MACHINE_CHANGED.notify_all();
     }
 }
+// The pool retains weak handles only. The last physical owner unmaps its
+// complete arena; freed groups in a partly live arena return to the OS pager.
+struct Arena {
+    pointer: NonNull<u8>,
+    free: AtomicU64,
+    reusable: AtomicU64,
+}
+// SAFETY: immutable VA ownership. Only the arena pool lock edits group metadata;
+// actual byte access uses disjoint Physical owners and their existing gates.
+unsafe impl Send for Arena {}
+unsafe impl Sync for Arena {}
+impl Drop for Arena {
+    fn drop(&mut self) {
+        unsafe { libc::munmap(self.pointer.as_ptr().cast(), ARENA_LEN) };
+    }
+}
+struct ArenaSlot {
+    arena: Arc<Arena>,
+    index: usize,
+    machine: Weak<Machine>,
+}
+impl ArenaSlot {
+    fn pointer(&self) -> *mut u8 {
+        self.arena
+            .pointer
+            .as_ptr()
+            .wrapping_add(self.index * 4 * PAGE_SIZE as usize)
+    }
+}
+impl Drop for ArenaSlot {
+    fn drop(&mut self) {
+        let Some(machine) = self.machine.upgrade() else {
+            return;
+        };
+        let mut arenas = machine.arenas.lock().unwrap();
+        // Physical::drop has withdrawn HVF before this field is retired. There
+        // are no surviving byte owners in the full aligned 16KiB group.
+        if unsafe {
+            libc::madvise(
+                self.pointer().cast(),
+                machine.granule,
+                libc::MADV_FREE_REUSABLE,
+            )
+        } == 0
+        {
+            self.arena
+                .reusable
+                .fetch_or(1 << self.index, Ordering::Relaxed);
+        }
+        self.arena.free.fetch_or(1 << self.index, Ordering::Relaxed);
+        arenas.insert(
+            self.arena.pointer.as_ptr() as usize,
+            Arc::downgrade(&self.arena),
+        );
+    }
+}
 struct Gate {
     hosts: usize,
     mapped: bool,
@@ -482,8 +527,8 @@ struct Gate {
 struct Physical {
     pointer: NonNull<u8>,
     gpa: u64,
-    offset: u64,
     external: Option<SharedMapping>,
+    _arena: Option<ArenaSlot>,
     length: usize,
     machine: Weak<Machine>,
     used: AtomicU8,
@@ -507,12 +552,7 @@ impl Drop for Physical {
                 trames_hvf_release(vm.pointer.as_ptr(), self.gpa);
             }
             if self.external.is_none() {
-                vm.file.lock().unwrap().free.push(self.offset);
-            }
-        }
-        if self.external.is_none() {
-            unsafe {
-                libc::munmap(self.pointer.as_ptr().cast(), self.length);
+                vm.backing.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
         }
     }
@@ -577,18 +617,6 @@ unsafe impl HardwareStorage for Slot {
                 0,
                 "failed to restore hardware byte actors"
             );
-        }
-        if !gate.mapped {
-            // A host access can fault an evicted file page back into RSS. Once
-            // its last byte borrow ends, preserve any writes and release that
-            // clean host residency too. On I/O failure RAM remains authoritative.
-            unsafe {
-                libc::msync(
-                    self.block.pointer.as_ptr().cast(),
-                    self.block.length,
-                    libc::MS_SYNC | libc::MS_INVALIDATE,
-                );
-            }
         }
         let waiters = std::mem::take(&mut gate.waiters);
         let owner = gate.owner.take();
