@@ -1248,5 +1248,769 @@
       },
       "scope_reuse": "The interval journal is unused by software Views; existing socket syscall branches are unchanged. The earlier full workflow results are retained, with affected follow-up checks listed separately."
     }
+  },
+  "smp12_scaling_followup": {
+    "code_mac": "4de0946a4f007e51b19ba96530abf49c1a30e978",
+    "code_runtime": "79434370422ff130117ed2066d4b22b49b79962c",
+    "fixes": [
+      "Weak per-thread physical-slot hint and short atomic slot handoff; map and initialization outside shared pool lock",
+      "Persistent live-chunk mapping versions after bounded interval history expiry",
+      "Address-only per-arena linear IPA geometry with separate table/import address pool; lazy per-used-granule mapping and immediate final reclamation"
+    ],
+    "diagnosis": {
+      "kind": "instrumented attribution, not a clean performance score",
+      "profile_source_base_mac": "32af75948d1af4208ace22488dd865bf3a11046f",
+      "profile_runtime": "773083005cb5553aaaa400278c4f53192f27a548",
+      "profile_variant": "uncommitted diagnostic + weak-slot allocator patch before chunk versions",
+      "profile_runner_sha256": "4e8d53eaa0ef80a71bf2aa389692e80fa02eebeed2ca2ec16e6ec5790b6ade1e",
+      "profile_complete_seconds": 862.737889834,
+      "work_order": [
+        "sync",
+        "run_adapter",
+        "stage1_fault",
+        "stage2_resume",
+        "allocator_lock_wait",
+        "hvf_map",
+        "initialize",
+        "hvf_unmap",
+        "arena_recycle"
+      ],
+      "counter_order": [
+        "full_scan_fallback",
+        "interval_sync",
+        "inspected_leaves",
+        "installed_leaves",
+        "stage1_fault",
+        "retired_leaves",
+        "root_switches",
+        "peak_leaves_per_thread"
+      ],
+      "boundary_method": "last active cumulative records before stdout workload boundaries; no exact interval accounting; sampler used for Navigation and PDF",
+      "phases": [
+        {
+          "phase": "multi",
+          "workload": "PDF Renderer",
+          "seconds": 89.832,
+          "wall_ns": [
+            72225315775,
+            13566077994,
+            19909639836,
+            0,
+            138924905,
+            13698447035,
+            285463850,
+            3395381554,
+            188252927
+          ],
+          "cpu_ns": [
+            70233687032,
+            13391355547,
+            9005222640,
+            0,
+            0,
+            0,
+            0,
+            3356538054,
+            180894440
+          ],
+          "calls": [
+            61191,
+            1494619,
+            1442863,
+            0,
+            771390,
+            215247,
+            1380910,
+            168332,
+            168332
+          ],
+          "counts": [
+            1300,
+            55409,
+            571292279,
+            7590948,
+            1442863,
+            7092828,
+            0,
+            1113537
+          ]
+        },
+        {
+          "phase": "multi",
+          "workload": "Photo Library",
+          "seconds": 190.344,
+          "wall_ns": [
+            163084797436,
+            12512277331,
+            31969166703,
+            0,
+            467276635,
+            26201276308,
+            154580547,
+            2387643452,
+            119828897
+          ],
+          "cpu_ns": [
+            160051558275,
+            12164510208,
+            6610873050,
+            0,
+            0,
+            0,
+            0,
+            2359156802,
+            117707880
+          ],
+          "calls": [
+            274444,
+            1037460,
+            776102,
+            0,
+            414496,
+            99611,
+            743612,
+            100328,
+            100328
+          ],
+          "counts": [
+            3204,
+            30739,
+            1290828300,
+            4771393,
+            776102,
+            4772698,
+            0,
+            6999
+          ]
+        },
+        {
+          "phase": "multi",
+          "workload": "Text Processing",
+          "seconds": 45.807,
+          "wall_ns": [
+            36761908468,
+            3856421147,
+            471953786,
+            0,
+            1154394,
+            0,
+            18057007,
+            2034750,
+            182872
+          ],
+          "cpu_ns": [
+            36308946666,
+            3807741668,
+            461136300,
+            0,
+            0,
+            0,
+            0,
+            2024288,
+            183128
+          ],
+          "calls": [
+            278239,
+            382844,
+            104625,
+            0,
+            54820,
+            0,
+            87991,
+            80,
+            80
+          ],
+          "counts": [
+            940,
+            18615,
+            299305237,
+            616956,
+            104625,
+            589991,
+            0,
+            0
+          ]
+        }
+      ],
+      "map_sample": "3 seconds of lifecycle fixture: framework mapping-lock waits, vector insert/erase and memmove; not an API implementation guarantee"
+    },
+    "validation": {
+      "mac_workflow": "boundary/fmt/all-target all-feature clippy/workspace tests/normal signed release passed",
+      "mac_workspace_tests": 9,
+      "signed_hvf_tests": 29,
+      "signed_app_pressure_tests": 1,
+      "macos_memory_tests": 135,
+      "linux_arm64_runtime_workspace_tests": 784,
+      "ipad_host_tests": 256,
+      "ipad_targets": [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim"
+      ],
+      "scope_reuse": "Common software byte access, CPU/network/graphics paths unchanged. Prior full Linux 81-step acceptance retained; shared memory tests/lints, full local Mac workflow and iPad host/target checks repeated for this change."
+    },
+    "lifecycle_clean_comparison": {
+      "total_working_set_mib": 1536,
+      "memory_limit_mib": 4096,
+      "rounds": 2,
+      "repeats": 2,
+      "all_byte_checks": true,
+      "checksum_matches_per_slot_count": true,
+      "before_mac": "8b4615cf9848bf6c86dfe22f90895233bdd55b1b",
+      "after_mac": "4de0946a4f007e51b19ba96530abf49c1a30e978",
+      "rows": [
+        {
+          "variant": "before",
+          "repeat": 0,
+          "runner_sha256": "e900c99d2b023067de7aecaeffab3fd830cb72e568d2b5a236b772b9350f25c2",
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 4553.258,
+          "map_thread_ms": 1654.455,
+          "touch_thread_ms": 36350.835,
+          "read_thread_ms": 5184.539,
+          "unmap_thread_ms": 3252.48,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "arena",
+          "repeat": 0,
+          "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2642.054,
+          "map_thread_ms": 659.303,
+          "touch_thread_ms": 19617.285,
+          "read_thread_ms": 4260.6,
+          "unmap_thread_ms": 2013.521,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "arena",
+          "repeat": 0,
+          "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+          "threads": 4,
+          "chunk_mib": 384,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2731.841,
+          "map_thread_ms": 1529.414,
+          "touch_thread_ms": 5545.386,
+          "read_thread_ms": 421.683,
+          "unmap_thread_ms": 2577.885,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "before",
+          "repeat": 0,
+          "runner_sha256": "e900c99d2b023067de7aecaeffab3fd830cb72e568d2b5a236b772b9350f25c2",
+          "threads": 4,
+          "chunk_mib": 384,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 5415.689,
+          "map_thread_ms": 1290.778,
+          "touch_thread_ms": 13502.739,
+          "read_thread_ms": 2069.258,
+          "unmap_thread_ms": 2544.281,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "before",
+          "repeat": 1,
+          "runner_sha256": "e900c99d2b023067de7aecaeffab3fd830cb72e568d2b5a236b772b9350f25c2",
+          "threads": 4,
+          "chunk_mib": 384,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 5432.723,
+          "map_thread_ms": 626.074,
+          "touch_thread_ms": 14360.552,
+          "read_thread_ms": 1501.37,
+          "unmap_thread_ms": 3258.52,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "arena",
+          "repeat": 1,
+          "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+          "threads": 4,
+          "chunk_mib": 384,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2720.597,
+          "map_thread_ms": 552.611,
+          "touch_thread_ms": 5915.53,
+          "read_thread_ms": 390.217,
+          "unmap_thread_ms": 2867.779,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "arena",
+          "repeat": 1,
+          "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2645.147,
+          "map_thread_ms": 904.82,
+          "touch_thread_ms": 19220.31,
+          "read_thread_ms": 3697.959,
+          "unmap_thread_ms": 2598.523,
+          "checksum": 206158430208
+        },
+        {
+          "variant": "before",
+          "repeat": 1,
+          "runner_sha256": "e900c99d2b023067de7aecaeffab3fd830cb72e568d2b5a236b772b9350f25c2",
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 4470.031,
+          "map_thread_ms": 854.378,
+          "touch_thread_ms": 36419.682,
+          "read_thread_ms": 4492.39,
+          "unmap_thread_ms": 2617.957,
+          "checksum": 206158430208
+        }
+      ]
+    },
+    "intermediate_12cpu": {
+      "runner_sha256": "e900c99d2b023067de7aecaeffab3fd830cb72e568d2b5a236b772b9350f25c2",
+      "code_mac": "8b4615cf9848bf6c86dfe22f90895233bdd55b1b",
+      "code_runtime": "79434370422ff130117ed2066d4b22b49b79962c",
+      "variant": "trames-4096mib-12cpu-chunk-clean",
+      "memory_mib": 4096,
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793192482.863405,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 353.816826083,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19402476"
+      ],
+      "url": "https://browser.geekbench.com/v6/cpu/19402476",
+      "single": 3137,
+      "multi": 5690,
+      "components": {
+        "single": {
+          "File Compression": 2179,
+          "Navigation": 1315,
+          "HTML5 Browser": 4095,
+          "PDF Renderer": 3094,
+          "Photo Library": 3247,
+          "Clang": 4826,
+          "Text Processing": 3395,
+          "Asset Compression": 3441,
+          "Object Detection": 3127,
+          "Background Blur": 3390,
+          "Horizon Detection": 3922,
+          "Object Remover": 4452,
+          "HDR": 3707,
+          "Photo Filter": 1797,
+          "Ray Tracer": 3598,
+          "Structure from Motion": 3491
+        },
+        "multi": {
+          "File Compression": 2617,
+          "Navigation": 1604,
+          "HTML5 Browser": 9868,
+          "PDF Renderer": 3184,
+          "Photo Library": 1295,
+          "Clang": 22405,
+          "Text Processing": 2870,
+          "Asset Compression": 17048,
+          "Object Detection": 6434,
+          "Background Blur": 10092,
+          "Horizon Detection": 14280,
+          "Object Remover": 14359,
+          "HDR": 4383,
+          "Photo Filter": 905,
+          "Ray Tracer": 21147,
+          "Structure from Motion": 12012
+        }
+      }
+    },
+    "final_runs": [
+      {
+        "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+        "code_mac": "4de0946a4f007e51b19ba96530abf49c1a30e978",
+        "code_runtime": "79434370422ff130117ed2066d4b22b49b79962c",
+        "variant": "trames-4096mib-4cpu-arena-clean",
+        "memory_mib": 4096,
+        "cpus": 4,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793194083.4717052,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 306.31484658299996,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19402587"
+        ],
+        "url": "https://browser.geekbench.com/v6/cpu/19402587",
+        "single": 3244,
+        "multi": 6001,
+        "components": {
+          "single": {
+            "File Compression": 2121,
+            "Navigation": 1270,
+            "HTML5 Browser": 4162,
+            "PDF Renderer": 3783,
+            "Photo Library": 3235,
+            "Clang": 4742,
+            "Text Processing": 3451,
+            "Asset Compression": 3579,
+            "Object Detection": 3079,
+            "Background Blur": 3442,
+            "Horizon Detection": 3970,
+            "Object Remover": 4680,
+            "HDR": 4204,
+            "Photo Filter": 2153,
+            "Ray Tracer": 3652,
+            "Structure from Motion": 3548
+          },
+          "multi": {
+            "File Compression": 3617,
+            "Navigation": 1854,
+            "HTML5 Browser": 5271,
+            "PDF Renderer": 4855,
+            "Photo Library": 7033,
+            "Clang": 10634,
+            "Text Processing": 3606,
+            "Asset Compression": 8179,
+            "Object Detection": 6797,
+            "Background Blur": 6881,
+            "Horizon Detection": 9474,
+            "Object Remover": 11452,
+            "HDR": 8214,
+            "Photo Filter": 3340,
+            "Ray Tracer": 11007,
+            "Structure from Motion": 8977
+          }
+        },
+        "clean_performance_sample": true,
+        "sampler_used": false,
+        "completed_workloads": 32,
+        "comparison": {
+          "single_vs_previous_4": 1.0099626400996264,
+          "multi_vs_previous_4": 1.2355363393040972,
+          "wall_vs_previous_4": 0.8395758313754095
+        }
+      },
+      {
+        "runner_sha256": "fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d",
+        "code_mac": "4de0946a4f007e51b19ba96530abf49c1a30e978",
+        "code_runtime": "79434370422ff130117ed2066d4b22b49b79962c",
+        "variant": "trames-4096mib-12cpu-arena-clean",
+        "memory_mib": 4096,
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793193682.6773179,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 306.679533167,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19402563"
+        ],
+        "url": "https://browser.geekbench.com/v6/cpu/19402563",
+        "single": 3241,
+        "multi": 7938,
+        "components": {
+          "single": {
+            "File Compression": 2297,
+            "Navigation": 1352,
+            "HTML5 Browser": 4179,
+            "PDF Renderer": 3981,
+            "Photo Library": 3313,
+            "Clang": 4881,
+            "Text Processing": 3420,
+            "Asset Compression": 3276,
+            "Object Detection": 3021,
+            "Background Blur": 3191,
+            "Horizon Detection": 3721,
+            "Object Remover": 4296,
+            "HDR": 4248,
+            "Photo Filter": 2259,
+            "Ray Tracer": 3623,
+            "Structure from Motion": 3433
+          },
+          "multi": {
+            "File Compression": 3942,
+            "Navigation": 2006,
+            "HTML5 Browser": 10441,
+            "PDF Renderer": 5722,
+            "Photo Library": 5254,
+            "Clang": 22403,
+            "Text Processing": 2978,
+            "Asset Compression": 17761,
+            "Object Detection": 10086,
+            "Background Blur": 10117,
+            "Horizon Detection": 16930,
+            "Object Remover": 14853,
+            "HDR": 8904,
+            "Photo Filter": 2613,
+            "Ray Tracer": 21245,
+            "Structure from Motion": 12614
+          }
+        },
+        "clean_performance_sample": true,
+        "sampler_used": false,
+        "completed_workloads": 32,
+        "comparison": {
+          "single_vs_previous_12": 1.0243362831858407,
+          "multi_vs_previous_12": 1.998992697053639,
+          "wall_vs_previous_12": 0.38433334133992464,
+          "native_single_ratio": 0.7560065313739212,
+          "native_multi_ratio": 0.4264073914911904,
+          "native_memory_budget_and_os_equal": false,
+          "workloads": [
+            {
+              "name": "File Compression",
+              "previous_multi": 2596,
+              "final_multi": 3942,
+              "multi_ratio": 1.5184899845916795
+            },
+            {
+              "name": "Navigation",
+              "previous_multi": 1750,
+              "final_multi": 2006,
+              "multi_ratio": 1.1462857142857144
+            },
+            {
+              "name": "HTML5 Browser",
+              "previous_multi": 3742,
+              "final_multi": 10441,
+              "multi_ratio": 2.7902191341528595
+            },
+            {
+              "name": "PDF Renderer",
+              "previous_multi": 651,
+              "final_multi": 5722,
+              "multi_ratio": 8.789554531490015
+            },
+            {
+              "name": "Photo Library",
+              "previous_multi": 715,
+              "final_multi": 5254,
+              "multi_ratio": 7.348251748251748
+            },
+            {
+              "name": "Clang",
+              "previous_multi": 20893,
+              "final_multi": 22403,
+              "multi_ratio": 1.0722730100990763
+            },
+            {
+              "name": "Text Processing",
+              "previous_multi": 388,
+              "final_multi": 2978,
+              "multi_ratio": 7.675257731958763
+            },
+            {
+              "name": "Asset Compression",
+              "previous_multi": 17291,
+              "final_multi": 17761,
+              "multi_ratio": 1.027181770863455
+            },
+            {
+              "name": "Object Detection",
+              "previous_multi": 3757,
+              "final_multi": 10086,
+              "multi_ratio": 2.6845887676337505
+            },
+            {
+              "name": "Background Blur",
+              "previous_multi": 11430,
+              "final_multi": 10117,
+              "multi_ratio": 0.8851268591426071
+            },
+            {
+              "name": "Horizon Detection",
+              "previous_multi": 15669,
+              "final_multi": 16930,
+              "multi_ratio": 1.0804773757100006
+            },
+            {
+              "name": "Object Remover",
+              "previous_multi": 14711,
+              "final_multi": 14853,
+              "multi_ratio": 1.0096526408809734
+            },
+            {
+              "name": "HDR",
+              "previous_multi": 4490,
+              "final_multi": 8904,
+              "multi_ratio": 1.9830734966592427
+            },
+            {
+              "name": "Photo Filter",
+              "previous_multi": 1778,
+              "final_multi": 2613,
+              "multi_ratio": 1.46962879640045
+            },
+            {
+              "name": "Ray Tracer",
+              "previous_multi": 21771,
+              "final_multi": 21245,
+              "multi_ratio": 0.9758394194111433
+            },
+            {
+              "name": "Structure from Motion",
+              "previous_multi": 12218,
+              "final_multi": 12614,
+              "multi_ratio": 1.0324111965951874
+            }
+          ]
+        }
+      }
+    ],
+    "remaining_limits": [
+      "One clean run per final configuration, not a statistical distribution",
+      "HVF per-used-granule map/unmap, first-touch exits and joined mapping commits remain",
+      "Dense guest/snapshot/PTE metadata and conservative per-VM fork charges/copies remain",
+      "Linux versus native macOS benchmark builds and reported memory budgets differ; score ratios are whole-run behavior",
+      "At the final same-source run, 12 slots remain below 4 in Photo Library (5254/7033), Text Processing (2978/3606), and Photo Filter (2613/3340); do not call all SMP scaling solved or infer Firefox performance without a new interactive run"
+    ],
+    "comparison_same_final_binary": {
+      "single_12_over_4": 0.999075215782984,
+      "multi_12_over_4": 1.322779536743876,
+      "wall_12_over_4": 1.001190561241377,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "multi_4": 3617,
+          "multi_12": 3942,
+          "multi_12_over_4": 1.0898534697262925
+        },
+        {
+          "name": "Navigation",
+          "multi_4": 1854,
+          "multi_12": 2006,
+          "multi_12_over_4": 1.0819848975188782
+        },
+        {
+          "name": "HTML5 Browser",
+          "multi_4": 5271,
+          "multi_12": 10441,
+          "multi_12_over_4": 1.9808385505596662
+        },
+        {
+          "name": "PDF Renderer",
+          "multi_4": 4855,
+          "multi_12": 5722,
+          "multi_12_over_4": 1.1785787847579814
+        },
+        {
+          "name": "Photo Library",
+          "multi_4": 7033,
+          "multi_12": 5254,
+          "multi_12_over_4": 0.7470496232048912
+        },
+        {
+          "name": "Clang",
+          "multi_4": 10634,
+          "multi_12": 22403,
+          "multi_12_over_4": 2.106733120180553
+        },
+        {
+          "name": "Text Processing",
+          "multi_4": 3606,
+          "multi_12": 2978,
+          "multi_12_over_4": 0.8258458125346645
+        },
+        {
+          "name": "Asset Compression",
+          "multi_4": 8179,
+          "multi_12": 17761,
+          "multi_12_over_4": 2.171536862697151
+        },
+        {
+          "name": "Object Detection",
+          "multi_4": 6797,
+          "multi_12": 10086,
+          "multi_12_over_4": 1.4838899514491688
+        },
+        {
+          "name": "Background Blur",
+          "multi_4": 6881,
+          "multi_12": 10117,
+          "multi_12_over_4": 1.4702804824880105
+        },
+        {
+          "name": "Horizon Detection",
+          "multi_4": 9474,
+          "multi_12": 16930,
+          "multi_12_over_4": 1.7869959890225882
+        },
+        {
+          "name": "Object Remover",
+          "multi_4": 11452,
+          "multi_12": 14853,
+          "multi_12_over_4": 1.2969786936779601
+        },
+        {
+          "name": "HDR",
+          "multi_4": 8214,
+          "multi_12": 8904,
+          "multi_12_over_4": 1.0840029218407596
+        },
+        {
+          "name": "Photo Filter",
+          "multi_4": 3340,
+          "multi_12": 2613,
+          "multi_12_over_4": 0.7823353293413173
+        },
+        {
+          "name": "Ray Tracer",
+          "multi_4": 11007,
+          "multi_12": 21245,
+          "multi_12_over_4": 1.930135368401926
+        },
+        {
+          "name": "Structure from Motion",
+          "multi_4": 8977,
+          "multi_12": 12614,
+          "multi_12_over_4": 1.4051464854628495
+        }
+      ]
+    }
   }
 }

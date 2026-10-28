@@ -454,3 +454,124 @@ The twelve-slot multi score is 21.3% of the earlier native 18616 result with the
 same host core count. Guest Linux versus native macOS builds and 4 GiB versus
 24 GiB reported RAM still differ, so this ratio is whole-benchmark behavior under
 these configurations, not the cost of an individual HVF instruction/trap.
+
+
+### Twelve-slot scaling: bounded invalidation and linear arena addresses
+
+The 3971 twelve-slot multi score above exposed two independent amplifiers.
+An opt-in diagnostic build first narrowed physical-slot allocation: its pool
+mutex had covered HVF mapping and 4 KiB initialization, serializing unrelated
+CPUs. In a 12-thread, 1.5 GiB allocate/touch/read/unmap fixture, summed allocator
+lock wait fell from 36.58 to 0.31 thread-seconds after moving those operations
+outside the pool lock and adding weak thread-local slot hints. These are nested,
+instrumented timings from one run each, not independent benchmark scores.
+
+The original Geekbench binary/data then ran with that allocator change and
+per-thread HVF diagnostics. It completed and uploaded in 862.74 s. Two 5 s stack
+samples covered Navigation/PDF; this run is for attribution, not a clean score.
+Approximate workload deltas from cumulative active-thread records showed:
+
+| Multi workload | Cached leaves inspected | Synchronization thread CPU | Phase wall time |
+| --- | ---: | ---: | ---: |
+| PDF Renderer | 571 million | 70.2 s | 89.8 s |
+| Photo Library | 1291 million | 160.0 s | 190.3 s |
+| Text Processing | 299 million | 36.3 s | 45.8 s |
+
+The bounded 32-update journal allowed a delayed CPU to fall back to a complete
+cached-leaf walk. Work in that synchronization path also delayed joined mapping
+checkpoints. Persistent metadata stamps per live 2 MiB chunk now let late CPUs
+inspect leaves only in changed chunks, while the precise interval path remains
+for current CPUs. Empty chunks leave no tombstones, byte owners or RAM charges.
+Full snapshot replacement changes all stamps; permissions/storage/EOF admission
+still uses the existing page checks. The signed 80-update regression verifies
+zero unrelated inspections, 64 checks in one changed cached chunk and correct
+read-only, unmap and fresh-byte behavior after address reuse. Software iPad Views
+build neither chunk stamps nor the hardware journal.
+
+A clean intermediate build (`8b4615c` / runtime `7943437`) scored 3137/5690 at
+12 slots and 4096 MiB in 353.82 s:
+[public intermediate result](https://browser.geekbench.com/v6/cpu/19402476).
+This is +43.3% multi and -55.7% complete wall time versus the previous twelve-slot
+completion. Its Photo Library and Photo Filter still scaled poorly; removing
+full scans did not remove all physical mapping costs.
+
+A subsequent 3 s sample of the bounded lifecycle fixture found worker waits on
+the framework's mapping lock, with the owner in
+`HvCore::HypervisorMemoryMap` vector insertion/erasure and `memmove`.
+The Mac allocator now reserves a linear IPA range per existing anonymous arena,
+matching its host-VA offset geometry. Table/import granules use a separate address
+pool. This avoids scattering arena offsets among unrelated GPA allocations.
+It reserves addresses only: each used 16 KiB granule still maps/unmaps on demand,
+and free slots do not remain wired. On this OS/build, the instrumented fixture's
+summed HVF data-map wall time fell from 23.63 to 8.46 thread-seconds; exact internal
+framework behavior is not an API guarantee. Per-granule HVF calls remain.
+
+Equal-total-1.5-GiB clean lifecycle comparisons used two rounds per thread,
+4096 MiB, complete byte checks and matching checksums. Two runs per case used
+opposite variant order; builds/profilers were stopped:
+
+| Slots / MiB per thread | Before linear IPA, two wall times | After, two wall times |
+| --- | ---: | ---: |
+| 4 / 384 | 5415.69, 5432.72 ms | 2731.84, 2720.60 ms |
+| 12 / 128 | 4553.26, 4470.03 ms | 2642.05, 2645.15 ms |
+
+The affected local Mac workflow (boundaries, format, all-target/all-feature lint,
+workspace tests, normal signed release) passed. Signed acceptance is now 29 HVF
+tests plus one app pressure test. The new allocation tests race 12 host threads,
+verify unique live slots and retained bytes, and check zero mapped/backing RAM
+while weak TLS hints remain. Another test interleaves 256 private pages and table
+allocations, checks linear GPAs, one-granule initial RAM, final release and reuse.
+The shared-memory change passed 135 macOS memory tests, 784 native ARM Linux
+runtime workspace tests and lints, iPad's 256 host tests/lints and both iOS target
+checks. The prior full Linux workflow remains baseline evidence for unaffected
+CPU, network and graphics acceptance; those suites were not repeated merely for
+hardware-only invalidation metadata or documentation changes.
+
+
+#### Final clean matched-source control
+
+Final product source is `4de0946a4f007e51b19ba96530abf49c1a30e978`, runtime
+`79434370422ff130117ed2066d4b22b49b79962c`. Both slot counts used the identical
+normal signed executable, SHA-256
+`fd5d26b330949b5c3db79bd92a7fef855e313f3fee544b6a9c07ddaf4cbce33d`,
+original Geekbench 6.7.1 Preview instructions/data and 4096 MiB. The `diagnostics`
+feature was compiled out. Firefox and Linux CI were stopped; no builds,
+profilers or sampling ran. Thermal state was nominal and low-power off
+before/after both runs. Each exited zero, completed 32 workloads and uploaded.
+These are one clean run per configuration; ordinary desktop apps remained.
+
+| Metric / multi component | Previous 4 | Previous 12 | Final 4 | Final 12 |
+| --- | ---: | ---: | ---: | ---: |
+| Single-core score | 3212 | 3164 | 3244 | 3241 |
+| Multi-core score | 4857 | 3971 | 6001 | 7938 |
+| Complete wall time | 364.84 s | 797.95 s | 306.31 s | 306.68 s |
+| PDF Renderer | 3196 | 651 | 4855 | 5722 |
+| Photo Library | 2949 | 715 | 7033 | 5254 |
+| Text Processing | 2336 | 388 | 3606 | 2978 |
+| Photo Filter | 1927 | 1778 | 3340 | 2613 |
+| Clang | 10808 | 20893 | 10634 | 22403 |
+
+Public final results: [four slots](https://browser.geekbench.com/v6/cpu/19402587),
+[twelve slots](https://browser.geekbench.com/v6/cpu/19402563).
+Twelve-slot multi improves 99.9% over the previous twelve-slot result, with
+61.6% less complete wall time. PDF, Photo Library and Text Processing improve
+8.79x, 7.35x and 7.68x respectively. The final twelve-slot total exceeds the
+matched-source four-slot total by 32.3%, replacing the previous 18.2% regression.
+Single-core totals differ by 0.1% between final slot counts. Four-slot multi
+also improves 23.6% over its previous result.
+
+Scaling is still incomplete: final twelve-slot Photo Library is 25.3% below
+four slots, Text Processing 17.4% below, and Photo Filter 21.8% below. Clang,
+Asset Compression and Ray Tracer scale about 1.9–2.2x from four to twelve slots;
+several memory/lifecycle-heavy components do not. Per-granule HVF calls,
+first-touch exits, joined shared-mm commits, dense metadata and conservative fork
+copies/charges remain follow-up candidates, not measured exclusive attribution
+of those remaining gaps. Product CPU defaults were not changed on this evidence.
+
+Final twelve-slot single/multi are 75.6%/42.6% of the earlier native macOS
+4287/18616 result. Linux versus macOS benchmark builds and reported 4/24 GiB
+memory still differ; these are whole-run ratios, not an individual trap or
+instruction overhead. Firefox remains closed; no interactive performance or
+long-term release stability claim follows from the benchmark. The filtered
+[JSON evidence](mac-geekbench.json) preserves all 16 component comparisons,
+source/binary identities, diagnostics and scoped compatibility checks.
