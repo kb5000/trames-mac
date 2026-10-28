@@ -1,0 +1,1067 @@
+{
+  "schema": 1,
+  "date": "2026-10-29",
+  "purpose": "Quantify memory-model headroom; research probes, no production memory path change",
+  "product_source_mac": "01b808c4ea03e450c96266ae1f9438cba9f285a7",
+  "runtime_revision": "87a4f2036453226e6f8a779e6ae1616ba008461c",
+  "host": {
+    "model": "Mac18,5",
+    "cpu": "Apple M6",
+    "memory_bytes": 25769803776,
+    "os": "macOS 27.0.1 (26A434)"
+  },
+  "compiler": {
+    "rust": "rustc 1.101.0-nightly (4ebd25825 2026-10-15)",
+    "c": "Apple clang 21.0.0 (clang-2100.3.34.2)"
+  },
+  "source_sha256": {
+    "benchmarks/memory-architecture/Cargo.toml": "b9dff9dc7501ee75c5e90b9cd003c396067ecd726cf3c30751370ae37f88e8a7",
+    "benchmarks/memory-architecture/Cargo.lock": "8ad6ae673a67374d89b9bd09c6b5465c333b2f03e5b5b6ef43f1cca92288f85d",
+    "benchmarks/memory-architecture/src/main.rs": "a5d5ee3183bc09af4bb0d1cd5be95db6da200ee4e4b136c801642c89e89f32f1",
+    "benchmarks/memory-architecture/touch-probe.c": "16c4a0351cadd58fa1f31c6a503a3c936939d73d59e3ac5ea8d32f6a611cb7d4",
+    "benchmarks/memory-architecture/pthread-churn.c": "51b5ce8e4f5de161f68f380fafe51b0cc0dc7379a3cdcee685de9828b91cb225"
+  },
+  "metadata": {
+    "method": "Two fresh processes per size/mode, reverse mode order on second pass. 64/256/1024MiB, no guest data accessed; runtime asserts zero guest resident bytes. hardware Registry only: no HVF vCPU. ru_maxrss is process high-water RSS in Darwin bytes, not current live RSS or kernel metadata. Native and PROT_NONE controls do not implement the complete accessible guest mapping semantics.",
+    "first_1024mib_dense": [
+      {
+        "map": {
+          "ms": 20.439625,
+          "peak_rss_delta_mib": 50.546875
+        },
+        "freeze": {
+          "ms": 41.538833,
+          "peak_rss_delta_mib": 168.8125
+        },
+        "commit": {
+          "ms": 0.0052499999999999995,
+          "peak_rss_delta_mib": 168.8125
+        },
+        "protect": {
+          "ms": 22.181165999999997,
+          "peak_rss_delta_mib": 174.25
+        },
+        "refreeze": {
+          "ms": 84.64608299999999,
+          "peak_rss_delta_mib": 283.234375
+        },
+        "unmap": {
+          "ms": 43.383832999999996,
+          "peak_rss_delta_mib": 283.234375
+        },
+        "empty_freeze": {
+          "ms": 9.905125,
+          "peak_rss_delta_mib": 283.234375
+        }
+      },
+      {
+        "map": {
+          "ms": 20.737667000000002,
+          "peak_rss_delta_mib": 50.546875
+        },
+        "freeze": {
+          "ms": 41.751917,
+          "peak_rss_delta_mib": 168.8125
+        },
+        "commit": {
+          "ms": 0.005208999999999999,
+          "peak_rss_delta_mib": 168.8125
+        },
+        "protect": {
+          "ms": 22.053416,
+          "peak_rss_delta_mib": 174.25
+        },
+        "refreeze": {
+          "ms": 84.01050000000001,
+          "peak_rss_delta_mib": 283.234375
+        },
+        "unmap": {
+          "ms": 42.9255,
+          "peak_rss_delta_mib": 283.234375
+        },
+        "empty_freeze": {
+          "ms": 9.781540999999999,
+          "peak_rss_delta_mib": 283.234375
+        }
+      }
+    ],
+    "release_overflow_checks": true,
+    "runner_sha256": "3e1e007215b37d7fc76fb3726feaeea66b2e17b433dce03dc952e64f9ffa8714",
+    "runs": [
+      {
+        "mode": "native",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.001584,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.00475,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.000917,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "reserved",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.0405,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.003,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 4.2e-05,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 4.2e-05,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.000417,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.041458,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.0012920000000000002,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "dense",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 2.9355420000000003,
+            "peak_rss_bytes": 5275648
+          },
+          {
+            "name": "freeze",
+            "ms": 6.452042,
+            "peak_rss_bytes": 13844480
+          },
+          {
+            "name": "commit",
+            "ms": 0.000875,
+            "peak_rss_bytes": 13844480
+          },
+          {
+            "name": "protect",
+            "ms": 2.752167,
+            "peak_rss_bytes": 14237696
+          },
+          {
+            "name": "refreeze",
+            "ms": 11.742583,
+            "peak_rss_bytes": 21463040
+          },
+          {
+            "name": "unmap",
+            "ms": 5.100417,
+            "peak_rss_bytes": 21774336
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 1.337917,
+            "peak_rss_bytes": 21790720
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.001666,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.011459,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.0011250000000000001,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "reserved",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.003625,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.003125,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 0.00020800000000000001,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 4.2e-05,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.00045900000000000004,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.0050420000000000005,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.0018750000000000001,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "dense",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 7.704292,
+            "peak_rss_bytes": 15237120
+          },
+          {
+            "name": "freeze",
+            "ms": 12.067124999999999,
+            "peak_rss_bytes": 49479680
+          },
+          {
+            "name": "commit",
+            "ms": 0.001833,
+            "peak_rss_bytes": 49479680
+          },
+          {
+            "name": "protect",
+            "ms": 6.528333,
+            "peak_rss_bytes": 50937856
+          },
+          {
+            "name": "refreeze",
+            "ms": 21.926209,
+            "peak_rss_bytes": 81133568
+          },
+          {
+            "name": "unmap",
+            "ms": 10.625709,
+            "peak_rss_bytes": 81133568
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 2.524083,
+            "peak_rss_bytes": 81133568
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "native",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.001333,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.003625,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.0011250000000000001,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "reserved",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.002,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.001917,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 0.000125,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 4.1e-05,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.000166,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.003042,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.001542,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "dense",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 20.439625,
+            "peak_rss_bytes": 54853632
+          },
+          {
+            "name": "freeze",
+            "ms": 41.538833,
+            "peak_rss_bytes": 178864128
+          },
+          {
+            "name": "commit",
+            "ms": 0.0052499999999999995,
+            "peak_rss_bytes": 178864128
+          },
+          {
+            "name": "protect",
+            "ms": 22.181165999999997,
+            "peak_rss_bytes": 184565760
+          },
+          {
+            "name": "refreeze",
+            "ms": 84.64608299999999,
+            "peak_rss_bytes": 298844160
+          },
+          {
+            "name": "unmap",
+            "ms": 43.383832999999996,
+            "peak_rss_bytes": 298844160
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 9.905125,
+            "peak_rss_bytes": 298844160
+          }
+        ],
+        "repeat": 0
+      },
+      {
+        "mode": "dense",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 1.174292,
+            "peak_rss_bytes": 5308416
+          },
+          {
+            "name": "freeze",
+            "ms": 2.0101250000000004,
+            "peak_rss_bytes": 13910016
+          },
+          {
+            "name": "commit",
+            "ms": 0.000709,
+            "peak_rss_bytes": 13910016
+          },
+          {
+            "name": "protect",
+            "ms": 1.205541,
+            "peak_rss_bytes": 14319616
+          },
+          {
+            "name": "refreeze",
+            "ms": 4.904707999999999,
+            "peak_rss_bytes": 21479424
+          },
+          {
+            "name": "unmap",
+            "ms": 2.346208,
+            "peak_rss_bytes": 21643264
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.553584,
+            "peak_rss_bytes": 21643264
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "reserved",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.002,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.001542,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 0.000292,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 0,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.000125,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.002167,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.0006659999999999999,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "native",
+        "mib": 64,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.0005,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.004459,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.000292,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "dense",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 4.860375,
+            "peak_rss_bytes": 15237120
+          },
+          {
+            "name": "freeze",
+            "ms": 9.177833999999999,
+            "peak_rss_bytes": 49496064
+          },
+          {
+            "name": "commit",
+            "ms": 0.0014169999999999999,
+            "peak_rss_bytes": 49496064
+          },
+          {
+            "name": "protect",
+            "ms": 5.428708,
+            "peak_rss_bytes": 50954240
+          },
+          {
+            "name": "refreeze",
+            "ms": 21.335334,
+            "peak_rss_bytes": 81133568
+          },
+          {
+            "name": "unmap",
+            "ms": 12.062583,
+            "peak_rss_bytes": 81133568
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 2.836,
+            "peak_rss_bytes": 81133568
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "reserved",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.002291,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.002125,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 0.000125,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 0,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.00025,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.003333,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.001666,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.000583,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.001917,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.000583,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "dense",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 20.737667000000002,
+            "peak_rss_bytes": 54853632
+          },
+          {
+            "name": "freeze",
+            "ms": 41.751917,
+            "peak_rss_bytes": 178864128
+          },
+          {
+            "name": "commit",
+            "ms": 0.005208999999999999,
+            "peak_rss_bytes": 178864128
+          },
+          {
+            "name": "protect",
+            "ms": 22.053416,
+            "peak_rss_bytes": 184565760
+          },
+          {
+            "name": "refreeze",
+            "ms": 84.01050000000001,
+            "peak_rss_bytes": 298844160
+          },
+          {
+            "name": "unmap",
+            "ms": 42.9255,
+            "peak_rss_bytes": 298844160
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 9.781540999999999,
+            "peak_rss_bytes": 298844160
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "reserved",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.002167,
+            "peak_rss_bytes": 1949696
+          },
+          {
+            "name": "freeze",
+            "ms": 0.002042,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "commit",
+            "ms": 0.000209,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "protect",
+            "ms": 4.2e-05,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "refreeze",
+            "ms": 0.000167,
+            "peak_rss_bytes": 1966080
+          },
+          {
+            "name": "unmap",
+            "ms": 0.0028339999999999997,
+            "peak_rss_bytes": 2031616
+          },
+          {
+            "name": "empty_freeze",
+            "ms": 0.001167,
+            "peak_rss_bytes": 2031616
+          }
+        ],
+        "repeat": 1
+      },
+      {
+        "mode": "native",
+        "mib": 1024,
+        "initial_peak_rss_bytes": 1851392,
+        "guest_data_touched": false,
+        "stages": [
+          {
+            "name": "map",
+            "ms": 0.00125,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "protect",
+            "ms": 0.000583,
+            "peak_rss_bytes": 1851392
+          },
+          {
+            "name": "unmap",
+            "ms": 0.0012079999999999999,
+            "peak_rss_bytes": 1851392
+          }
+        ],
+        "repeat": 1
+      }
+    ]
+  },
+  "first_touch": {
+    "method_note": "Native and hardware-only use the same assembly store/stride/branch loop. Hardware-only runs at EL1 with uniform preinstalled 2MiB blocks, no Linux syscalls, VFS, quota/COW/4KiB subrange semantics; evidence is a phase lower bound, not an application speedup. Native pthread and Trames use the same C fixture, 1 thread, 256MiB, 1 recreate round, 1 word per 4KiB with checked values. Original no-metrics Trames runner; ordinary desktop remained, no builds/profilers or other test runners during measurements. Packaged C probes add SPDX/scope comments to measured source, with checked recompiles separately verified.",
+    "summary": {
+      "native": {
+        "first_touch_median_ms": 7.73,
+        "retouch_median_ms": 0.38
+      },
+      "hardware-only": {
+        "first_touch_median_ms": 16.236,
+        "retouch_median_ms": 0.398
+      },
+      "native-pthread": {
+        "first_touch_median_ms": 7.957
+      },
+      "trames": {
+        "first_touch_median_ms": 97.278
+      }
+    },
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "original_trames_sha256": "39651812d1483d1a769dfe330eaaa36b3f6ec06e6bca2f8fc6bdc7c9f8d999b1",
+    "thin_probe_sha256": "c31f0e3d7ffd92bbb1cbe3a17fea65e5c3832a56c3f2f92760852b8830067c36",
+    "native_pthread_sha256": "c873b99b8e2a27902de7c26ff2258f9157f4139bda91808056b44d706e8cd9c3",
+    "method": "five fresh processes per variant, seeded shuffled order, same 256MiB and checked word/page values; hardware-only is EL1 with preinstalled block translations, not a Linux runtime",
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "runs": [
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 10.118,
+        "map_thread_ms": 0.001,
+        "touch_thread_ms": 8.778,
+        "read_thread_ms": 0.31,
+        "unmap_thread_ms": 1.01,
+        "checksum": 16777216,
+        "variant": "native-pthread",
+        "repeat": 0
+      },
+      {
+        "mode": "hardware",
+        "mib": 256,
+        "setup_ms": 0.513,
+        "first_touch_ms": 16.319,
+        "retouch_ms": 0.381,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "hardware-only",
+        "repeat": 0
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "setup_ms": 0.001,
+        "first_touch_ms": 7.975,
+        "retouch_ms": 0.379,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "native",
+        "repeat": 0
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 169.864,
+        "map_thread_ms": 21.337,
+        "touch_thread_ms": 97.647,
+        "read_thread_ms": 0.436,
+        "unmap_thread_ms": 50.37,
+        "checksum": 16777216,
+        "variant": "trames",
+        "repeat": 0
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 9.278,
+        "map_thread_ms": 0.001,
+        "touch_thread_ms": 7.923,
+        "read_thread_ms": 0.318,
+        "unmap_thread_ms": 1.024,
+        "checksum": 16777216,
+        "variant": "native-pthread",
+        "repeat": 1
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "setup_ms": 0.001,
+        "first_touch_ms": 7.701,
+        "retouch_ms": 0.38,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "native",
+        "repeat": 1
+      },
+      {
+        "mode": "hardware",
+        "mib": 256,
+        "setup_ms": 0.453,
+        "first_touch_ms": 16.237,
+        "retouch_ms": 0.397,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "hardware-only",
+        "repeat": 1
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 170.625,
+        "map_thread_ms": 21.09,
+        "touch_thread_ms": 97.278,
+        "read_thread_ms": 0.432,
+        "unmap_thread_ms": 51.749,
+        "checksum": 16777216,
+        "variant": "trames",
+        "repeat": 1
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "setup_ms": 0.001,
+        "first_touch_ms": 7.73,
+        "retouch_ms": 0.369,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "native",
+        "repeat": 2
+      },
+      {
+        "mode": "hardware",
+        "mib": 256,
+        "setup_ms": 0.439,
+        "first_touch_ms": 16.236,
+        "retouch_ms": 0.398,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "hardware-only",
+        "repeat": 2
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 8.996,
+        "map_thread_ms": 0.001,
+        "touch_thread_ms": 7.654,
+        "read_thread_ms": 0.341,
+        "unmap_thread_ms": 0.988,
+        "checksum": 16777216,
+        "variant": "native-pthread",
+        "repeat": 2
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 169.421,
+        "map_thread_ms": 21.208,
+        "touch_thread_ms": 96.559,
+        "read_thread_ms": 0.438,
+        "unmap_thread_ms": 51.125,
+        "checksum": 16777216,
+        "variant": "trames",
+        "repeat": 2
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 170.146,
+        "map_thread_ms": 21.162,
+        "touch_thread_ms": 97.466,
+        "read_thread_ms": 0.446,
+        "unmap_thread_ms": 50.995,
+        "checksum": 16777216,
+        "variant": "trames",
+        "repeat": 3
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 9.249,
+        "map_thread_ms": 0.001,
+        "touch_thread_ms": 7.976,
+        "read_thread_ms": 0.301,
+        "unmap_thread_ms": 0.96,
+        "checksum": 16777216,
+        "variant": "native-pthread",
+        "repeat": 3
+      },
+      {
+        "mode": "hardware",
+        "mib": 256,
+        "setup_ms": 0.621,
+        "first_touch_ms": 15.554,
+        "retouch_ms": 0.427,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "hardware-only",
+        "repeat": 3
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "setup_ms": 0.001,
+        "first_touch_ms": 8.413,
+        "retouch_ms": 0.38,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "native",
+        "repeat": 3
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 9.185,
+        "map_thread_ms": 0.0,
+        "touch_thread_ms": 7.957,
+        "read_thread_ms": 0.316,
+        "unmap_thread_ms": 0.901,
+        "checksum": 16777216,
+        "variant": "native-pthread",
+        "repeat": 4
+      },
+      {
+        "mode": "native",
+        "mib": 256,
+        "setup_ms": 0.0,
+        "first_touch_ms": 7.587,
+        "retouch_ms": 0.385,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "native",
+        "repeat": 4
+      },
+      {
+        "threads": 1,
+        "chunk_mib": 256,
+        "rounds": 1,
+        "reuse": 0,
+        "sparse": 1,
+        "wall_ms": 171.362,
+        "map_thread_ms": 21.17,
+        "touch_thread_ms": 96.943,
+        "read_thread_ms": 0.471,
+        "unmap_thread_ms": 52.695,
+        "checksum": 16777216,
+        "variant": "trames",
+        "repeat": 4
+      },
+      {
+        "mode": "hardware",
+        "mib": 256,
+        "setup_ms": 0.443,
+        "first_touch_ms": 16.141,
+        "retouch_ms": 0.404,
+        "checksum": 16777216,
+        "complete_linux_semantics": false,
+        "variant": "hardware-only",
+        "repeat": 4
+      }
+    ]
+  },
+  "validation": {
+    "probes": "Rust format, release lint with -D warnings, release build with product overflow-checks; both C sources compile -Wall -Wextra -Werror; native/HVF/fixture checksum controls pass",
+    "product": "No production source or runtime pin changed. Existing product validation reused; no new Geekbench result or Firefox run."
+  },
+  "interpretation": {
+    "first_touch_trames_to_hardware_only": 5.99150036954915,
+    "scope": "This ratio is headroom in a bounded first-touch phase, not a forecast of total Geekbench/Firefox speedup. Stable-mapping memory stores are already close to native in this loop.",
+    "priority": "Common sparse VMA/resident-extent representation plus a Mac native anonymous backing provider; range publication after that foundation. Keep one userspace Linux kernel shared with iPad."
+  }
+}

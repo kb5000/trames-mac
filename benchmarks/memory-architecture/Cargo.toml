@@ -1,0 +1,16 @@
+[package]
+name = "trames-memory-architecture-probe"
+version = "0.0.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+trames-memory = { path = "../../runtime/crates/trames-memory" }
+libc = "=0.2.190"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+overflow-checks = true
+

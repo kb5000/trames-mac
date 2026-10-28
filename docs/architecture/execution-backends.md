@@ -758,3 +758,123 @@ There is no eager guest population, new resident charge or ordinary-memory fence
 Signed tests cover fresh leaf and all table-branch levels without TLBI, pending
 publication interrupted before restore, register preservation through 64 new
 faults, bounded timer programming, permissions, address reuse and root switching.
+
+
+## Memory-model headroom review (2026-10-29)
+
+The next high-value change is a common sparse VMA/resident-extent model plus a
+Mac native anonymous backing provider. This keeps the shared userspace Linux
+kernel and HVF execution. New measurements point to object/snapshot construction
+and first-touch mediation rather than steady-state instruction execution in the
+memory loop. These are research probes; the installed product path is unchanged.
+
+### Untouched mappings still have substantial host metadata cost
+
+A release probe using the pinned common runtime (87a4f20), hardware admission and
+registry, thin LTO and product overflow checks maps accessible anonymous memory,
+creates a View, commits, changes RW to R, creates another View, then unmaps. It
+never reads/writes guest data and asserts zero guest resident bytes. There is no
+vCPU. Two fresh processes per size/mode reverse variant order. For a 1 GiB VMA:
+
+| Stage | Typical elapsed | Process peak RSS above baseline |
+| --- | ---: | ---: |
+| Create per-page mappings | 20.6 ms | 50.5 MiB |
+| First hardware snapshot | 41.6 ms | 168.8 MiB |
+| Snapshot after permission change | 84.3 ms | 283.2 MiB |
+| Unmap | 43.2 ms | high-water mark retained |
+
+`ru_maxrss` measures process peak RSS in Darwin bytes, not live RSS after release
+or kernel-side page-table memory. Exact values depend on the build/allocator.
+Native untouched mappings add about 0.02 MiB to this process metric; the existing
+PROT_NONE reservation control adds about 0.2 MiB. Those controls are not drop-in
+implementations of accessible guest memory. They demonstrate why range metadata
+is worth pursuing. Removing the guest resident quota did not remove these host
+objects. The independent 16 GiB descriptor guard should be replaced along with
+the representation, rather than raised while this cost remains proportional to
+all mapped pages.
+
+### First-touch exits are a much larger target than timer setup
+
+Five fresh processes per variant, seeded shuffled order, write/check one aligned
+word per 4 KiB in 256 MiB. The native and hardware-only probes use the same
+assembly store/stride/branch body. The hardware-only probe supplies a contiguous
+anonymous host backing and preinstalled uniform 2 MiB stage-one blocks, then lets
+HVF/macOS supply actual host pages on demand. It runs at EL1 with no Linux kernel
+or userspace Linux runtime. Its one final HVC returns to the host.
+
+| Variant | First-touch median | Same store loop after population |
+| --- | ---: | ---: |
+| Native assembly | 7.73 ms | 0.380 ms |
+| Hardware-only lower bound | 16.24 ms | 0.398 ms |
+| Full Trames Linux fixture | 97.28 ms | not measured with this store loop |
+
+The native pthread version of the same C fixture used by Trames takes 7.96 ms
+for first touch. All touched words/checksums match. Trames uses the unchanged
+normal signed product, one CPU and 4096 MiB. The raw records retain every trial;
+thermal state was nominal and low-power mode off before/after. No builds or
+profilers ran during the measurements; ordinary desktop apps remained.
+
+The approximately 6x ratio between Trames and the hardware-only first-touch
+phase is headroom in this bounded case, not a total Geekbench/Firefox forecast.
+The prototype omits Linux syscall dispatch, quotas, fork/COW, shared/file-backed
+mappings, 4 KiB subrange changes, native leases and production invalidation. Its
+steady-state store result establishes that this particular stable-mapping loop
+is already close to native. The earlier original-workload profile found 97.6%
+of faults exporting new storage and zero allocations equivalent to 96.1% of
+faults, making private anonymous backing the appropriate first target.
+
+### Recommended implementation sequence
+
+1. Put virtual ownership and permissions in common VMA intervals. Keep resident
+   storage/COW exceptions sparse. Views should share an immutable range index
+   and changed extents, without constructing another Frame/ConcurrentPage graph
+   for every untouched 4 KiB. Interpreter and native accesses must use the same
+   permission, ownership and race semantics. Existing architectural range checks
+   and configured resident quotas remain.
+2. Add a Mac provider for stable native anonymous ranges with linear GPA/host-VA
+   geometry. Build stage-one translations by range, using blocks for uniform
+   regions and 4 KiB leaves where required. Physical population remains with the
+   host pager. This removes the ordinary per-4-KiB Rust export/HVC cycle for the
+   eligible range, rather than only shortening its handler. iPad uses the same
+   VMA model with its software memory/execution provider; no second Linux kernel
+   implementation is introduced.
+3. On that foundation, publish non-destructive range additions without joining
+   every worker of the mm. Permission withdrawal, unmap, COW and reuse still
+   require the real affected translation/byte-lease boundary. Shared VMA state
+   and per-range/object synchronization should replace derived snapshot work;
+   do not add a coordinator thread, polling bus or ordinary byte barriers.
+
+The initial native range scope should be host-managed private anonymous memory.
+Strict resident caps retain fault admission until accounting is equivalent. A
+partial mprotect/unmap must split translations correctly; Linux DONTNEED must
+produce zeroes, unlike Darwin's content-preserving live-page reclamation hint.
+Fork, retained native/GPU pointers and file/shared mappings must preserve their
+existing semantics before entering the new path. This is a joint memory-model
+change: sparse metadata addresses the untouched-mapping cost, while native
+backing/range translations address first-touch exits. A contiguous canonical
+backing can also help future native buffer access without per-page transport.
+
+### Reproduction and validation boundary
+
+Sources live in [benchmarks/memory-architecture](../../benchmarks/memory-architecture).
+The Rust probe is a separate workspace and does not change product build members:
+
+```sh
+cargo run --manifest-path benchmarks/memory-architecture/Cargo.toml --release --locked -- dense 1024
+cargo run --manifest-path benchmarks/memory-architecture/Cargo.toml --release --locked -- reserved 1024
+cargo run --manifest-path benchmarks/memory-architecture/Cargo.toml --release --locked -- native 1024
+mkdir -p target/memory-probes
+clang -O2 -Wall -Wextra -Werror benchmarks/memory-architecture/touch-probe.c -framework Hypervisor -o target/memory-probes/touch-probe
+codesign --force --sign - --entitlements apps/macos/Trames.entitlements target/memory-probes/touch-probe
+target/memory-probes/touch-probe native 256
+target/memory-probes/touch-probe hardware 256
+```
+
+The C fixture is compiled with `-O2 -pthread` on macOS, or statically with a Linux
+AArch64 toolchain for the guest. Arguments `1 256 1 0 1` select this comparison.
+The probe sources pass Rust format/release lint with warnings denied and checked
+C compilation; native/HVF/fixture controls validate their values. No production
+CPU, Linux, network or graphics source changed, so prior passing acceptance was
+reused. Firefox stayed closed and no new Geekbench score is claimed. Full raw
+records, compiler/source/binary identities and limitations are in
+[the filtered evidence](../validation/mac-memory-model-probes.json).
