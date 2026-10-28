@@ -28,6 +28,7 @@ struct HostExit {
     pc: u64,
 }
 unsafe extern "C" {
+    fn trames_hvf_register_stats(host: *mut c_void, stats: *mut RegisterStats);
     fn trames_hvf_max_vcpus() -> u32;
     fn trames_hvf_space_current(host: *mut c_void) -> *mut c_void;
     fn trames_hvf_space_create(host: *mut c_void, error: *mut i32) -> *mut c_void;
@@ -43,6 +44,14 @@ unsafe extern "C" {
         nanos: u64,
         result: *mut HostExit,
     ) -> i32;
+}
+/// Thread-local transport counts, read only on the owning executor thread.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RegisterStats {
+    pub mailbox: u64,
+    pub fallback: u64,
+    pub completions: u64,
 }
 #[derive(Debug)]
 pub enum Error {
@@ -160,6 +169,12 @@ impl Executor {
             wait: None,
             _same_thread: PhantomData,
         })
+    }
+    pub fn register_stats(&self) -> RegisterStats {
+        let mut stats = RegisterStats::default();
+        // SAFETY: a live creator-thread host and matching three-u64 C layout.
+        unsafe { trames_hvf_register_stats(self.host.as_ptr(), &mut stats) };
+        stats
     }
     pub fn features(&self) -> Features {
         Features {

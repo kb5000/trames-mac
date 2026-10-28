@@ -619,3 +619,49 @@ target/release/trames-mac-run --rootfs /path/to/verified-Alpine.tar.gz \
   --no-pty --metrics --cpus 4 --memory-mib 4096 \
   --exec-file /mapping-scope=/path/to/mapping-scope /mapping-scope
 ```
+
+### Batched register context (2026-10-28)
+
+The HVF adapter now transfers complete architectural state through a private
+EL1-only context. This removes 126 individual GPR/SIMD framework calls from a
+normal syscall boundary and preserves the existing single private HVC. The
+common runtime remains at the mapping-scope checkpoint; iPad and guest artifacts
+are unchanged. The context consumes one host granule per initialized vCPU and
+one page of the existing adapter VA reservation, with no extra user-VA hole.
+
+Three alternating fresh-session pairs use the identical static ARM64 Linux ELF,
+four configured execution slots, a 4096 MiB logical budget, no profiler and no
+network I/O. One guest process performs 4096 warmup getpid syscalls, then measures
+300,000 additional calls using CLOCK_MONOTONIC. Startup is excluded. No other
+acceptance jobs ran during measurement; the existing desktop browser stayed open.
+
+| Fixed work, median of three | Previous adapter | Batched adapter |
+| --- | ---: | ---: |
+| 300,000 short syscalls | 478.18 ms | 361.85 ms |
+
+This is a 24.3% reduction in elapsed time for this short-syscall workload. Every
+run has the same checksum, 304103 total guest syscalls and 53248 charged resident
+bytes. It is not a Firefox speedup ratio, a native-Linux comparison or a claim
+that guest computation is faster. Additional resident-reload prototypes did not
+reliably improve the batch result and are not part of the shipped source.
+
+Local validation passed 21 signed HVF cases plus the signed pressure case. New
+cases cover all GPR/SIMD/control state across alternating tasks/roots, EL0 timer
+fallback, EL0 denial of private-context read/write/execute, and interrupted save
+and restore. The latter also injects old-task x0/SIMD values during partial
+restore. The existing platform-HVC collision, borrow, paging, code-cache,
+allocation-reuse and teardown checks continue to pass.
+
+The final product also passed four real Linux signal/altstack cases against
+unchanged native-Linux oracle outputs, four one/four-CPU counter and privileged
+register cases, six process/session/PTY cases, and all three SMP/paging
+configurations. Mac workspace unit tests and Clippy passed. Unchanged shared
+runtime/iPad acceptance was reused. After a normal browser quit/restart, Firefox
+loaded Bilibili and visibly presented keyboard page-down; this is a finite smoke
+check, not input-latency, video or long-term stability acceptance.
+
+The [filtered record](mac-register-context.json) includes individual timings,
+source/binary hashes and scope. The [fixture](../../tests/fixtures/syscall-context.c)
+can be built with a static AArch64 musl toolchain and run through `--exec-file`
+with `--no-pty --metrics --cpus 4 --memory-mib 4096`. Raw logs, process identifiers,
+addresses and web contents remain private.

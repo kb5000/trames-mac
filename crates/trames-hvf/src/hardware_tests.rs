@@ -727,3 +727,111 @@ fn syscall_arguments_cannot_be_consumed_by_platform_hypercalls() {
         assert_eq!(cpu.registers, expected, "syscall argument {value:#x}");
     }
 }
+
+fn context_memory(word: u32) -> Memory {
+    let mut m = Memory::default();
+    m.map(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    m.write_array(0x10000, word.to_le_bytes()).unwrap();
+    m.write_array(0x10004, 0xd4000001u32.to_le_bytes()).unwrap();
+    m.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    m
+}
+fn patterned_state(tag: u64) -> Aarch64State {
+    let mut s = state();
+    for (i, x) in s.registers.iter_mut().enumerate() {
+        *x = 0x8123456789abcdefu64.wrapping_add(tag * 31 + i as u64);
+    }
+    for (i, q) in s.vectors.iter_mut().enumerate() {
+        *q = (u128::from(tag) << 96) | (u128::from(i as u64) << 64) | 0xfedcba9876543210;
+    }
+    s.sp += tag * 16;
+    s.tpidr_el0 = 0xfeed0000 + tag;
+    s.fpcr = 0x01400000;
+    s.fpsr = 0x0800001f;
+    s.nzcv = ((tag as u32) & 15) << 28;
+    s
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn context_mailbox_preserves_complete_state_across_tasks_and_roots() {
+    let mut e = Executor::new().unwrap();
+    let mut a = context_memory(0xd4000001);
+    let mut b = context_memory(0xd4000001);
+    for tag in 0..128 {
+        let mut cpu = patterned_state(tag);
+        let mut expected = cpu.clone();
+        expected.pc += 4;
+        svc(&mut e, &mut cpu, if tag & 1 == 0 { &mut a } else { &mut b });
+        assert_eq!(cpu, expected, "context tag {tag}");
+    }
+    assert!(e.register_stats().mailbox >= 128);
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn interrupted_context_save_and_restore_keep_the_complete_continuation() {
+    unsafe extern "C" {
+        fn trames_hvf_test_interrupted_context(
+            host: *mut c_void,
+            state: *mut Aarch64State,
+            out: *mut HostExit,
+            phase: u32,
+        ) -> i32;
+    }
+    let mut e = Executor::new().unwrap();
+    let mut memory = context_memory(0xd4000001);
+    svc(&mut e, &mut state(), &mut memory); // install tables and finish TLBI
+    for phase in 0..6 {
+        let mut cpu = patterned_state(u64::from(phase));
+        cpu.pc += 4;
+        let expected = cpu.clone();
+        let mut out = HostExit::default();
+        // SAFETY: same creator-thread executor, retained EL1 context and exact
+        // state layout. The hook invokes real adapter instructions and the
+        // production completion path, never mutating an HVF-owned exit record.
+        check(unsafe {
+            trames_hvf_test_interrupted_context(e.host.as_ptr(), &mut cpu, &mut out, phase)
+        })
+        .unwrap();
+        assert_eq!(cpu, expected, "phase {phase}");
+        assert_eq!(out.kind, if (3..=4).contains(&phase) { 0 } else { 1 });
+        // Partial loads/saves must not leak into the next task's bank.
+        cpu.pc = 0x10000;
+        svc(&mut e, &mut cpu, &mut memory);
+        assert_eq!(cpu, expected);
+    }
+    assert!(e.register_stats().completions >= 3);
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn el0_timer_uses_full_register_fallback_without_changing_state() {
+    let mut e = Executor::new().unwrap();
+    let mut memory = context_memory(0x14000000); // b .
+    let mut cpu = patterned_state(9);
+    let expected = cpu.clone();
+    for _ in 0..3 {
+        let exit = e
+            .run(&mut cpu, &mut memory, Duration::from_millis(2))
+            .unwrap();
+        assert_eq!(exit.reason, ExitReason::Yield);
+        assert_eq!(cpu, expected);
+        if e.register_stats().fallback != 0 {
+            break;
+        }
+    }
+    assert!(e.register_stats().fallback != 0);
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn el0_cannot_read_write_or_execute_the_private_context() {
+    let mut e = Executor::new().unwrap();
+    for word in [0xf9400020, 0xf9000020, 0xd61f0020] {
+        // ldr/str x0,[x1]; br x1
+        let mut memory = context_memory(word);
+        let mut cpu = patterned_state(7);
+        cpu.registers[1] = VECTOR_VA + 0xf000;
+        assert!(
+            matches!(e.run(&mut cpu, &mut memory, Duration::from_millis(2)),
+            Err(Error::Memory(MemoryError::Unmapped(address))) if address == VECTOR_VA + 0xf000)
+        );
+    }
+}

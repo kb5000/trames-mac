@@ -1,0 +1,175 @@
+{
+  "method": "Three alternating fresh-session pairs; same static Linux ELF and 300000 getpid syscalls after 4096 warmup calls; 4 vCPUs, 4096 MiB logical budget, no network I/O or profiler. No other acceptance jobs run during timings. Existing desktop Firefox remains running. Microbenchmark, not browser latency.",
+  "baseline_mac_revision": "04e82b848458edeb30bcabfe2a1d8269ad01a580",
+  "runtime_revision": "dc49cbfed76fa5876dcc1ac2eb0e49100b464c26",
+  "fixture": "tests/fixtures/syscall-context.c",
+  "fixture_source_sha256": "64b64672b46ed720ba22f82dfc5505dd8bd998ad476434aeb3edc6c93222a5df",
+  "fixture_elf_sha256": "f32ef0125faaa86d7524c6ab3ed6d8b2f286e56ead56c3f2b857e7ac1ff08507",
+  "runner_sha256": {
+    "baseline": "83021a094b2fe635c98e5e8c887983b63d4173092a8c91af2cce00acf81b83ba",
+    "optimized": "7e124a6c82e64a6ccb3b9f49571606cd449036193e2e69ba4ce5f9423a299cf8"
+  },
+  "configuration": {
+    "execution_slots_configured": 4,
+    "guest_processes": 1,
+    "logical_memory_mib": 4096,
+    "network": "default policy; fixture performs no network I/O",
+    "metrics": true,
+    "profiler": false,
+    "warmup_syscalls": 4096,
+    "measured_getpid_syscalls": 300000,
+    "repeats": 3
+  },
+  "rows": [
+    {
+      "variant": "baseline",
+      "repeat": 0,
+      "elapsed": 0.556551166,
+      "phase_ms": 477.184958,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 0,
+      "elapsed": 0.39822770799999996,
+      "phase_ms": 359.230042,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 1,
+      "elapsed": 0.400652875,
+      "phase_ms": 361.853666,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "baseline",
+      "repeat": 1,
+      "elapsed": 0.5185779159999999,
+      "phase_ms": 478.182583,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "baseline",
+      "repeat": 2,
+      "elapsed": 0.5292941249999998,
+      "phase_ms": 487.532125,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    },
+    {
+      "variant": "optimized",
+      "repeat": 2,
+      "elapsed": 0.41818399999999967,
+      "phase_ms": 371.403458,
+      "checksum": 300000,
+      "metrics": {
+        "syscalls": 304103,
+        "context_switches": 304103,
+        "hardware_mapped_bytes": 49152,
+        "guest_resident_bytes": 53248,
+        "vm_checkpoint_groups": 0,
+        "vm_checkpoint_spaces": 0,
+        "backing_domain_checks": 0,
+        "backing_page_checks": 0,
+        "parallel_memory_us": 0,
+        "instruction_count": null
+      }
+    }
+  ],
+  "median_ms": {
+    "baseline": 478.182583,
+    "optimized": 361.853666
+  },
+  "elapsed_reduction_percent": 24.327301147227274,
+  "transport": {
+    "state_bytes": 816,
+    "general_registers": 31,
+    "simd_registers": 32,
+    "removed_general_simd_framework_calls_per_svc": 126,
+    "extra_context_allocation": "one host granule per initialized vCPU",
+    "context_guest_mapping_bytes": 4096,
+    "additional_guest_user_va_reservation_bytes": 0,
+    "normal_svc_hypercalls": 1,
+    "state_materialization": "complete at every public kernel/executor boundary",
+    "el0_timer_or_stage2_exit": "full framework export fallback"
+  },
+  "validation": {
+    "signed_hvf_cases": 21,
+    "signed_pressure_cases": 1,
+    "unit_tests": "Mac workspace passed",
+    "clippy": "Mac workspace and all targets passed",
+    "linux_signal_cases": 4,
+    "cpu_access_cases": 4,
+    "process_session_cases": 6,
+    "smp_paging_configurations": 3,
+    "partial_restore_poison_test": "x0 and not-yet-loaded SIMD bank replaced with old-task values; continuation passed",
+    "firefox": "Original profile, four slots and 4096 MiB; Bilibili content and keyboard page-down visibly presented",
+    "ipad": "shared runtime and iPad sources unchanged; previous acceptance reused"
+  },
+  "limits": [
+    "Short-syscall microbenchmark, not native Linux or Firefox performance.",
+    "No displayed-frame percentile, video or all-site stability claim.",
+    "Resident reload prototypes had no reliable extra benefit in this workload and are not included.",
+    "Raw logs, process identifiers, stacks, local paths and page content remain private."
+  ]
+}

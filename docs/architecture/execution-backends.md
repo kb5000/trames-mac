@@ -557,3 +557,40 @@ The [mapping-scope checkpoint](../validation/mac-windows.md#local-mapping-scope-
 records the fixed-work Linux comparison, concurrency/EOF/COW regressions and
 Mac/iPad acceptance. This does not implement register residency, lazy fork COW,
 file persistence redesign or native Firefox GPU acceleration.
+
+## Batched EL1 register transport (2026-10-28)
+
+The executor now exchanges the complete 816-byte AArch64 state through a private
+per-vCPU context. An EL1 entry restores GPRs, SIMD, SP, TLS, FP control/status and
+NZCV; the exception adapter saves them before the existing private HVC. The host
+copies the retained context directly. A normal SVC no longer makes 31 GPR and
+32 SIMD framework get/set calls in both directions (126 calls). PC/CPSR and timer
+control remain framework operations. The normal SVC still uses one hypercall.
+There is no common CPU interface, Linux syscall implementation or iPad change.
+
+Each initialized vCPU owns one anonymous host granule. Only its first 4 KiB is
+mapped into EL1, inside the original 64 KiB adapter reservation. The mapping is
+not executable and EL0 cannot read, write or execute it; no host pointer enters
+guest memory. Every cached root of that vCPU maps the same context, while other
+vCPUs retain separate physical owners. It is released after vCPU/root teardown;
+a failed withdrawal retains the allocation rather than free/reuse a live alias.
+
+The context has one execution owner. Host copies and opaque HVF calls alternate
+on the creator thread, with no live host borrow during vCPU execution. Ordinary
+ARM coherence and that execution boundary supply visibility; no additional byte
+barriers, coordinator thread, polling bus or guest RAM publication is introduced.
+The linked adapter image has fixed offsets and is copied intact, preserving its
+internal branch offsets. C layout assertions match the shared architectural ABI.
+
+Timer/cancellation exits in EL0 and stage-two faults retain the full framework
+export fallback. An interruption before ERET keeps the complete input state,
+including when only part of the actual bank was loaded. An interruption during
+exception save completes only the bounded EL1 adapter with its timer masked; a
+completion marker covers the final-save/HVC interval. It never runs arbitrary
+EL0 code with an expired timer masked. Adapter faults are host failures. Signals,
+fork, migration and native calls continue to receive fully materialized state.
+
+The [register-context checkpoint](../validation/mac-windows.md#batched-register-context-2026-10-28)
+records hardware, real Linux and fixed-work evidence. Additional resident-reload
+prototypes did not show reliable benefit beyond batching in this workload and
+were not included. The complete-state contract is retained.
