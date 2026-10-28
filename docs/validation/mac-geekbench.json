@@ -565,5 +565,515 @@
       "mapped_estimate_note": "Trace-derived estimate, excludes initial ELF pages and PROT_NONE file pages; overlapping successful mmap/mprotect ranges unioned; not a physical/RSS measurement. All benchmark threads share one address space.",
       "quota_note": "Memory::map bounds committed mapping bytes by the logical per-space limit. Initial ELF and some PROT_NONE file mapping pages are absent from the trace reconstruction."
     }
+  },
+  "demand_paging_followup": {
+    "code_mac": "017db6c76967afe728342b5a9bd0a343596cf03c",
+    "code_runtime": "3440534db8ae8594aacd39faab44e70f7eec6bb1",
+    "runner_sha256": "54554423873073e404817342db400becdcea9ce3ff5a0475bcafdee9bddbd20e",
+    "fixes": [
+      "Independent virtual descriptor and resident-byte budgets",
+      "Deferred PlainFile mmap byte loading and private snapshot copies",
+      "Indexed stage-one table ownership",
+      "Retained resident PTE fault-around without neighbor page-in",
+      "Lazy anonymous macOS arenas and native pager, no application page-file preallocation/MS_SYNC",
+      "HVF configuration-derived SIMD/crypto/atomic capabilities",
+      "Scoped glibc system-DNS IP_RECVERR and nonblocking MSG_ERRQUEUE compatibility"
+    ],
+    "validation": {
+      "linux_workflow": {
+        "passed_steps": 81,
+        "reused_steps": 21,
+        "summary_sha256": "5a7897770fd290441ef70e3e27540590ce8367c590eae405a723cfa7ed0be5a6"
+      },
+      "common_runtime_macos_tests": 780,
+      "ipad_host_tests": 256,
+      "ipad_targets": [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim"
+      ],
+      "signed_hvf_tests": 25,
+      "signed_app_pressure_tests": 1,
+      "smp_paging": "1/4 slots, 64MiB data, repeated eviction, atomics and fork COW passed",
+      "dns": "Original Ubuntu glibc getent hosts/ahostsv4 succeeded after removing the benchmark-only hosts entry"
+    },
+    "capabilities": {
+      "hwcap": "0x9017fb",
+      "hwcap2": "0x6000",
+      "executed_subsets": [
+        "AES",
+        "PMULL",
+        "SHA1",
+        "SHA2",
+        "CRC32",
+        "LSE",
+        "FP16",
+        "RDM",
+        "dot-product",
+        "FHM",
+        "I8MM",
+        "BF16"
+      ],
+      "unadvertised_state": [
+        "CPUID",
+        "SVE",
+        "SME",
+        "PAC",
+        "additional PSTATE"
+      ]
+    },
+    "working_set": {
+      "background": "Firefox and native Linux CI VM stopped; no builds or samplers; ordinary desktop apps remain.",
+      "runner_sha256": {
+        "baseline": "7e124a6c82e64a6ccb3b9f49571606cd449036193e2e69ba4ce5f9423a299cf8",
+        "candidate": "54554423873073e404817342db400becdcea9ce3ff5a0475bcafdee9bddbd20e"
+      },
+      "method": "Three alternating baseline/candidate repeats; 512MiB, one 64-bit store per 4KiB page then 8 read passes; long diagnostic uses 800 read passes. No timing threshold.",
+      "summary": [
+        {
+          "variant": "baseline",
+          "cpus": 1,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.159,
+            "first_touch_ms": 445.059,
+            "reuse_ms": 5.268,
+            "retire_ms": 143.17
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              437.379,
+              450.342
+            ],
+            "reuse_ms": [
+              5.219,
+              5.783
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "candidate",
+          "cpus": 1,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.156,
+            "first_touch_ms": 350.341,
+            "reuse_ms": 12.89,
+            "retire_ms": 104.769
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              347.66,
+              350.585
+            ],
+            "reuse_ms": [
+              11.387,
+              13.045
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "baseline",
+          "cpus": 4,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.034,
+            "first_touch_ms": 488.241,
+            "reuse_ms": 108.968,
+            "retire_ms": 91.734
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              488.125,
+              503.128
+            ],
+            "reuse_ms": [
+              100.114,
+              109.669
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "candidate",
+          "cpus": 4,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.45,
+            "first_touch_ms": 321.357,
+            "reuse_ms": 24.93,
+            "retire_ms": 95.738
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              319.093,
+              331.051
+            ],
+            "reuse_ms": [
+              24.3,
+              30.753
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "baseline",
+          "cpus": 12,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.419,
+            "first_touch_ms": 505.578,
+            "reuse_ms": 68.38,
+            "retire_ms": 115.608
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              496.308,
+              522.519
+            ],
+            "reuse_ms": [
+              64.773,
+              73.171
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "candidate",
+          "cpus": 12,
+          "mib": 512,
+          "rounds": 8,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 50.253,
+            "first_touch_ms": 353.564,
+            "reuse_ms": 54.752,
+            "retire_ms": 116.343
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              351.123,
+              355.743
+            ],
+            "reuse_ms": [
+              52.875,
+              55.096
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "baseline",
+          "cpus": 1,
+          "mib": 512,
+          "rounds": 800,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.218,
+            "first_touch_ms": 447.579,
+            "reuse_ms": 408.044,
+            "retire_ms": 147.572
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              447.03,
+              455.137
+            ],
+            "reuse_ms": [
+              406.781,
+              427.071
+            ]
+          },
+          "checksums_valid": true
+        },
+        {
+          "variant": "candidate",
+          "cpus": 1,
+          "mib": 512,
+          "rounds": 800,
+          "repeats": 3,
+          "median_ms": {
+            "map_ms": 49.46,
+            "first_touch_ms": 347.322,
+            "reuse_ms": 413.934,
+            "retire_ms": 105.681
+          },
+          "range_ms": {
+            "first_touch_ms": [
+              346.818,
+              347.463
+            ],
+            "reuse_ms": [
+              412.353,
+              419.336
+            ]
+          },
+          "checksums_valid": true
+        }
+      ]
+    },
+    "remaining_limits": [
+      "Accessible-page descriptors are dense and separately capped at 16GiB; unused VMAs still cost host metadata",
+      "Per-VM fork charges/copies remain conservative, not unique physical RSS/PSS",
+      "Single-slot short reuse phase retains several milliseconds of fixed overhead; 800-pass median is 1.4% slower",
+      "Native pager hints permit reclaim but do not guarantee immediate process RSS reduction",
+      "IP_RECVERR subset supports system DNS only; general native UDP ICMP error queues remain unsupported",
+      "Final interval fix has not yet been measured at 12 slots; the earlier 12-slot diagnostic completed computations slowly and failed upload, so it is not a score"
+    ],
+    "geekbench_runs": [
+      {
+        "runner_sha256": "54554423873073e404817342db400becdcea9ce3ff5a0475bcafdee9bddbd20e",
+        "code_mac": "017db6c76967afe728342b5a9bd0a343596cf03c",
+        "code_runtime": "3440534db8ae8594aacd39faab44e70f7eec6bb1",
+        "variant": "trames-4096mib-12cpu",
+        "memory_mib": 4096,
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793183684.137731,
+        "upload_authorized": true,
+        "exit": 255,
+        "seconds": 943.883887542,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [],
+        "sampled_diagnostic": true,
+        "completed_workloads": 32,
+        "score_available": false,
+        "failure": "glibc dual-stack DNS used sendmmsg (AArch64 syscall 269), which was still ENOSYS; IPv4-only getent tests had missed this",
+        "stack_sample_seconds": 1,
+        "point_rss_kib": 9499424,
+        "sample_report_footprint": "7.8G"
+      },
+      {
+        "runner_sha256": "f24695cf82e56dbbbe2609a405e0fea4e492b39c4249da3f62d9953fc011cd46",
+        "code_mac": "36d62f8369b9f0e201f46a70542108fed38514f4",
+        "code_runtime": "773083005cb5553aaaa400278c4f53192f27a548",
+        "variant": "trames-4096mib-4cpu",
+        "memory_mib": 4096,
+        "cpus": 4,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793186403.4785762,
+        "upload_authorized": true,
+        "exit": 0,
+        "seconds": 364.844764625,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19402105"
+        ],
+        "single_core": 3212,
+        "multi_core": 4857,
+        "version": "Geekbench 6.7.1 Preview for Linux AArch64",
+        "source": "https://browser.geekbench.com/v6/cpu/19402105",
+        "read_method": "Published result page accessibility tree in the in-app browser; web reader unavailable",
+        "clean_performance_sample": true,
+        "sampler_used": false,
+        "completed_workloads": 32,
+        "workloads": [
+          {
+            "name": "File Compression",
+            "single_core": 2227,
+            "multi_core": 2651,
+            "single_vs_before": 1.3713054187192117,
+            "multi_vs_before": 1.6374305126621371,
+            "multi_over_single": 1.1903906600808263
+          },
+          {
+            "name": "Navigation",
+            "single_core": 1317,
+            "multi_core": 1785,
+            "single_vs_before": 1.1748438893844781,
+            "multi_vs_before": 1.4077287066246056,
+            "multi_over_single": 1.355353075170843
+          },
+          {
+            "name": "HTML5 Browser",
+            "single_core": 4199,
+            "multi_core": 4316,
+            "single_vs_before": 1.0127834056922336,
+            "multi_vs_before": 1.473037542662116,
+            "multi_over_single": 1.0278637770897834
+          },
+          {
+            "name": "PDF Renderer",
+            "single_core": 3748,
+            "multi_core": 3196,
+            "single_vs_before": 1.2589855559287875,
+            "multi_vs_before": 3.1674925668979186,
+            "multi_over_single": 0.8527214514407684
+          },
+          {
+            "name": "Photo Library",
+            "single_core": 3298,
+            "multi_core": 2949,
+            "single_vs_before": 1.5177174413253567,
+            "multi_vs_before": 1.1948946515397083,
+            "multi_over_single": 0.8941782898726501
+          },
+          {
+            "name": "Clang",
+            "single_core": 4376,
+            "multi_core": 10808,
+            "single_vs_before": 0.9382504288164666,
+            "multi_vs_before": 1.0871052102192718,
+            "multi_over_single": 2.469835466179159
+          },
+          {
+            "name": "Text Processing",
+            "single_core": 3303,
+            "multi_core": 2336,
+            "single_vs_before": 1.3854865771812082,
+            "multi_vs_before": 1.2913211719181867,
+            "multi_over_single": 0.7072358462004239
+          },
+          {
+            "name": "Asset Compression",
+            "single_core": 3478,
+            "multi_core": 8282,
+            "single_vs_before": 0.9769662921348314,
+            "multi_vs_before": 1.419609187521426,
+            "multi_over_single": 2.3812535940195514
+          },
+          {
+            "name": "Object Detection",
+            "single_core": 3123,
+            "multi_core": 6759,
+            "single_vs_before": 3.428100987925357,
+            "multi_vs_before": 4.224375,
+            "multi_over_single": 2.164265129682997
+          },
+          {
+            "name": "Background Blur",
+            "single_core": 3409,
+            "multi_core": 7442,
+            "single_vs_before": 1.6202471482889733,
+            "multi_vs_before": 1.8253617856266864,
+            "multi_over_single": 2.1830448811968317
+          },
+          {
+            "name": "Horizon Detection",
+            "single_core": 3906,
+            "multi_core": 9780,
+            "single_vs_before": 1.0469043151969981,
+            "multi_vs_before": 1.6237755271459406,
+            "multi_over_single": 2.50384024577573
+          },
+          {
+            "name": "Object Remover",
+            "single_core": 4566,
+            "multi_core": 11124,
+            "single_vs_before": 1.041514598540146,
+            "multi_vs_before": 1.0585212674850129,
+            "multi_over_single": 2.436268068331143
+          },
+          {
+            "name": "HDR",
+            "single_core": 3648,
+            "multi_core": 5580,
+            "single_vs_before": 1.2139767054908486,
+            "multi_vs_before": 2.1695178849144634,
+            "multi_over_single": 1.5296052631578947
+          },
+          {
+            "name": "Photo Filter",
+            "single_core": 2143,
+            "multi_core": 1927,
+            "single_vs_before": 2.2230290456431536,
+            "multi_vs_before": 6.785211267605634,
+            "multi_over_single": 0.8992067195520299
+          },
+          {
+            "name": "Ray Tracer",
+            "single_core": 3638,
+            "multi_core": 11060,
+            "single_vs_before": 1.0038631346578366,
+            "multi_vs_before": 1.2746340901233144,
+            "multi_over_single": 3.040131940626718
+          },
+          {
+            "name": "Structure from Motion",
+            "single_core": 3757,
+            "multi_core": 7820,
+            "single_vs_before": 1.3848138591964614,
+            "multi_vs_before": 1.233827705900915,
+            "multi_over_single": 2.081447963800905
+          }
+        ],
+        "comparison": {
+          "same_guest_slots_and_budget": true,
+          "single_vs_before": 1.3267244940107394,
+          "multi_vs_before": 1.7377459749552773,
+          "wall_vs_before": 0.7891996285823133,
+          "multi_over_single": 1.5121419676214196,
+          "native_single_ratio": 0.7492418940984371,
+          "native_multi_ratio": 0.260904598195101,
+          "native_multi_is_equal_core_comparison": false
+        }
+      }
+    ],
+    "interval_and_sendmmsg_followup": {
+      "code_mac": "36d62f8369b9f0e201f46a70542108fed38514f4",
+      "code_runtime": "773083005cb5553aaaa400278c4f53192f27a548",
+      "changes": [
+        "Bound hardware invalidation history by coalesced intervals rather than VMA page count",
+        "Intersect each interval with cached PTEs and remove redundant full ordered-set construction",
+        "Implement sendmmsg through existing sendmsg admission with partial counts, length-fault side effects and SIGPIPE propagation",
+        "Keep syscall restart, per-call nonblocking and socket write parking for sendmmsg"
+      ],
+      "validation": {
+        "baseline_full_linux_ci_runtime": "3440534db8ae8594aacd39faab44e70f7eec6bb1",
+        "baseline_full_linux_ci_steps": 81,
+        "affected_followup_checks": "Common runtime lints/tests on macOS and ARM64 Linux; Linux/session signal follow-up; Mac workflow and signed hardware; iPad host/device/simulator checks",
+        "signed_hvf_tests": 26,
+        "signed_pressure_tests": 1,
+        "native_linux_sendmmsg_peer": {
+          "passed": true,
+          "native_guest_equal": true,
+          "cpus": [
+            1,
+            4
+          ],
+          "fixture_sha256": "bbc8b1a74c38b1cdc7eaaa6fd8d5db3d63ad151d475791b91faf1c7860b1ec41"
+        },
+        "hvf_sendmmsg_peer": {
+          "passed": true,
+          "runner_sha256": "f24695cf82e56dbbbe2609a405e0fea4e492b39c4249da3f62d9953fc011cd46",
+          "rows": [
+            {
+              "cpus": 1,
+              "passed": true
+            },
+            {
+              "cpus": 4,
+              "passed": true
+            }
+          ]
+        },
+        "unused_large_vma": "32MiB map/unmap inspects no unrelated cached PTE; actual one-page protection change inspects one",
+        "original_glibc_dns": "getent ahosts and ahostsv4 both succeed; trace sendmmsg returns 2, no benchmark hosts record"
+      },
+      "scope_reuse": "The interval journal is unused by software Views; existing socket syscall branches are unchanged. The earlier full workflow results are retained, with affected follow-up checks listed separately."
+    }
   }
 }

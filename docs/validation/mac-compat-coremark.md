@@ -273,3 +273,145 @@ case.
 [Filtered scores, provenance, hashes and diagnostics](mac-geekbench.json).
 The previous code-validation results remain applicable because this checkpoint
 changes only benchmark records and documentation.
+
+
+## Demand allocation and compatibility follow-up (2026-10-28)
+
+Mac source `017db6c` and runtime `3440534` replace the mapped-length RAM limit
+with demand accounting. An unused VMA, mprotect, snapshot or futex metadata query
+does not load file bytes or consume guest RAM quota. Actual file access and
+hardware physical slots pay per reached page. Accessible descriptors still have
+a separate 16 GiB representation ceiling and consume host metadata. Fork/COW
+accounting remains conservative per VM rather than unique physical RSS/PSS.
+
+The [backend contract](../architecture/execution-backends.md#physical-paging)
+describes anonymous VM arenas, native-pager reclamation and counter semantics.
+It removes checked disk preallocation and synchronous MS_SYNC from ordinary
+RAM allocation/eviction. Per-space GPA indexes replace linear table ownership
+searches. Migrating workers fill PTEs only from already resident, paid hardware
+owners; untouched neighboring VMAs are not prefaulted or charged.
+
+The exact local Linux workflow passed all 81 steps, reusing 21 matching passes.
+Both runtime platform workflows, Mac CI, 780 common runtime macOS tests, 256 iPad
+host tests, device/simulator Rust target checks, 25 signed HVF tests and the
+signed application pressure test passed. The real 64 MiB paging/atomics/COW
+fixture passed at 1/4 slots; its 16 MiB working-set run sampled about 48 MiB lower
+RSS than the default run. Native-pager hints do not promise immediate RSS drops.
+
+### Fixed working-set comparison
+
+Three alternating repeats, 512 MiB, median milliseconds. Firefox and the local
+Linux CI VM were stopped; no builds or samplers ran. Ordinary desktop apps
+remained. Each page receives one 64-bit store, followed by eight checked read
+passes. These are memory/translation phase timings, not general application or
+CPU-throughput scores.
+
+| Slots | First touch, before | First touch, after | Reuse, before | Reuse, after |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 445.059 | 350.341 | 5.268 | 12.890 |
+| 4 | 488.241 | 321.357 | 108.968 | 24.930 |
+| 12 | 505.578 | 353.564 | 68.380 | 54.752 |
+
+Do not hide the short single-slot reuse regression. Extending the same read loop
+from 8 to 800 passes gives 408.044 ms before and 413.934 ms after (1.4% slower).
+The extra 792 passes cost about 0.51 ms/pass in either build, suggesting a fixed
+phase/translation cost rather than a twofold steady-state memory slowdown. This
+is an inference from timing, not an isolated stack attribution.
+
+Reproduce with static AArch64-musl builds of `tests/fixtures/working-set.c` and
+`tests/fixtures/cpu-features.c`, then run:
+
+```sh
+python3 tests/integration/mac-memory-compat.py \
+  --runner target/release/trames-mac-run \
+  --features /path/to/cpu-features --working-set /path/to/working-set \
+  --mib 512 --repeats 3 --output target/memory-compat
+```
+
+### CPU and glibc DNS compatibility
+
+HVF's configuration registers now supply runtime HWCAP/HWCAP2. This machine
+reports `0x9017fb`/`0x6000`; real instructions validate AES, PMULL, SHA1/SHA2,
+CRC32, LSE, FP16, RDM, dot-product, FHM, I8MM and BF16. SVE/SME and other
+unsaved architectural state remain absent. The shared interface keeps the
+interpreter/iPad's conservative default capabilities.
+
+The original Ubuntu glibc getent now resolves the Geekbench domain through DNS,
+with the earlier benchmark-only hosts record removed. Native sockets support a
+scoped IP_RECVERR state for the runtime's system-DNS endpoint. Its error queue is
+empty and MSG_ERRQUEUE returns EAGAIN without consuming queued DNS replies; the
+session treats it as nonblocking. This is not general Linux ICMP error-queue
+emulation: enabling it for non-DNS native UDP is rejected. DNS option/reply and
+non-DNS rejection tests cover this boundary.
+
+
+### Interval history and the complete DNS query path
+
+The first-batch 12-slot/4096 MiB run completed all 32 workloads in 943.88 seconds,
+then exited 255 during upload: libcurl could not resolve the result server.
+One second of private thread-stack sampling was taken during its slow multi-core
+portion; this is a diagnostic run, not a clean score. It produced no public score.
+A point ps observation reported 9,499,424 KiB RSS and sample reported 7.8G
+footprint. These host totals include metadata/aliases and are not a measurement
+of unique guest physical pages. The 4 GiB guest setting remains a logical budget.
+
+Sampling showed repeated full cached-PTE address-set construction and per-page
+hardware-info checks. Source inspection found a concrete amplification: a change
+larger than 4096 pages discarded hardware history, forcing every worker to scan
+its full retained page table. Runtime `7730830` and Mac `36d62f8` use coalesced
+interval history and intersect it with each worker's cached leaves. A 32 MiB
+unused-VMA regression now checks zero unrelated leaf inspections; a real one-page
+permission change still checks that page. Full reconciliation remains correct
+when bounded history actually expires.
+
+The upload failure exposed a second missing ABI operation: glibc's parallel
+A/AAAA resolver uses **sendmmsg**, while IPv4-only getent uses sendto. Syscall 269
+was returning ENOSYS. It now uses the existing sendmsg socket/memory path, returns
+partial message counts, preserves post-send msg_len faults and SIGPIPE, and uses
+the scheduler's existing blocking/restart/write-readiness paths. See the
+[Linux implementation](https://github.com/torvalds/linux/blob/v6.12/net/socket.c).
+Original glibc `getent ahosts` and `ahostsv4` now both succeed with no benchmark
+hosts entry; the syscall trace records two messages sent successfully.
+
+`runtime/tests/fixtures/sendmmsg.c` invokes the raw syscall so libc's own emulation
+cannot bypass the test. Its datagrams, partial completion, output faults,
+SIGPIPE/MSG_NOSIGNAL and zero-length FD validation match native Linux at 1/4
+interpreter workers and also pass at 1/4 signed HVF slots. Mac signed acceptance
+now has 26 HVF tests plus one application pressure test. Affected Linux/session,
+macOS runtime/Mac, and iPad host/device/simulator checks passed. The earlier
+81-step full Linux workflow is retained as the baseline; unchanged scopes were
+reused rather than rerunning unrelated CPU/network/graphics acceptance.
+
+
+### Clean four-slot result after the follow-up
+
+[The complete final four-slot result](https://browser.geekbench.com/v6/cpu/19402105)
+is Geekbench 6.7.1 Preview with the original benchmark/data, 4096 MiB and four
+slots, source `36d62f8` / runtime `7730830`. It exited zero and uploaded normally
+through real dual-stack glibc DNS. Firefox and the CI VM were stopped; no builds,
+stack samplers or tracing ran. Thermal state stayed nominal and low-power mode
+off before/after. Ordinary desktop apps remained. This is one completed run per
+variant, not a statistically established distribution.
+
+| Metric | Before | After | Change |
+| --- | ---: | ---: | ---: |
+| Single-core score | 2421 | 3212 | +32.7% |
+| Four-slot multi-core score | 2795 | 4857 | +73.8% |
+| Complete run wall time | 462.30 s | 364.84 s | -21.1% |
+| Multi/single ratio | 1.15x | 1.51x | Scaling still limited |
+| PDF Renderer multi-core | 1009 | 3196 | 3.17x |
+| Object Detection multi-core | 1600 | 6759 | 4.22x |
+| Photo Filter multi-core | 284 | 1927 | 6.79x |
+
+Not every component improved: single-core Clang changed 4664 to 4376 and Asset
+Compression 3560 to 3478. Single-run variation and the bundled memory/capability
+changes prevent attributing these differences, or the gains, to one mechanism.
+The filtered JSON retains all 16 before/after component comparisons.
+
+The single-core total is 74.9% of the earlier 4287 native 6.7.1 result. Native
+multi-core used all 12 host cores, so its 18616 is not an equal-core overhead
+comparison with this four-slot run. PDF, Photo Library, Text Processing and
+Photo Filter still score lower in multi-core than single-core within Trames.
+Do not call SMP scaling solved or infer whole-application native performance
+from the former near-native CoreMark loop. Dense guest/snapshot/PTE metadata and
+conservative fork accounting remain material memory/performance work.
