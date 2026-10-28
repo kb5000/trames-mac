@@ -151,6 +151,19 @@ ended. Reuse ends that state before publication and zeroes newly assigned 4 KiB
 slots. The last physical owner unmaps the entire arena. Explicit shared-file
 imports retain their original owner and alias geometry.
 
+Each anonymous arena reserves one linear IPA address range with the same offset
+geometry as its host VA range. This reserves addresses only. Page tables and
+shared imports use a separate granule-size address pool, so their allocations
+cannot interleave holes throughout a live data arena. Unused IPA slots have no
+HVF mapping or physical RAM. Each reached 16 KiB granule still maps/unmaps on
+demand, with the same byte owner, pressure gate and final reclamation. The arena
+returns its entire address reservation only after the last contained Physical
+has withdrawn HVF; weak VM identity prevents returning it into a replacement VM.
+The signed test interleaves 256 page-table allocations with data growth, verifies
+linear private GPAs, one-granule initial RAM, zero retained RAM after release and
+address-only arena reuse. Mapping operations remain per used host granule; this
+is not eager VMA population or a cache of free wired pages.
+
 Reclamation withdraws the stage-two mapping and uses Darwin MADV_DONTNEED to
 deactivate residency while retaining live contents at the same host address.
 Darwin maps this hint to VM_SYNC_DEACTIVATE, without VM_SYNC_KILLPAGES; it must

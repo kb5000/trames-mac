@@ -85,7 +85,7 @@ struct machine {
     pthread_mutex_t addresses;
     uint64_t next_gpa;
     bool asids[256];
-    struct free_gpa *free_gpas;
+    struct free_gpa *free_gpas[2];
 };
 struct address_space {
     struct table *tables;
@@ -117,23 +117,29 @@ static void *anonymous(size_t length) {
     void *p = mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     return p == MAP_FAILED ? NULL : p;
 }
-uint64_t trames_hvf_reserve(struct machine *m) {
+// Separate address-only pools prevent page tables/imports from scattering data
+// arena geometry. Reserving an IPA range allocates no host/guest physical RAM.
+static uint64_t reserve_gpa(struct machine *m, unsigned pool, size_t length) {
     pthread_mutex_lock(&m->addresses);
-    struct free_gpa *entry=m->free_gpas;
+    struct free_gpa *entry=m->free_gpas[pool];
     uint64_t gpa;
-    if (entry) { gpa=entry->value; m->free_gpas=entry->next; free(entry); }
-    else { gpa=m->next_gpa; m->next_gpa+=m->granule; }
+    if (entry) { gpa=entry->value; m->free_gpas[pool]=entry->next; free(entry); }
+    else { gpa=m->next_gpa; m->next_gpa+=length; }
     pthread_mutex_unlock(&m->addresses);
     return gpa;
 }
-void trames_hvf_release(struct machine *m, uint64_t gpa) {
+static void release_gpa(struct machine *m, uint64_t gpa, unsigned pool) {
     struct free_gpa *entry=malloc(sizeof(*entry));
     if (!entry) return; // A lost address slot cannot invalidate live RAM.
     entry->value=gpa;
     pthread_mutex_lock(&m->addresses);
-    entry->next=m->free_gpas; m->free_gpas=entry;
+    entry->next=m->free_gpas[pool]; m->free_gpas[pool]=entry;
     pthread_mutex_unlock(&m->addresses);
 }
+uint64_t trames_hvf_reserve(struct machine *m) { return reserve_gpa(m,0,m->granule); }
+void trames_hvf_release(struct machine *m, uint64_t gpa) { release_gpa(m,gpa,0); }
+uint64_t trames_hvf_reserve_arena(struct machine *m, size_t length) { return reserve_gpa(m,1,length); }
+void trames_hvf_release_arena(struct machine *m, uint64_t gpa) { release_gpa(m,gpa,1); }
 // A vCPU alone owns its address spaces. This index is metadata for cold page
 // installation/removal, not a lock or another guest memory-consistency layer.
 static size_t table_bucket(uint64_t gpa, size_t granule, size_t capacity) {
@@ -312,7 +318,8 @@ void trames_hvf_vm_destroy(struct machine *m) {
     if (!m) return;
     if (m->vectors) { hv_vm_unmap(VECTOR_GPA,m->granule); munmap(m->vectors,m->granule); }
     hv_vm_destroy();
-    while (m->free_gpas) { struct free_gpa *p=m->free_gpas; m->free_gpas=p->next; free(p); }
+    for (unsigned pool=0;pool<2;pool++)
+        while (m->free_gpas[pool]) { struct free_gpa *p=m->free_gpas[pool]; m->free_gpas[pool]=p->next; free(p); }
     pthread_mutex_destroy(&m->addresses); free(m);
 }
 struct machine *trames_hvf_vm_create(int *error) {

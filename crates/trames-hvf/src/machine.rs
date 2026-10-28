@@ -16,6 +16,8 @@ unsafe extern "C" {
     fn trames_hvf_cpu_destroy(cpu: *mut c_void);
     fn trames_hvf_reserve(vm: *mut c_void) -> u64;
     fn trames_hvf_release(vm: *mut c_void, gpa: u64);
+    fn trames_hvf_reserve_arena(vm: *mut c_void, length: usize) -> u64;
+    fn trames_hvf_release_arena(vm: *mut c_void, gpa: u64);
     fn trames_hvf_protect(gpa: u64, length: usize, flags: u32) -> i32;
 }
 static MACHINE: Mutex<Option<Weak<Machine>>> = Mutex::new(None);
@@ -145,15 +147,12 @@ impl Machine {
             } else {
                 let arena = self.allocate_arena()?;
                 let ptr = arena.pointer();
-                let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
+                let gpa = arena.physical_address();
                 #[cfg(feature = "diagnostics")]
                 let measured = diagnostics::start(diagnostics::Work::Map);
-                if let Err(e) = check(unsafe {
+                check(unsafe {
                     trames_hvf_map(std::ptr::null_mut(), ptr.cast(), gpa, self.granule)
-                }) {
-                    unsafe { trames_hvf_release(self.pointer.as_ptr(), gpa) };
-                    return Err(e);
-                }
+                })?;
                 #[cfg(feature = "diagnostics")]
                 diagnostics::end(diagnostics::Work::Map, measured);
                 self.backing
@@ -239,6 +238,8 @@ impl Machine {
                     }
                     break Arc::new(Arena {
                         pointer: NonNull::new(pointer.cast()).unwrap(),
+                        gpa: unsafe { trames_hvf_reserve_arena(self.pointer.as_ptr(), ARENA_LEN) },
+                        machine: Arc::downgrade(self),
                         free: AtomicU64::new(u64::MAX),
                         reusable: AtomicU64::new(0),
                     });
@@ -497,6 +498,8 @@ impl Drop for Machine {
 // complete arena; freed groups in a partly live arena return to the OS pager.
 struct Arena {
     pointer: NonNull<u8>,
+    gpa: u64,
+    machine: Weak<Machine>,
     free: AtomicU64,
     reusable: AtomicU64,
 }
@@ -507,6 +510,11 @@ unsafe impl Sync for Arena {}
 impl Drop for Arena {
     fn drop(&mut self) {
         unsafe { libc::munmap(self.pointer.as_ptr().cast(), ARENA_LEN) };
+        // Every contained Physical has already withdrawn its stage-two map.
+        // A weak VM identity cannot return addresses into a replacement VM.
+        if let Some(machine) = self.machine.upgrade() {
+            unsafe { trames_hvf_release_arena(machine.pointer.as_ptr(), self.gpa) };
+        }
     }
 }
 struct ArenaSlot {
@@ -515,6 +523,9 @@ struct ArenaSlot {
     machine: Weak<Machine>,
 }
 impl ArenaSlot {
+    fn physical_address(&self) -> u64 {
+        self.arena.gpa + self.index as u64 * 4 * PAGE_SIZE
+    }
     fn pointer(&self) -> *mut u8 {
         self.arena
             .pointer
@@ -602,9 +613,11 @@ impl Drop for Physical {
                 diagnostics::end(diagnostics::Work::Unmap, measured);
                 vm.mapped.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
-            unsafe {
-                trames_hvf_release(vm.pointer.as_ptr(), self.gpa);
+            if self.external.is_some() {
+                unsafe { trames_hvf_release(vm.pointer.as_ptr(), self.gpa) };
             }
+            // Private addresses belong to the containing arena until its last
+            // granule retires. Unused IPA slots never map or wire host memory.
             if self.external.is_none() {
                 vm.backing.fetch_sub(self.length as u64, Ordering::Relaxed);
             }

@@ -1163,3 +1163,35 @@ fn late_worker_revalidates_only_changed_chunks_after_journal_expiry() {
     );
     assert!(memory.resident_bytes() <= resident);
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn private_arena_addresses_stay_linear_across_table_growth_and_release_without_ram_cache() {
+    let executor = Executor::new().unwrap();
+    let machine = executor.machine.clone();
+    let mut pages = Vec::new();
+    let mut base = 0;
+    for index in 0..256u64 {
+        let page = machine.allocate(None).unwrap();
+        if index == 0 {
+            base = page.physical_address();
+            assert_eq!(machine.stats().mapped_bytes, 16384);
+            assert_eq!(machine.stats().backing_bytes, 16384);
+        }
+        assert_eq!(page.physical_address(), base + index * PAGE_SIZE);
+        // Each leaf allocates new page tables from the independent 16KiB pool.
+        executor
+            .pte(0x100000000 + index * (2 << 20), page.physical_address(), 3)
+            .unwrap();
+        pages.push(page);
+    }
+    for index in 0..256u64 {
+        executor.pte(0x100000000 + index * (2 << 20), 0, 0).unwrap();
+    }
+    drop(pages);
+    assert_eq!(machine.stats().mapped_bytes, 0);
+    assert_eq!(machine.stats().backing_bytes, 0);
+    let reused = machine.allocate(None).unwrap();
+    assert_eq!(reused.physical_address(), base);
+    assert_eq!(machine.stats().mapped_bytes, 16384);
+}
