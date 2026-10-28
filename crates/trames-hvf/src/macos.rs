@@ -46,6 +46,7 @@ unsafe extern "C" {
         host: *mut c_void,
         state: *mut Aarch64State,
         nanos: u64,
+        continue_fault: bool,
         result: *mut HostExit,
     ) -> i32;
 }
@@ -103,6 +104,9 @@ pub struct RegisterStats {
     pub invalidations: u64,
     pub full_invalidations: u64,
     pub restore_interruptions: u64,
+    pub fault_continuations: u64,
+    pub timer_programs: u64,
+    pub publications: u64,
 }
 #[derive(Debug)]
 pub enum Error {
@@ -510,6 +514,15 @@ impl Executor {
         } else {
             Access::Read
         };
+        #[cfg(feature = "diagnostics")]
+        diagnostics::count(
+            match access {
+                Access::Write => diagnostics::Count::FaultWrite,
+                Access::Read => diagnostics::Count::FaultRead,
+                Access::Execute => diagnostics::Count::FaultExecute,
+            },
+            1,
+        );
         if !(4..=15).contains(&status) {
             return Err(Error::Fault {
                 pc: event.pc,
@@ -532,6 +545,15 @@ impl Executor {
                 access,
                 |bytes| {
                     created.set(true);
+                    #[cfg(feature = "diagnostics")]
+                    diagnostics::count(
+                        if bytes.is_none() {
+                            diagnostics::Count::AllocateZero
+                        } else {
+                            diagnostics::Count::AllocateCopy
+                        },
+                        1,
+                    );
                     self.machine.allocate(bytes).map_err(|error| {
                         allocation_error.set(Some(error));
                         MemoryError::BackingIo(5)
@@ -539,6 +561,8 @@ impl Executor {
                 },
                 |mapping| {
                     created.set(true);
+                    #[cfg(feature = "diagnostics")]
+                    diagnostics::count(diagnostics::Count::ImportStorage, 1);
                     self.machine.import(mapping).map_err(|error| {
                         allocation_error.set(Some(error));
                         MemoryError::BackingIo(5)
@@ -548,6 +572,15 @@ impl Executor {
         };
         let (storage, info) =
             exported.map_err(|error| allocation_error.take().unwrap_or(Error::Memory(error)))?;
+        #[cfg(feature = "diagnostics")]
+        diagnostics::count(
+            if created.get() {
+                diagnostics::Count::FaultNewStorage
+            } else {
+                diagnostics::Count::FaultRetainedStorage
+            },
+            1,
+        );
         self.install_page(memory, va, &storage, info)?;
         if !created.get() {
             // A migrated task already has canonical RAM. Fill only retained
@@ -562,6 +595,8 @@ impl Executor {
                 if let Some((storage, info)) = memory.retained_hardware_page(address) {
                     if info.permissions.read {
                         self.install_page(memory, address, &storage, info)?;
+                        #[cfg(feature = "diagnostics")]
+                        diagnostics::count(diagnostics::Count::NeighborInstall, 1);
                     }
                 }
             }
@@ -650,6 +685,7 @@ impl Executor {
         self.wait = None;
         self.synchronize_view(memory)?;
         let deadline = std::time::Instant::now() + quantum;
+        let mut continue_fault = false;
         loop {
             let mut event = HostExit::default();
             let left = deadline.saturating_duration_since(std::time::Instant::now());
@@ -668,11 +704,13 @@ impl Executor {
                     self.host.as_ptr(),
                     state,
                     left.as_nanos().min(100_000_000) as u64,
+                    continue_fault,
                     &mut event,
                 )
             })?;
             #[cfg(feature = "diagnostics")]
             diagnostics::end(diagnostics::Work::Run, measured);
+            continue_fault = false;
             match event.kind {
                 0 | 1 => {
                     return Ok(ExecutionExit {
@@ -688,6 +726,9 @@ impl Executor {
                     #[cfg(feature = "diagnostics")]
                     let measured = diagnostics::start(diagnostics::Work::Fault);
                     self.fault(memory, &event)?;
+                    // This handler edits memory/PTEs, never the saved EL0 bank.
+                    // Reuse the EL1 context and the slice's absolute timer.
+                    continue_fault = true;
                     #[cfg(feature = "diagnostics")]
                     diagnostics::end(diagnostics::Work::Fault, measured);
                 }

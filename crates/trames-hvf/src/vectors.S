@@ -14,15 +14,17 @@ _trames_hvf_vectors_begin:
 _trames_hvf_tlbi_begin:
     ldr x0, [sp, #840]
     cbz x0, _trames_hvf_resume_begin
-    ldr x1, [sp, #848]
     dsb ishst
+    cmp x0, #3
+    b.eq 3f
+    ldr x1, [sp, #848]
     cmp x0, #1
     b.ne 1f
     tlbi vae1is, x1
     b 2f
 1:  tlbi aside1is, x1
 2:  dsb ish
-    isb
+3:  isb
     str xzr, [sp, #840]
     b _trames_hvf_resume_begin
 _trames_hvf_tlbi_end:

@@ -77,7 +77,7 @@ _Static_assert(offsetof(struct context, complete) == 832, "adapter completion of
 _Static_assert(offsetof(struct context, invalidate) == 840, "adapter invalidation mode");
 _Static_assert(offsetof(struct context, operand) == 848, "adapter invalidation operand");
 struct result { uint64_t kind, syndrome, address, pc; };
-struct register_stats { uint64_t mailbox, fallback, completions, entries, invalidations, full_invalidations, restore_interruptions; };
+struct register_stats { uint64_t mailbox, fallback, completions, entries, invalidations, full_invalidations, restore_interruptions, fault_continuations, timer_programs, publications; };
 struct table { void *memory; uint64_t gpa; struct table *next, *previous, *indexed; };
 struct free_gpa { uint64_t value; struct free_gpa *next; };
 struct machine {
@@ -101,7 +101,8 @@ struct host {
     unsigned asid;
     hv_vcpu_t cpu;
     hv_vcpu_exit_t *exit;
-    bool cpu_created, tlb_dirty, tlb_full, context_mapped;
+    bool cpu_created, context_mapped, fault_continuable;
+    enum { MAINTENANCE_NONE, MAINTENANCE_VA, MAINTENANCE_ASID, MAINTENANCE_PUBLISH } maintenance;
     uint64_t tlb_address;
     struct context *context;
     uint64_t context_gpa;
@@ -114,13 +115,18 @@ extern const char trames_hvf_tlbi_begin[], trames_hvf_tlbi_end[];
 extern const char trames_hvf_resume_begin[], trames_hvf_resume_end[];
 extern const char trames_hvf_save_begin[], trames_hvf_save_end[];
 // Creator-thread page-table maintenance, not guest byte synchronization. A
-// single leaf edit invalidates that VA (all levels); root/table structure and
-// multiple different leaves retain a full-ASID invalidation.
-static void dirty_all(struct host *h) { h->tlb_dirty=true; h->tlb_full=true; }
+// existing leaf edit invalidates that VA (all levels); root changes, table
+// withdrawal and multiple different leaves retain full-ASID invalidation.
+static void dirty_all(struct host *h) { h->maintenance=MAINTENANCE_ASID; }
+static void publish_tables(struct host *h) {
+    // Translation faults cannot be cached. New invalid->valid descriptors need
+    // publication, not TLBI; never weaken pending removal/root invalidation.
+    if (h->maintenance==MAINTENANCE_NONE) h->maintenance=MAINTENANCE_PUBLISH;
+}
 static void dirty_page(struct host *h, uint64_t va) {
-    if (!h->tlb_dirty) { h->tlb_address=va; h->tlb_full=false; }
-    else if (h->tlb_address!=va) h->tlb_full=true;
-    h->tlb_dirty=true;
+    if (h->maintenance==MAINTENANCE_NONE || h->maintenance==MAINTENANCE_PUBLISH) {
+        h->tlb_address=va; h->maintenance=MAINTENANCE_VA;
+    } else if (h->maintenance==MAINTENANCE_VA && h->tlb_address!=va) dirty_all(h);
 }
 static uint64_t ticks(void) { uint64_t n; __asm__ volatile("mrs %0,cntpct_el0":"=r"(n)); return n; }
 static uint64_t frequency(void) { uint64_t n; __asm__ volatile("mrs %0,cntfrq_el0":"=r"(n)); return n; }
@@ -207,7 +213,7 @@ static uint64_t *new_table(struct host *h, uint64_t *gpa) {
     h->space->tables=t;
     size_t bucket=table_bucket(t->gpa,h->granule,h->space->capacity);
     t->indexed=h->space->index[bucket]; h->space->index[bucket]=t;
-    h->space->count++; *gpa=t->gpa; dirty_all(h);
+    h->space->count++; *gpa=t->gpa; publish_tables(h);
     return t->memory;
 }
 static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
@@ -259,7 +265,10 @@ int trames_hvf_page(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
     uint64_t descriptor=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
     if (!(flags&4) || !(flags&8)) descriptor|=UINT64_C(1)<<53;
     if (!(flags&4) || (flags&8)) descriptor|=UINT64_C(1)<<54;
-    if (*p!=descriptor) { *p=descriptor; dirty_page(h,va); }
+    if (*p!=descriptor) {
+        bool valid=(*p&1)!=0; *p=descriptor;
+        if (valid) dirty_page(h,va); else publish_tables(h);
+    }
     return 0;
 }
 
@@ -396,6 +405,9 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
         // Match Linux: EL0 may read CNTVCT/CNTFRQ, but cannot control timers.
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTKCTL_EL1,1<<1)) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)))) goto fail;
+    // A new executor may reuse an old ASID; its first selected root still
+    // needs full invalidation even though its individual tables are all new.
+    dirty_all(h);
     *error=0; return h;
 fail:
     if (!*error) *error=-1;
@@ -429,6 +441,7 @@ static int context_result(struct host *h, struct state *s, struct result *out) {
     out->syndrome=h->context->syndrome; out->address=h->context->address; out->pc=s->pc;
     unsigned ec=(unsigned)(out->syndrome>>26);
     out->kind=ec==0x15 ? 1 : (ec==0x20 || ec==0x24) ? 2 : 3;
+    h->fault_continuable=out->kind==2;
     h->registers.mailbox++; return 0;
 }
 static bool in_save(uint64_t pc) {
@@ -493,25 +506,41 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
     out->pc=s->pc; h->registers.fallback++; return 0;
 }
 void trames_hvf_register_stats(struct host *h, struct register_stats *out) { *out=h->registers; }
-int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct result *out) {
+int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds,
+                    bool continue_fault, struct result *out) {
     hv_return_t e;
-    // The regular restore entry performs pending TLBI before EL0. No separate
-    // hypervisor entry/HVC is needed. The context marker clears only after the
-    // original DSB/TLBI/DSB/ISB sequence; interrupted restore can safely retry.
-    h->context->invalidate=h->tlb_dirty ? (h->tlb_full ? 2 : 1) : 0;
-    h->context->operand=((uint64_t)h->asid<<48)|(h->tlb_full ? 0 : h->tlb_address>>12);
-    memcpy(&h->context->state,s,sizeof(*s)); h->context->complete=0;
-    if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
-        (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
-        (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CVAL_EL0,ticks()+nanoseconds*frequency()/UINT64_C(1000000000))) ||
-        (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CTL_EL0,1)) ||
+    // Only the immediate EL1 fault handler can reuse this paused context. EL0
+    // state is unchanged by that handler; mapping edits only affect the prelude.
+    // Ordinary task/root changes always take the complete input-state path.
+    if (continue_fault && !h->fault_continuable) return -2;
+    h->fault_continuable=false;
+    // The regular restore entry publishes fresh descriptors or invalidates old
+    // translations before EL0. Its marker clears only after the required
+    // barriers; interrupted restore can safely retry without another entry.
+    h->context->invalidate=h->maintenance;
+    h->context->operand=((uint64_t)h->asid<<48)|(h->maintenance==MAINTENANCE_ASID ? 0 : h->tlb_address>>12);
+    h->context->complete=0;
+    if (!continue_fault) {
+        memcpy(&h->context->state,s,sizeof(*s));
+        if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
+            (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CVAL_EL0,ticks()+nanoseconds*frequency()/UINT64_C(1000000000))) ||
+            (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CTL_EL0,1))) return (int)e;
+        h->registers.timer_programs++;
+    } else h->registers.fault_continuations++;
+    // HVC left the immediate-fault CPU at EL1. Keep its original absolute timer
+    // deadline, including time spent in the host handler. Unmask even when a
+    // timer/cancellation completion had temporarily masked the adapter.
+    if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
         (e=hv_vcpu_set_vtimer_mask(h->cpu,false))) return (int)e;
     h->registers.entries++;
     if ((e=hv_vcpu_run(h->cpu))) return (int)e;
-    if (h->tlb_dirty && !h->context->invalidate) {
-        h->registers.invalidations++;
-        h->registers.full_invalidations+=h->tlb_full;
-        h->tlb_dirty=false; h->tlb_full=false;
+    if (h->maintenance!=MAINTENANCE_NONE && !h->context->invalidate) {
+        if (h->maintenance==MAINTENANCE_PUBLISH) h->registers.publications++;
+        else {
+            h->registers.invalidations++;
+            h->registers.full_invalidations+=h->maintenance==MAINTENANCE_ASID;
+        }
+        h->maintenance=MAINTENANCE_NONE;
     }
     bool exception=h->exit->reason==HV_EXIT_REASON_EXCEPTION;
     return finish_run(h,s,out,h->exit->reason,exception ? h->exit->exception.syndrome : 0,
@@ -559,7 +588,7 @@ void trames_hvf_inject_pressure_for_test(unsigned bits) {
 // exit record is modified. Unreferenced by the product entry point.
 int trames_hvf_test_interrupted_context(struct host *h, struct state *s,
                                        struct result *out, unsigned phase) {
-    if (phase>7 || h->tlb_dirty) return -2;
+    if (phase>8 || h->maintenance!=MAINTENANCE_NONE) return -2;
     hv_return_t e;
     memcpy(&h->context->state,s,sizeof(*s));
     h->context->syndrome=UINT64_C(0x56000000); h->context->address=0x1234;
@@ -575,8 +604,9 @@ int trames_hvf_test_interrupted_context(struct host *h, struct state *s,
         phase==5 ? VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin)-4 :
         phase==6 ? VECTOR_VA+0x800 : VECTOR_VA+0x828;
     if (phase>=6) {
-        h->tlb_dirty=true; h->tlb_full=phase==7; h->tlb_address=s->pc;
-        h->context->invalidate=phase==7 ? 2 : 1;
+        h->maintenance=phase==7 ? MAINTENANCE_ASID : phase==8 ? MAINTENANCE_PUBLISH : MAINTENANCE_VA;
+        h->tlb_address=s->pc;
+        h->context->invalidate=h->maintenance;
         h->context->operand=((uint64_t)h->asid<<48)|(phase==7 ? 0 : s->pc>>12);
     }
     if (phase==3) {

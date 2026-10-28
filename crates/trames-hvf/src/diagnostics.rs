@@ -28,9 +28,18 @@ pub(super) enum Count {
     RootSwitch,
     PeakLeaves,
     ChunkChecks,
+    FaultNewStorage,
+    FaultRetainedStorage,
+    NeighborInstall,
+    FaultWrite,
+    FaultRead,
+    FaultExecute,
+    AllocateZero,
+    AllocateCopy,
+    ImportStorage,
 }
 const WORKS: usize = 9;
-const COUNTS: usize = 9;
+const COUNTS: usize = 18;
 pub(super) struct Stamp {
     wall: Instant,
     cpu: Option<u64>,

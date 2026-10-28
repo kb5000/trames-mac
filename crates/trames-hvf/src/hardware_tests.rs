@@ -853,7 +853,7 @@ fn interrupted_context_save_and_restore_keep_the_complete_continuation() {
     let mut e = Executor::new().unwrap();
     let mut memory = context_memory(0xd4000001);
     svc(&mut e, &mut state(), &mut memory); // install tables and finish TLBI
-    for phase in 0..8 {
+    for phase in 0..9 {
         let mut cpu = patterned_state(u64::from(phase));
         cpu.pc += 4;
         let expected = cpu.clone();
@@ -1205,11 +1205,15 @@ fn private_arena_addresses_stay_linear_across_table_growth_and_release_without_r
 
 #[test]
 #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
-fn single_leaf_faults_flush_only_their_va_in_the_regular_restore_entry() {
+fn fresh_leaves_and_table_branches_publish_without_tlb_invalidation() {
     let mut memory = memory();
     memory
         .map(0x40000, 64 * PAGE_SIZE, Permissions::RW)
         .unwrap();
+    let branches = [0x200000, 0x40000000, 0x8000000000];
+    for &address in &branches {
+        memory.map(address, PAGE_SIZE, Permissions::RW).unwrap();
+    }
     let mut executor = Executor::new().unwrap();
     svc(&mut executor, &mut state(), &mut memory);
     let before = executor.register_stats();
@@ -1219,8 +1223,15 @@ fn single_leaf_faults_flush_only_their_va_in_the_regular_restore_entry() {
         svc(&mut executor, &mut cpu, &mut memory);
         assert_eq!(cpu.registers[1], 1);
     }
+    for &address in &branches {
+        let mut cpu = state();
+        cpu.registers[0] = address;
+        svc(&mut executor, &mut cpu, &mut memory);
+        assert_eq!(cpu.registers[1], 1);
+    }
     let after = executor.register_stats();
-    assert!(after.invalidations > before.invalidations);
+    assert!(after.publications > before.publications);
+    assert_eq!(after.invalidations, before.invalidations);
     assert_eq!(after.full_invalidations, before.full_invalidations);
     assert_eq!(
         after.entries - before.entries,
@@ -1229,5 +1240,51 @@ fn single_leaf_faults_flush_only_their_va_in_the_regular_restore_entry() {
             + after.restore_interruptions
             - before.restore_interruptions,
         "no extra TLB-only hypervisor entries"
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn demand_faults_continue_the_same_timer_and_complete_register_bank() {
+    let mut memory = context_memory(0xd4000001);
+    memory
+        .map(0x40000, 64 * PAGE_SIZE, Permissions::RW)
+        .unwrap();
+    // Each load crosses to a fresh page, then one final SVC. x0 moves through
+    // the range, x1 is zero and x2 counts down; every other GPR/SIMD bit survives.
+    for (i, word) in [
+        0xf9400001u32,
+        0x91400400,
+        0xf1000442,
+        0x54ffffa1,
+        0xd4000001,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        memory.protect(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    let mut executor = Executor::new().unwrap();
+    let mut cpu = patterned_state(42);
+    cpu.registers[0] = 0x40000;
+    cpu.registers[2] = 64;
+    let before = executor.register_stats();
+    let mut expected = cpu.clone();
+    expected.pc += 20;
+    expected.registers[0] += 64 * PAGE_SIZE;
+    expected.registers[1] = 0;
+    expected.registers[2] = 0;
+    expected.nzcv = 0x60000000;
+    svc(&mut executor, &mut cpu, &mut memory);
+    assert_eq!(cpu, expected);
+    let after = executor.register_stats();
+    assert!(after.fault_continuations - before.fault_continuations >= 32);
+    assert!(
+        after.timer_programs - before.timer_programs < 16,
+        "a fresh timer is not programmed for every demand fault: {after:?}"
     );
 }

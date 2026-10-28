@@ -688,8 +688,11 @@ do not add them as independent totals.
 
 `counts` records journal fallback, interval synchronization, inspected cached
 leaves, installed leaves, stage-one faults, retired leaves, root switches, peak
-cached leaves per thread and fallback chunk-stamp checks. Compare cumulative
+cached leaves per thread, fallback chunk-stamp checks, faults exporting new
+storage, faults reusing retained storage, retained-neighbor PTE installations,
+write/read/execute faults, zero/copy allocations and imports. Compare cumulative
 deltas over workload boundaries; sum only final per-thread records for totals.
+Historical diagnostic builds emitted only the first nine counters.
 
 
 ## Host-managed memory and fused translation maintenance
@@ -709,7 +712,7 @@ per-mm dense mapping-descriptor ceiling and conservative fork accounting.
 
 The EL1 restore prelude performs pending translation maintenance before loading
 EL0 state. A single leaf change uses ASID + VA `VAE1IS`; root/intermediate-table
-changes or multiple different leaves use full-ASID `ASIDE1IS`. Both retain the
+withdrawal or multiple different leaves use full-ASID `ASIDE1IS`. Both retain the
 original DSB ISHST / TLBI / DSB ISH / ISB sequence. The completion marker clears
 only after that sequence, so interruption before completion retries maintenance;
 interruption during restore retains the authoritative complete input state.
@@ -723,3 +726,28 @@ restoration, root reuse, permissions, unmap, table reclamation and code stores.
 Hardware admission also persistently disables unused coordinator software CPU
 aliases while preserving cached-byte-pointer invalidation and true fork COW.
 The iPad software alias path and default memory policy remain unchanged.
+
+
+## Immediate demand-fault continuation
+
+An EL1 translation fault saves the complete task state in its private context.
+Its Rust handler only edits memory and page tables. The next iteration in that
+same execution slice therefore reuses the paused EL1 context and original timer
+deadline instead of copying input state, resetting PSTATE and programming two
+timer system registers again. The private handoff must have produced a memory
+fault; task changes, yielded slices and stage-two exits use the full input path.
+The timer is unmasked for continuation even if interrupted-adapter completion
+masked it. Time in the host fault handler still counts against the slice. Every
+exit retains a complete materialized common CPU state.
+
+Fresh invalid-to-valid descriptors require publication, not TLB invalidation:
+translation faults cannot be cached. The restore prelude uses DSB ISHST / ISB for
+this case, including newly created intermediate tables. Valid mapping edits,
+removals and root/ASID reuse retain their required invalidation; publication
+never downgrades pending VA/full-ASID work. See Arm's
+[memory management guide, section 8](https://developer.arm.com/-/media/Arm%20Developer%20Community/PDF/Learn%20the%20Architecture/LearnTheArchitecture-MemoryManagement-101811_0100_00_en.pdf?revision=1fdc3375-d81c-4457-b786-04fb98557de0)
+and the [Trusted Firmware-A design](https://trustedfirmware-a.readthedocs.io/en/latest/components/xlat-tables-lib-v2-design.html).
+There is no eager guest population, new resident charge or ordinary-memory fence.
+Signed tests cover fresh leaf and all table-branch levels without TLBI, pending
+publication interrupted before restore, register preservation through 64 new
+faults, bounded timer programming, permissions, address reuse and root switching.
