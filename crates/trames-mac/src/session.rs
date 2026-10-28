@@ -8,6 +8,7 @@ use trames_session::{MemoryLimits, RuntimeOptions, Terminal};
 type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
+    host_memory_total: Option<usize>,
     deadline: Instant,
     window: Option<(u16, u16)>,
     pressure_target: Option<u64>,
@@ -43,6 +44,9 @@ fn window_size() -> Option<(u16, u16)> {
         .filter(|&(rows, columns)| rows != 0 && columns != 0)
 }
 impl GuestOutput for Output {
+    fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
+        self.host_memory_total.map(super::host_memory::snapshot)
+    }
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         Ok(self.bridge.as_ref().is_some_and(|b| b.stopped())
@@ -196,7 +200,7 @@ impl Command {
         let mut trace = false;
         let mut metrics = false;
         let mut timeout = 86400;
-        let mut limit = 4usize << 30;
+        let mut limit = MemoryLimits::host_managed().total;
         let mut cpus = std::thread::available_parallelism()
             .map_or(1, usize::from)
             .min(8)
@@ -241,12 +245,15 @@ impl Command {
                     );
                 }
                 "--memory-mib" => {
-                    limit = arguments
-                        .next()
-                        .ok_or("missing memory limit")?
-                        .parse::<usize>()?
-                        .checked_mul(1 << 20)
-                        .ok_or("memory limit overflow")?
+                    let value = arguments.next().ok_or("missing memory limit")?;
+                    limit = if value == "auto" {
+                        MemoryLimits::host_managed().total
+                    } else {
+                        value
+                            .parse::<usize>()?
+                            .checked_mul(1 << 20)
+                            .ok_or("memory limit overflow")?
+                    }
                 }
                 "--no-windows" => windows = false,
                 "--vulkan" => vulkan = true,
@@ -256,7 +263,7 @@ impl Command {
                 "--no-pty" => pty = false,
                 "--" => break,
                 "--help" => {
-                    println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to /bin/sh -l with a rootfs.");
+                    println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs.");
                     return Ok(None);
                 }
                 _ => return Err("unknown option".into()),
@@ -393,6 +400,11 @@ pub fn run(
     }
     let _terminal = RawTerminal::enter(pty)?;
     let mut output = Output {
+        host_memory_total: options
+            .memory_limits
+            .is_host_managed()
+            .then(super::host_memory::physical_bytes)
+            .transpose()?,
         deadline: Instant::now() + Duration::from_secs(timeout),
         pressure_target: None,
         bridge,
@@ -481,6 +493,7 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            host_memory_total: None,
             deadline: Instant::now() + Duration::from_secs(5),
             window: None,
             pressure_target: None,
@@ -508,6 +521,26 @@ mod tests {
             }
         }
         assert!(trames_hvf::paging_stats().page_ins > before.page_ins);
+    }
+    #[test]
+    fn memory_defaults_to_host_management_and_accepts_an_explicit_cap_or_auto_reset() {
+        let parse = |args: &[&str]| {
+            Command::parse(args.iter().map(|s| (*s).to_owned()), false)
+                .unwrap()
+                .unwrap()
+        };
+        assert_eq!(
+            parse(&["/bin/sh"]).limit,
+            MemoryLimits::host_managed().total
+        );
+        assert_eq!(
+            parse(&["--memory-mib", "8192", "/bin/sh"]).limit,
+            8usize << 30
+        );
+        assert_eq!(
+            parse(&["--memory-mib", "8192", "--memory-mib", "auto", "/bin/sh"]).limit,
+            MemoryLimits::host_managed().total
+        );
     }
     #[test]
     fn exact_instruction_budget_is_rejected_before_creating_hardware() {

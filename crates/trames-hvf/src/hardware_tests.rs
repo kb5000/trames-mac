@@ -853,7 +853,7 @@ fn interrupted_context_save_and_restore_keep_the_complete_continuation() {
     let mut e = Executor::new().unwrap();
     let mut memory = context_memory(0xd4000001);
     svc(&mut e, &mut state(), &mut memory); // install tables and finish TLBI
-    for phase in 0..6 {
+    for phase in 0..8 {
         let mut cpu = patterned_state(u64::from(phase));
         cpu.pc += 4;
         let expected = cpu.clone();
@@ -866,7 +866,14 @@ fn interrupted_context_save_and_restore_keep_the_complete_continuation() {
         })
         .unwrap();
         assert_eq!(cpu, expected, "phase {phase}");
-        assert_eq!(out.kind, if (3..=4).contains(&phase) { 0 } else { 1 });
+        assert_eq!(
+            out.kind,
+            if (3..=4).contains(&phase) || phase >= 6 {
+                0
+            } else {
+                1
+            }
+        );
         // Partial loads/saves must not leak into the next task's bank.
         cpu.pc = 0x10000;
         svc(&mut e, &mut cpu, &mut memory);
@@ -1194,4 +1201,33 @@ fn private_arena_addresses_stay_linear_across_table_growth_and_release_without_r
     let reused = machine.allocate(None).unwrap();
     assert_eq!(reused.physical_address(), base);
     assert_eq!(machine.stats().mapped_bytes, 16384);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn single_leaf_faults_flush_only_their_va_in_the_regular_restore_entry() {
+    let mut memory = memory();
+    memory
+        .map(0x40000, 64 * PAGE_SIZE, Permissions::RW)
+        .unwrap();
+    let mut executor = Executor::new().unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    let before = executor.register_stats();
+    for page in 0..64 {
+        let mut cpu = state();
+        cpu.registers[0] = 0x40000 + page * PAGE_SIZE;
+        svc(&mut executor, &mut cpu, &mut memory);
+        assert_eq!(cpu.registers[1], 1);
+    }
+    let after = executor.register_stats();
+    assert!(after.invalidations > before.invalidations);
+    assert_eq!(after.full_invalidations, before.full_invalidations);
+    assert_eq!(
+        after.entries - before.entries,
+        after.mailbox - before.mailbox + after.fallback - before.fallback + after.completions
+            - before.completions
+            + after.restore_interruptions
+            - before.restore_interruptions,
+        "no extra TLB-only hypervisor entries"
+    );
 }

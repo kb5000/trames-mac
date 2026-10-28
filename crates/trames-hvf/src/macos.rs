@@ -99,6 +99,10 @@ pub struct RegisterStats {
     pub mailbox: u64,
     pub fallback: u64,
     pub completions: u64,
+    pub entries: u64,
+    pub invalidations: u64,
+    pub full_invalidations: u64,
+    pub restore_interruptions: u64,
 }
 #[derive(Debug)]
 pub enum Error {

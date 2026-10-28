@@ -28,9 +28,13 @@ Alpine only if that store is not initialized; subsequent launches can use just
 `--storage DIR`. Omitting storage keeps the in-memory filesystem. `--network`
 accepts `off`, `loopback`, `outbound`, or `full` (default). A missing guest DNS
 configuration uses the managed host resolver; existing guest DNS settings are
-preserved. `--memory-mib` defaults
-to 4096; it caps guest memory without allocating a fixed RAM image. Released
-physical pages are returned while hardware execution remains alive.
+preserved. Memory defaults to `--memory-mib auto`: allocations grow on demand
+in the host VM pool, with no fixed product resident-byte quota. Guest memory
+information reports host physical/free/available memory, and host pressure can
+return live pages to the macOS pager. `--memory-mib N` selects an explicit MiB
+hard cap when needed. Released physical pages return while execution stays alive.
+The independent dense accessible-VMA descriptor limit remains 16 GiB per address
+space; host-managed RAM is not yet unlimited sparse virtual address metadata.
 
 Linux tasks now run on multiple hardware vCPUs through the common worker
 scheduler. `--cpus N` selects the limit (default: available CPUs, capped at eight
@@ -39,7 +43,7 @@ physical pages with scoped hardware exclusion.
 
 Live dirty memory can be paged out and restored. macOS pressure notifications
 trigger batched reclamation; `--resident-mib N` optionally sets a deterministic
-hardware working-set target, independently of the 4096MiB logical guest budget.
+hardware working-set target, independently of any explicit logical guest cap.
 This does not cap all process RSS. See [hardware execution and paging](docs/architecture/execution-backends.md)
 for ownership, temporary backing storage, remaining fork costs and repeatable
 hardware acceptance.

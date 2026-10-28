@@ -22,7 +22,6 @@
 #define ADDRESS_MASK UINT64_C(0x0000fffffffff000)
 #define PAGE 4096
 #define EXIT_HVC_IMMEDIATE 0x5452
-#define TLBI_HVC_IMMEDIATE 1
 
 // Advertise only extensions using the saved GPR/128-bit SIMD state. The HVF
 // configuration is authoritative; native host features alone are insufficient.
@@ -64,7 +63,7 @@ struct state {
 };
 _Static_assert(sizeof(struct state) == 816, "shared AArch64 state layout");
 _Static_assert(offsetof(struct state, vectors) == 304, "shared SIMD offset");
-struct context { struct state state; uint64_t syndrome, address, complete; };
+struct context { struct state state; uint64_t syndrome, address, complete, invalidate, operand; };
 _Static_assert(offsetof(struct state, sp) == 248, "adapter SP offset");
 _Static_assert(offsetof(struct state, pc) == 256, "adapter PC offset");
 _Static_assert(offsetof(struct state, nzcv) == 264, "adapter flags offset");
@@ -75,8 +74,10 @@ _Static_assert(sizeof(struct context)<=PAGE, "private context fits one guest pag
 _Static_assert(offsetof(struct context, syndrome) == 816, "adapter ESR offset");
 _Static_assert(offsetof(struct context, address) == 824, "adapter FAR offset");
 _Static_assert(offsetof(struct context, complete) == 832, "adapter completion offset");
+_Static_assert(offsetof(struct context, invalidate) == 840, "adapter invalidation mode");
+_Static_assert(offsetof(struct context, operand) == 848, "adapter invalidation operand");
 struct result { uint64_t kind, syndrome, address, pc; };
-struct register_stats { uint64_t mailbox, fallback, completions; };
+struct register_stats { uint64_t mailbox, fallback, completions, entries, invalidations, full_invalidations, restore_interruptions; };
 struct table { void *memory; uint64_t gpa; struct table *next, *previous, *indexed; };
 struct free_gpa { uint64_t value; struct free_gpa *next; };
 struct machine {
@@ -100,7 +101,8 @@ struct host {
     unsigned asid;
     hv_vcpu_t cpu;
     hv_vcpu_exit_t *exit;
-    bool cpu_created, tlb_dirty, context_mapped;
+    bool cpu_created, tlb_dirty, tlb_full, context_mapped;
+    uint64_t tlb_address;
     struct context *context;
     uint64_t context_gpa;
     struct register_stats registers;
@@ -111,6 +113,15 @@ extern const char trames_hvf_vectors_begin[], trames_hvf_vectors_end[];
 extern const char trames_hvf_tlbi_begin[], trames_hvf_tlbi_end[];
 extern const char trames_hvf_resume_begin[], trames_hvf_resume_end[];
 extern const char trames_hvf_save_begin[], trames_hvf_save_end[];
+// Creator-thread page-table maintenance, not guest byte synchronization. A
+// single leaf edit invalidates that VA (all levels); root/table structure and
+// multiple different leaves retain a full-ASID invalidation.
+static void dirty_all(struct host *h) { h->tlb_dirty=true; h->tlb_full=true; }
+static void dirty_page(struct host *h, uint64_t va) {
+    if (!h->tlb_dirty) { h->tlb_address=va; h->tlb_full=false; }
+    else if (h->tlb_address!=va) h->tlb_full=true;
+    h->tlb_dirty=true;
+}
 static uint64_t ticks(void) { uint64_t n; __asm__ volatile("mrs %0,cntpct_el0":"=r"(n)); return n; }
 static uint64_t frequency(void) { uint64_t n; __asm__ volatile("mrs %0,cntfrq_el0":"=r"(n)); return n; }
 static void *anonymous(size_t length) {
@@ -196,7 +207,7 @@ static uint64_t *new_table(struct host *h, uint64_t *gpa) {
     h->space->tables=t;
     size_t bucket=table_bucket(t->gpa,h->granule,h->space->capacity);
     t->indexed=h->space->index[bucket]; h->space->index[bucket]=t;
-    h->space->count++; *gpa=t->gpa;
+    h->space->count++; *gpa=t->gpa; dirty_all(h);
     return t->memory;
 }
 static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
@@ -222,12 +233,12 @@ static int remove_page(struct host *h, uint64_t va) {
         gpas[level+1]=descriptor&ADDRESS_MASK;
         chain[level+1]=table_for(h,gpas[level+1]); if (!chain[level+1]) return -1;
     }
-    chain[3][(va>>12)&511]=0; h->tlb_dirty=true;
+    chain[3][(va>>12)&511]=0; dirty_page(h,va);
     for (unsigned level=3;level;level--) {
         bool empty=true;
         for (unsigned i=0;i<512;i++) if (chain[level][i]) {empty=false;break;}
         if (!empty) break;
-        chain[level-1][indexes[level-1]]=0;
+        chain[level-1][indexes[level-1]]=0; dirty_all(h);
         struct table *t=table_owner(h,gpas[level]);
         if (!t) return -1;
         hv_return_t e=hv_vm_unmap(t->gpa,h->granule); if (e) return (int)e;
@@ -248,7 +259,7 @@ int trames_hvf_page(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
     uint64_t descriptor=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
     if (!(flags&4) || !(flags&8)) descriptor|=UINT64_C(1)<<53;
     if (!(flags&4) || (flags&8)) descriptor|=UINT64_C(1)<<54;
-    if (*p!=descriptor) { *p=descriptor; h->tlb_dirty=true; }
+    if (*p!=descriptor) { *p=descriptor; dirty_page(h,va); }
     return 0;
 }
 
@@ -289,7 +300,7 @@ int trames_hvf_space_select(struct host *h, struct address_space *space) {
     if (h->space==space) return 0;
     hv_return_t error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,space->root_gpa|((uint64_t)h->asid<<48));
     if (error) return (int)error;
-    h->space=space; h->tlb_dirty=true;
+    h->space=space; dirty_all(h);
     return 0;
 }
 int trames_hvf_space_destroy(struct host *h, struct address_space *space) {
@@ -436,10 +447,10 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
     out->kind=0; out->syndrome=syndrome; out->address=0;
     if ((pstate&15)==5) {
         if (!interrupted) return -2; // adapter faults are host transport failures
-        if (pc>=VECTOR_VA+0x900 && pc<VECTOR_VA+(uint64_t)(trames_hvf_resume_end-trames_hvf_vectors_begin)) {
+        if (pc>=VECTOR_VA+0x800 && pc<VECTOR_VA+(uint64_t)(trames_hvf_resume_end-trames_hvf_vectors_begin)) {
             // ERET has not executed: the complete input state is authoritative,
             // even if only part of the hardware register bank has been loaded.
-            out->pc=s->pc; return 0;
+            out->pc=s->pc; h->registers.restore_interruptions++; return 0;
         }
         if (!in_save(pc)) return -2;
         // Complete a bounded pending exception adapter, never enter EL0 with
@@ -447,7 +458,9 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
         // the final save and HVC. It is not a cross-thread publication flag.
         for (unsigned attempt=0;attempt<4;attempt++) {
             if (h->context->complete) return context_result(h,s,out);
-            if ((e=hv_vcpu_set_vtimer_mask(h->cpu,true)) || (e=hv_vcpu_run(h->cpu))) return (int)e;
+            if ((e=hv_vcpu_set_vtimer_mask(h->cpu,true))) return (int)e;
+            h->registers.entries++;
+            if ((e=hv_vcpu_run(h->cpu))) return (int)e;
             h->registers.completions++;
             if (handoff(h)) return context_result(h,s,out);
             if (h->exit->reason!=HV_EXIT_REASON_VTIMER_ACTIVATED && h->exit->reason!=HV_EXIT_REASON_CANCELED) return -2;
@@ -482,23 +495,24 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
 void trames_hvf_register_stats(struct host *h, struct register_stats *out) { *out=h->registers; }
 int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds, struct result *out) {
     hv_return_t e;
-    if (h->tlb_dirty) {
-        if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_X0,(uint64_t)h->asid<<48)) ||
-            (e=hv_vcpu_set_vtimer_mask(h->cpu,true)) ||
-            (e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
-            (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
-            (e=hv_vcpu_run(h->cpu))) return (int)e;
-        if (h->exit->reason!=HV_EXIT_REASON_EXCEPTION || h->exit->exception.syndrome>>26!=0x16 ||
-            (h->exit->exception.syndrome&0xffff)!=TLBI_HVC_IMMEDIATE) return -2;
-        h->tlb_dirty=false;
-    }
+    // The regular restore entry performs pending TLBI before EL0. No separate
+    // hypervisor entry/HVC is needed. The context marker clears only after the
+    // original DSB/TLBI/DSB/ISB sequence; interrupted restore can safely retry.
+    h->context->invalidate=h->tlb_dirty ? (h->tlb_full ? 2 : 1) : 0;
+    h->context->operand=((uint64_t)h->asid<<48)|(h->tlb_full ? 0 : h->tlb_address>>12);
     memcpy(&h->context->state,s,sizeof(*s)); h->context->complete=0;
     if ((e=hv_vcpu_set_reg(h->cpu,HV_REG_CPSR,0x3c5)) ||
-        (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x900)) ||
+        (e=hv_vcpu_set_reg(h->cpu,HV_REG_PC,VECTOR_VA+0x800)) ||
         (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CVAL_EL0,ticks()+nanoseconds*frequency()/UINT64_C(1000000000))) ||
         (e=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTV_CTL_EL0,1)) ||
-        (e=hv_vcpu_set_vtimer_mask(h->cpu,false)) ||
-        (e=hv_vcpu_run(h->cpu))) return (int)e;
+        (e=hv_vcpu_set_vtimer_mask(h->cpu,false))) return (int)e;
+    h->registers.entries++;
+    if ((e=hv_vcpu_run(h->cpu))) return (int)e;
+    if (h->tlb_dirty && !h->context->invalidate) {
+        h->registers.invalidations++;
+        h->registers.full_invalidations+=h->tlb_full;
+        h->tlb_dirty=false; h->tlb_full=false;
+    }
     bool exception=h->exit->reason==HV_EXIT_REASON_EXCEPTION;
     return finish_run(h,s,out,h->exit->reason,exception ? h->exit->exception.syndrome : 0,
         exception ? h->exit->exception.physical_address : 0);
@@ -545,7 +559,7 @@ void trames_hvf_inject_pressure_for_test(unsigned bits) {
 // exit record is modified. Unreferenced by the product entry point.
 int trames_hvf_test_interrupted_context(struct host *h, struct state *s,
                                        struct result *out, unsigned phase) {
-    if (phase>5 || h->tlb_dirty) return -2;
+    if (phase>7 || h->tlb_dirty) return -2;
     hv_return_t e;
     memcpy(&h->context->state,s,sizeof(*s));
     h->context->syndrome=UINT64_C(0x56000000); h->context->address=0x1234;
@@ -558,7 +572,13 @@ int trames_hvf_test_interrupted_context(struct host *h, struct state *s,
     uint64_t pc=phase==0 ? VECTOR_VA+0x400 : phase==1 ? VECTOR_VA+0xa20 :
         phase==2 ? VECTOR_VA+0xa80 : phase==3 ? VECTOR_VA+0x920 :
         phase==4 ? VECTOR_VA+(uint64_t)(trames_hvf_resume_end-trames_hvf_vectors_begin)-4 :
-        VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin)-4;
+        phase==5 ? VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin)-4 :
+        phase==6 ? VECTOR_VA+0x800 : VECTOR_VA+0x828;
+    if (phase>=6) {
+        h->tlb_dirty=true; h->tlb_full=phase==7; h->tlb_address=s->pc;
+        h->context->invalidate=phase==7 ? 2 : 1;
+        h->context->operand=((uint64_t)h->asid<<48)|(phase==7 ? 0 : s->pc>>12);
+    }
     if (phase==3) {
         // At this early restore PC, scratch x0 and the not-yet-loaded SIMD bank
         // may belong to the old task. The input context must still win.

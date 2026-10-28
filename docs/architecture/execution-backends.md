@@ -127,8 +127,9 @@ The shared runtime builds no chunk stamps for the iPad software interpreter.
 
 ## Physical paging
 
-The default 4096MiB guest limit is a logical allocation budget, not preallocated
-RAM. Only accessed pages acquire physical slots. Four unrelated 4KiB guest pages
+The default host-managed policy grows from the ordinary host VM pool. Numeric
+`--memory-mib N` remains an optional logical resident-byte cap. Neither policy
+preallocates a RAM image; only accessed pages acquire physical slots. Four unrelated 4KiB guest pages
 can share one 16KiB host granule, and partially freed granules are reused before
 allocating another. Mapping addresses need not be contiguous.
 
@@ -178,7 +179,7 @@ See [XNU's implementation](https://github.com/apple-oss-distributions/xnu/blob/m
 it is neither disk usage nor exact host residency. `mapped_bytes` counts active
 HVF bindings, `page_out_bytes` withdrawn bindings and `page_ins` rebindings.
 Logical guest-page accounting remains in the common runtime. Virtual VMA length
-and protection changes do not consume the guest's 4 GiB RAM budget; actual file
+and protection changes do not consume an explicit guest RAM budget; actual file
 access and physical hardware exports do. Dense accessible-page metadata has a
 separate 16 GiB ceiling and still consumes host memory. Fork accounting remains
 conservative per VM rather than unique-physical-page/PSS accounting.
@@ -446,7 +447,8 @@ without returning an exception to this executor. Ordinary Linux pointers and
 syscall arguments can have those same values.
 
 The adapter validates the exit immediate before interpreting the saved EL0
-exception; its separate TLBI helper retains immediate 1. No argument register
+exception. Pending TLBI now runs in the ordinary restore entry without another
+HVC/host round trip. No argument register
 is repurposed to carry an exit tag, and the change adds no extra guest exception
 or ordinary-memory synchronization. Signed hardware tests preserve all general
 registers across SVC for platform service-number values and high-bit aliases.
@@ -688,3 +690,36 @@ do not add them as independent totals.
 leaves, installed leaves, stage-one faults, retired leaves, root switches, peak
 cached leaves per thread and fallback chunk-stamp checks. Compare cumulative
 deltas over workload boundaries; sum only final per-thread records for totals.
+
+
+## Host-managed memory and fused translation maintenance
+
+The Mac default is `--memory-mib auto`. The shared account uses the architectural
+ceiling instead of a product resident quota, while the host adapter supplies
+actual `hw.memsize` and Mach VM statistics for guest memory reports. `MemFree`
+uses free pages; `MemAvailable` estimates free plus inactive pages, clamped to
+physical total. Speculative pages already belong to free_count and are not
+counted twice. This is an availability hint, not Linux's complete heuristic or
+a physical reservation. Mach send rights are released after each query. Reports
+are queried for proc/sysinfo metadata, not ordinary guest memory operations.
+Numeric caps retain guest-budget reporting; data/RSS/address limits are unlimited
+only in host-managed mode. Proc address-space limits follow getrlimit too.
+The existing pressure/reclaim/pager path remains, as does the independent 16 GiB
+per-mm dense mapping-descriptor ceiling and conservative fork accounting.
+
+The EL1 restore prelude performs pending translation maintenance before loading
+EL0 state. A single leaf change uses ASID + VA `VAE1IS`; root/intermediate-table
+changes or multiple different leaves use full-ASID `ASIDE1IS`. Both retain the
+original DSB ISHST / TLBI / DSB ISH / ISB sequence. The completion marker clears
+only after that sequence, so interruption before completion retries maintenance;
+interruption during restore retains the authoritative complete input state.
+No separate TLBI-only hypervisor entry/HVC is needed. The
+[Linux ARM64 TLB implementation](https://github.com/torvalds/linux/blob/v6.12/arch/arm64/include/asm/tlbflush.h)
+provides the matching VA/ASID operand and all-level invalidation reference.
+
+Signed acceptance covers cold single-page faults without extra entries or
+full-ASID flushes, interrupted VA/full-ASID prelude phases, complete GPR/SIMD
+restoration, root reuse, permissions, unmap, table reclamation and code stores.
+Hardware admission also persistently disables unused coordinator software CPU
+aliases while preserving cached-byte-pointer invalidation and true fork COW.
+The iPad software alias path and default memory policy remain unchanged.

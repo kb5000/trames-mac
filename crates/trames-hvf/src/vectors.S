@@ -12,11 +12,19 @@ _trames_hvf_vectors_begin:
 .global _trames_hvf_tlbi_begin
 .global _trames_hvf_tlbi_end
 _trames_hvf_tlbi_begin:
+    ldr x0, [sp, #840]
+    cbz x0, _trames_hvf_resume_begin
+    ldr x1, [sp, #848]
     dsb ishst
-    tlbi aside1is, x0
-    dsb ish
+    cmp x0, #1
+    b.ne 1f
+    tlbi vae1is, x1
+    b 2f
+1:  tlbi aside1is, x1
+2:  dsb ish
     isb
-    hvc #1
+    str xzr, [sp, #840]
+    b _trames_hvf_resume_begin
 _trames_hvf_tlbi_end:
 .space 0x900 - (. - _trames_hvf_vectors_begin)
 .global _trames_hvf_resume_begin
