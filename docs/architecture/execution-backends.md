@@ -875,6 +875,76 @@ AArch64 toolchain for the guest. Arguments `1 256 1 0 1` select this comparison.
 The probe sources pass Rust format/release lint with warnings denied and checked
 C compilation; native/HVF/fixture controls validate their values. No production
 CPU, Linux, network or graphics source changed, so prior passing acceptance was
-reused. Firefox stayed closed and no new Geekbench score is claimed. Full raw
+reused. At this research-probe checkpoint Firefox stayed closed and no new
+Geekbench score was claimed. Full raw
 records, compiler/source/binary identities and limitations are in
 [the filtered evidence](../validation/mac-memory-model-probes.json).
+
+
+### Production sparse VMAs and persistent canonical storage (2026-10-29)
+
+Runtime `b230398dd102433599268a2fef4630d77a0a600c` implements the common sparse VMA portion of the
+review above, shared with the iPad interpreter. Accessible private anonymous
+mappings larger than 64 KiB keep interval metadata until reached. Frozen worker
+views share canonical byte stores and reuse unchanged frame caches across normal
+execution handoffs. They avoid constructing a second coordinator descriptor
+graph after every worker slice. Fork/COW, permission changes, pins, quotas and
+4 KiB subranges retain their existing checks and ownership boundaries.
+
+Retirement tickets retain exactly the affected old stores and address intervals.
+Frozen snapshot indexes update only overlapping range records and preserve their
+unchanged frame caches. Mmap search and mprotect avoid complete process-region
+lists. A 2,000-VMA regression bounds local release to its target store/cache,
+at most two rebuilt range records, and zero complete region-list constructions.
+Deferred retirement survives retained view generations; their shared dirty bit
+keeps late canonical writes visible. Visited hardware chunks retain precise
+stamps, preserving bounded revalidation and resident-neighbor reuse after CPU
+migration. The common implementation and lifetime rules are documented in
+[region memory](https://github.com/kb5000/trames-runtime/blob/b230398dd102433599268a2fef4630d77a0a600c/docs/architecture/region-memory.md#sparse-accessible-anonymous-ranges-2026-10-29).
+
+Five fresh processes per variant, in shuffled order, measured an untouched
+1 GiB RW mapping with no guest data touches:
+
+| Stage | Before median | After median | Additional peak RSS, before / after |
+| --- | ---: | ---: | ---: |
+| Map | 20.686 ms | 2.42 us | 50.58 / 0.11 MiB |
+| Initial freeze | 37.240 ms | 5.25 us | 180.95 / 0.19 MiB |
+| Protect + refreeze | 108.607 ms | 10.08 us | 295.31 / 0.27 MiB |
+
+RSS is `ru_maxrss` relative to each fresh process's initial peak, including earlier
+stages in that process. A separate allocator-instrumented test bounds total
+allocation requests for map/freeze/partial-protect below 128 KiB.
+
+The unchanged static Linux pthread fixture also checked every reached value.
+Both variants used normal signed binaries, a 4 GiB guest resident cap, no
+windows/network, and five fresh shuffled repetitions per configuration:
+
+| Workload | Before wall median | After wall median | Wall-time reduction |
+| --- | ---: | ---: | ---: |
+| 1 CPU, 256 MiB, one word per 4 KiB, one recreate round | 174.433 ms | 169.404 ms | 2.9% |
+| 12 CPUs, 128 MiB each, full 8-byte stores/reads, two recreate rounds | 2233.883 ms | 2189.918 ms | 2.0% |
+
+These are bounded memory-workload results. Hardware first touch still enters the
+existing 4 KiB export/fault path; native range backing and block translations
+remain the next larger execution-memory change. The Linux CI VM was stopped and
+no builds, profilers or other test runners ran during measurements. Thermal state
+was nominal and low-power mode was off before and after.
+
+Validation passed the common macOS and native ARM64 Linux workflows, the Mac
+workflow plus 32 signed HVF tests and the pressure test, and the iPad workspace
+and both iOS compile targets. English evidence, binary hashes and raw bounded
+measurements are in [mac-memory-model-probes.json](../validation/mac-memory-model-probes.json).
+
+The separately completed clean Geekbench 6.7.1 Preview run used the same Linux
+benchmark bytes, twelve slots and explicit 4096 MiB cap as the preceding control.
+It scored **3678 single / 9134 multi**, versus **3388 / 8181** before (+8.6% /
++11.6%), and completed all 32 workloads in 275.91 s. Navigation multi rose from
+2248 to 7522; Asset Compression from 13937 to 16907. Photo Library and several
+image components did not improve, and Text Processing still scales poorly.
+Both revisions have one clean full-run sample, so these are observed scores,
+not confidence intervals or a claim that every workload improved. The public
+[new result](https://browser.geekbench.com/v6/cpu/19404127) and
+[preceding control](https://browser.geekbench.com/v6/cpu/19403147) are also recorded
+with all component scores in [mac-geekbench.json](../validation/mac-geekbench.json).
+The new totals are 85.8% / 49.1% of the earlier native macOS run; OS, binary,
+library/ISA dispatch and reported 4/24 GiB memory differ. Firefox remained closed.

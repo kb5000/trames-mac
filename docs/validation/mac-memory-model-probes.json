@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "date": "2026-10-29",
-  "purpose": "Quantify memory-model headroom; research probes, no production memory path change",
+  "purpose": "Memory-model research probes and production sparse-VMA validation; sections retain their own code and binary provenance.",
   "product_source_mac": "01b808c4ea03e450c96266ae1f9438cba9f285a7",
   "runtime_revision": "87a4f2036453226e6f8a779e6ae1616ba008461c",
   "host": {
@@ -1063,5 +1063,1224 @@
     "first_touch_trames_to_hardware_only": 5.99150036954915,
     "scope": "This ratio is headroom in a bounded first-touch phase, not a forecast of total Geekbench/Firefox speedup. Stable-mapping memory stores are already close to native in this loop.",
     "priority": "Common sparse VMA/resident-extent representation plus a Mac native anonymous backing provider; range publication after that foundation. Keep one userspace Linux kernel shared with iPad."
-  }
+  },
+  "production_sparse_vmas_2026_10_29": {
+    "runtime_revision": "b230398dd102433599268a2fef4630d77a0a600c",
+    "mac_application_source_parent": "2d95bc40f050271160142033ee576f5e040d2722",
+    "binary_is_normal_release": true,
+    "guest_memory_limit_mib": 4096,
+    "metadata_mode_note": "The historical dense CLI mode creates an accessible RW private anonymous mapping; the after implementation represents it sparsely.",
+    "median_summary": {
+      "before": {
+        "metadata": {
+          "map": {
+            "ms": 20.686166999999998,
+            "additional_peak_rss_mib": 50.578125
+          },
+          "freeze": {
+            "ms": 37.240125,
+            "additional_peak_rss_mib": 180.953125
+          },
+          "protect": {
+            "ms": 22.132458,
+            "additional_peak_rss_mib": 186.375
+          },
+          "refreeze": {
+            "ms": 85.59908300000001,
+            "additional_peak_rss_mib": 295.3125
+          }
+        },
+        "single_cpu_wall_ms": 174.433,
+        "twelve_cpu_wall_ms": 2233.883
+      },
+      "after": {
+        "metadata": {
+          "map": {
+            "ms": 0.002417,
+            "additional_peak_rss_mib": 0.109375
+          },
+          "freeze": {
+            "ms": 0.0052499999999999995,
+            "additional_peak_rss_mib": 0.1875
+          },
+          "protect": {
+            "ms": 0.004459,
+            "additional_peak_rss_mib": 0.234375
+          },
+          "refreeze": {
+            "ms": 0.005625000000000001,
+            "additional_peak_rss_mib": 0.265625
+          }
+        },
+        "single_cpu_wall_ms": 169.404,
+        "twelve_cpu_wall_ms": 2189.918
+      }
+    },
+    "evidence": {
+      "runtime_before": "87a4f2036453226e6f8a779e6ae1616ba008461c",
+      "runtime_after": "b230398dd102433599268a2fef4630d77a0a600c",
+      "metadata_binaries": {
+        "before": "e87d2e861db45e0bc91e59c66e1b93e5569dabdfcb13ca29abb8c2e8906b96f3",
+        "after": "2d187c1226d8100e0a39a13490bea9e8a3aa878f15f9b1d317ed1154fa1e0e95"
+      },
+      "runners": {
+        "before": "39651812d1483d1a769dfe330eaaa36b3f6ec06e6bca2f8fc6bdc7c9f8d999b1",
+        "after": "11dbfda9d79c39e5b5efa41a726d6adf2bed859b1ce6caf31880cd1647318076"
+      },
+      "fixture_sha256": "ef8d82927eaf9a258d6336e54766b919b844a0575c1e6477469f7de64ee25c28",
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "method": "Sequential fresh processes in seeded shuffled order. Same Linux static pthread fixture and normal signed no-diagnostics Mac runner. Linux CI VM stopped; no builds/profilers/other tests. Thread timing sums overlap; wall is guest workload duration, not summed thread time.",
+      "metadata": [
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1818624,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 21.186667,
+              "peak_rss_bytes": 54853632
+            },
+            {
+              "name": "freeze",
+              "ms": 37.543583,
+              "peak_rss_bytes": 191578112
+            },
+            {
+              "name": "commit",
+              "ms": 0.0011250000000000001,
+              "peak_rss_bytes": 191578112
+            },
+            {
+              "name": "protect",
+              "ms": 21.954459,
+              "peak_rss_bytes": 197246976
+            },
+            {
+              "name": "refreeze",
+              "ms": 85.399042,
+              "peak_rss_bytes": 311476224
+            },
+            {
+              "name": "unmap",
+              "ms": 44.736042,
+              "peak_rss_bytes": 311476224
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 9.936916,
+              "peak_rss_bytes": 311476224
+            }
+          ],
+          "variant": "before",
+          "repeat": 4
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1818624,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 20.509125,
+              "peak_rss_bytes": 54837248
+            },
+            {
+              "name": "freeze",
+              "ms": 37.240125,
+              "peak_rss_bytes": 191545344
+            },
+            {
+              "name": "commit",
+              "ms": 0.0011250000000000001,
+              "peak_rss_bytes": 191545344
+            },
+            {
+              "name": "protect",
+              "ms": 22.132458,
+              "peak_rss_bytes": 197230592
+            },
+            {
+              "name": "refreeze",
+              "ms": 84.08954200000001,
+              "peak_rss_bytes": 311459840
+            },
+            {
+              "name": "unmap",
+              "ms": 44.5105,
+              "peak_rss_bytes": 311459840
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 10.185042,
+              "peak_rss_bytes": 311459840
+            }
+          ],
+          "variant": "before",
+          "repeat": 1
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1818624,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 20.447792,
+              "peak_rss_bytes": 54853632
+            },
+            {
+              "name": "freeze",
+              "ms": 36.424541,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "commit",
+              "ms": 0.001,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "protect",
+              "ms": 22.220375,
+              "peak_rss_bytes": 197246976
+            },
+            {
+              "name": "refreeze",
+              "ms": 86.386667,
+              "peak_rss_bytes": 311492608
+            },
+            {
+              "name": "unmap",
+              "ms": 44.512833,
+              "peak_rss_bytes": 311492608
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 9.92875,
+              "peak_rss_bytes": 311492608
+            }
+          ],
+          "variant": "before",
+          "repeat": 0
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1835008,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 0.06370799999999999,
+              "peak_rss_bytes": 1949696
+            },
+            {
+              "name": "freeze",
+              "ms": 0.07225,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "commit",
+              "ms": 4.2e-05,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "protect",
+              "ms": 0.050958,
+              "peak_rss_bytes": 2080768
+            },
+            {
+              "name": "refreeze",
+              "ms": 0.038458,
+              "peak_rss_bytes": 2113536
+            },
+            {
+              "name": "unmap",
+              "ms": 0.016833,
+              "peak_rss_bytes": 2162688
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 0.001667,
+              "peak_rss_bytes": 2162688
+            }
+          ],
+          "variant": "after",
+          "repeat": 1
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1835008,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 0.006375,
+              "peak_rss_bytes": 1949696
+            },
+            {
+              "name": "freeze",
+              "ms": 0.011541000000000001,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "commit",
+              "ms": 0.00025,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "protect",
+              "ms": 0.010042,
+              "peak_rss_bytes": 2080768
+            },
+            {
+              "name": "refreeze",
+              "ms": 0.014667,
+              "peak_rss_bytes": 2113536
+            },
+            {
+              "name": "unmap",
+              "ms": 0.013083,
+              "peak_rss_bytes": 2162688
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 0.0015,
+              "peak_rss_bytes": 2162688
+            }
+          ],
+          "variant": "after",
+          "repeat": 4
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1818624,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 22.684625,
+              "peak_rss_bytes": 54853632
+            },
+            {
+              "name": "freeze",
+              "ms": 36.427417,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "commit",
+              "ms": 0.001083,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "protect",
+              "ms": 22.100833,
+              "peak_rss_bytes": 197230592
+            },
+            {
+              "name": "refreeze",
+              "ms": 86.694791,
+              "peak_rss_bytes": 311476224
+            },
+            {
+              "name": "unmap",
+              "ms": 44.754416,
+              "peak_rss_bytes": 311476224
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 10.085583,
+              "peak_rss_bytes": 311476224
+            }
+          ],
+          "variant": "before",
+          "repeat": 2
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1835008,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 0.0024159999999999997,
+              "peak_rss_bytes": 1949696
+            },
+            {
+              "name": "freeze",
+              "ms": 0.004625,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "commit",
+              "ms": 0.00020800000000000001,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "protect",
+              "ms": 0.004459,
+              "peak_rss_bytes": 2080768
+            },
+            {
+              "name": "refreeze",
+              "ms": 0.005582999999999999,
+              "peak_rss_bytes": 2113536
+            },
+            {
+              "name": "unmap",
+              "ms": 0.003125,
+              "peak_rss_bytes": 2129920
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 0.0007080000000000001,
+              "peak_rss_bytes": 2129920
+            }
+          ],
+          "variant": "after",
+          "repeat": 0
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1818624,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 20.686166999999998,
+              "peak_rss_bytes": 54853632
+            },
+            {
+              "name": "freeze",
+              "ms": 37.822083,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "commit",
+              "ms": 0.001167,
+              "peak_rss_bytes": 191561728
+            },
+            {
+              "name": "protect",
+              "ms": 23.935792,
+              "peak_rss_bytes": 197246976
+            },
+            {
+              "name": "refreeze",
+              "ms": 85.59908300000001,
+              "peak_rss_bytes": 311508992
+            },
+            {
+              "name": "unmap",
+              "ms": 43.906625,
+              "peak_rss_bytes": 311508992
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 10.182792,
+              "peak_rss_bytes": 311508992
+            }
+          ],
+          "variant": "before",
+          "repeat": 3
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1835008,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 0.002417,
+              "peak_rss_bytes": 1949696
+            },
+            {
+              "name": "freeze",
+              "ms": 0.0052499999999999995,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "commit",
+              "ms": 0.000125,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "protect",
+              "ms": 0.004458,
+              "peak_rss_bytes": 2080768
+            },
+            {
+              "name": "refreeze",
+              "ms": 0.005625000000000001,
+              "peak_rss_bytes": 2113536
+            },
+            {
+              "name": "unmap",
+              "ms": 0.003708,
+              "peak_rss_bytes": 2146304
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 0.0007080000000000001,
+              "peak_rss_bytes": 2146304
+            }
+          ],
+          "variant": "after",
+          "repeat": 2
+        },
+        {
+          "mode": "dense",
+          "mib": 1024,
+          "initial_peak_rss_bytes": 1835008,
+          "guest_data_touched": false,
+          "stages": [
+            {
+              "name": "map",
+              "ms": 0.002,
+              "peak_rss_bytes": 1949696
+            },
+            {
+              "name": "freeze",
+              "ms": 0.003583,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "commit",
+              "ms": 8.3e-05,
+              "peak_rss_bytes": 2031616
+            },
+            {
+              "name": "protect",
+              "ms": 0.0029579999999999997,
+              "peak_rss_bytes": 2080768
+            },
+            {
+              "name": "refreeze",
+              "ms": 0.00425,
+              "peak_rss_bytes": 2113536
+            },
+            {
+              "name": "unmap",
+              "ms": 0.004791,
+              "peak_rss_bytes": 2162688
+            },
+            {
+              "name": "empty_freeze",
+              "ms": 0.00075,
+              "peak_rss_bytes": 2162688
+            }
+          ],
+          "variant": "after",
+          "repeat": 3
+        }
+      ],
+      "churn": [
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2269.034,
+          "map_thread_ms": 540.37,
+          "touch_thread_ms": 15374.831,
+          "read_thread_ms": 3877.677,
+          "unmap_thread_ms": 2275.262,
+          "checksum": 206158430208,
+          "variant": "after",
+          "repeat": 0,
+          "process_wall_ms": 2384.145
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 173.743,
+          "map_thread_ms": 0.02,
+          "touch_thread_ms": 107.461,
+          "read_thread_ms": 0.437,
+          "unmap_thread_ms": 65.758,
+          "checksum": 16777216,
+          "variant": "after",
+          "repeat": 4,
+          "process_wall_ms": 181.40100000000015
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2259.886,
+          "map_thread_ms": 938.498,
+          "touch_thread_ms": 16723.504,
+          "read_thread_ms": 2776.699,
+          "unmap_thread_ms": 2016.625,
+          "checksum": 206158430208,
+          "variant": "before",
+          "repeat": 0,
+          "process_wall_ms": 2283.1554169999995
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2235.896,
+          "map_thread_ms": 501.94,
+          "touch_thread_ms": 16186.975,
+          "read_thread_ms": 3507.698,
+          "unmap_thread_ms": 2135.959,
+          "checksum": 206158430208,
+          "variant": "after",
+          "repeat": 3,
+          "process_wall_ms": 2257.3245419999994
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 173.316,
+          "map_thread_ms": 22.492,
+          "touch_thread_ms": 98.022,
+          "read_thread_ms": 0.44,
+          "unmap_thread_ms": 52.275,
+          "checksum": 16777216,
+          "variant": "before",
+          "repeat": 3,
+          "process_wall_ms": 182.54404099999988
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2260.793,
+          "map_thread_ms": 1322.995,
+          "touch_thread_ms": 15375.128,
+          "read_thread_ms": 3097.458,
+          "unmap_thread_ms": 1974.297,
+          "checksum": 206158430208,
+          "variant": "before",
+          "repeat": 1,
+          "process_wall_ms": 2291.1059999999993
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 174.48,
+          "map_thread_ms": 22.242,
+          "touch_thread_ms": 99.077,
+          "read_thread_ms": 0.436,
+          "unmap_thread_ms": 52.634,
+          "checksum": 16777216,
+          "variant": "before",
+          "repeat": 2,
+          "process_wall_ms": 181.66000000000082
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 174.433,
+          "map_thread_ms": 22.576,
+          "touch_thread_ms": 99.547,
+          "read_thread_ms": 0.466,
+          "unmap_thread_ms": 51.768,
+          "checksum": 16777216,
+          "variant": "before",
+          "repeat": 1,
+          "process_wall_ms": 181.11387499999944
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2189.918,
+          "map_thread_ms": 679.998,
+          "touch_thread_ms": 14385.14,
+          "read_thread_ms": 3389.023,
+          "unmap_thread_ms": 2479.475,
+          "checksum": 206158430208,
+          "variant": "after",
+          "repeat": 1,
+          "process_wall_ms": 2214.890708999999
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 174.647,
+          "map_thread_ms": 22.897,
+          "touch_thread_ms": 98.871,
+          "read_thread_ms": 0.542,
+          "unmap_thread_ms": 52.254,
+          "checksum": 16777216,
+          "variant": "before",
+          "repeat": 4,
+          "process_wall_ms": 181.79745900000023
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2112.946,
+          "map_thread_ms": 862.684,
+          "touch_thread_ms": 15092.449,
+          "read_thread_ms": 2512.554,
+          "unmap_thread_ms": 1564.411,
+          "checksum": 206158430208,
+          "variant": "before",
+          "repeat": 4,
+          "process_wall_ms": 2136.6264999999985
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2233.883,
+          "map_thread_ms": 1178.953,
+          "touch_thread_ms": 16122.079,
+          "read_thread_ms": 2331.863,
+          "unmap_thread_ms": 2448.559,
+          "checksum": 206158430208,
+          "variant": "before",
+          "repeat": 3,
+          "process_wall_ms": 2256.3081250000005
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 170.683,
+          "map_thread_ms": 0.006,
+          "touch_thread_ms": 107.415,
+          "read_thread_ms": 0.473,
+          "unmap_thread_ms": 62.726,
+          "checksum": 16777216,
+          "variant": "after",
+          "repeat": 2,
+          "process_wall_ms": 178.31279199999983
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 165.83,
+          "map_thread_ms": 0.005,
+          "touch_thread_ms": 105.481,
+          "read_thread_ms": 0.439,
+          "unmap_thread_ms": 59.838,
+          "checksum": 16777216,
+          "variant": "after",
+          "repeat": 1,
+          "process_wall_ms": 173.5004999999994
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 172.794,
+          "map_thread_ms": 22.027,
+          "touch_thread_ms": 97.581,
+          "read_thread_ms": 0.441,
+          "unmap_thread_ms": 52.665,
+          "checksum": 16777216,
+          "variant": "before",
+          "repeat": 0,
+          "process_wall_ms": 179.31150000000073
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 168.693,
+          "map_thread_ms": 0.004,
+          "touch_thread_ms": 107.012,
+          "read_thread_ms": 0.443,
+          "unmap_thread_ms": 61.166,
+          "checksum": 16777216,
+          "variant": "after",
+          "repeat": 3,
+          "process_wall_ms": 176.5405830000013
+        },
+        {
+          "threads": 1,
+          "chunk_mib": 256,
+          "rounds": 1,
+          "reuse": 0,
+          "sparse": 1,
+          "wall_ms": 169.404,
+          "map_thread_ms": 0.004,
+          "touch_thread_ms": 107.276,
+          "read_thread_ms": 0.446,
+          "unmap_thread_ms": 61.613,
+          "checksum": 16777216,
+          "variant": "after",
+          "repeat": 0,
+          "process_wall_ms": 179.20183300000048
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2179.854,
+          "map_thread_ms": 859.588,
+          "touch_thread_ms": 15292.73,
+          "read_thread_ms": 3128.06,
+          "unmap_thread_ms": 2048.74,
+          "checksum": 206158430208,
+          "variant": "after",
+          "repeat": 4,
+          "process_wall_ms": 2204.874583999999
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2074.782,
+          "map_thread_ms": 793.314,
+          "touch_thread_ms": 14918.164,
+          "read_thread_ms": 2539.976,
+          "unmap_thread_ms": 2031.677,
+          "checksum": 206158430208,
+          "variant": "before",
+          "repeat": 2,
+          "process_wall_ms": 2098.721459
+        },
+        {
+          "threads": 12,
+          "chunk_mib": 128,
+          "rounds": 2,
+          "reuse": 0,
+          "sparse": 0,
+          "wall_ms": 2081.31,
+          "map_thread_ms": 387.227,
+          "touch_thread_ms": 14716.347,
+          "read_thread_ms": 2976.28,
+          "unmap_thread_ms": 2401.169,
+          "checksum": 206158430208,
+          "variant": "after",
+          "repeat": 2,
+          "process_wall_ms": 2104.8550000000005
+        }
+      ],
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      }
+    },
+    "validation": {
+      "runtime_macos": [
+        "fmt",
+        "clippy",
+        "workspace tests",
+        "release"
+      ],
+      "runtime_native_arm_linux": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.284454792
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 1.1487605829999996
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 4.344813419
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 34.865523183
+        },
+        {
+          "name": "release",
+          "exit": 0,
+          "seconds": 4.128561836000003
+        },
+        {
+          "name": "reclaim",
+          "exit": 0,
+          "seconds": 2.205711125999997
+        }
+      ],
+      "mac_product": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.16566729200000002
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 2.286494709
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 3.7385721670000005
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 17.321040167
+        },
+        {
+          "name": "hardware",
+          "exit": 0,
+          "seconds": 9.734369542
+        },
+        {
+          "name": "build",
+          "exit": 0,
+          "seconds": 19.055047000000002
+        }
+      ],
+      "signed_hardware": {
+        "passed": true,
+        "runtime_revision": "b230398dd102433599268a2fef4630d77a0a600c",
+        "rows": [
+          {
+            "target": "trames-mac-run",
+            "executable_sha256": "0ea4150ecfe6f3861bdca0d5dadf362f8af586f9d01fcc797a4e3cfd0da4679c",
+            "exit": 0,
+            "passed_tests": 1
+          },
+          {
+            "target": "trames_hvf",
+            "executable_sha256": "a4e48ecd227e110673f36ad125acb7807e9a82f1fb65925f54119244210fcd76",
+            "exit": 0,
+            "passed_tests": 32
+          }
+        ]
+      },
+      "ipad_product": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.15136054200000001
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 1.233287083
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 6.1118211659999995
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 27.236669166
+        },
+        {
+          "name": "device",
+          "exit": 0,
+          "seconds": 5.113859999999995
+        },
+        {
+          "name": "sim",
+          "exit": 0,
+          "seconds": 3.564278792000003
+        }
+      ],
+      "memory_lib_tests": 141,
+      "fragmentation_guard": {
+        "mapped_vmas": 2000,
+        "local_retirement_store_cache_scopes_max": 2,
+        "rebuilt_range_records_max": 2,
+        "complete_region_lists": 0
+      }
+    },
+    "remaining_work": "Hardware first touch still uses 4KiB page exports/faults. Native anonymous range backing and block translations remain separate work. The bounded memory medians and the separately completed full Geekbench run have different scopes.",
+    "invalidated_prior_geekbench": {
+      "runtime_revision": "351a5202f75f8c2b8b9754d2fa4434e85a4fcd2c",
+      "valid_performance_result": false,
+      "reason": "Multi-core PDF exposed a VMA/retirement cross-product traversal; sampled and deliberately stopped. Replaced by direct store tickets and incremental overlap-index updates. No complete score."
+    },
+    "geekbench": {
+      "run": {
+        "runner_sha256": "11dbfda9d79c39e5b5efa41a726d6adf2bed859b1ce6caf31880cd1647318076",
+        "code_mac": "2d95bc40f050271160142033ee576f5e040d2722",
+        "code_runtime": "b230398dd102433599268a2fef4630d77a0a600c",
+        "variant": "trames-4096mib-12cpu-sparse-indexed",
+        "memory_mib": 4096,
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793218718.347871,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 275.913189416,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19404127"
+        ],
+        "single": 3678,
+        "multi": 9134,
+        "components": {
+          "single": {
+            "File Compression": 2779,
+            "Navigation": 2855,
+            "HTML5 Browser": 4486,
+            "PDF Renderer": 3950,
+            "Photo Library": 3448,
+            "Clang": 4947,
+            "Text Processing": 3628,
+            "Asset Compression": 3621,
+            "Object Detection": 3209,
+            "Background Blur": 3450,
+            "Horizon Detection": 4012,
+            "Object Remover": 4713,
+            "HDR": 4470,
+            "Photo Filter": 2969,
+            "Ray Tracer": 3682,
+            "Structure from Motion": 3790
+          },
+          "multi": {
+            "File Compression": 4901,
+            "Navigation": 7522,
+            "HTML5 Browser": 8170,
+            "PDF Renderer": 6665,
+            "Photo Library": 5957,
+            "Clang": 24439,
+            "Text Processing": 3185,
+            "Asset Compression": 16907,
+            "Object Detection": 8607,
+            "Background Blur": 10931,
+            "Horizon Detection": 15661,
+            "Object Remover": 14660,
+            "HDR": 9997,
+            "Photo Filter": 3889,
+            "Ray Tracer": 21953,
+            "Structure from Motion": 13708
+          }
+        },
+        "read_method": "Public Geekbench result, complete accessibility tree through in-app browser",
+        "version": "6.7.1 Preview for Linux AArch64",
+        "completed_workloads": 32,
+        "clean_performance_sample": true,
+        "sampler_used": false,
+        "application_source_unchanged_from": "01b808c4ea03e450c96266ae1f9438cba9f285a7"
+      },
+      "comparison": {
+        "baseline_url": "https://browser.geekbench.com/v6/cpu/19403147",
+        "same_guest_binary_data_cpus_and_explicit_memory_limit": true,
+        "single_ratio": 1.0855962219598583,
+        "multi_ratio": 1.11648942672045,
+        "wall_ratio": 0.9379149417734253,
+        "native_url": "https://browser.geekbench.com/v6/cpu/19400588",
+        "native_single_ratio": 0.8579426172148356,
+        "native_multi_ratio": 0.4906532015470563,
+        "workloads": [
+          {
+            "name": "File Compression",
+            "single_before": 2411,
+            "single_after": 2779,
+            "single_ratio": 1.1526337619245126,
+            "multi_before": 4638,
+            "multi_after": 4901,
+            "multi_ratio": 1.0567054764984907
+          },
+          {
+            "name": "Navigation",
+            "single_before": 1465,
+            "single_after": 2855,
+            "single_ratio": 1.9488054607508531,
+            "multi_before": 2248,
+            "multi_after": 7522,
+            "multi_ratio": 3.346085409252669
+          },
+          {
+            "name": "HTML5 Browser",
+            "single_before": 4339,
+            "single_after": 4486,
+            "single_ratio": 1.0338787739110393,
+            "multi_before": 8779,
+            "multi_after": 8170,
+            "multi_ratio": 0.9306299122906937
+          },
+          {
+            "name": "PDF Renderer",
+            "single_before": 3642,
+            "single_after": 3950,
+            "single_ratio": 1.0845689181768259,
+            "multi_before": 6242,
+            "multi_after": 6665,
+            "multi_ratio": 1.067766741429029
+          },
+          {
+            "name": "Photo Library",
+            "single_before": 3334,
+            "single_after": 3448,
+            "single_ratio": 1.0341931613677264,
+            "multi_before": 6172,
+            "multi_after": 5957,
+            "multi_ratio": 0.9651652624756967
+          },
+          {
+            "name": "Clang",
+            "single_before": 4880,
+            "single_after": 4947,
+            "single_ratio": 1.0137295081967213,
+            "multi_before": 24294,
+            "multi_after": 24439,
+            "multi_ratio": 1.0059685519058204
+          },
+          {
+            "name": "Text Processing",
+            "single_before": 3590,
+            "single_after": 3628,
+            "single_ratio": 1.0105849582172701,
+            "multi_before": 3188,
+            "multi_after": 3185,
+            "multi_ratio": 0.9990589711417817
+          },
+          {
+            "name": "Asset Compression",
+            "single_before": 3610,
+            "single_after": 3621,
+            "single_ratio": 1.0030470914127423,
+            "multi_before": 13937,
+            "multi_after": 16907,
+            "multi_ratio": 1.21310181531176
+          },
+          {
+            "name": "Object Detection",
+            "single_before": 3163,
+            "single_after": 3209,
+            "single_ratio": 1.0145431552323743,
+            "multi_before": 9024,
+            "multi_after": 8607,
+            "multi_ratio": 0.9537898936170213
+          },
+          {
+            "name": "Background Blur",
+            "single_before": 3410,
+            "single_after": 3450,
+            "single_ratio": 1.0117302052785924,
+            "multi_before": 11449,
+            "multi_after": 10931,
+            "multi_ratio": 0.9547558738754477
+          },
+          {
+            "name": "Horizon Detection",
+            "single_before": 3956,
+            "single_after": 4012,
+            "single_ratio": 1.0141557128412537,
+            "multi_before": 16325,
+            "multi_after": 15661,
+            "multi_ratio": 0.9593261868300154
+          },
+          {
+            "name": "Object Remover",
+            "single_before": 4672,
+            "single_after": 4713,
+            "single_ratio": 1.0087756849315068,
+            "multi_before": 14286,
+            "multi_after": 14660,
+            "multi_ratio": 1.0261794764104717
+          },
+          {
+            "name": "HDR",
+            "single_before": 4392,
+            "single_after": 4470,
+            "single_ratio": 1.0177595628415301,
+            "multi_before": 9077,
+            "multi_after": 9997,
+            "multi_ratio": 1.101355073262091
+          },
+          {
+            "name": "Photo Filter",
+            "single_before": 2688,
+            "single_after": 2969,
+            "single_ratio": 1.1045386904761905,
+            "multi_before": 3423,
+            "multi_after": 3889,
+            "multi_ratio": 1.1361378907391178
+          },
+          {
+            "name": "Ray Tracer",
+            "single_before": 3528,
+            "single_after": 3682,
+            "single_ratio": 1.0436507936507937,
+            "multi_before": 21715,
+            "multi_after": 21953,
+            "multi_ratio": 1.0109601657840204
+          },
+          {
+            "name": "Structure from Motion",
+            "single_before": 3791,
+            "single_after": 3790,
+            "single_ratio": 0.9997362173568979,
+            "multi_before": 13040,
+            "multi_after": 13708,
+            "multi_ratio": 1.0512269938650307
+          }
+        ],
+        "limitations": [
+          "One clean complete run per final revision; no confidence interval or claim of improvement for every subtest.",
+          "Native macOS uses different OS/binary/library/ISA dispatch and reports 24GiB versus the explicit 4GiB guest cap. Ratios are platform results, not isolated HVF cost.",
+          "Twelve-slot Text Processing remains below its single-core result; Photo Library and several image components did not improve versus the prior twelve-slot run.",
+          "No Firefox recovery or interactive GUI performance claim follows from the CPU benchmark."
+        ]
+      }
+    }
+  },
+  "provenance_note": "Top-level product_source_mac/runtime_revision describe the original research; production_sparse_vmas_2026_10_29 records the implemented path separately."
 }

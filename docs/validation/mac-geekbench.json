@@ -7584,5 +7584,433 @@
       "multi_ratio": 1.030612244897959,
       "same_memory_mib": 4096
     }
+  },
+  "sparse_vma_followup": {
+    "date": "2026-10-29",
+    "runtime_revision": "b230398dd102433599268a2fef4630d77a0a600c",
+    "changes": [
+      "Common sparse accessible private-anonymous VMAs above 64KiB; no per-page descriptor graph for untouched addresses, including VMAs above the former 16GiB ceiling.",
+      "Persistent canonical reached-byte/charge stores across worker snapshot generations; no ordinary handoff conversion into duplicate coordinator descriptors.",
+      "Exact old-store retirement tickets, overlap-index updates and direct mapping-collision lookup remove process-wide VMA/retirement traversals.",
+      "Retained view ownership, fork COW, late dirty publication, quotas, precise subrange permissions and iPad software CPU aliases remain covered."
+    ],
+    "final_run": {
+      "runner_sha256": "11dbfda9d79c39e5b5efa41a726d6adf2bed859b1ce6caf31880cd1647318076",
+      "code_mac": "2d95bc40f050271160142033ee576f5e040d2722",
+      "code_runtime": "b230398dd102433599268a2fef4630d77a0a600c",
+      "variant": "trames-4096mib-12cpu-sparse-indexed",
+      "memory_mib": 4096,
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793218718.347871,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 275.913189416,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19404127"
+      ],
+      "single": 3678,
+      "multi": 9134,
+      "components": {
+        "single": {
+          "File Compression": 2779,
+          "Navigation": 2855,
+          "HTML5 Browser": 4486,
+          "PDF Renderer": 3950,
+          "Photo Library": 3448,
+          "Clang": 4947,
+          "Text Processing": 3628,
+          "Asset Compression": 3621,
+          "Object Detection": 3209,
+          "Background Blur": 3450,
+          "Horizon Detection": 4012,
+          "Object Remover": 4713,
+          "HDR": 4470,
+          "Photo Filter": 2969,
+          "Ray Tracer": 3682,
+          "Structure from Motion": 3790
+        },
+        "multi": {
+          "File Compression": 4901,
+          "Navigation": 7522,
+          "HTML5 Browser": 8170,
+          "PDF Renderer": 6665,
+          "Photo Library": 5957,
+          "Clang": 24439,
+          "Text Processing": 3185,
+          "Asset Compression": 16907,
+          "Object Detection": 8607,
+          "Background Blur": 10931,
+          "Horizon Detection": 15661,
+          "Object Remover": 14660,
+          "HDR": 9997,
+          "Photo Filter": 3889,
+          "Ray Tracer": 21953,
+          "Structure from Motion": 13708
+        }
+      },
+      "read_method": "Public Geekbench result, complete accessibility tree through in-app browser",
+      "version": "6.7.1 Preview for Linux AArch64",
+      "completed_workloads": 32,
+      "clean_performance_sample": true,
+      "sampler_used": false,
+      "application_source_unchanged_from": "01b808c4ea03e450c96266ae1f9438cba9f285a7"
+    },
+    "comparison": {
+      "baseline_url": "https://browser.geekbench.com/v6/cpu/19403147",
+      "same_guest_binary_data_cpus_and_explicit_memory_limit": true,
+      "single_ratio": 1.0855962219598583,
+      "multi_ratio": 1.11648942672045,
+      "wall_ratio": 0.9379149417734253,
+      "native_url": "https://browser.geekbench.com/v6/cpu/19400588",
+      "native_single_ratio": 0.8579426172148356,
+      "native_multi_ratio": 0.4906532015470563,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single_before": 2411,
+          "single_after": 2779,
+          "single_ratio": 1.1526337619245126,
+          "multi_before": 4638,
+          "multi_after": 4901,
+          "multi_ratio": 1.0567054764984907
+        },
+        {
+          "name": "Navigation",
+          "single_before": 1465,
+          "single_after": 2855,
+          "single_ratio": 1.9488054607508531,
+          "multi_before": 2248,
+          "multi_after": 7522,
+          "multi_ratio": 3.346085409252669
+        },
+        {
+          "name": "HTML5 Browser",
+          "single_before": 4339,
+          "single_after": 4486,
+          "single_ratio": 1.0338787739110393,
+          "multi_before": 8779,
+          "multi_after": 8170,
+          "multi_ratio": 0.9306299122906937
+        },
+        {
+          "name": "PDF Renderer",
+          "single_before": 3642,
+          "single_after": 3950,
+          "single_ratio": 1.0845689181768259,
+          "multi_before": 6242,
+          "multi_after": 6665,
+          "multi_ratio": 1.067766741429029
+        },
+        {
+          "name": "Photo Library",
+          "single_before": 3334,
+          "single_after": 3448,
+          "single_ratio": 1.0341931613677264,
+          "multi_before": 6172,
+          "multi_after": 5957,
+          "multi_ratio": 0.9651652624756967
+        },
+        {
+          "name": "Clang",
+          "single_before": 4880,
+          "single_after": 4947,
+          "single_ratio": 1.0137295081967213,
+          "multi_before": 24294,
+          "multi_after": 24439,
+          "multi_ratio": 1.0059685519058204
+        },
+        {
+          "name": "Text Processing",
+          "single_before": 3590,
+          "single_after": 3628,
+          "single_ratio": 1.0105849582172701,
+          "multi_before": 3188,
+          "multi_after": 3185,
+          "multi_ratio": 0.9990589711417817
+        },
+        {
+          "name": "Asset Compression",
+          "single_before": 3610,
+          "single_after": 3621,
+          "single_ratio": 1.0030470914127423,
+          "multi_before": 13937,
+          "multi_after": 16907,
+          "multi_ratio": 1.21310181531176
+        },
+        {
+          "name": "Object Detection",
+          "single_before": 3163,
+          "single_after": 3209,
+          "single_ratio": 1.0145431552323743,
+          "multi_before": 9024,
+          "multi_after": 8607,
+          "multi_ratio": 0.9537898936170213
+        },
+        {
+          "name": "Background Blur",
+          "single_before": 3410,
+          "single_after": 3450,
+          "single_ratio": 1.0117302052785924,
+          "multi_before": 11449,
+          "multi_after": 10931,
+          "multi_ratio": 0.9547558738754477
+        },
+        {
+          "name": "Horizon Detection",
+          "single_before": 3956,
+          "single_after": 4012,
+          "single_ratio": 1.0141557128412537,
+          "multi_before": 16325,
+          "multi_after": 15661,
+          "multi_ratio": 0.9593261868300154
+        },
+        {
+          "name": "Object Remover",
+          "single_before": 4672,
+          "single_after": 4713,
+          "single_ratio": 1.0087756849315068,
+          "multi_before": 14286,
+          "multi_after": 14660,
+          "multi_ratio": 1.0261794764104717
+        },
+        {
+          "name": "HDR",
+          "single_before": 4392,
+          "single_after": 4470,
+          "single_ratio": 1.0177595628415301,
+          "multi_before": 9077,
+          "multi_after": 9997,
+          "multi_ratio": 1.101355073262091
+        },
+        {
+          "name": "Photo Filter",
+          "single_before": 2688,
+          "single_after": 2969,
+          "single_ratio": 1.1045386904761905,
+          "multi_before": 3423,
+          "multi_after": 3889,
+          "multi_ratio": 1.1361378907391178
+        },
+        {
+          "name": "Ray Tracer",
+          "single_before": 3528,
+          "single_after": 3682,
+          "single_ratio": 1.0436507936507937,
+          "multi_before": 21715,
+          "multi_after": 21953,
+          "multi_ratio": 1.0109601657840204
+        },
+        {
+          "name": "Structure from Motion",
+          "single_before": 3791,
+          "single_after": 3790,
+          "single_ratio": 0.9997362173568979,
+          "multi_before": 13040,
+          "multi_after": 13708,
+          "multi_ratio": 1.0512269938650307
+        }
+      ],
+      "limitations": [
+        "One clean complete run per final revision; no confidence interval or claim of improvement for every subtest.",
+        "Native macOS uses different OS/binary/library/ISA dispatch and reports 24GiB versus the explicit 4GiB guest cap. Ratios are platform results, not isolated HVF cost.",
+        "Twelve-slot Text Processing remains below its single-core result; Photo Library and several image components did not improve versus the prior twelve-slot run.",
+        "No Firefox recovery or interactive GUI performance claim follows from the CPU benchmark."
+      ]
+    },
+    "bounded_memory_results": {
+      "before": {
+        "metadata": {
+          "map": {
+            "ms": 20.686166999999998,
+            "additional_peak_rss_mib": 50.578125
+          },
+          "freeze": {
+            "ms": 37.240125,
+            "additional_peak_rss_mib": 180.953125
+          },
+          "protect": {
+            "ms": 22.132458,
+            "additional_peak_rss_mib": 186.375
+          },
+          "refreeze": {
+            "ms": 85.59908300000001,
+            "additional_peak_rss_mib": 295.3125
+          }
+        },
+        "single_cpu_wall_ms": 174.433,
+        "twelve_cpu_wall_ms": 2233.883
+      },
+      "after": {
+        "metadata": {
+          "map": {
+            "ms": 0.002417,
+            "additional_peak_rss_mib": 0.109375
+          },
+          "freeze": {
+            "ms": 0.0052499999999999995,
+            "additional_peak_rss_mib": 0.1875
+          },
+          "protect": {
+            "ms": 0.004459,
+            "additional_peak_rss_mib": 0.234375
+          },
+          "refreeze": {
+            "ms": 0.005625000000000001,
+            "additional_peak_rss_mib": 0.265625
+          }
+        },
+        "single_cpu_wall_ms": 169.404,
+        "twelve_cpu_wall_ms": 2189.918
+      }
+    },
+    "bounded_evidence": "mac-memory-model-probes.json#production_sparse_vmas_2026_10_29",
+    "validation": {
+      "runtime_macos": [
+        "fmt",
+        "clippy",
+        "workspace tests",
+        "release"
+      ],
+      "runtime_native_arm_linux": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.284454792
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 1.1487605829999996
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 4.344813419
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 34.865523183
+        },
+        {
+          "name": "release",
+          "exit": 0,
+          "seconds": 4.128561836000003
+        },
+        {
+          "name": "reclaim",
+          "exit": 0,
+          "seconds": 2.205711125999997
+        }
+      ],
+      "mac_product": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.16566729200000002
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 2.286494709
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 3.7385721670000005
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 17.321040167
+        },
+        {
+          "name": "hardware",
+          "exit": 0,
+          "seconds": 9.734369542
+        },
+        {
+          "name": "build",
+          "exit": 0,
+          "seconds": 19.055047000000002
+        }
+      ],
+      "signed_hardware": {
+        "passed": true,
+        "runtime_revision": "b230398dd102433599268a2fef4630d77a0a600c",
+        "rows": [
+          {
+            "target": "trames-mac-run",
+            "executable_sha256": "0ea4150ecfe6f3861bdca0d5dadf362f8af586f9d01fcc797a4e3cfd0da4679c",
+            "exit": 0,
+            "passed_tests": 1
+          },
+          {
+            "target": "trames_hvf",
+            "executable_sha256": "a4e48ecd227e110673f36ad125acb7807e9a82f1fb65925f54119244210fcd76",
+            "exit": 0,
+            "passed_tests": 32
+          }
+        ]
+      },
+      "ipad_product": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.15136054200000001
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 1.233287083
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 6.1118211659999995
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 27.236669166
+        },
+        {
+          "name": "device",
+          "exit": 0,
+          "seconds": 5.113859999999995
+        },
+        {
+          "name": "sim",
+          "exit": 0,
+          "seconds": 3.564278792000003
+        }
+      ],
+      "memory_lib_tests": 141,
+      "fragmentation_guard": {
+        "mapped_vmas": 2000,
+        "local_retirement_store_cache_scopes_max": 2,
+        "rebuilt_range_records_max": 2,
+        "complete_region_lists": 0
+      }
+    },
+    "excluded_diagnostic": {
+      "runtime_revision": "351a5202f75f8c2b8b9754d2fa4434e85a4fcd2c",
+      "valid_performance_result": false,
+      "reason": "Multi-core PDF exposed a VMA/retirement cross-product traversal; sampled and deliberately stopped. Replaced by direct store tickets and incremental overlap-index updates. No complete score."
+    },
+    "remaining_limits": [
+      "Per-4KiB hardware first-touch export/ownership handling remains.",
+      "Shared-mm changes still join workers; native range backing and hardware block translations are future work.",
+      "File/shared mapping descriptor ceilings and conservative fork accounting remain; large private anonymous mappings now use sparse intervals."
+    ]
   }
 }

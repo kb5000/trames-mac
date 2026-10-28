@@ -764,3 +764,54 @@ Per-page first-touch export, joined mm changes, dense metadata, the 16 GiB VMA
 descriptor guard and conservative fork accounting remain. No Firefox recovery
 or long-term stability claim follows from these CPU runs. Detailed filtered
 evidence, all components and the probe records are in [JSON](mac-geekbench.json).
+
+### Sparse anonymous VMAs and indexed retirement (2026-10-29)
+
+Runtime `b230398dd102433599268a2fef4630d77a0a600c` replaces the dense metadata
+cost above for large private anonymous mappings. Unreached accessible ranges
+remain intervals; reached bytes and charges retain one canonical identity across
+worker generations. Ordinary commits avoid duplicate coordinator descriptors.
+Retirement and snapshot-index updates visit the affected stores/ranges, and
+mmap/mprotect avoid constructing a process-wide region list. A 2,000-VMA guard
+bounds a local mutation to at most two updated records. The common model serves
+both Mac hardware execution and iPad software aliases. File/shared mappings keep
+their independent descriptor bounds; first-touch exports remain per 4 KiB.
+
+Five fresh shuffled trials measured untouched 1 GiB map time at 20.686 ms before
+and 2.42 us after, with additional peak process RSS 50.58 / 0.11 MiB. Protect plus
+refreeze fell from 108.607 ms to 10.08 us; cumulative additional peak RSS at that
+stage fell from 295.31 to 0.27 MiB. These are process high-water marks, not unique
+physical memory. The unchanged Linux memory fixture's single/twelve-slot wall
+medians improved 2.9% / 2.0%; no whole-application gain is inferred from those
+bounded trials.
+
+The final normal signed release has SHA-256
+`11dbfda9d79c39e5b5efa41a726d6adf2bed859b1ce6caf31880cd1647318076`.
+Its clean twelve-slot, 4096 MiB Geekbench run completed all 32 workloads in
+275.91 s and scored **3678 / 9134**, versus the preceding **3388 / 8181**
+(single +8.6%, multi +11.6%). Navigation multi improved 2248 -> 7522 and Asset
+Compression 13937 -> 16907. Photo Library and several image components did not
+improve; Text Processing remains below its single-core score. Each revision has
+one full sample. The earlier native macOS totals are 4287 / 18616; new Trames
+totals are 85.8% / 49.1%, with the OS/binary/ISA/library and 4/24 GiB memory
+differences still applying. Public results:
+[new sparse implementation](https://browser.geekbench.com/v6/cpu/19404127),
+[preceding control](https://browser.geekbench.com/v6/cpu/19403147).
+
+A provisional implementation was deliberately stopped after multi-core PDF
+exposed a cross-product traversal of VMA/retirement intervals. That sampled run
+has no complete score and is excluded. The final indexed implementation passed
+the same PDF stage and the complete suite without profiling. No CI VM, builds
+or other probes ran during clean measurements; thermal state was nominal and
+low-power mode off before/after. Firefox stayed closed.
+
+Local common macOS and native ARM64 Linux workflows passed. Memory coverage has
+141 lib tests plus the allocation and translation integration tests. Mac
+boundaries, format/lint, workspace tests, 32 signed HVF tests, one pressure test
+and normal signed release passed. iPad workspace checks plus device and simulator
+target compilation passed. Checks use the intended tracked runtime sources and
+preserve unrelated network/integration-test work. Prior unchanged acceptance is
+reused. Native range backing/block translations and joined shared-mm changes
+remain follow-up work. Full component scores and limits are in
+[mac-geekbench.json](mac-geekbench.json); bounded raw measurements are in
+[mac-memory-model-probes.json](mac-memory-model-probes.json).
