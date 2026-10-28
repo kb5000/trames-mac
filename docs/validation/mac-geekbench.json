@@ -1,0 +1,569 @@
+{
+  "schema": 1,
+  "date": "2026-10-28",
+  "code": {
+    "mac": "7a54477cde6c988cd264f3534a612f15a28354f6",
+    "runtime": "dc49cbfed76fa5876dcc1ac2eb0e49100b464c26",
+    "runner_sha256": "7e124a6c82e64a6ccb3b9f49571606cd449036193e2e69ba4ce5f9423a299cf8"
+  },
+  "benchmark": {
+    "name": "Geekbench",
+    "version": "6.7.1",
+    "guest_build": "Linux AArch64 Preview",
+    "native_build": "macOS AArch64",
+    "binary_and_data_unmodified": true,
+    "repeats_per_completed_variant": 1,
+    "upload_authorized": true,
+    "source_urls": [
+      "https://www.geekbench.com/preview/",
+      "https://www.geekbench.com/legacy/",
+      "https://geekbench-cdn.b-cdn.net/Geekbench-6.7.1-LinuxARMPreview.tar.gz",
+      "https://geekbench-cdn.b-cdn.net/Geekbench-6.7.1-Mac.zip",
+      "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.5-base-arm64.tar.gz"
+    ],
+    "source_sha256": {
+      "Geekbench-6.7.1-LinuxARMPreview.tar.gz": "6e59acb83e6dea3671e2e295365fc37c40fdd280cdbddd50acf248910e14a0e3",
+      "Geekbench-6.7.1-Mac.zip": "0cceb31fce4f40af265292c3ffe050ceb509aeabe647240dde73842e62401008",
+      "ubuntu-base-24.04.5-base-arm64.tar.gz": "a91d5a93010193712d346d761372b7c9db6dfcf093893161c64ca107f05914f2",
+      "linux/Geekbench-6.7.1-LinuxARMPreview/geekbench_aarch64": "2ab486aa545c2a62ad3debf53d6412d2eba0a189d6daf6dec213af2d89b247e5",
+      "linux/Geekbench-6.7.1-LinuxARMPreview/geekbench6": "73ceafda276e6cd03709b333899742d8812dc05e2ee9c3a32591009b70cfc0ff",
+      "mac/Geekbench 6.app/Contents/Resources/geekbench6": "f82d24a42623019d4c1b349636278409b271e4384ffbb1293d6072dd90a1895c"
+    },
+    "glibc_files": {
+      "ld-linux-aarch64.so.1": {
+        "source": "usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1",
+        "sha256": "49005ef8e9db9a45691ff875e6ca18dd8723c7ec5c1a863a276a1186dbf22774"
+      },
+      "libc.so.6": {
+        "source": "usr/lib/aarch64-linux-gnu/libc.so.6",
+        "sha256": "6e3cc56b98887cb3cc2a9fe78b6dd4610184aa27bd05d592cb287db93e82d494"
+      },
+      "libdl.so.2": {
+        "source": "usr/lib/aarch64-linux-gnu/libdl.so.2",
+        "sha256": "f196e378b444da9e982e8930e1595e9ad6a723d890e0647bc60d8fcf581a93c8"
+      },
+      "libgcc_s.so.1": {
+        "source": "usr/lib/aarch64-linux-gnu/libgcc_s.so.1",
+        "sha256": "f2d3ad2bf0b61f6bc944cc37d7b6ab7f88d2582b41ff989ca164803f56cc5f20"
+      },
+      "libm.so.6": {
+        "source": "usr/lib/aarch64-linux-gnu/libm.so.6",
+        "sha256": "24be585ff27080ba6301d8b3e1c92a54a3832829a9efde744cad4b876a73681a"
+      },
+      "libpthread.so.0": {
+        "source": "usr/lib/aarch64-linux-gnu/libpthread.so.0",
+        "sha256": "1ce5833f596169e194b95a6f288c98d80b7b907a1ded2389746cd00235b3a456"
+      }
+    },
+    "ubuntu_archive_verified_against_official_sha256sums": true,
+    "official_mac_codesign_deep_strict_verified": true
+  },
+  "host": {
+    "cpu": "Apple M6",
+    "model": "Mac18,5",
+    "os": "macOS 27.0.1 (26A434)",
+    "physical_and_logical_cpus": 12,
+    "memory_bytes": 25769803776
+  },
+  "method": {
+    "order": [
+      "trames-4096mib-failed",
+      "native",
+      "offline-traced-4096mib-diagnostic-unscored",
+      "sampled-and-stopped-trames-8192mib-12cpu",
+      "trames-4096mib-4cpu-upload-dns-failure",
+      "trames-4096mib-4cpu-scored"
+    ],
+    "no_concurrent_build_profiler_or_window_capture": true,
+    "normal_desktop_background_apps_remained": true,
+    "test_firefox_stopped": true,
+    "idle_sleep_prevented": true,
+    "scored_process_state_check": null,
+    "scored_syscall_trace": false,
+    "scored_metrics": false,
+    "cpus_placed_by_macos": true,
+    "guest_network": "outbound",
+    "guest_windows": false,
+    "guest_pty": false,
+    "guest_resident_target": null,
+    "guest_default_budget_mib_unchanged": 4096,
+    "guest_advertised_hwcap": 3,
+    "guest_advertised_hwcap2": 0,
+    "native_geekbench_capabilities": [
+      "neon",
+      "aes",
+      "sha1",
+      "sha2",
+      "neon-fp16",
+      "neon-dotprod",
+      "i8mm",
+      "sme-i8i32",
+      "sme-f32f32",
+      "sme2"
+    ],
+    "interpretation": "End-to-end platform comparison; includes ISA dispatch, binary/ABI/library differences, memory limits, runtime work and scheduling; not isolated HVF overhead or a Firefox benchmark."
+  },
+  "completed": [
+    {
+      "variant": "trames",
+      "cpus": 4,
+      "logical_memory_mib": 4096,
+      "exit": 0,
+      "wall_seconds": 462.29718237500003,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "source": "https://browser.geekbench.com/v6/cpu/19400701",
+      "read_method": "public result DOM via in-app browser",
+      "version": "6.7.1",
+      "single_core": 2421,
+      "multi_core": 2795,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single_core": 1624,
+          "multi_core": 1619
+        },
+        {
+          "name": "Navigation",
+          "single_core": 1121,
+          "multi_core": 1268
+        },
+        {
+          "name": "HTML5 Browser",
+          "single_core": 4146,
+          "multi_core": 2930
+        },
+        {
+          "name": "PDF Renderer",
+          "single_core": 2977,
+          "multi_core": 1009
+        },
+        {
+          "name": "Photo Library",
+          "single_core": 2173,
+          "multi_core": 2468
+        },
+        {
+          "name": "Clang",
+          "single_core": 4664,
+          "multi_core": 9942
+        },
+        {
+          "name": "Text Processing",
+          "single_core": 2384,
+          "multi_core": 1809
+        },
+        {
+          "name": "Asset Compression",
+          "single_core": 3560,
+          "multi_core": 5834
+        },
+        {
+          "name": "Object Detection",
+          "single_core": 911,
+          "multi_core": 1600
+        },
+        {
+          "name": "Background Blur",
+          "single_core": 2104,
+          "multi_core": 4077
+        },
+        {
+          "name": "Horizon Detection",
+          "single_core": 3731,
+          "multi_core": 6023
+        },
+        {
+          "name": "Object Remover",
+          "single_core": 4384,
+          "multi_core": 10509
+        },
+        {
+          "name": "HDR",
+          "single_core": 3005,
+          "multi_core": 2572
+        },
+        {
+          "name": "Photo Filter",
+          "single_core": 964,
+          "multi_core": 284
+        },
+        {
+          "name": "Ray Tracer",
+          "single_core": 3624,
+          "multi_core": 8677
+        },
+        {
+          "name": "Structure from Motion",
+          "single_core": 2713,
+          "multi_core": 6338
+        }
+      ]
+    },
+    {
+      "variant": "native",
+      "cpus": 12,
+      "memory_mib": 24576,
+      "exit": 0,
+      "wall_seconds": 235.84762304199998,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "source": "https://browser.geekbench.com/v6/cpu/19400588",
+      "read_method": "public result DOM via in-app browser",
+      "version": "6.7.1",
+      "single_core": 4287,
+      "multi_core": 18616,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single_core": 3513,
+          "multi_core": 12298
+        },
+        {
+          "name": "Navigation",
+          "single_core": 3543,
+          "multi_core": 16886
+        },
+        {
+          "name": "HTML5 Browser",
+          "single_core": 4466,
+          "multi_core": 21252
+        },
+        {
+          "name": "PDF Renderer",
+          "single_core": 3968,
+          "multi_core": 19319
+        },
+        {
+          "name": "Photo Library",
+          "single_core": 3717,
+          "multi_core": 23344
+        },
+        {
+          "name": "Clang",
+          "single_core": 4862,
+          "multi_core": 29922
+        },
+        {
+          "name": "Text Processing",
+          "single_core": 4123,
+          "multi_core": 5545
+        },
+        {
+          "name": "Asset Compression",
+          "single_core": 3737,
+          "multi_core": 25436
+        },
+        {
+          "name": "Object Detection",
+          "single_core": 6297,
+          "multi_core": 18010
+        },
+        {
+          "name": "Background Blur",
+          "single_core": 4428,
+          "multi_core": 18671
+        },
+        {
+          "name": "Horizon Detection",
+          "single_core": 4700,
+          "multi_core": 25922
+        },
+        {
+          "name": "Object Remover",
+          "single_core": 5143,
+          "multi_core": 20020
+        },
+        {
+          "name": "HDR",
+          "single_core": 4938,
+          "multi_core": 23779
+        },
+        {
+          "name": "Photo Filter",
+          "single_core": 4753,
+          "multi_core": 14494
+        },
+        {
+          "name": "Ray Tracer",
+          "single_core": 3718,
+          "multi_core": 26110
+        },
+        {
+          "name": "Structure from Motion",
+          "single_core": 3991,
+          "multi_core": 20364
+        }
+      ]
+    }
+  ],
+  "upload_workaround": {
+    "guest_hosts_record": "Resolved browser.geekbench.com through the host resolver; inserted only in isolated benchmark guest /etc/hosts. Address intentionally omitted from published evidence.",
+    "cause": "glibc DNS sets IP_RECVERR (SOL_IP=0, opt=11); current setsockopt returns ENOPROTOOPT (92).",
+    "glibc_getent_hosts_after": 0,
+    "glibc_getent_ahostsv4_after": 0,
+    "busybox_https_preflight": "Reached server; HTTP 403 response.",
+    "ca_bundle_source": "https://curl.se/ca/cacert.pem",
+    "ca_bundle_sha256": "796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe",
+    "verified_against": "https://curl.se/ca/cacert.pem.sha256",
+    "runtime_code_changed": false
+  },
+  "completed_but_upload_failed_4096mib_4cpu": {
+    "cpus": 4,
+    "logical_memory_mib": 4096,
+    "workloads_completed": 32,
+    "exit": 255,
+    "wall_seconds": 457.23744008299997,
+    "public_result": null,
+    "error": "libcurl (6): could not resolve host browser.geekbench.com",
+    "local_result_file_retained": false
+  },
+  "stopped_8192mib_12cpu": {
+    "exit": -15,
+    "wall_seconds": 714.3396316669999,
+    "stage": "Multi-Core PDF Renderer",
+    "score": null,
+    "public_result": null,
+    "scored": false,
+    "reason": "No stage progress for more than 300 seconds; sampled for diagnosis and stopped.",
+    "process_state_observation": {
+      "cpu_percent": 282.8,
+      "host_rss_kib": 5271888,
+      "note": "One ps observation; not a utilization average, retired guest time or unique physical memory measurement."
+    },
+    "one_second_sample": {
+      "main_thread": "Most samples waiting in parallel_epoch/event_timeout",
+      "worker_observations": [
+        "hv_vcpu_run",
+        "Machine::allocate / memset",
+        "trames_hvf_page"
+      ],
+      "scope": "Not a CPU-only time profile; HVF run frames combine guest execution and kernel waits. No dominant-cost percentage inferred."
+    },
+    "source_followup": "host.c table_for walks the address-space table list for each guest page-table lookup; an indexed lookup is a candidate, not proven dominant by this sample."
+  },
+  "comparison": {
+    "thread_counts_equal": false,
+    "single_core_ratio": 0.564731,
+    "multi_core_ratio": 0.15014,
+    "workloads": [
+      {
+        "name": "File Compression",
+        "trames_single": 1624,
+        "native_single": 3513,
+        "single_ratio": 0.462283,
+        "trames_multi": 1619,
+        "native_multi": 12298,
+        "multi_ratio": 0.131647
+      },
+      {
+        "name": "Navigation",
+        "trames_single": 1121,
+        "native_single": 3543,
+        "single_ratio": 0.316399,
+        "trames_multi": 1268,
+        "native_multi": 16886,
+        "multi_ratio": 0.075092
+      },
+      {
+        "name": "HTML5 Browser",
+        "trames_single": 4146,
+        "native_single": 4466,
+        "single_ratio": 0.928348,
+        "trames_multi": 2930,
+        "native_multi": 21252,
+        "multi_ratio": 0.137869
+      },
+      {
+        "name": "PDF Renderer",
+        "trames_single": 2977,
+        "native_single": 3968,
+        "single_ratio": 0.750252,
+        "trames_multi": 1009,
+        "native_multi": 19319,
+        "multi_ratio": 0.052228
+      },
+      {
+        "name": "Photo Library",
+        "trames_single": 2173,
+        "native_single": 3717,
+        "single_ratio": 0.584611,
+        "trames_multi": 2468,
+        "native_multi": 23344,
+        "multi_ratio": 0.105723
+      },
+      {
+        "name": "Clang",
+        "trames_single": 4664,
+        "native_single": 4862,
+        "single_ratio": 0.959276,
+        "trames_multi": 9942,
+        "native_multi": 29922,
+        "multi_ratio": 0.332264
+      },
+      {
+        "name": "Text Processing",
+        "trames_single": 2384,
+        "native_single": 4123,
+        "single_ratio": 0.57822,
+        "trames_multi": 1809,
+        "native_multi": 5545,
+        "multi_ratio": 0.32624
+      },
+      {
+        "name": "Asset Compression",
+        "trames_single": 3560,
+        "native_single": 3737,
+        "single_ratio": 0.952636,
+        "trames_multi": 5834,
+        "native_multi": 25436,
+        "multi_ratio": 0.22936
+      },
+      {
+        "name": "Object Detection",
+        "trames_single": 911,
+        "native_single": 6297,
+        "single_ratio": 0.144672,
+        "trames_multi": 1600,
+        "native_multi": 18010,
+        "multi_ratio": 0.08884
+      },
+      {
+        "name": "Background Blur",
+        "trames_single": 2104,
+        "native_single": 4428,
+        "single_ratio": 0.475158,
+        "trames_multi": 4077,
+        "native_multi": 18671,
+        "multi_ratio": 0.21836
+      },
+      {
+        "name": "Horizon Detection",
+        "trames_single": 3731,
+        "native_single": 4700,
+        "single_ratio": 0.79383,
+        "trames_multi": 6023,
+        "native_multi": 25922,
+        "multi_ratio": 0.232351
+      },
+      {
+        "name": "Object Remover",
+        "trames_single": 4384,
+        "native_single": 5143,
+        "single_ratio": 0.852421,
+        "trames_multi": 10509,
+        "native_multi": 20020,
+        "multi_ratio": 0.524925
+      },
+      {
+        "name": "HDR",
+        "trames_single": 3005,
+        "native_single": 4938,
+        "single_ratio": 0.608546,
+        "trames_multi": 2572,
+        "native_multi": 23779,
+        "multi_ratio": 0.108163
+      },
+      {
+        "name": "Photo Filter",
+        "trames_single": 964,
+        "native_single": 4753,
+        "single_ratio": 0.202819,
+        "trames_multi": 284,
+        "native_multi": 14494,
+        "multi_ratio": 0.019594
+      },
+      {
+        "name": "Ray Tracer",
+        "trames_single": 3624,
+        "native_single": 3718,
+        "single_ratio": 0.974718,
+        "trames_multi": 8677,
+        "native_multi": 26110,
+        "multi_ratio": 0.332325
+      },
+      {
+        "name": "Structure from Motion",
+        "trames_single": 2713,
+        "native_single": 3991,
+        "single_ratio": 0.67978,
+        "trames_multi": 6338,
+        "native_multi": 20364,
+        "multi_ratio": 0.311236
+      }
+    ],
+    "trames_multi_over_single": 1.154481619165634,
+    "observed_within_trames_regressions": [
+      {
+        "name": "File Compression",
+        "single": 1624,
+        "multi": 1619,
+        "multi_over_single": 0.9969211822660099
+      },
+      {
+        "name": "HTML5 Browser",
+        "single": 4146,
+        "multi": 2930,
+        "multi_over_single": 0.7067052580800772
+      },
+      {
+        "name": "PDF Renderer",
+        "single": 2977,
+        "multi": 1009,
+        "multi_over_single": 0.3389318105475311
+      },
+      {
+        "name": "Text Processing",
+        "single": 2384,
+        "multi": 1809,
+        "multi_over_single": 0.7588087248322147
+      },
+      {
+        "name": "HDR",
+        "single": 3005,
+        "multi": 2572,
+        "multi_over_single": 0.8559068219633943
+      },
+      {
+        "name": "Photo Filter",
+        "single": 964,
+        "multi": 284,
+        "multi_over_single": 0.2946058091286307
+      }
+    ]
+  },
+  "failed_4096mib": {
+    "exit": 255,
+    "wall_seconds": 208.112286458,
+    "stage": "Multi-Core Navigation",
+    "error": "std::bad_alloc",
+    "single_core_workloads_completed": 16,
+    "public_result": null,
+    "diagnostic": {
+      "network": "off",
+      "syscall_trace": true,
+      "scored": false,
+      "exit": 255,
+      "wall_seconds": 219.8861539363861,
+      "sampled_peak_host_rss_kib": 3456208,
+      "rss_interval_seconds": 5,
+      "rss_note": "Host process RSS is not unique guest physical bytes; aliases may be counted; sampling can miss instantaneous peak.",
+      "estimated_mapped_bytes_before_enomem": 4006141952,
+      "failed_rw_mmap_bytes": 335560704,
+      "mapped_estimate_note": "Trace-derived estimate, excludes initial ELF pages and PROT_NONE file pages; overlapping successful mmap/mprotect ranges unioned; not a physical/RSS measurement. All benchmark threads share one address space.",
+      "quota_note": "Memory::map bounds committed mapping bytes by the logical per-space limit. Initial ELF and some PROT_NONE file mapping pages are absent from the trace reconstruction."
+    }
+  }
+}
