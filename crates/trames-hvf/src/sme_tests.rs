@@ -153,3 +153,79 @@ fn sme_timer_exit_preserves_streaming_vectors_and_predicates() {
     .join()
     .unwrap();
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and SME2"]
+fn ordinary_tasks_skip_sme_and_tpidr2_first_use_isolated_between_tasks() {
+    if features().hwcap2 & (1 << 37) == 0 {
+        return;
+    }
+    unsafe extern "C" {
+        static trames_sme_tls_begin: u8;
+        static trames_sme_tls_end: u8;
+    }
+    let mut executor = Executor::new().unwrap();
+    let mut normal = memory();
+    let mut normal_state = state();
+    let mut unused = None;
+    loop {
+        if executor
+            .run_sme(
+                &mut normal_state,
+                &mut unused,
+                64,
+                &mut normal,
+                Duration::from_millis(2),
+            )
+            .unwrap()
+            .reason
+            == ExitReason::Syscall
+        {
+            break;
+        }
+    }
+    assert!(
+        unused.is_none(),
+        "ordinary tasks must never activate SME storage"
+    );
+    for marker in [0x713, 0x371, 0] {
+        let mut m = code(
+            &raw const trames_sme_tls_begin,
+            &raw const trames_sme_tls_end,
+        );
+        let mut s = state();
+        s.registers[0] = marker;
+        let mut r = None;
+        loop {
+            if executor
+                .run_sme(&mut s, &mut r, 64, &mut m, Duration::from_millis(2))
+                .unwrap()
+                .reason
+                == ExitReason::Syscall
+            {
+                break;
+            }
+        }
+        assert_eq!(s.registers[1], marker);
+        assert_eq!(s.tpidr2_el0, marker);
+        assert_eq!(r.as_ref().unwrap().svcr, 0);
+        normal_state = state();
+        loop {
+            if executor
+                .run_sme(
+                    &mut normal_state,
+                    &mut unused,
+                    64,
+                    &mut normal,
+                    Duration::from_millis(2),
+                )
+                .unwrap()
+                .reason
+                == ExitReason::Syscall
+            {
+                break;
+            }
+        }
+        assert!(unused.is_none());
+    }
+}

@@ -1137,8 +1137,8 @@ bits follow those registers. On the tested Apple M6, requests for SMCR lengths
 16 or 32 bytes still execute at 64 bytes; Linux prctl therefore reports the
 only supported length, including requests below it. No full Linux kernel starts.
 
-The common 816-byte AArch64 layout is unchanged. A task retains an optional
-6,352-byte extended buffer only while SME registers are live; ordinary tasks
+The common 816-byte AArch64 layout is unchanged. A task allocates an optional
+6,352-byte extended buffer on its first SME/TPIDR2 access; ordinary tasks
 have no matrix buffer. The existing 16 KiB per-vCPU private allocation now holds
 the extended mailbox, using two EL1-only 4 KiB leaves in the existing adapter
 reservation. EL1 saves/restores Z/P/ZA/ZT directly through this mailbox; ordinary
@@ -1171,3 +1171,30 @@ mapping pauses; they are not all removable overhead. Advisory madvise is a very
 small candidate in this data. Reducing the withdrawal/protection path is the
 next broad mechanism to investigate while preserving completed-call permission
 and backing-lifetime guarantees.
+
+
+Build `tests/fixtures/linux-sme.c` and `linux-sme.S` with a static Linux AArch64
+musl toolchain and an assembler supporting SME2 (or the Mac Clang/musl sysroot
+and rust-lld recipe used by the CoreMark fixtures). On a supported Mac, run:
+
+```sh
+python3 tests/integration/mac-sme.py \
+  --runner target/release/trames-mac-run \
+  --fixture /path/to/linux-sme \
+  --output target/sme-linux-acceptance
+```
+
+The harness checks one bounded-memory CPU and twelve host-managed CPUs using
+the identical ELF, with networking and windows disabled.
+
+
+SME permission is lazy per task. Unused tasks keep SMEN/EnTP2 disabled and skip
+the extended adapter. The first architecturally trapped SME or TPIDR2 access
+allocates state, enables controls and retries that same instruction on the same
+host thread. A fixed SMCR is configured only on this transition; an ISB is
+required only when controls change. Switching back to an unused task clears the
+previous streaming mode before disabling access. A regression alternates
+ordinary tasks and TPIDR2-only tasks and checks both non-activation and isolation.
+The initial eager candidate scored 4079/11520: Object Detection single improved
+to 6560, but the multi total was below the previous 12307 sample. It is retained
+as provisional evidence, not accepted as a general performance improvement.

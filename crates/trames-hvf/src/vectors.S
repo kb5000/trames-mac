@@ -89,17 +89,15 @@ _trames_hvf_resume_end:
 _trames_hvf_sme_prepare:
     ldr x0, [sp, #864]
     cbz x0, 9f
-    isb
+    tbz x0, #2, 1f
+    isb // only after host changes CPACR/SMCR/SCTLR controls
+    bic x0, x0, #4
+    str x0, [sp, #864]
+1:  mrs x1, svcr
+    cbz x1, 2f
     smstop
-    ldr x1, [sp, #880]
-    lsr x1, x1, #4
-    sub x1, x1, #1
-    tbz x0, #1, 1f
-    orr x1, x1, #0x40000000 // SMCR_EL1.EZT0
-1:  msr smcr_el1, x1
-    ldr x1, [sp, #280]
+2:  ldr x1, [sp, #280]
     msr tpidr2_el0, x1
-    isb
 9:  ret
 _trames_hvf_sme_restore:
     ldr x0, [sp, #864]

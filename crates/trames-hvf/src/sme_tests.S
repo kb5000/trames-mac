@@ -43,3 +43,10 @@ _trames_sme_yield_finish:
     fmopa za0.s, p0/m, p0/m, z0.s, z1.s
     svc #0
 _trames_sme_yield_end:
+.balign 16
+.global _trames_sme_tls_begin, _trames_sme_tls_end
+_trames_sme_tls_begin:
+    msr tpidr2_el0, x0
+    mrs x1, tpidr2_el0
+    svc #0
+_trames_sme_tls_end:

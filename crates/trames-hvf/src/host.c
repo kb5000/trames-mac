@@ -494,7 +494,7 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,3<<20)) ||
         // Match Linux: EL0 may read CNTVCT/CNTFRQ, but cannot control timers.
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTKCTL_EL1,1<<1)) ||
-        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)|(m->sme_enabled ? UINT64_C(1)<<60 : 0)))) goto fail;
+        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)))) goto fail;
     // A new executor may reuse an old ASID; its first selected root still
     // needs full invalidation even though its individual tables are all new.
     dirty_all(h);
@@ -539,10 +539,21 @@ int trames_hvf_sme_input(struct host *h, const struct sme_state *state, uint64_t
     uint64_t enabled=vl ? h->machine->sme_enabled : 0;
     if (vl && (!enabled || vl!=64)) return -2;
     if (state && (state->vl!=vl || state->svcr&~UINT64_C(3))) return -2;
-    if (h->context->sme_enabled!=enabled) {
-        hv_return_t error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,(3<<20)|(enabled ? 3<<24 : 0));
-        if (error) return (int)error;
-        h->context->sme_enabled=enabled;
+    if ((h->context->sme_enabled&3)!=enabled) {
+        if (__builtin_available(macOS 15.2, *)) {
+            hv_return_t error;
+            if (!enabled) {
+                // Clear the old task's streaming mode before denying access;
+                // otherwise the baseline NEON restore itself could trap.
+                hv_vcpu_sme_state_t mode={0};
+                if ((error=hv_vcpu_set_sme_state(h->cpu,&mode))) return (int)error;
+            } else if ((error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SMCR_EL1,3|(enabled&2 ? UINT64_C(1)<<30 : 0)))) return (int)error;
+            if ((error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,(3<<20)|(enabled ? 3<<24 : 0))) ||
+                (error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)|(enabled ? UINT64_C(1)<<60 : 0)))) return (int)error;
+            // The adapter synchronizes changed execution controls once. A
+            // fixed VL does not require an SMCR write at every page fault.
+            h->context->sme_enabled=enabled ? enabled|4 : 0;
+        } else return -2;
     }
     h->context->sme.vl=vl;
     h->context->sme.svcr=state ? state->svcr : 0;

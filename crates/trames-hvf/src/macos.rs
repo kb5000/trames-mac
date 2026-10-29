@@ -844,10 +844,23 @@ impl Executor {
             trames_hvf_sme_input(
                 self.host.as_ptr(),
                 registers.as_deref().map_or(std::ptr::null(), |r| r),
-                vl as u64,
+                if registers.is_some() { vl as u64 } else { 0 },
             )
         })?;
-        let result = self.run_parallel_inner(state, memory, quantum);
+        let mut result = self.run_parallel_inner(state, memory, quantum);
+        if registers.is_none()
+            && matches!(&result, Err(Error::Fault { syndrome, .. }) if sme_access_trap(*syndrome))
+        {
+            // SME/TPIDR2 is initially denied, so ordinary tasks execute the
+            // baseline adapter. Enable only this task's first actual access,
+            // keep its faulting PC, and retry on the same creator thread.
+            let saved = registers.insert(Box::new(SmeState {
+                vl: vl as u64,
+                ..Default::default()
+            }));
+            check(unsafe { trames_hvf_sme_input(self.host.as_ptr(), saved.as_ref(), vl as u64) })?;
+            result = self.run_parallel_inner(state, memory, quantum);
+        }
         // Capture on every exit, including a guest fault that may deliver a
         // signal. Immediate handled faults never copy through movable storage.
         let active = unsafe { trames_hvf_sme_active(self.host.as_ptr()) };
@@ -871,11 +884,10 @@ impl Executor {
             ) {
                 saved.syscall();
             }
-            if saved.svcr == 0 {
-                *registers = None;
-            }
-        } else {
-            *registers = None;
+        } else if let Some(saved) = registers.as_mut() {
+            // Retain the first-use marker, not live matrix contents. A later
+            // access needs no second permission trap or zeroed allocation.
+            saved.svcr = 0;
         }
         result
     }
@@ -982,6 +994,14 @@ impl Drop for Executor {
     fn drop(&mut self) {
         self.machine.destroy_cpu(self.host);
     }
+}
+
+fn sme_access_trap(syndrome: u64) -> bool {
+    let ec = syndrome >> 26;
+    // AArch64 trapped system-register ISS, excluding direction and Rt.
+    let mask = (3 << 20) | (7 << 17) | (7 << 14) | (15 << 10) | (15 << 1);
+    let tpidr2 = (3 << 20) | (5 << 17) | (3 << 14) | (13 << 10);
+    ec == 0x1d || ec == 0x18 && syndrome & mask == tpidr2
 }
 
 /// One creator-thread vCPU is reserved for joined single-task execution.
