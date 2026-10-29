@@ -86,7 +86,7 @@ struct machine {
     pthread_mutex_t addresses;
     uint64_t next_gpa;
     bool asids[256];
-    struct free_gpa *free_gpas[2];
+    struct free_gpa *free_gpas[3];
 };
 struct address_space {
     struct table *tables;
@@ -141,7 +141,7 @@ static uint64_t reserve_gpa(struct machine *m, unsigned pool, size_t length) {
     struct free_gpa *entry=m->free_gpas[pool];
     uint64_t gpa;
     if (entry) { gpa=entry->value; m->free_gpas[pool]=entry->next; free(entry); }
-    else { gpa=m->next_gpa; m->next_gpa+=length; }
+    else { if (pool==2) m->next_gpa=(m->next_gpa+UINT64_C(0x1fffff))&~UINT64_C(0x1fffff); gpa=m->next_gpa; m->next_gpa+=length; }
     pthread_mutex_unlock(&m->addresses);
     return gpa;
 }
@@ -157,6 +157,8 @@ uint64_t trames_hvf_reserve(struct machine *m) { return reserve_gpa(m,0,m->granu
 void trames_hvf_release(struct machine *m, uint64_t gpa) { release_gpa(m,gpa,0); }
 uint64_t trames_hvf_reserve_arena(struct machine *m, size_t length) { return reserve_gpa(m,1,length); }
 void trames_hvf_release_arena(struct machine *m, uint64_t gpa) { release_gpa(m,gpa,1); }
+uint64_t trames_hvf_reserve_range(struct machine *m) { return reserve_gpa(m,2,1<<21); }
+void trames_hvf_release_range(struct machine *m, uint64_t gpa) { release_gpa(m,gpa,2); }
 // A vCPU alone owns its address spaces. This index is metadata for cold page
 // installation/removal, not a lock or another guest memory-consistency layer.
 static size_t table_bucket(uint64_t gpa, size_t granule, size_t capacity) {
@@ -225,6 +227,7 @@ static uint64_t *leaf(struct host *h, uint64_t va, bool create) {
             uint64_t gpa; if (!new_table(h,&gpa)) return NULL;
             table[index]=gpa|3;
         }
+        if ((table[index]&3)!=3) return NULL; // withdraw blocks before leaf edits
         table=table_for(h,table[index]&ADDRESS_MASK);
         if (!table) return NULL;
     }
@@ -236,6 +239,7 @@ static int remove_page(struct host *h, uint64_t va) {
         indexes[level]=(unsigned)((va>>(39-level*9))&511);
         uint64_t descriptor=chain[level][indexes[level]];
         if (!(descriptor&1)) return 0;
+        if ((descriptor&3)!=3) return -1;
         gpas[level+1]=descriptor&ADDRESS_MASK;
         chain[level+1]=table_for(h,gpas[level+1]); if (!chain[level+1]) return -1;
     }
@@ -253,6 +257,34 @@ static int remove_page(struct host *h, uint64_t va) {
         if (t->next) t->next->previous=t->previous;
         unindex_table(h,h->space,t);
         trames_hvf_release(h->machine,t->gpa);munmap(t->memory,h->granule);free(t);
+    }
+    return 0;
+}
+// Uniform data-only 2MiB translations. No guest Linux kernel is involved.
+// Withdraw the complete block before installing any 4KiB exception.
+int trames_hvf_block(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
+    if ((va&UINT64_C(0x1fffff)) || (gpa&UINT64_C(0x1fffff))) return -1;
+    uint64_t *table=h->space->root;
+    for (unsigned level=0;level<2;level++) {
+        unsigned index=(unsigned)((va>>(39-level*9))&511);
+        if (!(table[index]&1)) {
+            if (!flags) return 0;
+            uint64_t next; if (!new_table(h,&next)) return -1;
+            table[index]=next|3;
+        }
+        if ((table[index]&3)!=3) return -1;
+        table=table_for(h,table[index]&ADDRESS_MASK); if (!table) return -1;
+    }
+    uint64_t *p=&table[(va>>21)&511];
+    if ((*p&3)==3) return -1;
+    uint64_t value=0;
+    if (flags) {
+        if (flags!=3) return -1;
+        value=(gpa&ADDRESS_MASK)|1|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(UINT64_C(1)<<6)|(UINT64_C(3)<<53);
+    }
+    if (*p!=value) {
+        bool valid=(*p&1)!=0; *p=value;
+        if (valid) dirty_all(h); else publish_tables(h);
     }
     return 0;
 }
@@ -338,7 +370,7 @@ void trames_hvf_vm_destroy(struct machine *m) {
     if (!m) return;
     if (m->vectors) { hv_vm_unmap(VECTOR_GPA,m->granule); munmap(m->vectors,m->granule); }
     hv_vm_destroy();
-    for (unsigned pool=0;pool<2;pool++)
+    for (unsigned pool=0;pool<3;pool++)
         while (m->free_gpas[pool]) { struct free_gpa *p=m->free_gpas[pool]; m->free_gpas[pool]=p->next; free(p); }
     pthread_mutex_destroy(&m->addresses); free(m);
 }

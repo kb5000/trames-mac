@@ -1326,3 +1326,185 @@ fn lazy_arena_registration_preserves_sparse_ram_holes_reclaim_and_reuse() {
     assert_eq!(fresh.physical_address(), base);
     assert_eq!(machine.arena_residency(base), (64, 16384));
 }
+
+fn native_memory() -> Memory {
+    let mut memory = Memory::new(trames_memory::ADDRESS_LIMIT as usize);
+    memory.map(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    for (i, word) in [0xf9400001u32, 0x91000421, 0xf9000001, 0xd4000001]
+        .into_iter()
+        .enumerate()
+    {
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    memory.map(0x200000, 1 << 21, Permissions::RW).unwrap();
+    memory
+}
+fn native_step(executor: &mut Executor, memory: &mut Memory, address: u64) {
+    let mut s = state();
+    s.registers[0] = address;
+    svc(executor, &mut s, memory);
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn native_range_has_one_fault_for_all_512_pages_and_sparse_real_residency() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = native_memory();
+    let unpopulated = executor.machine.allocate_range().unwrap();
+    assert_eq!(
+        unpopulated.resident_bytes(),
+        0,
+        "address registration does not populate data"
+    );
+    drop(unpopulated);
+    native_step(&mut executor, &mut memory, 0x200000);
+    assert!(
+        memory.resident_bytes() < 65536,
+        "one reached host granule, not a charged 2MiB range"
+    );
+    for i in 1..512 {
+        native_step(&mut executor, &mut memory, 0x200000 + i * PAGE_SIZE);
+    }
+    assert_eq!(executor.translations.blocks, 1);
+    assert_eq!(
+        executor.translations.faults, 2,
+        "one code fault plus one complete data block"
+    );
+    assert_eq!(
+        executor.translations.exports, 1,
+        "no page graph or individual exports for data"
+    );
+    for i in 0..512 {
+        assert_eq!(
+            memory.read_array::<8>(0x200000 + i * PAGE_SIZE).unwrap(),
+            1u64.to_le_bytes()
+        );
+    }
+    memory.unmap(0x200000, 1 << 21).unwrap();
+    memory.reclaim_unused();
+    assert_eq!(
+        executor.machine.stats().native_range_bytes,
+        0,
+        "weak cached translations cannot retain RAM"
+    );
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn native_block_partial_protection_unmap_discard_and_reuse_are_precise() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = native_memory();
+    let a = 0x200000;
+    let b = a + PAGE_SIZE;
+    native_step(&mut executor, &mut memory, a);
+    native_step(&mut executor, &mut memory, b);
+    memory.protect(a, PAGE_SIZE, Permissions::R).unwrap();
+    let mut s = state();
+    s.registers[0] = a;
+    let result = loop {
+        match executor.run(&mut s, &mut memory, Duration::from_millis(5)) {
+            Ok(result) if result.reason == ExitReason::Yield => continue,
+            other => break other,
+        }
+    };
+    assert!(matches!(
+        result,
+        Err(Error::Memory(MemoryError::Permission {
+            access: Access::Write,
+            ..
+        }))
+    ));
+    assert!(executor.spaces[&executor.active].blocks.is_empty());
+    assert_eq!(memory.read_array::<8>(a).unwrap(), 1u64.to_le_bytes());
+    memory.protect(a, PAGE_SIZE, Permissions::RW).unwrap();
+    native_step(&mut executor, &mut memory, a);
+    memory.discard(a, PAGE_SIZE).unwrap();
+    assert_eq!(memory.read_array::<8>(a).unwrap(), [0; 8]);
+    assert_eq!(memory.read_array::<8>(b).unwrap(), 1u64.to_le_bytes());
+    native_step(&mut executor, &mut memory, a);
+    assert_eq!(memory.read_array::<8>(a).unwrap(), 1u64.to_le_bytes());
+    memory.unmap(a, PAGE_SIZE).unwrap();
+    let mut s = state();
+    s.registers[0] = a;
+    assert!(matches!(
+        executor.run(&mut s, &mut memory, Duration::from_millis(5)),
+        Err(Error::Memory(MemoryError::Unmapped(_)))
+    ));
+    memory.map(a, PAGE_SIZE, Permissions::RW).unwrap();
+    native_step(&mut executor, &mut memory, a);
+    assert_eq!(memory.read_array::<8>(a).unwrap(), 1u64.to_le_bytes());
+    assert_eq!(memory.read_array::<8>(b).unwrap(), 1u64.to_le_bytes());
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn native_range_fork_migration_and_pressure_keep_canonical_bytes() {
+    let mut first = Executor::new().unwrap();
+    let mut memory = native_memory();
+    native_step(&mut first, &mut memory, 0x200000);
+    native_step(&mut first, &mut memory, 0x3ff000);
+    let _machine = first.machine.clone();
+    drop(first); // HVF permits one creator-thread vCPU; retain the process VM.
+    let mut second = Executor::new().unwrap();
+    native_step(&mut second, &mut memory, 0x3ff000);
+    assert_eq!(
+        second.translations.blocks, 1,
+        "migrated CPU reuses the complete canonical range"
+    );
+    assert!(reclaim(u64::MAX).unwrap() >= 1 << 21);
+    native_step(&mut second, &mut memory, 0x200000);
+    assert_eq!(
+        memory.read_array::<8>(0x200000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    assert_eq!(
+        memory.read_array::<8>(0x3ff000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    let mut child = memory.clone();
+    child.write_array(0x3ff000, 99u64.to_le_bytes()).unwrap();
+    native_step(&mut second, &mut memory, 0x3ff000);
+    assert_eq!(
+        memory.read_array::<8>(0x3ff000).unwrap(),
+        3u64.to_le_bytes()
+    );
+    assert_eq!(
+        child.read_array::<8>(0x3ff000).unwrap(),
+        99u64.to_le_bytes()
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn native_blocks_promote_after_sparse_leaf_permission_exceptions() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = native_memory();
+    native_step(&mut executor, &mut memory, 0x200000);
+    memory.protect(0x200000, PAGE_SIZE, Permissions::R).unwrap();
+    let mut s = state();
+    s.registers[0] = 0x200000;
+    assert!(matches!(
+        executor.run(&mut s, &mut memory, Duration::from_millis(5)),
+        Err(Error::Memory(MemoryError::Permission {
+            access: Access::Write,
+            ..
+        }))
+    ));
+    assert!(!executor.spaces[&executor.active].pages.is_empty());
+    memory.protect(0x200000, 1 << 21, Permissions::RW).unwrap();
+    native_step(&mut executor, &mut memory, 0x210000);
+    assert_eq!(executor.translations.blocks, 2);
+    assert_eq!(executor.spaces[&executor.active].blocks.len(), 1);
+    assert!(!executor.spaces[&executor.active]
+        .pages
+        .contains_key(&0x200000));
+    native_step(&mut executor, &mut memory, 0x200000);
+    assert_eq!(
+        memory.read_array::<8>(0x200000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    assert_eq!(
+        memory.read_array::<8>(0x210000).unwrap(),
+        1u64.to_le_bytes()
+    );
+}

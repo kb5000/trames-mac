@@ -39,6 +39,7 @@ unsafe extern "C" {
     fn trames_hvf_space_select(host: *mut c_void, space: *mut c_void) -> i32;
     fn trames_hvf_space_destroy(host: *mut c_void, space: *mut c_void) -> i32;
     fn trames_hvf_page(host: *mut c_void, va: u64, gpa: u64, flags: u32) -> i32;
+    fn trames_hvf_block(host: *mut c_void, va: u64, gpa: u64, flags: u32) -> i32;
     fn trames_hvf_map(host: *mut c_void, memory: *mut c_void, gpa: u64, size: usize) -> i32;
     fn trames_hvf_unmap(host: *mut c_void, gpa: u64, size: usize) -> i32;
     fn trames_hvf_icache(memory: *mut c_void, size: usize);
@@ -152,7 +153,12 @@ struct CachedChunk {
     pages: usize,
     version: Option<u64>,
 }
+struct Block {
+    storage: Weak<dyn trames_memory::HardwareRange>,
+    version: Option<u64>,
+}
 struct AddressSpace {
+    blocks: BTreeMap<u64, Block>,
     host: NonNull<c_void>,
     pages: BTreeMap<u64, Page>,
     chunks: BTreeMap<u64, CachedChunk>,
@@ -195,6 +201,7 @@ struct TranslationStats {
     exports: usize,
     updates: usize,
     retired: usize,
+    blocks: usize,
 }
 /// A thread-affine vCPU with persistent address-space tables in the shared VM.
 /// Canonical physical pages, VFS and native access share one byte authority.
@@ -225,6 +232,7 @@ impl Executor {
                 AddressSpace {
                     host: NonNull::new(unsafe { trames_hvf_space_current(host.as_ptr()) })
                         .expect("initial tables"),
+                    blocks: BTreeMap::new(),
                     pages: BTreeMap::new(),
                     chunks: BTreeMap::new(),
                     version: None,
@@ -261,6 +269,13 @@ impl Executor {
             .collect::<BTreeSet<_>>()
             .len()
             * granule as usize
+            + self
+                .spaces
+                .values()
+                .flat_map(|s| s.blocks.values())
+                .filter(|b| b.storage.strong_count() != 0)
+                .count()
+                * trames_memory::HARDWARE_MAPPING_CHUNK_SIZE as usize
     }
     pub fn take_wait(&mut self) -> Option<Arc<HardwareWait>> {
         self.wait.take()
@@ -289,6 +304,10 @@ impl Executor {
             return Ok(());
         }
         self.activate(identity)?;
+        for &base in self.spaces[&identity].blocks.keys() {
+            check(unsafe { trames_hvf_block(self.host.as_ptr(), base, 0, 0) })?;
+        }
+        self.spaces.get_mut(&identity).unwrap().blocks.clear();
         let addresses: Vec<_> = self.spaces[&identity].pages.keys().copied().collect();
         for va in addresses {
             self.pte(va, 0, 0)?;
@@ -325,6 +344,7 @@ impl Executor {
                 check(error)?;
                 AddressSpace {
                     host: NonNull::new(host).ok_or(Error::Host(-1))?,
+                    blocks: BTreeMap::new(),
                     pages: BTreeMap::new(),
                     chunks: BTreeMap::new(),
                     version: None,
@@ -354,10 +374,39 @@ impl Executor {
         }
         Ok(())
     }
+    fn synchronize_blocks(&mut self, memory: &View) -> Result<(), Error> {
+        let space = self.spaces.get_mut(&self.active).unwrap();
+        let version = memory.hardware_view_version();
+        if space.version.map(|v| v.0) == Some(version.0) {
+            return Ok(());
+        }
+        let mut retired = BTreeSet::new();
+        if let Some(changes) = space
+            .version
+            .and_then(|v| memory.hardware_mapping_ranges(v.0))
+        {
+            for change in changes {
+                let first = change.start & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
+                retired.extend(space.blocks.range(first..change.end).map(|(&a, _)| a));
+            }
+        } else {
+            retired.extend(space.blocks.iter().filter_map(|(&base, b)| {
+                (b.storage.strong_count() == 0
+                    || b.version != memory.hardware_mapping_chunk_version(base))
+                .then_some(base)
+            }));
+        }
+        for base in retired {
+            check(unsafe { trames_hvf_block(self.host.as_ptr(), base, 0, 0) })?;
+            space.blocks.remove(&base);
+        }
+        Ok(())
+    }
     fn synchronize_view(&mut self, memory: &View) -> Result<(), Error> {
         #[cfg(feature = "diagnostics")]
         let measured = diagnostics::start(diagnostics::Work::Sync);
         self.select_view(memory)?;
+        self.synchronize_blocks(memory)?;
         let version = memory.hardware_view_version();
         let space = self.spaces.get_mut(&self.active).unwrap();
         if space.version.map(|v| v.0) != Some(version.0) {
@@ -481,7 +530,7 @@ impl Executor {
         // Conservative hardware dirty publication is once per joined epoch,
         // rather than a page walk at every short syscall in that epoch.
         if space.version != Some(version) {
-            if space.private_writable != 0 {
+            if space.private_writable != 0 || !space.blocks.is_empty() {
                 memory.mark_hardware_private_writes();
             }
             for &write in space.publications.values() {
@@ -530,11 +579,59 @@ impl Executor {
                 syndrome: event.syndrome,
             });
         }
-        memory.check(event.address, 1, access)?;
         let va = (event.address & 0x00ff_ffff_ffff_ffff) & !(PAGE_SIZE - 1);
         if (VECTOR_VA..VECTOR_VA + 65536).contains(&va) {
+            memory.check(event.address, 1, access)?;
             return Err(Error::Unsupported("reserved exception adapter address"));
         }
+        let block_base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
+        if access != Access::Execute && block_base != VECTOR_VA {
+            let error = std::cell::Cell::new(None);
+            // SAFETY: same hardware-only actor/retained canonical owner contract.
+            let range = unsafe {
+                memory.export_hardware_range(va, || {
+                    self.machine.allocate_range().map_err(|e| {
+                        error.set(Some(e));
+                        MemoryError::BackingIo(5)
+                    })
+                })
+            }
+            .map_err(|e| error.take().unwrap_or(Error::Memory(e)))?;
+            if let Some(storage) = range {
+                let base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
+                // Promotion after a partial permission edit can leave sparse
+                // leaf translations in this CPU's root. Withdraw those aliases
+                // before replacing the leaf table with one uniform block.
+                let leaves: Vec<_> = self.spaces[&self.active]
+                    .pages
+                    .range(base..base + trames_memory::HARDWARE_MAPPING_CHUNK_SIZE)
+                    .map(|(&va, _)| va)
+                    .collect();
+                for address in leaves {
+                    self.pte(address, 0, 0)?;
+                    let space = self.spaces.get_mut(&self.active).unwrap();
+                    let old = space.remove_page(address).unwrap();
+                    space.track_write(address, old.write, None);
+                }
+                check(unsafe {
+                    trames_hvf_block(self.host.as_ptr(), base, storage.physical_address(), 3)
+                })?;
+                self.spaces.get_mut(&self.active).unwrap().blocks.insert(
+                    base,
+                    Block {
+                        storage: Arc::downgrade(&storage),
+                        version: memory.hardware_mapping_chunk_version(base),
+                    },
+                );
+                memory.mark_hardware_private_writes();
+                #[cfg(test)]
+                {
+                    self.translations.blocks += 1;
+                }
+                return Ok(());
+            }
+        }
+        memory.check(event.address, 1, access)?;
         // SAFETY: the scheduler admits every View in hardware mode and joins
         // before coordinator mutation. Canonical exports gate all host borrows.
         let allocation_error = std::cell::Cell::new(None);
@@ -589,6 +686,9 @@ impl Executor {
             for address in (start..start + (1 << 20)).step_by(PAGE_SIZE as usize) {
                 if (VECTOR_VA..VECTOR_VA + 65536).contains(&address)
                     || self.spaces[&self.active].pages.contains_key(&address)
+                    || self.spaces[&self.active].blocks.contains_key(
+                        &(address & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1)),
+                    )
                 {
                     continue;
                 }
@@ -610,6 +710,15 @@ impl Executor {
         storage: &Arc<dyn HardwareStorage>,
         info: HardwarePageInfo,
     ) -> Result<(), Error> {
+        let base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
+        if self.spaces[&self.active].blocks.contains_key(&base) {
+            check(unsafe { trames_hvf_block(self.host.as_ptr(), base, 0, 0) })?;
+            self.spaces
+                .get_mut(&self.active)
+                .unwrap()
+                .blocks
+                .remove(&base);
+        }
         let flags = Self::flags(info)?;
         if info.permissions.execute {
             self.machine.publish_code(storage.physical_address())?;

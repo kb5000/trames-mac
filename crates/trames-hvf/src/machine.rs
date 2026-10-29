@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicU64, AtomicU8, Ordering},
     Condvar, Mutex, Weak,
 };
-use trames_memory::{HardwareStorage, HardwareWait, SharedMapping};
+use trames_memory::{HardwareRange, HardwareStorage, HardwareWait, SharedMapping};
 
 unsafe extern "C" {
     fn trames_hvf_pressure_supported() -> i32;
@@ -14,6 +14,8 @@ unsafe extern "C" {
     fn trames_hvf_vm_destroy(vm: *mut c_void);
     fn trames_hvf_cpu_create(vm: *mut c_void, error: *mut i32) -> *mut c_void;
     fn trames_hvf_cpu_destroy(cpu: *mut c_void);
+    fn trames_hvf_reserve_range(vm: *mut c_void) -> u64;
+    fn trames_hvf_release_range(vm: *mut c_void, gpa: u64);
     fn trames_hvf_reserve(vm: *mut c_void) -> u64;
     fn trames_hvf_release(vm: *mut c_void, gpa: u64);
     fn trames_hvf_reserve_arena(vm: *mut c_void, length: usize) -> u64;
@@ -37,17 +39,20 @@ pub fn set_resident_limit(bytes: Option<u64>) {
 }
 #[derive(Default, Debug, Clone, Copy)]
 pub struct PagingStats {
-    /// Used live granules bound to HVF, excluding untouched arena address registrations.
+    /// Live stage-two registration bytes, including native ranges; not host RSS.
     pub mapped_bytes: u64,
     /// Live private VM storage, including host-granule padding; not disk bytes.
     pub backing_bytes: u64,
     pub page_out_bytes: u64,
     pub page_ins: u64,
+    /// Native demand-zero address ownership, not resident RAM.
+    pub native_range_bytes: u64,
 }
 pub(super) struct Machine {
     pointer: NonNull<c_void>,
     granule: usize,
     backing: AtomicU64,
+    native: AtomicU64,
     blocks: Mutex<BTreeMap<u64, Weak<Physical>>>,
     allocation: Mutex<BTreeMap<u64, Weak<Physical>>>,
     arenas: Mutex<BTreeMap<usize, Weak<Arena>>>,
@@ -85,6 +90,7 @@ impl Machine {
             pointer,
             granule: unsafe { libc::sysconf(libc::_SC_PAGESIZE) as usize },
             backing: AtomicU64::new(0),
+            native: AtomicU64::new(0),
             blocks: Mutex::new(BTreeMap::new()),
             allocation: Mutex::new(BTreeMap::new()),
             arenas: Mutex::new(BTreeMap::new()),
@@ -156,6 +162,7 @@ impl Machine {
                     pointer: NonNull::new(ptr.cast()).unwrap(),
                     gpa,
                     external: None,
+                    native: None,
                     _arena: Some(arena),
                     length: self.granule,
                     machine: Arc::downgrade(self),
@@ -205,6 +212,66 @@ impl Machine {
             self.trim_to(limit, slot.block.gpa)?;
         }
         Ok(slot)
+    }
+    pub fn allocate_range(self: &Arc<Self>) -> Result<Arc<dyn HardwareRange>, Error> {
+        const LENGTH: usize = 1 << 21;
+        let pointer = unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                LENGTH,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_PRIVATE | libc::MAP_ANON,
+                -1,
+                0,
+            )
+        };
+        if pointer == libc::MAP_FAILED {
+            return Err(Error::Io(std::io::Error::last_os_error()));
+        }
+        let gpa = unsafe { trames_hvf_reserve_range(self.pointer.as_ptr()) };
+        let allocation = NativeAllocation {
+            pointer: NonNull::new(pointer.cast()).unwrap(),
+            gpa,
+            machine: Arc::downgrade(self),
+            code: Mutex::new(BTreeSet::new()),
+        };
+        check(unsafe { trames_hvf_map(std::ptr::null_mut(), pointer, gpa, LENGTH) })?;
+        self.native.fetch_add(LENGTH as u64, Ordering::Relaxed);
+        self.mapped.fetch_add(LENGTH as u64, Ordering::Relaxed);
+        let block = Arc::new(Physical {
+            pointer: allocation.pointer,
+            gpa,
+            external: None,
+            native: Some(allocation),
+            _arena: None,
+            length: LENGTH,
+            machine: Arc::downgrade(self),
+            used: AtomicU8::new(15),
+            executable: AtomicU8::new(0),
+            touched: AtomicU64::new(CLOCK.fetch_add(1, Ordering::Relaxed)),
+            gate: Mutex::new(Gate {
+                hosts: 0,
+                mapped: true,
+                owner: None,
+                waiters: Vec::new(),
+            }),
+        });
+        self.blocks
+            .lock()
+            .unwrap()
+            .insert(gpa, Arc::downgrade(&block));
+        Ok(Arc::new(NativeRange {
+            slot: Slot { block, index: 0 },
+        }))
+    }
+    fn physical(&self, address: u64) -> Option<Arc<Physical>> {
+        self.blocks
+            .lock()
+            .unwrap()
+            .range(..=address)
+            .next_back()
+            .and_then(|(_, b)| b.upgrade())
+            .filter(|b| address - b.gpa < b.length as u64)
     }
     fn allocate_arena(self: &Arc<Self>) -> Result<ArenaSlot, Error> {
         let mut arenas = self.arenas.lock().unwrap();
@@ -320,6 +387,7 @@ impl Machine {
                 pointer: NonNull::new(base as *mut u8).unwrap(),
                 gpa,
                 external: Some(mapping),
+                native: None,
                 _arena: None,
                 length: self.granule,
                 machine: Arc::downgrade(self),
@@ -354,24 +422,20 @@ impl Machine {
     pub fn publish_code(&self, address: u64) -> Result<(), Error> {
         let gpa = address & !(self.granule as u64 - 1);
         let block = self
-            .blocks
-            .lock()
-            .unwrap()
-            .get(&gpa)
-            .and_then(Weak::upgrade)
+            .physical(gpa)
             .ok_or(Error::Unsupported("unowned executable page"))?;
-        let index = (address - gpa) as usize / PAGE_SIZE as usize;
+        let offset = (address - block.gpa) as usize;
         let _gate = block.gate.lock().unwrap();
-        block.executable.fetch_or(1 << index, Ordering::Relaxed);
-        // Cache operations do not construct a byte reference. Initial code and
-        // later page-in publish only actual executable slots, not untouched RAM.
+        let bit = if let Some(native) = &block.native {
+            native.code.lock().unwrap().insert(offset);
+            1
+        } else {
+            1 << (offset / PAGE_SIZE as usize)
+        };
+        block.executable.fetch_or(bit, Ordering::Relaxed);
         unsafe {
             trames_hvf_icache(
-                block
-                    .pointer
-                    .as_ptr()
-                    .add(index * PAGE_SIZE as usize)
-                    .cast(),
+                block.pointer.as_ptr().add(offset).cast(),
                 PAGE_SIZE as usize,
             );
         }
@@ -410,11 +474,7 @@ impl Machine {
     pub fn resume(&self, address: u64) -> Result<Option<Arc<HardwareWait>>, Error> {
         let gpa = address & !(self.granule as u64 - 1);
         let block = self
-            .blocks
-            .lock()
-            .unwrap()
-            .get(&gpa)
-            .and_then(Weak::upgrade)
+            .physical(gpa)
             .ok_or(Error::Unsupported("unowned stage-two fault"))?;
         let mut gate = block.gate.lock().unwrap();
         block
@@ -427,18 +487,20 @@ impl Machine {
         }
         if !gate.mapped {
             let code = block.executable.load(Ordering::Relaxed);
-            for index in 0..4 {
-                if code & (1 << index) != 0 {
-                    unsafe {
-                        trames_hvf_icache(
-                            block
-                                .pointer
-                                .as_ptr()
-                                .add(index * PAGE_SIZE as usize)
-                                .cast(),
-                            PAGE_SIZE as usize,
-                        );
-                    }
+            let offsets: Vec<_> = if let Some(native) = &block.native {
+                native.code.lock().unwrap().iter().copied().collect()
+            } else {
+                (0..4)
+                    .filter(|&i| code & (1 << i) != 0)
+                    .map(|i| i * PAGE_SIZE as usize)
+                    .collect()
+            };
+            for offset in offsets {
+                unsafe {
+                    trames_hvf_icache(
+                        block.pointer.as_ptr().add(offset).cast(),
+                        PAGE_SIZE as usize,
+                    );
                 }
             }
             check(unsafe {
@@ -475,6 +537,7 @@ impl Machine {
             backing_bytes: self.backing.load(Ordering::Relaxed),
             page_out_bytes: self.outs.load(Ordering::Relaxed),
             page_ins: self.ins.load(Ordering::Relaxed),
+            native_range_bytes: self.native.load(Ordering::Relaxed),
         }
     }
     fn trim_to(&self, target: u64, avoid: u64) -> Result<u64, Error> {
@@ -666,6 +729,7 @@ struct Physical {
     pointer: NonNull<u8>,
     gpa: u64,
     external: Option<SharedMapping>,
+    native: Option<NativeAllocation>,
     _arena: Option<ArenaSlot>,
     length: usize,
     machine: Weak<Machine>,
@@ -707,6 +771,7 @@ impl Drop for Physical {
                     // withdrawal; no dangling HVF alias or address reuse.
                     std::mem::forget(self.external.take());
                     std::mem::forget(self._arena.take());
+                    std::mem::forget(self.native.take());
                     return;
                 }
                 if let Some(arena) = &self._arena {
@@ -719,10 +784,66 @@ impl Drop for Physical {
             }
             // Private addresses belong to the containing arena until its last
             // granule retires. Untouched IPA registrations own no physical bytes.
-            if self.external.is_none() {
+            if self.native.is_some() {
+                vm.native.fetch_sub(self.length as u64, Ordering::Relaxed);
+            }
+            if self.external.is_none() && self.native.is_none() {
                 vm.backing.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
         }
+    }
+}
+struct NativeAllocation {
+    pointer: NonNull<u8>,
+    gpa: u64,
+    machine: Weak<Machine>,
+    code: Mutex<BTreeSet<usize>>,
+}
+unsafe impl Send for NativeAllocation {}
+unsafe impl Sync for NativeAllocation {}
+impl Drop for NativeAllocation {
+    fn drop(&mut self) {
+        if let Some(vm) = self.machine.upgrade() {
+            unsafe { trames_hvf_release_range(vm.pointer.as_ptr(), self.gpa) };
+        }
+        unsafe { libc::munmap(self.pointer.as_ptr().cast(), 1 << 21) };
+    }
+}
+struct NativeRange {
+    slot: Slot,
+}
+// SAFETY: retained private allocation and original stage-two byte-borrow gate.
+unsafe impl HardwareStorage for NativeRange {
+    fn pointer(&self) -> *mut u8 {
+        self.slot.pointer()
+    }
+    fn physical_address(&self) -> u64 {
+        self.slot.physical_address()
+    }
+    fn is_live(&self) -> bool {
+        self.slot.is_live()
+    }
+    fn publish_host_write(&self, offset: usize, len: usize) {
+        self.slot.publish_host_write(offset, len);
+    }
+    fn begin_host_access(&self) {
+        self.slot.begin_host_access();
+    }
+    fn end_host_access(&self) {
+        self.slot.end_host_access();
+    }
+}
+// SAFETY: all bytes are demand-zero/stable; mincore reads only host metadata.
+unsafe impl HardwareRange for NativeRange {
+    fn len(&self) -> usize {
+        self.slot.block.length
+    }
+    fn resident_bytes(&self) -> usize {
+        let mut pages = [0i8; 128];
+        if unsafe { libc::mincore(self.pointer().cast(), self.len(), pages.as_mut_ptr()) } != 0 {
+            return 0;
+        }
+        pages.iter().filter(|&&p| p & 1 != 0).count() * 16384
     }
 }
 struct Slot {
@@ -750,7 +871,15 @@ unsafe impl HardwareStorage for Slot {
         mapping.with_offset(self.pointer() as usize - mapping.allocation_pointer() as usize)
     }
     fn publish_host_write(&self, offset: usize, len: usize) {
-        if len != 0 && self.block.executable.load(Ordering::Relaxed) & (1 << self.index) != 0 {
+        if len != 0
+            && self.block.executable.load(Ordering::Relaxed)
+                & (1 << if self.block.native.is_some() {
+                    0
+                } else {
+                    self.index
+                })
+                != 0
+        {
             // The owning slot keeps this initialized host VA valid even while
             // stage two is evicted. Actual code writers publish their range;
             // consumers never flush every executable page on a global epoch.
@@ -797,7 +926,7 @@ unsafe impl HardwareStorage for Slot {
 }
 impl Drop for Slot {
     fn drop(&mut self) {
-        if self.block.external.is_some() {
+        if self.block.external.is_some() || self.block.native.is_some() {
             return;
         }
         let previous = self
