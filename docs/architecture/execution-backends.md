@@ -1317,3 +1317,70 @@ retains RSS/footprint as observations: its former immediate 24 MiB RSS-reduction
 assertion also failed on the frozen old runner under the existing native pager.
 Complete bytes, shared atomics, fork/COW and actual withdrawal/page-in activity
 remain gates; no production memory/pager behavior changed in that correction.
+
+
+### Parallel metadata, directed wakeups and clock vDSO (2026-10-29)
+
+The common runtime now reuses frame/chunk metadata within each frozen worker
+View and notifies eligible sleeping workers individually. Dynamic residency and
+backing/code versions are still read live; missing and first-touch chunk stamps
+are not cached. Initial placement, affinity, outstanding I/O/deadlines and stop
+retain blocking wakeup coverage. Ordinary guest/native memory and algorithms
+gain no lock, barrier, polling bus or resource thread. Both products use these
+common changes; the iPad interpreter retains its execution/capability defaults.
+
+Mac enables the common AArch64 Linux vDSO for monotonic clock queries. The
+public Hypervisor SDK defines `CNTVCT_EL0 = mach_absolute_time() - vtimer_offset`.
+Each vCPU explicitly uses offset zero, and the host validates CNTFRQ against
+`mach_timebase_info` before advertising the counter. The preemption timer uses
+the same documented Mach domain. Initialization/exec calibrate against the
+existing session/Wayland origin while stopped, with at most eight attempts and
+a one-microsecond bracket limit. Failed calibration uses the syscall. Guest
+counter reads do not exit HVF or rendezvous with the owner. Realtime still uses
+the host syscall path, so wall-clock changes need no updater thread. The common
+vDSO retains existing clock-ID semantics; no new host-suspend policy is claimed.
+
+Fixed-work probes use five shuffled repetitions per variant/CPU setting, with
+no concurrent compiler or sampler. They isolate the changed mechanisms and are
+not application speedups or confidence intervals:
+
+| Probe | Configuration | Old median | New median |
+| --- | --- | ---: | ---: |
+| Metadata queries | 1 thread, 200k iterations | 6.824 ms | 3.424 ms |
+| Metadata queries | 6 threads, 200k each | 127.874 ms | 23.191 ms |
+| Metadata queries | 12 threads, 200k each | 382.359 ms | 74.767 ms |
+| Futex token ring | 1 CPU, 2 threads, 1k turns each | 2.575 ms | 2.603 ms |
+| Futex token ring | 6 CPUs, 6 threads, 1k turns each | 36.352 ms | 33.684 ms |
+| Futex token ring | 12 CPUs, 12 threads, 1k turns each | 166.771 ms | 83.052 ms |
+| libc monotonic clock | 1 CPU, one caller, 200k calls | 1270.7 ns/call | 15.0 ns/call |
+| libc monotonic clock | 12 CPUs, one caller, 200k calls | 1277.3 ns/call | 15.2 ns/call |
+
+Metadata checksums match and remain at zero guest resident bytes. The ring
+isolates directed wakeups using controls that both already have metadata/vDSO
+changes. Clock timing uses one caller even in the 12-CPU configuration; separate
+12-thread tests check monotonicity and syscall agreement. The initial metadata
+run that overlapped compilation is excluded. Diagnostic queue-wait samples mix
+guest synchronization, idle workers and runtime coordination; they cannot all
+be labeled removable overhead or converted into useful guest core occupancy.
+Darwin `proc_pid_rusage` CPU times use Mach ticks, requiring the measured 125/3
+timebase conversion on this host.
+
+Build `tests/fixtures/linux-clock.c` and `tests/fixtures/futex-ring.c` unchanged
+with a static AArch64 Linux musl toolchain (`-O2 -static -pthread -ffixed-x18`).
+The source-bound acceptance harness checks libc/versioned symbols, syscall
+agreement, concurrent clocks, fork/exec, syscall-count reduction and futex
+handoffs without imposing a timing threshold:
+
+```sh
+python3 tests/integration/mac-parallel-clock.py \
+  --runner target/release/trames-mac-run \
+  --clock /path/to/linux-clock --ring /path/to/futex-ring \
+  --output target/parallel-clock-acceptance
+```
+
+Actual signed HVF tests cover long elapsed counter conversion, nanosecond carry
+and realtime fallback. Shared memory/session/Linux regressions, Mac Clippy/unit
+checks, both iOS embedding targets and existing real Linux SME, signal and SMP
+paging fixtures pass. No actual macOS suspend/resume test was performed; the
+counter-domain behavior relies on the public SDK contract, rather than an
+unverified private commpage layout or periodic synchronization thread.

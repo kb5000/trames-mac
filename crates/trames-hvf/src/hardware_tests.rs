@@ -1751,3 +1751,54 @@ fn retained_cancel_handle_is_inert_during_destroy_and_cpu_identifier_reuse() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn clock_vdso_handles_long_elapsed_carry_and_leaves_realtime_for_the_syscall() {
+    let Some(sample) = crate::clock_sample() else {
+        return;
+    };
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    let base = trames_linux::vdso::install(&mut memory).unwrap();
+    let anchor = sample
+        .ticks
+        .checked_sub(5 * sample.frequency)
+        .expect("host uptime exceeds five seconds");
+    trames_linux::vdso::initialize(
+        &mut memory,
+        base,
+        trames_linux::vdso::TimeBase {
+            counter: anchor,
+            frequency: sample.frequency,
+            seconds: 123,
+            nanos: 999_999_999,
+        },
+    )
+    .unwrap();
+    let mut state = state();
+    state.pc = base + 0x600;
+    state.registers[0] = 1;
+    state.registers[1] = 0x20040;
+    state.registers[30] = 0x1000c;
+    let before = crate::clock_sample().unwrap().ticks;
+    svc(&mut executor, &mut state, &mut memory);
+    let after = crate::clock_sample().unwrap().ticks;
+    let bytes = memory.read_array::<16>(0x20040).unwrap();
+    let seconds = u64::from_le_bytes(bytes[..8].try_into().unwrap());
+    let nanos = u64::from_le_bytes(bytes[8..].try_into().unwrap());
+    let actual = seconds as u128 * 1_000_000_000 + nanos as u128;
+    let expected = |counter: u64| {
+        124u128 * 1_000_000_000 - 1
+            + (counter - anchor) as u128 * 1_000_000_000 / sample.frequency as u128
+    };
+    assert!(nanos < 1_000_000_000 && seconds >= 129);
+    assert!(expected(before) <= actual && actual <= expected(after));
+    state.pc = base + 0x600;
+    state.registers[0] = 0;
+    state.registers[8] = 0;
+    svc(&mut executor, &mut state, &mut memory);
+    assert_eq!(state.registers[8], 113);
+    assert_eq!(state.registers[0], 0);
+    assert_ne!(state.pc, 0x10010); // returned at the fallback SVC, before its body
+}

@@ -158,6 +158,8 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
 
 impl trames_engine::Cpu for Cpu {
     type Engine = Engine;
+    fn clock_sample() -> Option<trames_engine::ClockSample> { crate::clock_sample() }
+
     fn execution_interrupt(
         engine: &mut Engine,
     ) -> Result<Option<std::sync::Arc<dyn trames_engine::ExecutionInterrupt>>, CpuFault> {

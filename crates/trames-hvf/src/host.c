@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Small EL1 exception/page-table adapter. Linux remains in the host runtime.
 #include <Hypervisor/Hypervisor.h>
+#include <mach/mach_time.h>
 #include <dispatch/dispatch.h>
 #include <stdatomic.h>
 #include <libkern/OSCacheControl.h>
@@ -165,8 +166,17 @@ static void dirty_page(struct host *h, uint64_t va) {
         h->tlb_address=va; h->maintenance=MAINTENANCE_VA;
     } else if (h->maintenance==MAINTENANCE_VA && h->tlb_address!=va) dirty_all(h);
 }
-static uint64_t ticks(void) { uint64_t n; __asm__ volatile("mrs %0,cntpct_el0":"=r"(n)); return n; }
+static uint64_t ticks(void) { return mach_absolute_time(); }
 static uint64_t frequency(void) { uint64_t n; __asm__ volatile("mrs %0,cntfrq_el0":"=r"(n)); return n; }
+// The public HVF contract is CNTVCT_EL0 = mach_absolute_time() - offset.
+// Validate counter units before advertising the optional guest vDSO.
+uint64_t trames_hvf_clock_frequency(void) {
+    mach_timebase_info_data_t info;
+    if (mach_timebase_info(&info)!=KERN_SUCCESS || !info.numer || !info.denom) return 0;
+    uint64_t hz=frequency();
+    return ((__uint128_t)hz*info.numer==(__uint128_t)UINT64_C(1000000000)*info.denom) ? hz : 0;
+}
+uint64_t trames_hvf_clock_counter(void) { return mach_absolute_time(); }
 static void *anonymous(size_t length) {
     void *p = mmap(NULL, length, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     return p == MAP_FAILED ? NULL : p;
@@ -486,6 +496,7 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
     if (!h->space) goto fail;
     *error=(int)hv_vcpu_create(&h->cpu,&h->exit,NULL); if (*error) goto fail;
     h->cpu_created=true;
+    if ((*error=(int)hv_vcpu_set_vtimer_offset(h->cpu,0))) goto fail;
     if ((*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TTBR0_EL1,h->space->root_gpa|((uint64_t)h->asid<<48))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_TCR_EL1,16|(1<<8)|(1<<10)|(3<<12)|(1<<23)|(UINT64_C(2)<<32)|(UINT64_C(1)<<37))) ||
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_MAIR_EL1,0xff)) ||

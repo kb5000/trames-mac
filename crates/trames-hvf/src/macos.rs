@@ -33,6 +33,8 @@ struct HostExit {
     pc: u64,
 }
 unsafe extern "C" {
+    fn trames_hvf_clock_frequency() -> u64;
+    fn trames_hvf_clock_counter() -> u64;
     fn trames_hvf_features(hwcap: *mut u64, hwcap2: *mut u64);
     fn trames_hvf_sme_input(host: *mut c_void, state: *const SmeState, vl: u64) -> i32;
     fn trames_hvf_sme_active(host: *mut c_void) -> u64;
@@ -59,6 +61,19 @@ unsafe extern "C" {
         continue_fault: bool,
         result: *mut HostExit,
     ) -> i32;
+}
+pub fn clock_sample() -> Option<trames_engine::ClockSample> {
+    static FREQUENCY: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    // SAFETY: queries public clock metadata without guest memory or retained pointers.
+    let frequency = *FREQUENCY.get_or_init(|| unsafe { trames_hvf_clock_frequency() });
+    if frequency == 0 || frequency > u64::MAX / 1_000_000_000 {
+        return None;
+    }
+    // SAFETY: public, process-local Mach clock, no retained pointer or authority.
+    Some(trames_engine::ClockSample {
+        ticks: unsafe { trames_hvf_clock_counter() },
+        frequency,
+    })
 }
 pub fn features() -> Features {
     static FEATURES: std::sync::OnceLock<Features> = std::sync::OnceLock::new();
