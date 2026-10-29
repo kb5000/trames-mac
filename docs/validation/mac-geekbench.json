@@ -8890,5 +8890,556 @@
         "https://docs.kernel.org/arch/arm64/sme.html"
       ]
     }
+  },
+  "sme_followup_2026_10_29": {
+    "date": "2026-10-29",
+    "code_mac": "a6bc6839e9ed44daf91fc077057013e7f5349f56",
+    "runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4",
+    "implemented": [
+      "Hardware SME/SME2 profile at actual 64-byte streaming VL; arithmetic bits from HVF configuration.",
+      "Per-task lazy SME/TPIDR2 access trap activates the extension; ordinary tasks retain no extended buffer or register-transfer path.",
+      "Fixed SMCR configured at enable transition; instruction synchronization only after execution-control changes.",
+      "Direct private-mailbox streaming Z/P/ZA/ZT transfers; cold framework export for timer/stage-two exits.",
+      "Common optional syscall/signal/prctl/fork/CLONE_VM/exec ABI and AT_MINSIGSTKSZ; baseline 816-byte state and iPad capabilities unchanged.",
+      "Mapping checkpoint calls attributed by operation in RuntimeMetrics."
+    ],
+    "baseline_control": {
+      "runner_sha256": "4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683",
+      "code_mac": "6a3045e6ab988401badcee3bca29215226a27fc4",
+      "code_runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+      "variant": "trames-automib-12cpu-baseline-control",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793248919.405131,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 251.97132054099998,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405419"
+      ],
+      "scores": {
+        "single": 3831,
+        "multi": 12206
+      }
+    },
+    "accepted_installed": {
+      "runner_sha256": "d434987efbd12f854f8db573f6115af0b4bb5d3d915abb87afd7688a19d0b67b",
+      "code_mac": "a6bc6839e9ed44daf91fc077057013e7f5349f56",
+      "code_runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4",
+      "variant": "trames-automib-12cpu-sme-lazy",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793249234.2436538,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 248.969764042,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405427"
+      ],
+      "scores": {
+        "single": 4127,
+        "multi": 12551
+      }
+    },
+    "comparison": {
+      "single_delta": 0.07726442182197868,
+      "multi_delta": 0.028264787809274106,
+      "single_fraction_of_native": 0.9626778633076744,
+      "multi_fraction_of_native": 0.6742049849591749,
+      "native_result": "https://browser.geekbench.com/v6/cpu/19400588",
+      "native_single": 4287,
+      "native_multi": 18616,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "baseline_single": 3300,
+          "single": 3322,
+          "single_delta": 0.006666666666666599,
+          "baseline_multi": 8694,
+          "multi": 9036,
+          "multi_delta": 0.039337474120082705,
+          "native_single": 3513,
+          "native_multi": 12298,
+          "single_fraction_of_native": 0.9456305152291489,
+          "multi_fraction_of_native": 0.7347536184745487
+        },
+        {
+          "name": "Navigation",
+          "baseline_single": 3270,
+          "single": 3274,
+          "single_delta": 0.0012232415902140303,
+          "baseline_multi": 13632,
+          "multi": 14358,
+          "multi_delta": 0.053257042253521236,
+          "native_single": 3543,
+          "native_multi": 16886,
+          "single_fraction_of_native": 0.9240756421112052,
+          "multi_fraction_of_native": 0.8502901812152078
+        },
+        {
+          "name": "HTML5 Browser",
+          "baseline_single": 4486,
+          "single": 4474,
+          "single_delta": -0.002674988854213134,
+          "baseline_multi": 11136,
+          "multi": 11492,
+          "multi_delta": 0.03196839080459779,
+          "native_single": 4466,
+          "native_multi": 21252,
+          "single_fraction_of_native": 1.0017913121361397,
+          "multi_fraction_of_native": 0.5407491059664973
+        },
+        {
+          "name": "PDF Renderer",
+          "baseline_single": 3990,
+          "single": 4218,
+          "single_delta": 0.05714285714285716,
+          "baseline_multi": 9537,
+          "multi": 8257,
+          "multi_delta": -0.13421411345286782,
+          "native_single": 3968,
+          "native_multi": 19319,
+          "single_fraction_of_native": 1.0630040322580645,
+          "multi_fraction_of_native": 0.42740307469330713
+        },
+        {
+          "name": "Photo Library",
+          "baseline_single": 3401,
+          "single": 3816,
+          "single_delta": 0.12202293443104972,
+          "baseline_multi": 9420,
+          "multi": 10226,
+          "multi_delta": 0.08556263269639075,
+          "native_single": 3717,
+          "native_multi": 23344,
+          "single_fraction_of_native": 1.026634382566586,
+          "multi_fraction_of_native": 0.4380568882796436
+        },
+        {
+          "name": "Clang",
+          "baseline_single": 5000,
+          "single": 4889,
+          "single_delta": -0.022199999999999998,
+          "baseline_multi": 23757,
+          "multi": 24082,
+          "multi_delta": 0.013680178473713056,
+          "native_single": 4862,
+          "native_multi": 29922,
+          "single_fraction_of_native": 1.0055532702591525,
+          "multi_fraction_of_native": 0.804825880622953
+        },
+        {
+          "name": "Text Processing",
+          "baseline_single": 3663,
+          "single": 3627,
+          "single_delta": -0.009828009828009798,
+          "baseline_multi": 3396,
+          "multi": 3324,
+          "multi_delta": -0.021201413427561877,
+          "native_single": 4123,
+          "native_multi": 5545,
+          "single_fraction_of_native": 0.8796992481203008,
+          "multi_fraction_of_native": 0.5994589720468891
+        },
+        {
+          "name": "Asset Compression",
+          "baseline_single": 3628,
+          "single": 3623,
+          "single_delta": -0.001378169790518191,
+          "baseline_multi": 16942,
+          "multi": 16449,
+          "multi_delta": -0.02909927989611616,
+          "native_single": 3737,
+          "native_multi": 25436,
+          "single_fraction_of_native": 0.9694942467219695,
+          "multi_fraction_of_native": 0.6466818682182733
+        },
+        {
+          "name": "Object Detection",
+          "baseline_single": 3106,
+          "single": 6437,
+          "single_delta": 1.0724404378622023,
+          "baseline_multi": 10443,
+          "multi": 13242,
+          "multi_delta": 0.26802642918701514,
+          "native_single": 6297,
+          "native_multi": 18010,
+          "single_fraction_of_native": 1.0222328092742576,
+          "multi_fraction_of_native": 0.7352581898945031
+        },
+        {
+          "name": "Background Blur",
+          "baseline_single": 3426,
+          "single": 4252,
+          "single_delta": 0.24109748978400458,
+          "baseline_multi": 11285,
+          "multi": 12729,
+          "multi_delta": 0.12795746566238364,
+          "native_single": 4428,
+          "native_multi": 18671,
+          "single_fraction_of_native": 0.960252935862692,
+          "multi_fraction_of_native": 0.6817524503240319
+        },
+        {
+          "name": "Horizon Detection",
+          "baseline_single": 3985,
+          "single": 3952,
+          "single_delta": -0.008281053952321149,
+          "baseline_multi": 20118,
+          "multi": 20317,
+          "multi_delta": 0.009891639327965107,
+          "native_single": 4700,
+          "native_multi": 25922,
+          "single_fraction_of_native": 0.8408510638297872,
+          "multi_fraction_of_native": 0.7837744001234472
+        },
+        {
+          "name": "Object Remover",
+          "baseline_single": 4942,
+          "single": 5036,
+          "single_delta": 0.01902063941724008,
+          "baseline_multi": 15877,
+          "multi": 15759,
+          "multi_delta": -0.00743213453423186,
+          "native_single": 5143,
+          "native_multi": 20020,
+          "single_fraction_of_native": 0.9791950223604899,
+          "multi_fraction_of_native": 0.7871628371628372
+        },
+        {
+          "name": "HDR",
+          "baseline_single": 4314,
+          "single": 4323,
+          "single_delta": 0.0020862308762170656,
+          "baseline_multi": 17296,
+          "multi": 18771,
+          "multi_delta": 0.08527983348751156,
+          "native_single": 4938,
+          "native_multi": 23779,
+          "single_fraction_of_native": 0.8754556500607533,
+          "multi_fraction_of_native": 0.7893940031119896
+        },
+        {
+          "name": "Photo Filter",
+          "baseline_single": 4325,
+          "single": 4458,
+          "single_delta": 0.030751445086705242,
+          "baseline_multi": 12294,
+          "multi": 11753,
+          "multi_delta": -0.04400520579144296,
+          "native_single": 4753,
+          "native_multi": 14494,
+          "single_fraction_of_native": 0.9379339364611824,
+          "multi_fraction_of_native": 0.8108872636953222
+        },
+        {
+          "name": "Ray Tracer",
+          "baseline_single": 3667,
+          "single": 3651,
+          "single_delta": -0.004363239705481359,
+          "baseline_multi": 21244,
+          "multi": 21981,
+          "multi_delta": 0.03469214837130474,
+          "native_single": 3718,
+          "native_multi": 26110,
+          "single_fraction_of_native": 0.9819795589026358,
+          "multi_fraction_of_native": 0.8418613558023745
+        },
+        {
+          "name": "Structure from Motion",
+          "baseline_single": 3894,
+          "single": 3793,
+          "single_delta": -0.02593733949666155,
+          "baseline_multi": 15473,
+          "multi": 15292,
+          "multi_delta": -0.011697796161054708,
+          "native_single": 3991,
+          "native_multi": 20364,
+          "single_fraction_of_native": 0.9503883738411426,
+          "multi_fraction_of_native": 0.7509330190532312
+        }
+      ]
+    },
+    "method": [
+      "Same original Geekbench 6.7.1 Linux AArch64 preview binary, data and glibc loader as earlier evidence.",
+      "One fresh normal process per variant: frozen unchanged pre-SME binary followed by exact installed lazy-SME binary.",
+      "12 guest CPU slots, host-managed memory; both report 24 GiB, thermal state 0 and low-power false before/after.",
+      "No diagnostics, metrics, builds, CI VM, samplers or other benchmark process during clean measurements.",
+      "Result numbers read from public browser tables; no claim tokens retained here.",
+      "One sample per variant has no confidence interval. Component variation includes PDF multi declining 13.4%; this is not a uniform speedup. Native comparison uses an earlier macOS binary/library sample, not isolated HVF overhead."
+    ],
+    "provisional_eager_candidate": {
+      "runner_sha256": "70783bc42a8ffbb5f793cb414b8a9f57fdf6a975a5d8bcb1552b28771c38bc6d",
+      "code_mac": "c6352f17280b39f0cba67495bb91ddfada58f16a",
+      "code_runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4",
+      "variant": "trames-automib-12cpu-sme-final",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793248255.6466649,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 252.613856459,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405400"
+      ],
+      "scores": {
+        "single": 4079,
+        "multi": 11520
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3267,
+          "multi": 8214
+        },
+        "Navigation": {
+          "single": 3274,
+          "multi": 12580
+        },
+        "HTML5 Browser": {
+          "single": 4469,
+          "multi": 10428
+        },
+        "PDF Renderer": {
+          "single": 3750,
+          "multi": 8736
+        },
+        "Photo Library": {
+          "single": 3797,
+          "multi": 10077
+        },
+        "Clang": {
+          "single": 4959,
+          "multi": 22608
+        },
+        "Text Processing": {
+          "single": 3503,
+          "multi": 3154
+        },
+        "Asset Compression": {
+          "single": 3525,
+          "multi": 15443
+        },
+        "Object Detection": {
+          "single": 6560,
+          "multi": 11683
+        },
+        "Background Blur": {
+          "single": 4316,
+          "multi": 11888
+        },
+        "Horizon Detection": {
+          "single": 3957,
+          "multi": 17607
+        },
+        "Object Remover": {
+          "single": 5058,
+          "multi": 14211
+        },
+        "HDR": {
+          "single": 4291,
+          "multi": 16617
+        },
+        "Photo Filter": {
+          "single": 4345,
+          "multi": 10375
+        },
+        "Ray Tracer": {
+          "single": 3658,
+          "multi": 19528
+        },
+        "Structure from Motion": {
+          "single": 3872,
+          "multi": 12683
+        }
+      },
+      "disposition": "Not accepted as the final design; ordinary tasks eagerly traversed SME preparation and the multi total was below the earlier reference. The fresh baseline/lazy pair supersedes this sample."
+    },
+    "mapping_profile": {
+      "base_mac": "6a3045e6ab988401badcee3bca29215226a27fc4",
+      "base_runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+      "diagnostic_runner_sha256": "4f435291de992bfc406d6c01de4e01484578259455b18dcff4ab36c439bdc34f",
+      "instrumentation": "Opt-in HVF diagnostics plus added checkpoint-call attribution; no SME implementation in this binary. Timing not used as a clean score.",
+      "groups": 47764,
+      "calls": {
+        "brk": 5,
+        "munmap": 38652,
+        "mremap": 0,
+        "mmap": 51,
+        "mprotect": 18253,
+        "mincore": 0,
+        "madvise_discard": 149,
+        "madvise_advisory": 41
+      },
+      "sampled_workloads": [
+        "Multi-core HTML5 Browser",
+        "Multi-core PDF Renderer",
+        "Multi-core Photo Library"
+      ],
+      "sampling": "Three short sample PID 3 1 windows; queue waits mix genuine guest blocking and mapping pauses, not all removable overhead.",
+      "interpretation": "Protection/withdrawal is a stronger broad target than advisory madvise. These samples do not assign all workload latency to checkpoint machinery."
+    },
+    "sme_use_proof": {
+      "counter_names": [
+        "sme_context_captures",
+        "streaming_mode_captures"
+      ],
+      "changes": [
+        {
+          "thread": "main",
+          "stage": "Running Photo Library",
+          "at_ms": 1793247766807,
+          "counts": [
+            3,
+            3
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Photo Library",
+          "at_ms": 1793247767808,
+          "counts": [
+            14,
+            14
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Clang",
+          "at_ms": 1793247773307,
+          "counts": [
+            19,
+            19
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Background Blur",
+          "at_ms": 1793247805777,
+          "counts": [
+            52,
+            52
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Background Blur",
+          "at_ms": 1793247806778,
+          "counts": [
+            65,
+            65
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Background Blur",
+          "at_ms": 1793247807779,
+          "counts": [
+            87,
+            87
+          ]
+        },
+        {
+          "thread": "main",
+          "stage": "Running Background Blur",
+          "at_ms": 1793247808780,
+          "counts": [
+            110,
+            110
+          ]
+        }
+      ],
+      "last_by_thread": {
+        "main": [
+          110,
+          110
+        ],
+        "trames-cpu-0": [
+          0,
+          0
+        ],
+        "trames-cpu-1": [
+          0,
+          0
+        ],
+        "trames-cpu-2": [
+          0,
+          0
+        ]
+      },
+      "purpose": "ISA-use proof only; run stopped during single-core Background Blur, after Object Detection. Periodic reports can lag workload boundaries; no workload-specific timing attribution."
+    },
+    "validation": {
+      "signed_hvf_tests": {
+        "passed": 42,
+        "including": "SME FMOPA, ZA/ZT/TLS migration, streaming Z/P preemption, lazy non-activation, TPIDR2 isolation, private context permissions and existing memory regressions"
+      },
+      "app_pressure_test": 1,
+      "mac_unit_tests": 11,
+      "common_execution_tests": 2,
+      "common_kernel_tests": 10,
+      "interpreter_process_conformance": {
+        "passed": 202,
+        "ignored": 3,
+        "network_scope": "Sandbox loopback denial was resolved by the authorized local-network run."
+      },
+      "real_linux_signal_oracles": 4,
+      "sme_linux_integration": {
+        "passed": true,
+        "runner_sha256": "d434987efbd12f854f8db573f6115af0b4bb5d3d915abb87afd7688a19d0b67b",
+        "fixture_sha256": "ec1b1ee9d51bad892be8b7bcf19fe45f8df4e17a16536fe8c233f834512628d9",
+        "rows": [
+          {
+            "cpus": 1,
+            "memory_mib": "4096",
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "memory_mib": "auto",
+            "exit": 0,
+            "passed": true
+          }
+        ]
+      },
+      "ios_targets": [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim"
+      ],
+      "lint": "Mac workspace and final affected HVF target passed with -D warnings; pre-existing manifest warnings remain.",
+      "reuse": "Shared runtime/interpreter/iOS passes reuse identical source across later Mac-only lazy changes. Unchanged CPU/Linux/network/graphics acceptance reused."
+    },
+    "remaining": [
+      "Non-streaming SVE, FA64/FFR and debugger SME regsets are outside this bounded profile.",
+      "PDF, Photo Library and HTML5 multi scaling still trails native; mapping withdrawal/protection remains a broad mechanism to address.",
+      "Both products share the common Linux ABI; Mac-specific execution remains isolated."
+    ]
   }
 }

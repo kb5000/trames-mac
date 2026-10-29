@@ -1198,3 +1198,23 @@ ordinary tasks and TPIDR2-only tasks and checks both non-activation and isolatio
 The initial eager candidate scored 4079/11520: Object Detection single improved
 to 6560, but the multi total was below the previous 12307 sample. It is retained
 as provisional evidence, not accepted as a general performance improvement.
+
+
+The accepted installed run is [4127 / 12551](https://browser.geekbench.com/v6/cpu/19405427),
+compared with a fresh frozen-binary control of
+[3831 / 12206](https://browser.geekbench.com/v6/cpu/19405419): +7.7% single and
++2.8% multi. Object Detection is 3106 -> 6437 single and 10443 -> 13242 multi;
+Background Blur is 3426 -> 4252 and 11285 -> 12729. The earlier native macOS
+sample is [4287 / 18616](https://browser.geekbench.com/v6/cpu/19400588), putting
+the new aggregate at 96.3% / 67.4%. Object Detection single is in the same range
+as native's 6297. Different OS binaries/libraries prevent treating those native
+ratios as pure executor overhead.
+
+These are one clean sample per variant, not confidence intervals or a uniform
+improvement: PDF multi is 9537 -> 8257, and Photo Filter is 12294 -> 11753.
+PDF/Photo Library/HTML5 multi remain approximately 42.7%/43.8%/54.1% of native.
+No builds, CI VM, diagnostics, metrics, samplers or competing benchmark ran
+during the clean pair. Source revisions, exact installed runner hash, all
+component scores, provisional eager candidate, profile counts and verification
+scope are saved under `sme_followup_2026_10_29` in
+[mac-geekbench.json](../validation/mac-geekbench.json).
