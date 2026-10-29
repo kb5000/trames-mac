@@ -3,13 +3,17 @@
 use crate::{Error, Executor};
 use std::time::Duration;
 use trames_engine::{CpuFault, DecodeStats, SliceOutcome};
-use trames_execution::{Aarch64State, ExecutionExit, ExitReason, Features, Registers};
-use trames_memory::{parallel::View, CpuMemory, Memory, MemoryError};
+use trames_execution::{
+    Aarch64State, ExecutionExit, ExitReason, Features, Registers, SmeConfig, SmeState,
+};
+use trames_memory::{CpuMemory, Memory, MemoryError, parallel::View};
 
 #[derive(Clone, Default)]
 pub struct Cpu {
     pub state: Aarch64State,
     vulkan_calls: bool,
+    sme_config: SmeConfig,
+    sme: Option<Box<SmeState>>,
 }
 
 #[derive(Default)]
@@ -89,7 +93,7 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
             let (signal, code, address) = match syndrome >> 26 {
                 // Undefined instructions and trapped privileged system-register
                 // accesses are recoverable Linux SIGILL, not backend failures.
-                0 | 0x18 => (4, 1, pc),
+                0 | 0x18 | 0x1d => (4, 1, pc),
                 0x3c => (5, 1, pc),
                 0x22 | 0x26 => {
                     return CpuFault::Memory {
@@ -99,7 +103,7 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
                         } else {
                             pc
                         }),
-                    }
+                    };
                 }
                 _ => return CpuFault::Host(error.to_string()),
             };
@@ -140,6 +144,8 @@ impl trames_engine::Cpu for Cpu {
                 ..Default::default()
             },
             vulkan_calls: false,
+            sme_config: SmeConfig::default(),
+            sme: None,
         }
     }
     fn sp(&self) -> u64 {
@@ -159,6 +165,41 @@ impl trames_engine::Cpu for Cpu {
     }
     fn restore_architectural_state(&mut self, state: &Aarch64State) {
         self.state.clone_from(state);
+    }
+    fn sme_config(&self) -> Option<SmeConfig> {
+        (crate::features().hwcap2 & (1 << 23) != 0).then_some(self.sme_config)
+    }
+    fn sme_lengths() -> &'static [u16] {
+        &[64]
+    }
+    fn set_sme_config(&mut self, config: SmeConfig) {
+        if config.vl != self.sme_config.vl {
+            self.sme = None;
+        }
+        self.sme_config = config;
+    }
+    fn sme_state(&self) -> Option<&SmeState> {
+        self.sme.as_deref()
+    }
+    fn set_sme_state(&mut self, registers: Option<Box<SmeState>>) {
+        self.sme = registers;
+    }
+    fn fork_cpu(&self, shared_vm: bool) -> Self {
+        if shared_vm {
+            let mut state = self.state.clone();
+            state.tpidr2_el0 = 0;
+            Self {
+                state,
+                sme: None,
+                sme_config: self.sme_config,
+                vulkan_calls: self.vulkan_calls,
+            }
+        } else {
+            self.clone()
+        }
+    }
+    fn inherit_exec(&mut self, parent: &Self) {
+        self.sme_config = parent.sme_config.exec();
     }
     fn set_native_calls(&mut self, enabled: bool) {
         assert!(!enabled, "HVF executes the original native instructions");
@@ -180,11 +221,18 @@ impl trames_engine::Cpu for Cpu {
                 Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
             }
         }
-        let result = engine.executor.as_mut().unwrap().run(
-            &mut self.state,
-            memory,
-            Duration::from_millis(2),
-        );
+        let executor = engine.executor.as_mut().unwrap();
+        let result = if self.sme_config().is_some() {
+            executor.run_sme(
+                &mut self.state,
+                &mut self.sme,
+                self.sme_config.vl,
+                memory,
+                Duration::from_millis(2),
+            )
+        } else {
+            executor.run(&mut self.state, memory, Duration::from_millis(2))
+        };
         self.outcome(result, memory)
     }
     fn run_coordinated(
@@ -206,11 +254,18 @@ impl trames_engine::Cpu for Cpu {
                 .parallel_view(registry)
                 .ok_or(Error::Unsupported("hardware view admission"))?;
             view.enable_hardware();
-            let result = engine.executor.as_mut().unwrap().run_parallel(
-                &mut self.state,
-                &mut view,
-                Duration::from_millis(2),
-            );
+            let executor = engine.executor.as_mut().unwrap();
+            let result = if self.sme_config().is_some() {
+                executor.run_parallel_sme(
+                    &mut self.state,
+                    &mut self.sme,
+                    self.sme_config.vl,
+                    &mut view,
+                    Duration::from_millis(2),
+                )
+            } else {
+                executor.run_parallel(&mut self.state, &mut view, Duration::from_millis(2))
+            };
             drop(view);
             memory.commit_parallel()?;
             result
@@ -239,11 +294,18 @@ impl trames_engine::Cpu for Cpu {
                 Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
             }
         }
-        let result = engine.executor.as_mut().unwrap().run_parallel(
-            &mut self.state,
-            memory,
-            Duration::from_millis(2),
-        );
+        let executor = engine.executor.as_mut().unwrap();
+        let result = if self.sme_config().is_some() {
+            executor.run_parallel_sme(
+                &mut self.state,
+                &mut self.sme,
+                self.sme_config.vl,
+                memory,
+                Duration::from_millis(2),
+            )
+        } else {
+            executor.run_parallel(&mut self.state, memory, Duration::from_millis(2))
+        };
         self.outcome(result, memory)
     }
 }
@@ -305,9 +367,11 @@ mod tests {
             }
         ));
         let mut registry = trames_accel::native::Registry::default();
-        assert!(registry
-            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
-            .is_ok());
+        assert!(
+            registry
+                .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+                .is_ok()
+        );
         // A matching HLT is transport only; a modified prefix grants no host authority.
         memory
             .protect(0x1000, 4096, trames_memory::Permissions::RW)
@@ -318,9 +382,11 @@ mod tests {
         memory
             .protect(0x1000, 4096, trames_memory::Permissions::RX)
             .unwrap();
-        assert!(registry
-            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
-            .is_err());
+        assert!(
+            registry
+                .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+                .is_err()
+        );
         cpu.set_x(16, trames_accel::native::PROFILE);
         assert!(matches!(
             cpu.outcome(undefined(cpu.pc()), &memory),

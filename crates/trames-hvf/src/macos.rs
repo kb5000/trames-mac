@@ -8,11 +8,13 @@ use std::{
     sync::{Arc, Weak},
     time::Duration,
 };
-use trames_execution::{Aarch64State, ExecutionExit, ExitReason, Features, InstructionCount};
+use trames_execution::{
+    Aarch64State, ExecutionExit, ExitReason, Features, InstructionCount, SmeState,
+};
 use trames_memory::{
-    parallel::{Registry, View},
     Access, CpuMemory, HardwarePageInfo, HardwareStorage, HardwareWait, Memory, MemoryError,
     PAGE_SIZE,
+    parallel::{Registry, View},
 };
 #[cfg(feature = "diagnostics")]
 #[path = "diagnostics.rs"]
@@ -20,7 +22,7 @@ mod diagnostics;
 #[path = "machine.rs"]
 mod machine;
 use machine::Machine;
-pub use machine::{paging_stats, reclaim, set_resident_limit, take_memory_pressure, PagingStats};
+pub use machine::{PagingStats, paging_stats, reclaim, set_resident_limit, take_memory_pressure};
 const VECTOR_VA: u64 = 0xffffffe00000;
 #[repr(C)]
 #[derive(Default)]
@@ -32,6 +34,10 @@ struct HostExit {
 }
 unsafe extern "C" {
     fn trames_hvf_features(hwcap: *mut u64, hwcap2: *mut u64);
+    fn trames_hvf_sme_input(host: *mut c_void, state: *const SmeState, vl: u64) -> i32;
+    fn trames_hvf_sme_active(host: *mut c_void) -> u64;
+    fn trames_hvf_sme_output(host: *mut c_void, state: *mut SmeState);
+
     fn trames_hvf_register_stats(host: *mut c_void, stats: *mut RegisterStats);
     fn trames_hvf_max_vcpus() -> u32;
     fn trames_hvf_space_current(host: *mut c_void) -> *mut c_void;
@@ -86,7 +92,18 @@ pub fn feature_names() -> &'static str {
                 names.push(name);
             }
         }
-        for (bit, name) in [(13, "i8mm"), (14, "bf16")] {
+        for (bit, name) in [
+            (13, "i8mm"),
+            (14, "bf16"),
+            (23, "sme"),
+            (24, "sme_i16i64"),
+            (25, "sme_f64f64"),
+            (26, "sme_i8i32"),
+            (27, "sme_f16f32"),
+            (28, "sme_b16f32"),
+            (29, "sme_f32f32"),
+            (37, "sme2"),
+        ] {
             if feature.hwcap2 & (1 << bit) != 0 {
                 names.push(name);
             }
@@ -798,9 +815,94 @@ impl Executor {
     ) -> Result<ExecutionExit, Error> {
         if state.tpidr2_el0 != 0 {
             return Err(Error::Unsupported(
-                "SME/TPIDR2 is not advertised by this backend",
+                "raw execution requires an explicit SME context",
             ));
         }
+        // Baseline callers have no extended register owner and cannot enable SME.
+        check(unsafe { trames_hvf_sme_input(self.host.as_ptr(), std::ptr::null(), 0) })?;
+        self.run_parallel_inner(state, memory, quantum)
+    }
+    /// The movable task owns registers; the creator-thread executor owns only
+    /// its private EL1 mailbox. Ordinary tasks allocate no extension buffer.
+    pub fn run_parallel_sme(
+        &mut self,
+        state: &mut Aarch64State,
+        registers: &mut Option<Box<SmeState>>,
+        vl: u16,
+        memory: &mut View,
+        quantum: Duration,
+    ) -> Result<ExecutionExit, Error> {
+        if registers
+            .as_ref()
+            .is_some_and(|r| !r.valid() || r.vl != vl as u64)
+        {
+            return Err(Error::Unsupported("invalid SME context"));
+        }
+        // SAFETY: the stopped creator-thread CPU copies the bounded context;
+        // it retains no pointer into task storage while executing guest code.
+        check(unsafe {
+            trames_hvf_sme_input(
+                self.host.as_ptr(),
+                registers.as_deref().map_or(std::ptr::null(), |r| r),
+                vl as u64,
+            )
+        })?;
+        let result = self.run_parallel_inner(state, memory, quantum);
+        // Capture on every exit, including a guest fault that may deliver a
+        // signal. Immediate handled faults never copy through movable storage.
+        let active = unsafe { trames_hvf_sme_active(self.host.as_ptr()) };
+        if active != 0 {
+            #[cfg(feature = "diagnostics")]
+            {
+                diagnostics::count(diagnostics::Count::SmeContext, 1);
+                diagnostics::count(
+                    diagnostics::Count::SmeStreaming,
+                    usize::from(active & 1 != 0),
+                );
+            }
+            let saved = registers.get_or_insert_with(|| Box::new(SmeState::default()));
+            unsafe { trames_hvf_sme_output(self.host.as_ptr(), saved.as_mut()) };
+            if matches!(
+                result,
+                Ok(ExecutionExit {
+                    reason: ExitReason::Syscall,
+                    ..
+                })
+            ) {
+                saved.syscall();
+            }
+            if saved.svcr == 0 {
+                *registers = None;
+            }
+        } else {
+            *registers = None;
+        }
+        result
+    }
+    pub fn run_sme(
+        &mut self,
+        state: &mut Aarch64State,
+        registers: &mut Option<Box<SmeState>>,
+        vl: u16,
+        memory: &mut Memory,
+        quantum: Duration,
+    ) -> Result<ExecutionExit, Error> {
+        memory.prepare_hardware()?;
+        let mut view = memory
+            .parallel_view(&mut self.registry)
+            .ok_or(Error::Unsupported("hardware view admission"))?;
+        view.enable_hardware();
+        let result = self.run_parallel_sme(state, registers, vl, &mut view, quantum);
+        drop(view);
+        memory.commit_parallel()?;
+        result
+    }
+    fn run_parallel_inner(
+        &mut self,
+        state: &mut Aarch64State,
+        memory: &mut View,
+        quantum: Duration,
+    ) -> Result<ExecutionExit, Error> {
         self.wait = None;
         self.synchronize_view(memory)?;
         let deadline = std::time::Instant::now() + quantum;
@@ -839,7 +941,7 @@ impl Executor {
                             ExitReason::Yield
                         },
                         instructions: InstructionCount::Unavailable,
-                    })
+                    });
                 }
                 2 => {
                     #[cfg(feature = "diagnostics")]
@@ -870,7 +972,7 @@ impl Executor {
                         pc: event.pc,
                         address: event.address,
                         syndrome: event.syndrome,
-                    })
+                    });
                 }
             }
         }

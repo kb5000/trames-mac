@@ -263,7 +263,9 @@ impl Command {
                 "--no-pty" => pty = false,
                 "--" => break,
                 "--help" => {
-                    println!("trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs.");
+                    println!(
+                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                    );
                     return Ok(None);
                 }
                 _ => return Err("unknown option".into()),
@@ -419,11 +421,32 @@ pub fn run(
             runtime.metrics.cpu_time.as_micros()
         );
         eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
-        eprintln!("trames mac native: calls={} gpu_compiles={} gpu_wait_us={} upload_bytes={} download_bytes={} direct_bytes={} buffered_bytes={}",
-            runtime.metrics.native.calls, runtime.metrics.gpu_compiles, runtime.metrics.gpu_wait_time.as_micros(),
-            runtime.metrics.gpu_transfers.upload_bytes, runtime.metrics.gpu_transfers.download_bytes,
-            runtime.metrics.gpu_transfers.direct_bytes, runtime.metrics.gpu_transfers.buffered_bytes);
-        eprintln!("trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"vm_checkpoint_groups\":{},\"vm_checkpoint_spaces\":{},\"backing_domain_checks\":{},\"backing_page_checks\":{},\"parallel_memory_us\":{},\"instruction_count\":null}}", runtime.metrics.syscalls, runtime.metrics.context_switches, runtime.engine.mapped_bytes(), runtime.memory.resident_bytes(), runtime.metrics.vm_checkpoint_groups, runtime.metrics.vm_checkpoint_spaces, runtime.metrics.parallel_snapshots.backing_domain_checks, runtime.metrics.parallel_snapshots.backing_page_checks, runtime.metrics.parallel_memory_time.as_micros());
+        eprintln!(
+            "trames mac vm checkpoint calls: {:?}",
+            runtime.metrics.vm_checkpoint_calls
+        );
+        eprintln!(
+            "trames mac native: calls={} gpu_compiles={} gpu_wait_us={} upload_bytes={} download_bytes={} direct_bytes={} buffered_bytes={}",
+            runtime.metrics.native.calls,
+            runtime.metrics.gpu_compiles,
+            runtime.metrics.gpu_wait_time.as_micros(),
+            runtime.metrics.gpu_transfers.upload_bytes,
+            runtime.metrics.gpu_transfers.download_bytes,
+            runtime.metrics.gpu_transfers.direct_bytes,
+            runtime.metrics.gpu_transfers.buffered_bytes
+        );
+        eprintln!(
+            "trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"vm_checkpoint_groups\":{},\"vm_checkpoint_spaces\":{},\"backing_domain_checks\":{},\"backing_page_checks\":{},\"parallel_memory_us\":{},\"instruction_count\":null}}",
+            runtime.metrics.syscalls,
+            runtime.metrics.context_switches,
+            runtime.engine.mapped_bytes(),
+            runtime.memory.resident_bytes(),
+            runtime.metrics.vm_checkpoint_groups,
+            runtime.metrics.vm_checkpoint_spaces,
+            runtime.metrics.parallel_snapshots.backing_domain_checks,
+            runtime.metrics.parallel_snapshots.backing_page_checks,
+            runtime.metrics.parallel_memory_time.as_micros()
+        );
     }
     runtime.linux.vfs.sync()?;
     result.map(|exit| exit.code).map_err(Into::into)
@@ -445,11 +468,13 @@ mod tests {
         assert!(parse(&["/bin/echo", "--no-windows"]).windows);
         assert!(parse(&["--", "/bin/echo", "--no-windows"]).windows);
         assert!(parse(&["/bin/sh"]).windows);
-        assert!(Command::parse(
-            ["--vulkan", "--unknown"].into_iter().map(str::to_owned),
-            false
-        )
-        .is_err());
+        assert!(
+            Command::parse(
+                ["--vulkan", "--unknown"].into_iter().map(str::to_owned),
+                false
+            )
+            .is_err()
+        );
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]

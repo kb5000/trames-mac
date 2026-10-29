@@ -8,7 +8,7 @@ int main(void) {
     printf("hwcap=%lx hwcap2=%lx\n", cap, cap2);
     assert((cap & 3) == 3);
     assert(!(cap & (1ul << 22))); // SVE state is not advertised.
-    assert(!(cap2 & (1ul << 23))); // SME state is not advertised.
+    assert(!(cap2 & (1ul << 30))); // FA64 state is not advertised.
     uint32_t result[4];
     if (cap & (1ul << 3)) {
         __asm__ volatile(".arch_extension crypto\n movi v0.16b,#0\n movi v1.16b,#0\n aese v0.16b,v1.16b\n str q0,[%0]" :: "r"(result) : "v0","v1","memory");

@@ -37,9 +37,11 @@ pub(super) enum Count {
     AllocateZero,
     AllocateCopy,
     ImportStorage,
+    SmeContext,
+    SmeStreaming,
 }
 const WORKS: usize = 9;
-const COUNTS: usize = 18;
+const COUNTS: usize = 20;
 pub(super) struct Stamp {
     wall: Instant,
     cpu: Option<u64>,
@@ -115,7 +117,10 @@ impl Totals {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        eprintln!("trames hvf profile: {{\"thread\":{:?},\"at_ms\":{},\"wall_ns\":{:?},\"cpu_ns\":{:?},\"calls\":{:?},\"counts\":{:?}}}",self.name,at,self.wall,self.cpu,self.calls,self.counts);
+        eprintln!(
+            "trames hvf profile: {{\"thread\":{:?},\"at_ms\":{},\"wall_ns\":{:?},\"cpu_ns\":{:?},\"calls\":{:?},\"counts\":{:?}}}",
+            self.name, at, self.wall, self.cpu, self.calls, self.counts
+        );
     }
 }
 impl Drop for Totals {

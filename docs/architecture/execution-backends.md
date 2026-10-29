@@ -99,11 +99,12 @@ mappings are supported. See the common runtime's
 The generic CPU interface supplies runtime feature masks with conservative
 constant defaults, preserving interpreter/iPad behavior. HVF reads the vCPU
 configuration's ID registers and advertises only supported extensions whose
-state fits the existing GPR/128-bit SIMD/FPCR/FPSR migration and signal model:
-FP/ASIMD, AES/PMULL/SHA/CRC, LSE, FP16, RDM, dot-product, FHM, I8MM and BF16.
-Unsupported entries stay absent. CPUID, SVE, SME, PAC and extra PSTATE state are
-not advertised. The instruction fixture executes every advertised subset and
-checks results; physical-host capabilities alone are not an admission oracle.
+state is preserved by the backend and common signal ABI. The baseline profile
+covers FP/ASIMD, AES/PMULL/SHA/CRC, LSE, FP16, RDM, dot-product, FHM, I8MM and BF16.
+A bounded SME/SME2 streaming profile is also available on supported HVF
+configurations, as described below. CPUID, non-streaming SVE, SME FA64/FFR, PAC
+and unrelated PSTATE state remain absent. Separate instruction and SME fixtures
+check results; physical-host capabilities alone are not an admission oracle.
 
 Page-table ownership uses an address-space-local GPA hash index rather than a
 linear list walk. Sparse removal and reused GPAs update the index and cleanup
@@ -1083,8 +1084,8 @@ score ratios are comparative scaling signals rather than active-core counts.
 | Text Processing | 3525 / 4123 (85.5%) | 3367 / 5545 (60.7%) |
 
 SME is a concrete first capability investigation. Native Geekbench reports
-SME-I8I32, SME-F32F32 and SME2; the guest backend intentionally does not expose
-SME. The [official workload description](https://www.geekbench.com/doc/geekbench6-benchmark-internals.pdf)
+SME-I8I32, SME-F32F32 and SME2; the reviewed baseline did not expose SME.
+The implemented follow-up is recorded below. The [official workload description](https://www.geekbench.com/doc/geekbench6-benchmark-internals.pdf)
 identifies SME as an Object Detection acceleration path. The installed Hypervisor
 headers expose SME register/state APIs; a small signed read-only query returned
 HV_SUCCESS and maximum guest SVL 64 bytes, while the host SME2 sysctl returned 1.
@@ -1125,3 +1126,48 @@ The full per-workload ratios, capability-probe result and validation plan are
 recorded under host_relative_review in [mac-geekbench.json](../validation/mac-geekbench.json).
 This review changes documentation only; existing unchanged-source validation is
 reused and no new performance score is claimed.
+
+
+### Bounded hardware SME execution (2026-10-29)
+
+This implementation supersedes the capability investigation above. HVF's actual
+PFR/SMFR configuration and SME API must support the bounded 64-byte profile on
+macOS 15.2 or newer before auxv/proc advertise SME. Optional arithmetic and SME2
+bits follow those registers. On the tested Apple M6, requests for SMCR lengths
+16 or 32 bytes still execute at 64 bytes; Linux prctl therefore reports the
+only supported length, including requests below it. No full Linux kernel starts.
+
+The common 816-byte AArch64 layout is unchanged. A task retains an optional
+6,352-byte extended buffer only while SME registers are live; ordinary tasks
+have no matrix buffer. The existing 16 KiB per-vCPU private allocation now holds
+the extended mailbox, using two EL1-only 4 KiB leaves in the existing adapter
+reservation. EL1 saves/restores Z/P/ZA/ZT directly through this mailbox; ordinary
+exception exits do not issue one HVF API call per extended register. Streaming
+mode is stopped before NEON context operations, and low vector lanes are
+preserved. Timer/stage-two exits use the framework's cold export path. Immediate
+handled faults reuse the saved context and original timer without task-buffer
+copying. The creator-thread owner excludes concurrent mailbox access; no Rust
+slice spans hardware execution and no ordinary guest-memory barrier is added.
+
+Optional common hooks implement Linux SME signal records, vector-length prctl,
+fork/CLONE_VM and exec semantics. AT_MINSIGSTKSZ advertises 8192 bytes. iPad's
+interpreter retains its original capabilities and storage model. Non-streaming
+SVE, FA64/FFR and debugger SME regsets are not added in this change.
+
+Validation includes actual FP32 FMOPA results, ZA/ZT/TPIDR2 preservation,
+streaming-vector/predicate preemption, host-thread/vCPU migration, private
+context access denial, malformed-frame rollback and extended altstack bounds.
+The static Linux `linux-sme` fixture additionally verifies deferred/inherited
+exec policy, fork, CLONE_VM and signal delivery in streaming mode with a
+clobbering handler. Existing real-ELF signal recovery still matches its native
+Linux oracle. Shared process conformance and both iOS target checks pass.
+
+A fresh diagnostic suite attributes 57,151 mapping calls to 47,764 mm checkpoint
+groups: 38,652 munmap, 18,253 mprotect, 149 destructive madvise, 41 advisory
+madvise, 51 non-additive mmap and five brk calls. Three short multi-core samples
+of HTML5/PDF/Photo Library contain substantial queue waits as well as guest
+execution and per-page handling. These waits mix guest synchronization and
+mapping pauses; they are not all removable overhead. Advisory madvise is a very
+small candidate in this data. Reducing the withdrawal/protection path is the
+next broad mechanism to investigate while preserving completed-call permission
+and backing-lifetime guarantees.

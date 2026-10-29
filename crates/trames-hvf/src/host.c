@@ -18,14 +18,34 @@
 
 #define VECTOR_GPA UINT64_C(0x800000)
 #define VECTOR_VA UINT64_C(0xffffffE00000)
-// The final 4K of the existing 64K adapter reservation is data-only.
-#define CONTEXT_VA (VECTOR_VA+UINT64_C(0xf000))
+// The final 16K of the existing 64K adapter reservation is data-only.
+#define CONTEXT_VA (VECTOR_VA+UINT64_C(0xc000))
 #define TABLE_GPA UINT64_C(0x1000000)
 #define ADDRESS_MASK UINT64_C(0x0000fffffffff000)
 #define PAGE 4096
 #define EXIT_HVC_IMMEDIATE 0x5452
 
-// Advertise only extensions using the saved GPR/128-bit SIMD state. The HVF
+static uint64_t sme_features(hv_vcpu_config_t config) {
+    if (__builtin_available(macOS 15.2, *)) {
+        size_t maximum=0; uint64_t pfr=0, smfr=0;
+        if (hv_sme_config_get_max_svl_bytes(&maximum) || maximum!=64 ||
+            hv_vcpu_config_get_feature_reg(config,HV_FEATURE_REG_ID_AA64PFR1_EL1,&pfr) ||
+            !((pfr>>24)&15) ||
+            hv_vcpu_config_get_feature_reg(config,HV_FEATURE_REG_ID_AA64SMFR0_EL1,&smfr)) return 0;
+        uint64_t bits=UINT64_C(1)<<23;
+        if (((smfr>>52)&15)==15) bits|=UINT64_C(1)<<24;
+        if ((smfr>>48)&1) bits|=UINT64_C(1)<<25;
+        if (((smfr>>36)&15)==15) bits|=UINT64_C(1)<<26;
+        if ((smfr>>35)&1) bits|=UINT64_C(1)<<27;
+        if ((smfr>>34)&1) bits|=UINT64_C(1)<<28;
+        if ((smfr>>32)&1) bits|=UINT64_C(1)<<29;
+        if (((smfr>>56)&15)>=1) bits|=UINT64_C(1)<<37;
+        // FA64/FFR and ordinary non-streaming SVE are outside this profile.
+        return bits;
+    }
+    return 0;
+}
+// Advertise only extensions whose complete execution state is preserved. The HVF
 // configuration is authoritative; native host features alone are insufficient.
 void trames_hvf_features(uint64_t *hwcap, uint64_t *hwcap2) {
     *hwcap=3; *hwcap2=0;
@@ -52,7 +72,8 @@ void trames_hvf_features(uint64_t *hwcap, uint64_t *hwcap2) {
         if (((pfr0>>16)&15)==1) *hwcap|=UINT64_C(1)<<9;
         if (((pfr0>>20)&15)==1) *hwcap|=UINT64_C(1)<<10;
     }
-    // CPUID, SVE, SME, PAC and additional PSTATE state are deliberately absent.
+    *hwcap2|=sme_features(config);
+    // CPUID, non-streaming SVE, PAC and additional PSTATE state stay absent.
     os_release(config);
 }
 
@@ -65,14 +86,27 @@ struct state {
 };
 _Static_assert(sizeof(struct state) == 816, "shared AArch64 state layout");
 _Static_assert(offsetof(struct state, vectors) == 304, "shared SIMD offset");
-struct context { struct state state; uint64_t syndrome, address, complete, invalidate, operand; };
+struct sme_state { uint64_t vl, svcr; uint8_t z[2048], p[128], za[4096], zt[64]; };
+struct context {
+    struct state state;
+    uint64_t syndrome, address, complete, invalidate, operand, padding;
+    uint64_t sme_enabled, reserved;
+    struct sme_state sme;
+};
+_Static_assert(sizeof(struct sme_state)==6352, "bounded SME state layout");
+_Static_assert(offsetof(struct context,sme_enabled)==864, "adapter SME capability");
+_Static_assert(offsetof(struct context,sme)==880, "adapter SME state");
+_Static_assert(offsetof(struct context,sme.z)==896, "adapter Z bank");
+_Static_assert(offsetof(struct context,sme.p)==2944, "adapter predicate bank");
+_Static_assert(offsetof(struct context,sme.za)==3072, "adapter ZA matrix");
+_Static_assert(offsetof(struct context,sme.zt)==7168, "adapter ZT bank");
 _Static_assert(offsetof(struct state, sp) == 248, "adapter SP offset");
 _Static_assert(offsetof(struct state, pc) == 256, "adapter PC offset");
 _Static_assert(offsetof(struct state, nzcv) == 264, "adapter flags offset");
 _Static_assert(offsetof(struct state, tpidr) == 272, "adapter TLS offset");
 _Static_assert(offsetof(struct state, fpcr) == 288, "adapter FPCR offset");
 _Static_assert(offsetof(struct state, fpsr) == 292, "adapter FPSR offset");
-_Static_assert(sizeof(struct context)<=PAGE, "private context fits one guest page");
+_Static_assert(sizeof(struct context)<=16384, "private context fits one host granule");
 _Static_assert(offsetof(struct context, syndrome) == 816, "adapter ESR offset");
 _Static_assert(offsetof(struct context, address) == 824, "adapter FAR offset");
 _Static_assert(offsetof(struct context, complete) == 832, "adapter completion offset");
@@ -84,6 +118,7 @@ struct table { void *memory; uint64_t gpa; struct table *next, *previous, *index
 struct free_gpa { uint64_t value; struct free_gpa *next; };
 struct machine {
     size_t granule;
+    uint64_t sme_enabled;
     void *vectors;
     pthread_mutex_t addresses;
     uint64_t next_gpa;
@@ -332,7 +367,8 @@ struct address_space *trames_hvf_space_create(struct host *h, int *error) {
     *error=space->root ? 0 : -1;
     for (size_t offset=0; !*error && offset<h->granule; offset+=PAGE)
         *error=trames_hvf_page(h,VECTOR_VA+offset,VECTOR_GPA+offset,1|4|8);
-    if (!*error) *error=trames_hvf_page(h,CONTEXT_VA,h->context_gpa,1|2|8);
+    for (size_t offset=0; !*error && offset<sizeof(struct context); offset+=PAGE)
+        *error=trames_hvf_page(h,CONTEXT_VA+offset,h->context_gpa+offset,1|2|8);
     h->space=previous;
     if (*error) { free_tables(h,space); free(space); return NULL; }
     space->next=h->spaces; h->spaces=space;
@@ -396,6 +432,12 @@ struct machine *trames_hvf_vm_create(int *error) {
     if (!m) { hv_vm_destroy(); *error=-1; return NULL; }
     pthread_mutex_init(&m->addresses,NULL);
     m->granule=(size_t)sysconf(_SC_PAGESIZE); m->next_gpa=TABLE_GPA;
+    hv_vcpu_config_t config=hv_vcpu_config_create();
+    if (config) {
+        uint64_t features=sme_features(config);
+        m->sme_enabled=features ? 1|((features&(UINT64_C(1)<<37)) ? 2 : 0) : 0;
+        os_release(config);
+    }
     if (m->granule>65536 || m->granule<sizeof(struct context) ||
         (size_t)(trames_hvf_vectors_end-trames_hvf_vectors_begin)>m->granule) {
         *error=-1; goto fail;
@@ -452,7 +494,7 @@ struct host *trames_hvf_cpu_create(struct machine *m, int *error) {
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,3<<20)) ||
         // Match Linux: EL0 may read CNTVCT/CNTFRQ, but cannot control timers.
         (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CNTKCTL_EL1,1<<1)) ||
-        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)))) goto fail;
+        (*error=(int)hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_SCTLR_EL1,UINT64_C(0x30d00800)|1|4|(1<<12)|(1<<15)|(1<<26)|(m->sme_enabled ? UINT64_C(1)<<60 : 0)))) goto fail;
     // A new executor may reuse an old ASID; its first selected root still
     // needs full invalidation even though its individual tables are all new.
     dirty_all(h);
@@ -492,9 +534,50 @@ static int context_result(struct host *h, struct state *s, struct result *out) {
     h->fault_continuable=out->kind==2;
     h->registers.mailbox++; return 0;
 }
+// Called only while this creator-thread CPU is stopped. No pointer escapes.
+int trames_hvf_sme_input(struct host *h, const struct sme_state *state, uint64_t vl) {
+    uint64_t enabled=vl ? h->machine->sme_enabled : 0;
+    if (vl && (!enabled || vl!=64)) return -2;
+    if (state && (state->vl!=vl || state->svcr&~UINT64_C(3))) return -2;
+    if (h->context->sme_enabled!=enabled) {
+        hv_return_t error=hv_vcpu_set_sys_reg(h->cpu,HV_SYS_REG_CPACR_EL1,(3<<20)|(enabled ? 3<<24 : 0));
+        if (error) return (int)error;
+        h->context->sme_enabled=enabled;
+    }
+    h->context->sme.vl=vl;
+    h->context->sme.svcr=state ? state->svcr : 0;
+    if (state && state->svcr) memcpy(&h->context->sme,state,sizeof(*state));
+    return 0;
+}
+uint64_t trames_hvf_sme_active(struct host *h) { return h->context->sme.svcr; }
+void trames_hvf_sme_output(struct host *h, struct sme_state *state) { memcpy(state,&h->context->sme,sizeof(*state)); }
+static int cold_sme_context(struct host *h, struct state *s) {
+    if (!h->context->sme_enabled) return 0;
+    if (__builtin_available(macOS 15.2, *)) {
+        hv_vcpu_sme_state_t mode; hv_return_t e;
+        if ((e=hv_vcpu_get_sme_state(h->cpu,&mode)) ||
+            (e=hv_vcpu_get_sys_reg(h->cpu,HV_SYS_REG_TPIDR2_EL0,&s->tpidr2))) return (int)e;
+        struct sme_state *r=&h->context->sme;
+        r->svcr=(mode.streaming_sve_mode_enabled ? 1 : 0)|(mode.za_storage_enabled ? 2 : 0);
+        if (r->svcr&1) {
+            for (unsigned i=0;i<32;i++) if ((e=hv_vcpu_get_sme_z_reg(h->cpu,(hv_sme_z_reg_t)i,r->z+i*r->vl,r->vl))) return (int)e;
+            for (unsigned i=0;i<16;i++) if ((e=hv_vcpu_get_sme_p_reg(h->cpu,(hv_sme_p_reg_t)i,r->p+i*r->vl/8,r->vl/8))) return (int)e;
+        }
+        if (r->svcr&2) {
+            if ((e=hv_vcpu_get_sme_za_reg(h->cpu,r->za,r->vl*r->vl))) return (int)e;
+            if (h->context->sme_enabled&2) {
+                hv_sme_zt0_uchar64_t zt;
+                if ((e=hv_vcpu_get_sme_zt0_reg(h->cpu,&zt))) return (int)e;
+                memcpy(r->zt,&zt,64);
+            }
+        }
+        return 0;
+    }
+    return -2;
+}
 static bool in_save(uint64_t pc) {
     return (pc>=VECTOR_VA && pc<VECTOR_VA+0x800) ||
-        (pc>=VECTOR_VA+0xa00 && pc<VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin));
+        (pc>=VECTOR_VA+(uint64_t)(trames_hvf_save_begin-trames_hvf_vectors_begin) && pc<VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin));
 }
 static int finish_run(struct host *h, struct state *s, struct result *out,
                       hv_exit_reason_t reason, uint64_t syndrome, uint64_t physical) {
@@ -508,7 +591,7 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
     out->kind=0; out->syndrome=syndrome; out->address=0;
     if ((pstate&15)==5) {
         if (!interrupted) return -2; // adapter faults are host transport failures
-        if (pc>=VECTOR_VA+0x800 && pc<VECTOR_VA+(uint64_t)(trames_hvf_resume_end-trames_hvf_vectors_begin)) {
+        if (pc>=VECTOR_VA+0x800 && pc<VECTOR_VA+(uint64_t)(trames_hvf_save_begin-trames_hvf_vectors_begin)) {
             // ERET has not executed: the complete input state is authoritative,
             // even if only part of the hardware register bank has been loaded.
             out->pc=s->pc; h->registers.restore_interruptions++; return 0;
@@ -534,10 +617,12 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
     if ((pstate&15)!=0) return -2;
     // Timer/cancellation and stage-two faults may stop in EL0 without taking a
     // guest exception. These cold exits retain the full framework export path.
+    if ((e=cold_sme_context(h,s))) return (int)e;
     for (unsigned i=0;i<31;i++) if ((e=hv_vcpu_get_reg(h->cpu,(hv_reg_t)(HV_REG_X0+i),&s->x[i]))) return (int)e;
     for (unsigned i=0;i<32;i++) {
         union { __uint128_t bits; hv_simd_fp_uchar16_t vector; } value;
-        if ((e=hv_vcpu_get_simd_fp_reg(h->cpu,(hv_simd_fp_reg_t)(HV_SIMD_FP_REG_Q0+i),&value.vector))) return (int)e;
+        if (h->context->sme.svcr&1) memcpy(&value.bits,h->context->sme.z+i*h->context->sme.vl,16);
+        else if ((e=hv_vcpu_get_simd_fp_reg(h->cpu,(hv_simd_fp_reg_t)(HV_SIMD_FP_REG_Q0+i),&value.vector))) return (int)e;
         s->vectors[i]=value.bits;
     }
     uint64_t n;
@@ -646,8 +731,8 @@ int trames_hvf_test_interrupted_context(struct host *h, struct state *s,
         union { __uint128_t bits; hv_simd_fp_uchar16_t vector; } value={.bits=s->vectors[i]};
         if ((e=hv_vcpu_set_simd_fp_reg(h->cpu,(hv_simd_fp_reg_t)(HV_SIMD_FP_REG_Q0+i),value.vector))) return (int)e;
     }
-    uint64_t pc=phase==0 ? VECTOR_VA+0x400 : phase==1 ? VECTOR_VA+0xa20 :
-        phase==2 ? VECTOR_VA+0xa80 : phase==3 ? VECTOR_VA+0x920 :
+    uint64_t pc=phase==0 ? VECTOR_VA+0x400 : phase==1 ? VECTOR_VA+(uint64_t)(trames_hvf_save_begin-trames_hvf_vectors_begin)+0x20 :
+        phase==2 ? VECTOR_VA+(uint64_t)(trames_hvf_save_begin-trames_hvf_vectors_begin)+0x80 : phase==3 ? VECTOR_VA+0x920 :
         phase==4 ? VECTOR_VA+(uint64_t)(trames_hvf_resume_end-trames_hvf_vectors_begin)-4 :
         phase==5 ? VECTOR_VA+(uint64_t)(trames_hvf_save_end-trames_hvf_vectors_begin)-4 :
         phase==6 ? VECTOR_VA+0x800 : VECTOR_VA+0x828;

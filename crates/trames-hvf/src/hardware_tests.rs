@@ -138,9 +138,11 @@ fn unrelated_guest_pages_reuse_partial_physical_granules() {
         drop(page.take());
     }
     let replacements: Vec<_> = (0..3).map(|_| machine.allocate(None).unwrap()).collect();
-    assert!(replacements
-        .iter()
-        .all(|p| p.physical_address() & !16383 == base));
+    assert!(
+        replacements
+            .iter()
+            .all(|p| p.physical_address() & !16383 == base)
+    );
     assert_eq!(machine.stats().mapped_bytes, before);
 }
 
@@ -316,10 +318,12 @@ fn warm_address_spaces_switch_without_reexport_or_page_walks() {
     svc(&mut executor, &mut state(), &mut a);
     svc(&mut executor, &mut state(), &mut b);
     let warm = executor.translations;
-    assert!(executor
-        .spaces
-        .values()
-        .all(|space| space.publications.is_empty() && space.private_writable == 1));
+    assert!(
+        executor
+            .spaces
+            .values()
+            .all(|space| space.publications.is_empty() && space.private_writable == 1)
+    );
     for _ in 0..64 {
         svc(&mut executor, &mut state(), &mut a);
         svc(&mut executor, &mut state(), &mut b);
@@ -640,10 +644,12 @@ fn private_writable_code_reuses_metadata_across_joined_epochs() {
         svc(&mut executor, &mut state(), &mut memory);
         assert_eq!(memory.hardware_page_info(0x10000).unwrap(), original);
     }
-    assert!(executor
-        .spaces
-        .values()
-        .all(|space| space.publications.is_empty()));
+    assert!(
+        executor
+            .spaces
+            .values()
+            .all(|space| space.publications.is_empty())
+    );
     assert_eq!(executor.translations.inspections, warm.inspections);
     assert_eq!(executor.translations.exports, warm.exports);
     assert_eq!(executor.translations.updates, warm.updates);
@@ -750,10 +756,12 @@ fn guest_code_stores_use_guest_cache_maintenance_across_cpus() {
                 .instruction_revision,
             revision
         );
-        assert!(executor
-            .spaces
-            .values()
-            .all(|space| space.publications.is_empty()));
+        assert!(
+            executor
+                .spaces
+                .values()
+                .all(|space| space.publications.is_empty())
+        );
     }
     drop(request);
     worker.join().unwrap();
@@ -904,15 +912,17 @@ fn el0_timer_uses_full_register_fallback_without_changing_state() {
 #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
 fn el0_cannot_read_write_or_execute_the_private_context() {
     let mut e = Executor::new().unwrap();
-    for word in [0xf9400020, 0xf9000020, 0xd61f0020] {
-        // ldr/str x0,[x1]; br x1
-        let mut memory = context_memory(word);
-        let mut cpu = patterned_state(7);
-        cpu.registers[1] = VECTOR_VA + 0xf000;
-        assert!(
-            matches!(e.run(&mut cpu, &mut memory, Duration::from_millis(2)),
-            Err(Error::Memory(MemoryError::Unmapped(address))) if address == VECTOR_VA + 0xf000)
-        );
+    for address in [VECTOR_VA + 0xc000, VECTOR_VA + 0xd000, VECTOR_VA + 0xf000] {
+        for word in [0xf9400020, 0xf9000020, 0xd61f0020] {
+            // ldr/str x0,[x1]; br x1
+            let mut memory = context_memory(word);
+            let mut cpu = patterned_state(7);
+            cpu.registers[1] = address;
+            assert!(
+                matches!(e.run(&mut cpu, &mut memory, Duration::from_millis(2)),
+            Err(Error::Memory(MemoryError::Unmapped(address))) if address == cpu.registers[1])
+            );
+        }
     }
 }
 
@@ -1496,9 +1506,11 @@ fn native_blocks_promote_after_sparse_leaf_permission_exceptions() {
     native_step(&mut executor, &mut memory, 0x210000);
     assert_eq!(executor.translations.blocks, 2);
     assert_eq!(executor.spaces[&executor.active].blocks.len(), 1);
-    assert!(!executor.spaces[&executor.active]
-        .pages
-        .contains_key(&0x200000));
+    assert!(
+        !executor.spaces[&executor.active]
+            .pages
+            .contains_key(&0x200000)
+    );
     native_step(&mut executor, &mut memory, 0x200000);
     assert_eq!(
         memory.read_array::<8>(0x200000).unwrap(),
@@ -1605,3 +1617,6 @@ fn native_extents_rebind_without_retaining_the_old_vm_range_or_losing_accounting
     );
     assert!(memory.resident_bytes() > 2 * PAGE_SIZE as usize);
 }
+
+#[path = "sme_tests.rs"]
+mod sme;
