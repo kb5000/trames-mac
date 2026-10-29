@@ -1,0 +1,203 @@
+{
+  "date": "2026-10-30",
+  "runtime_revision": "6427992d672f91636ceb493f4dade3a8c7e072e3",
+  "host": {
+    "cpu": "Apple M6",
+    "cpu_slots": 12,
+    "ram_gib": 24,
+    "os": "macOS 27.0.1"
+  },
+  "method": {
+    "metric": "host elapsed time from trusted browser click-command start to the same content marker entering the target DOM",
+    "viewport_css_pixels": [
+      1920,
+      792
+    ],
+    "cases": {
+      "wiki": "Article paragraph containing Mozilla Firefox",
+      "github": "First repository directory link inside main",
+      "bilibili": "Fourth video-title link under main h3"
+    },
+    "cache": "Previously visited sites; one additional Firefox warmup per site is excluded. In-app browser sites had already been visited repeatedly. HTTP/DNS/CDN caches are not controlled or forcibly disabled.",
+    "controls": "Same host and URLs, default graphics/cache/security/process preferences, separate Firefox test profile, visible Trames window, no sampler/build/syscall profiler or verbose HTTP log during retained timing runs.",
+    "timing_limits": [
+      "In-app browser Performance/Navigation Timing globals are not exposed by the available API; no in-page FCP/TTI comparison is claimed.",
+      "DOM attachment is not screen-present time, complete subresource loading, video-start latency or proof that every control is responsive.",
+      "Firefox uses Marionette click/element waits; in-app uses the available click/locator API. Tool overhead and different browser engines/user agents remain.",
+      "No shuffled browser-order repetitions or confidence intervals. Dynamic responses, network routes and origin/CDN variation remain; this is an end-user reference, not a pure CPU/runtime ratio.",
+      "Firefox implicit element waits may overrun their configured timeout when its renderer is busy; actual measured elapsed times are preserved."
+    ]
+  },
+  "cases": {
+    "wiki": {
+      "url": "https://en.wikipedia.org/wiki/Firefox",
+      "in_app": {
+        "samples_ms": [
+          5412,
+          554,
+          539
+        ],
+        "median_ms": 554,
+        "complete": true
+      },
+      "trames": {
+        "trials": [
+          {
+            "trial": 1,
+            "status": "content_marker_found",
+            "content_ms": 5346.160709000001,
+            "click_command_ms": 1357.5630839999997
+          },
+          {
+            "trial": 2,
+            "status": "content_not_found",
+            "wait_seconds": 30.0,
+            "observed_elapsed_ms": 30376.763457999994,
+            "failure_title": "Navigation benchmark launcher",
+            "remained_on_launcher": true
+          },
+          {
+            "trial": 3,
+            "status": "content_marker_found",
+            "content_ms": 1788.026041000002,
+            "click_command_ms": 212.264624999996
+          }
+        ],
+        "successful_clicks": 2,
+        "requested_rounds": 3,
+        "complete": false
+      }
+    },
+    "github": {
+      "url": "https://github.com/mozilla-firefox/firefox",
+      "in_app": {
+        "samples_ms": [
+          4322,
+          472,
+          416
+        ],
+        "median_ms": 472,
+        "complete": true
+      },
+      "trames": {
+        "trials": [
+          {
+            "trial": 1,
+            "status": "content_marker_found",
+            "content_ms": 9084.444207999997,
+            "click_command_ms": 936.4704579999988
+          },
+          {
+            "trial": 2,
+            "status": "content_marker_found",
+            "content_ms": 8556.136207999998,
+            "click_command_ms": 1500.591208000003
+          },
+          {
+            "trial": 3,
+            "status": "content_marker_found",
+            "content_ms": 16743.107625000008,
+            "click_command_ms": 1835.127749999998
+          }
+        ],
+        "successful_clicks": 3,
+        "requested_rounds": 3,
+        "complete": true
+      }
+    },
+    "bilibili": {
+      "url": "https://www.bilibili.com/",
+      "in_app": {
+        "samples_ms": [
+          5354,
+          598,
+          571
+        ],
+        "median_ms": 598,
+        "complete": true
+      },
+      "trames": {
+        "trials": [
+          {
+            "trial": 1,
+            "status": "content_marker_found",
+            "content_ms": 37342.669,
+            "click_command_ms": 3283.298290999994
+          },
+          {
+            "trial": 2,
+            "status": "automation_setup_error",
+            "error": "timed out",
+            "note": "Failure occurred while returning to the local launcher, before another target click. The third requested trial was not started."
+          }
+        ],
+        "successful_clicks": 1,
+        "requested_rounds": 3,
+        "complete": false
+      }
+    }
+  },
+  "excluded_prototypes": [
+    "Earlier controller revisions could accept an old launcher document, misclassify transient empty script results, or wait for optional timing after content readiness. They are excluded from the primary table.",
+    "The retained controller waits for a unique new launcher marker and uses browser-owned implicit element waits, with no high-frequency sandbox creation."
+  ],
+  "other_observations": {
+    "earlier_tls_error": "PR_END_OF_FILE_ERROR observed on GitHub in an intermediate run; no certificate or TLS check was bypassed.",
+    "old_browser_exit": "After Bilibili, the pre-fix browser logged descriptor allocation failure and mozalloc_abort; subsequent repeated loads stopped. The exact peak object count of that browser run was not captured, so the object quota is independently proven rather than asserted as the sole cause.",
+    "old_diagnostic_counter": {
+      "backing_page_checks": 433154916,
+      "parallel_memory_us": 42201561,
+      "scope": "Mixed loopback/live-diagnostic session, not a timed complex-page sample; cannot be converted into whole-process CPU percentages."
+    }
+  },
+  "fixes": {
+    "vulkan_objects": "O(1) owner-thread lifetime count replaces per-call Weak<Object> scans; retained command/descriptor dependencies stay counted until final drop. Host-managed mode has no extra 16,384-object quota; bounded sessions retain it.",
+    "shared_anonymous": "Existing immutable SharedPage allocation and version/check contract opts into versioned snapshot preparation. No ordinary-byte ordering, permission, ownership, quiescence, quota or storage policy is changed."
+  },
+  "regressions": {
+    "shared_anonymous": {
+      "before_unrelated_frame_preparations": 64,
+      "after_unrelated_frame_preparations": 0,
+      "changed_data_page_refreshes": 1,
+      "hardware_mapping_generation": "stable for unrelated notifications and direct data writes; software/hardware snapshot modes tested"
+    },
+    "native_descriptor_objects": {
+      "before": "Host-managed real native allocation fails on batch 4, despite legal driver capacity.",
+      "after_host_managed_sets": 20480,
+      "after_bounded_accepted_sets": 12288,
+      "bounded_next_batch": "rejected as before",
+      "pool_layout_lifetime": "released; driver teardown reports zero GPU bytes",
+      "host_managed_creation_ms": 5.251,
+      "scope": "Mechanism regression, not a browser speedup benchmark."
+    }
+  },
+  "validation": {
+    "memory": {
+      "passed": 151,
+      "ignored": 1
+    },
+    "vulkan": {
+      "passed": 40
+    },
+    "kernel": {
+      "passed": 214,
+      "ignored": 3
+    },
+    "signed_hvf": {
+      "passed": 47
+    },
+    "mac_pressure": {
+      "passed": 1
+    },
+    "ipad_arm64_ffi": "pass",
+    "affected_package_clippy": "pass",
+    "signed_mac_release": "pass",
+    "benchmark_script": "compiled and exercised end-to-end; failures kept as failures",
+    "reused": "Unchanged network/graphics artifact acceptance from previous validation."
+  },
+  "artifacts": {
+    "runner_sha256": "044cbe0f7f0f46e2039b15de4bb55a73b0ea37bc926098eb1f22c0e7984ee45c",
+    "benchmark_script_sha256": "e086d25b0e396fe11dfd75bf327e1c384b22bc82b30d297dbab9797a46ff4193"
+  },
+  "privacy": "Only aggregate timings, public target URLs, error categories and hashes are published. Guest profiles, raw HTTP logs/cookies, host addresses and traces remain local."
+}

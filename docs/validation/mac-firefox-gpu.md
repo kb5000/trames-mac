@@ -238,3 +238,93 @@ all page sluggishness is solved. Process-statistics queries still rebuild common
 task metadata and cost about 0.6 s in this probe; content/utility subprocess launch
 retries still appear during normal browsing. Those are the next targets before
 claiming consistently fast navigation. Video decoding remains separate.
+
+## Complex-page click loading (2026-10-30)
+
+The [navigation record](mac-firefox-navigation.json) compares the same public
+URLs and content markers against the in-app browser at 1920×792 CSS pixels.
+Trames keeps its window visible, 12 CPU slots, host-managed memory, the original
+hardware graphics stack and default graphics/security/process preferences. One
+Firefox warmup per site is excluded. Both browsers have previously visited the
+sites; HTTP/DNS/CDN caches and response contents remain uncontrolled.
+
+The main metric is host elapsed time from click-command start to a content marker
+entering the DOM: the Firefox article's first relevant paragraph, a GitHub source
+directory link, or the fourth Bilibili video-title link. This is not pixel
+presentation, complete subresource loading, video startup or interactive latency.
+The in-app API does not expose Performance Timing, so browser-internal FCP/TTI
+numbers cannot be compared. Different engines, user agents and automation paths
+also prevent treating this as a pure guest CPU slowdown factor.
+
+| Page | In-app samples, seconds (median) | Final Trames warm samples, seconds |
+| --- | --- | --- |
+| Wikipedia Firefox article | 5.412 / 0.554 / 0.539 (**0.554**) | 5.346 / no target content by the 30 s wait / 1.788 |
+| GitHub Firefox source | 4.322 / 0.472 / 0.416 (**0.472**) | 9.084 / 8.556 / 16.743 (**9.084**) |
+| Bilibili home | 5.354 / 0.598 / 0.571 (**0.598**) | 37.343; the next return-to-launcher automation wait stalls, and the third trial is not started |
+
+Failures are retained, not dropped from a success-only average. The Wikipedia
+failure still shows the launcher after its target click. The Bilibili setup stall
+is not assigned a fabricated second page-load time. Busy Firefox renderer waits
+can exceed the configured implicit timeout; the actual 37.343 s sample is kept.
+An intermediate GitHub attempt also displayed PR_END_OF_FILE_ERROR. No TLS check,
+certificate validation, content sandbox or site-isolation preference was disabled.
+These results show substantial remaining latency and instability, rather than a
+reliable whole-browser speedup. There are no confidence intervals or randomized
+browser-order trials.
+
+Earlier controller prototypes are excluded: one could accept an old launcher
+document during navigation; another treated a transient empty script result as a
+failure. The retained [controller](../../scripts/benchmark-firefox-navigation.py)
+waits for a unique new launcher marker and uses browser-owned implicit element
+waits instead of repeatedly creating script sandboxes. It records every sample,
+warmup, content timeout and automation failure. With an isolated guest Firefox
+profile containing `user_pref("marionette.port", 2828)` and started using
+`firefox --no-remote --profile /path/to/test-profile --marionette about:blank` in
+the existing graphics environment, run:
+
+```sh
+python3 scripts/benchmark-firefox-navigation.py --port 2828 \
+  --warmups 1 --rounds 3 --timeout 30 --output target/navigation/results.jsonl
+```
+
+The normal product launcher continues without Marionette. The benchmark's HTTP
+launcher and remote control connect only over loopback. Keep the Trames window
+visible and the other browser on an idle page while each run is measured.
+
+### Confirmed mechanism fixes
+
+Runtime `6427992d672f91636ceb493f4dade3a8c7e072e3` removes two independently
+reproduced sources of unnecessary work:
+
+* Host-managed Vulkan still had a 16,384-object context ceiling after its byte
+  ceilings were removed. Every Vulkan call additionally swept a Weak<Object>
+  list, and object admission scanned it again. An owner-thread lifetime counter
+  now performs constant-time accounting, including deleted IDs retained by
+  commands/descriptors until final drop. Host-managed mode uses native driver
+  capacity; explicitly bounded/iPad sessions retain their selected object policy.
+  Ownership, driver destruction, protocol bounds and native errors are preserved.
+* Built-in shared-anonymous pages had stable retained physical storage and a
+  complete version/check contract but did not declare versioned preparation.
+  An unrelated backing notification therefore rebuilt every page's frame.
+  Declaring that existing contract preserves the original guards, pause domains
+  and memory ordering. A real 64-page regression changes unrelated preparation
+  from 64 frames to zero; writing one page still refreshes its current metadata
+  and live data without changing its hardware mapping generation.
+
+The native descriptor oracle fails on the old host-managed implementation at
+batch four. The fixed implementation creates/releases 20,480 real MoltenVK sets;
+the explicitly bounded case accepts 12,288 sets and rejects the next 4,096-set
+batch as before. Run it from the runtime workspace with the existing native-driver
+build configuration using `cargo run --release --locked -p trames-vulkan
+--example resources -- --objects-only`.
+
+Local validation passes 151 memory tests (one existing skip), 40 Vulkan tests,
+214 kernel cases (three existing skips), 47 signed HVF hardware tests, the Mac
+pressure case, iPad ARM64 FFI compilation, affected-package Clippy and the signed
+Mac release build. Unchanged guest graphics/network acceptance is reused.
+The previous Bilibili run's descriptor allocation failure and abort motivated
+the object investigation, but its exact peak object count was not recorded. The
+native regression proves the policy bug; it does not prove that every browser
+failure has the same cause. Complex-page latency still needs work on remaining
+snapshot/worker coordination and cross-site/network failures. No page-load speedup
+percentage is inferred across the differently instrumented prototype runs.
