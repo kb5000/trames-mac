@@ -8645,6 +8645,250 @@
       "Memory lifecycle results do not predict Firefox or whole-program speedups. Firefox stayed closed; normal syscall exits and file/shared-page work remain.",
       "One clean full sample per revision, no confidence interval. Do not compare the new auto run directly with the prior 4096MiB score to isolate implementation effects.",
       "The earlier native macOS result also reports 24GiB but uses a different OS/binary/library/ISA dispatch and was not rerun contemporaneously. Ratios are platform results, not isolated HVF overhead."
-    ]
+    ],
+    "host_relative_review": {
+      "date": "2026-10-29",
+      "trames_result": "https://browser.geekbench.com/v6/cpu/19405231",
+      "native_result": "https://browser.geekbench.com/v6/cpu/19400588",
+      "code_mac": "4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a",
+      "runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+      "host_cpu": "Apple M6",
+      "threads_both": 12,
+      "memory_mib_both": 24576,
+      "single_fraction": 0.9062281315605318,
+      "multi_fraction": 0.6610979802320585,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "trames_single": 3371,
+          "native_single": 3513,
+          "single_fraction": 0.9595787076572729,
+          "trames_multi": 9146,
+          "native_multi": 12298,
+          "multi_fraction": 0.7436981623028135,
+          "trames_multi_over_single": 2.7131415010382676,
+          "native_multi_over_single": 3.5007116424708227,
+          "normalized_scaling": 0.7750257028091914
+        },
+        {
+          "name": "Navigation",
+          "trames_single": 3302,
+          "native_single": 3543,
+          "single_fraction": 0.9319785492520463,
+          "trames_multi": 14928,
+          "native_multi": 16886,
+          "multi_fraction": 0.8840459552291839,
+          "trames_multi_over_single": 4.520896426408237,
+          "native_multi_over_single": 4.766017499294383,
+          "normalized_scaling": 0.9485689943600843
+        },
+        {
+          "name": "HTML5 Browser",
+          "trames_single": 4514,
+          "native_single": 4466,
+          "single_fraction": 1.0107478728168384,
+          "trames_multi": 10946,
+          "native_multi": 21252,
+          "multi_fraction": 0.5150574063617542,
+          "trames_multi_over_single": 2.424900310146212,
+          "native_multi_over_single": 4.758620689655173,
+          "normalized_scaling": 0.5095804999582619
+        },
+        {
+          "name": "PDF Renderer",
+          "trames_single": 4218,
+          "native_single": 3968,
+          "single_fraction": 1.0630040322580645,
+          "trames_multi": 8537,
+          "native_multi": 19319,
+          "multi_fraction": 0.44189657849785186,
+          "trames_multi_over_single": 2.0239449976292083,
+          "native_multi_over_single": 4.868699596774194,
+          "normalized_scaling": 0.41570545838773737
+        },
+        {
+          "name": "Photo Library",
+          "trames_single": 3450,
+          "native_single": 3717,
+          "single_fraction": 0.9281678773204197,
+          "trames_multi": 9777,
+          "native_multi": 23344,
+          "multi_fraction": 0.4188228238519534,
+          "trames_multi_over_single": 2.833913043478261,
+          "native_multi_over_single": 6.2803336023675005,
+          "normalized_scaling": 0.45123606848049586
+        },
+        {
+          "name": "Clang",
+          "trames_single": 5003,
+          "native_single": 4862,
+          "single_fraction": 1.0290004113533526,
+          "trames_multi": 23854,
+          "native_multi": 29922,
+          "multi_fraction": 0.7972060691130272,
+          "trames_multi_over_single": 4.767939236458125,
+          "native_multi_over_single": 6.154257507198683,
+          "normalized_scaling": 0.7747383386023463
+        },
+        {
+          "name": "Text Processing",
+          "trames_single": 3525,
+          "native_single": 4123,
+          "single_fraction": 0.8549599805966529,
+          "trames_multi": 3367,
+          "native_multi": 5545,
+          "multi_fraction": 0.6072137060414788,
+          "trames_multi_over_single": 0.955177304964539,
+          "native_multi_over_single": 1.3448944943002668,
+          "normalized_scaling": 0.7102247120592957
+        },
+        {
+          "name": "Asset Compression",
+          "trames_single": 3636,
+          "native_single": 3737,
+          "single_fraction": 0.972972972972973,
+          "trames_multi": 15492,
+          "native_multi": 25436,
+          "multi_fraction": 0.6090580279918226,
+          "trames_multi_over_single": 4.260726072607261,
+          "native_multi_over_single": 6.806529301578807,
+          "normalized_scaling": 0.6259763065471511
+        },
+        {
+          "name": "Object Detection",
+          "trames_single": 3186,
+          "native_single": 6297,
+          "single_fraction": 0.5059552167698904,
+          "trames_multi": 10316,
+          "native_multi": 18010,
+          "multi_fraction": 0.5727928928373126,
+          "trames_multi_over_single": 3.2379158819836786,
+          "native_multi_over_single": 2.8600921073527075,
+          "normalized_scaling": 1.1321019605136715
+        },
+        {
+          "name": "Background Blur",
+          "trames_single": 3469,
+          "native_single": 4428,
+          "single_fraction": 0.783423667570009,
+          "trames_multi": 11456,
+          "native_multi": 18671,
+          "multi_fraction": 0.6135718493921054,
+          "trames_multi_over_single": 3.3023926203516862,
+          "native_multi_over_single": 4.216576332429991,
+          "normalized_scaling": 0.7831928939487584
+        },
+        {
+          "name": "Horizon Detection",
+          "trames_single": 4005,
+          "native_single": 4700,
+          "single_fraction": 0.8521276595744681,
+          "trames_multi": 20690,
+          "native_multi": 25922,
+          "multi_fraction": 0.7981637219350359,
+          "trames_multi_over_single": 5.166042446941323,
+          "native_multi_over_single": 5.51531914893617,
+          "normalized_scaling": 0.9366715338563467
+        },
+        {
+          "name": "Object Remover",
+          "trames_single": 4949,
+          "native_single": 5143,
+          "single_fraction": 0.9622788255881781,
+          "trames_multi": 15874,
+          "native_multi": 20020,
+          "multi_fraction": 0.7929070929070929,
+          "trames_multi_over_single": 3.2075166700343503,
+          "native_multi_over_single": 3.8926696480653313,
+          "normalized_scaling": 0.8239889227765567
+        },
+        {
+          "name": "HDR",
+          "trames_single": 4355,
+          "native_single": 4938,
+          "single_fraction": 0.8819360064803564,
+          "trames_multi": 18340,
+          "native_multi": 23779,
+          "multi_fraction": 0.7712687665587283,
+          "trames_multi_over_single": 4.2112514351320325,
+          "native_multi_over_single": 4.815512353179425,
+          "normalized_scaling": 0.8745178345044776
+        },
+        {
+          "name": "Photo Filter",
+          "trames_single": 4822,
+          "native_single": 4753,
+          "single_fraction": 1.0145171470650116,
+          "trames_multi": 13544,
+          "native_multi": 14494,
+          "multi_fraction": 0.9344556368152339,
+          "trames_multi_over_single": 2.808793031936956,
+          "native_multi_over_single": 3.049442457395329,
+          "normalized_scaling": 0.921084123140358
+        },
+        {
+          "name": "Ray Tracer",
+          "trames_single": 3675,
+          "native_single": 3718,
+          "single_fraction": 0.9884346422807961,
+          "trames_multi": 21833,
+          "native_multi": 26110,
+          "multi_fraction": 0.8361930294906166,
+          "trames_multi_over_single": 5.940952380952381,
+          "native_multi_over_single": 7.022592791823561,
+          "normalized_scaling": 0.8459770567744525
+        },
+        {
+          "name": "Structure from Motion",
+          "trames_single": 3881,
+          "native_single": 3991,
+          "single_fraction": 0.9724379854673014,
+          "trames_multi": 15767,
+          "native_multi": 20364,
+          "multi_fraction": 0.774258495384011,
+          "trames_multi_over_single": 4.062612728678176,
+          "native_multi_over_single": 5.102480581307943,
+          "normalized_scaling": 0.7962034669099686
+        }
+      ],
+      "sme_capability_probe": {
+        "hv_sme_result": 0,
+        "maximum_svl_bytes": 64,
+        "host_sme2_sysctl": "1"
+      },
+      "sme_probe_scope": "Read-only Hypervisor max-SVL query and host sysctl; no VM creation, SME guest execution, context roundtrip or product changes. Native benchmark reports SME, guest backend deliberately excludes it. A performance hypothesis, not a measured SME speedup.",
+      "priorities": [
+        {
+          "candidate": "SME/SME2 execution state and Linux ABI",
+          "evidence": "Object Detection single is 50.6% of native while normalized scaling is 1.13. Native benchmark lists SME; guest does not expose it. Official benchmark documentation identifies SME as an accelerated Object Detection instruction path. Installed HVF query succeeds with max SVL 64 bytes.",
+          "next_measurement": "Bounded guest instruction and state-switch/signal tests before enabling HWCAP; then unchanged-binary A/B. Save/allocate extended state only for threads that use it; Mac backend isolation with optional common Linux ABI hooks."
+        },
+        {
+          "candidate": "Remaining mapping checkpoint work",
+          "evidence": "Photo Library/PDF/HTML single is 92.8/106.3/101.1% of native but multi is 41.9/44.2/51.5%. Current worker vm_call routes unmap/protect/discard/remap and even validation-only advice to checkpoints; checkpoint drains views, commits memory and prepares views.",
+          "next_measurement": "Fresh profiles of these workloads distinguishing vCPU guest CPU, host handler CPU, waits and mm checkpoint/commit time. Keep real permission withdrawal/TLB and byte-lifetime boundaries; remove unrelated snapshot/rebuild work and treat nondestructive advice separately."
+        },
+        {
+          "candidate": "File/shared mapping ownership and partial extent reclamation",
+          "evidence": "Native 2MiB block admission is limited to uniform private-anonymous RW extents. File/shared/executable/permission-exception pages retain page handling; retained partial extents have coarse allocation lifetime.",
+          "next_measurement": "Classify remaining faults by anonymous/file/shared/permission/COW and quantify host mapping/byte-copy/reclaim work before extending range providers. Preserve native/GPU aliases, EOF and precise Linux permissions."
+        },
+        {
+          "candidate": "Remaining proc metadata projection and synchronization locality",
+          "evidence": "Metadata-only proc refresh still builds ProcessInfo for every task, including argv/fd rows. Worker futex wait/wake and several short syscalls already execute locally, so moving all of them again is not a valid diagnosis. Text Processing multi 3367 is below single 3525; native also scales weakly (5545/4123).",
+          "next_measurement": "Attribute actual fallback/checkpoint and wait time; avoid whole-process snapshots for a single maps/status query. Inspect wake handoff/object lock contention only where measured; do not add global locks or a new service thread."
+        }
+      ],
+      "limitations": [
+        "One full sample per compared platform; native macOS and guest Linux benchmark builds, libraries and ISA dispatch differ. Fractions locate opportunities, not isolated hypervisor overhead.",
+        "Single/multi scores use benchmark-specific workload sizes; score scaling ratios are comparative signals, not measured active-core counts.",
+        "Historical profiles predate the latest native range/proc fixes and cannot identify current time shares. No new performance benchmark or claimed speedup in this read-only review."
+      ],
+      "primary_sources": [
+        "https://www.geekbench.com/doc/geekbench6-benchmark-internals.pdf",
+        "https://developer.apple.com/documentation/hypervisor/hv_vcpu_get_sme_state(_:_:)",
+        "https://docs.kernel.org/arch/arm64/sme.html"
+      ]
+    }
   }
 }

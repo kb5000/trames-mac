@@ -1063,3 +1063,65 @@ scopes are in
 [mac-memory-model-probes.json](../validation/mac-memory-model-probes.json). Common
 ownership rules are in [region
 memory](https://github.com/kb5000/trames-runtime/blob/68552f7bd3b9534fe15fe1fd4a5c4e22b7415998/docs/architecture/region-memory.md#native-anonymous-extents-and-additive-publication-2026-10-29).
+
+
+### Host-relative optimization targets (2026-10-29)
+
+The latest twelve-slot host-managed run is 90.6% / 66.1% of the earlier native
+macOS single/multi scores. Both report 24 GiB. These are one-sample platform
+results with different Linux/macOS binaries, libraries and ISA dispatch, not an
+isolated HVF overhead estimate. Single/multi workload sizes differ, so their
+score ratios are comparative scaling signals rather than active-core counts.
+
+| Workload | Single, Trames / native | Multi, Trames / native |
+| --- | ---: | ---: |
+| Object Detection | 3186 / 6297 (50.6%) | 10316 / 18010 (57.3%) |
+| Photo Library | 3450 / 3717 (92.8%) | 9777 / 23344 (41.9%) |
+| PDF Renderer | 4218 / 3968 (106.3%) | 8537 / 19319 (44.2%) |
+| HTML5 Browser | 4514 / 4466 (101.1%) | 10946 / 21252 (51.5%) |
+| Asset Compression | 3636 / 3737 (97.3%) | 15492 / 25436 (60.9%) |
+| Text Processing | 3525 / 4123 (85.5%) | 3367 / 5545 (60.7%) |
+
+SME is a concrete first capability investigation. Native Geekbench reports
+SME-I8I32, SME-F32F32 and SME2; the guest backend intentionally does not expose
+SME. The [official workload description](https://www.geekbench.com/doc/geekbench6-benchmark-internals.pdf)
+identifies SME as an Object Detection acceleration path. The installed Hypervisor
+headers expose SME register/state APIs; a small signed read-only query returned
+HV_SUCCESS and maximum guest SVL 64 bytes, while the host SME2 sysctl returned 1.
+No VM or SME guest instruction was executed by this query. This supports a
+capability hypothesis, not a demonstrated speedup or proof of the selected
+native workload kernel.
+
+Before advertising SME, validate guest instructions, extended per-thread context,
+thread migration and the [Linux syscall/signal/prctl ABI](https://docs.kernel.org/arch/arm64/sme.html).
+Apple's [SME state API](https://developer.apple.com/documentation/hypervisor/hv_vcpu_get_sme_state(_:_:))
+is thread-affine. Keep Mac execution state in the backend, allocate/save extended
+state only where used, and expose optional common Linux ABI support without
+changing iPad's default capability set.
+
+The strongest broad scaling candidates are the remaining mapping checkpoints.
+Photo Library, PDF and HTML5 have near-native single scores but only 42-52% of
+native multi scores. Unmap/protect/discard/remap and validation-only madvise
+currently enter the mm checkpoint path: views drain, memory commits, and views
+are prepared again. Fresh profiles should separate guest CPU, host handling,
+waits and commit/stop costs. Reduce unrelated snapshot/rebuild work and handle
+nondestructive advice separately, while retaining actual permission/TLB withdrawal
+and byte-lifetime synchronization. These observations do not prove that mapping
+checkpoints dominate any current component; historical profiles predate the
+latest native-range and proc changes.
+
+Further candidates are range ownership for eligible file/shared mappings and
+more precise partial-extent reclamation. Classify remaining faults and copy/map
+costs before extending the anonymous-only fast path; preserve EOF, COW, code
+freshness, native/GPU aliases and precise permissions. Metadata-only proc queries
+also still build all tasks' argv/fd rows, so a single maps/status request should
+be considered for target/field projection. Futex waits/wakes and many short
+syscalls already run locally; inspect measured fallback/lock/wake costs instead
+of assuming they all traverse the coordinator. Text Processing scales weakly on
+the native platform too, making it a lower-confidence target than the three
+strong multi-core gaps above.
+
+The full per-workload ratios, capability-probe result and validation plan are
+recorded under host_relative_review in [mac-geekbench.json](../validation/mac-geekbench.json).
+This review changes documentation only; existing unchanged-source validation is
+reused and no new performance score is claimed.
