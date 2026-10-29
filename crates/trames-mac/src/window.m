@@ -72,12 +72,13 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property NSMutableDictionary<NSNumber *,NSWindow *> *overlays;
 @property NSMutableArray<TramesFrame *> *frames;
 @property uint64_t identifier,lastRevision;
-@property uint32_t clientW,clientH,hostW,hostH,mode;
+@property uint32_t clientW,clientH,hostW,hostH,resizeW,resizeH,mode;
 @property BOOL seen,dirty,updating,closing,pendingResize,buttonDown;
 @property uint32_t interactionSerial,dragEdges;
 @property NSPoint dragMouse;
 @property NSRect dragFrame;
 - (void)drag;
+- (void)syncSize;
 - (BOOL)isVisible;
 - (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c;
 - (void)cancel;
@@ -169,8 +170,21 @@ static const uint16_t keys[128]={
     uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
     if(w==self.hostW && h==self.hostH)return;
     self.dirty=YES;self.hostW=w;self.hostH=h;
-    if(!self.updating){self.pendingResize=YES;[self emit:6 x:0 y:0 a:w b:h c:0];}
+    if(!self.updating)[self syncSize];
     wake(self.ui.source);
+}
+// AppKit can constrain or zoom a window while we apply a guest snapshot.
+// Publish its resulting logical content size after that update as well; those
+// delegate callbacks are deliberately suppressed while updating is true.
+- (void)syncSize {
+    NSSize size=self.canvas.bounds.size;
+    uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
+    self.hostW=w;self.hostH=h;
+    if(w==self.clientW && h==self.clientH){self.pendingResize=NO;return;}
+    if(self.pendingResize && self.resizeW==w && self.resizeH==h)return;
+    self.pendingResize=YES;self.resizeW=w;self.resizeH=h;
+    if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac configure: id=%llu native=%ux%u guest=%ux%u\n",self.identifier,w,h,self.clientW,self.clientH);
+    [self emit:6 x:0 y:0 a:w b:h c:0];
 }
 - (void)windowDidMove:(NSNotification *)notification{if(notification.object!=self.window)return;if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac window moved: id=%llu x=%.0f y=%.0f\n",self.identifier,self.window.frame.origin.x,self.window.frame.origin.y);}
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification{(void)notification;self.dirty=YES;wake(self.ui.source);}
@@ -333,9 +347,12 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
                 if((info->mode==2)!=family.window.zoomed)[family.window zoom:nil];
             }
         }
-        family.updating=NO;
+        family.updating=NO;[family syncSize];
         if(info->interaction_serial && info->interaction_serial!=family.interactionSerial){family.interactionSerial=info->interaction_serial;if(family.buttonDown){family.dragEdges=info->interaction_edges?info->interaction_edges:16;[family drag];}}
-        if(info->mode==1 || ![family isVisible])return 0;
+        if(info->mode==1 || ![family isVisible]){
+            if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac skip hidden: id=%llu mode=%u visible=%d occlusion=%llu native=%ux%u guest=%ux%u\n",info->id,info->mode,family.window.visible,(unsigned long long)family.window.occlusionState,family.hostW,family.hostH,info->width,info->height);
+            return 0;
+        }
         if(!family.dirty && family.lastRevision==info->revision)return 0;
         if(family.frames.count>=2 && family.lastRevision!=info->revision)supersede_frames(family.frames);
         if(family.frames.count>=2)return 0;

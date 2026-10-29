@@ -43,7 +43,7 @@ binary, and does not manufacture a Vulkan/GL capability. Original Gallium
 packages remain available; this opt-in stack supplies paired rebuilt EGL and
 Zink libraries. It is not a replacement for every installed Mesa driver.
 
-The common commit is `f9d3caded5580b4f7929191335e71ce55724a2f0`. The guest
+The initial GPU lifecycle commit is `f9d3caded5580b4f7929191335e71ce55724a2f0`. The guest
 [patch](https://github.com/kb5000/trames-ipad/blob/main/patches/mesa/0002-preserve-pbo-upload-output-type.patch),
 [build recipe](https://github.com/kb5000/trames-ipad/blob/main/scripts/build-zink-gallium.py)
 and [GLES pixel oracle](https://github.com/kb5000/trames-ipad/blob/main/tests/fixtures/zink-pbo.c)
@@ -85,6 +85,58 @@ unavailable logic-op, border-color, line-rasterization and depth-clip capabiliti
 general Vulkan/OpenGL completeness is not claimed. Firefox privacy-sanitizes the
 page's renderer string to `Generic Renderer`; its graphics probe and the native
 driver identify the actual Apple GPU.
+
+## Wikipedia allocation regression
+
+The first installed build could exit 139 while loading Wikipedia. Its trace
+rejects a 2,113,536-byte Vulkan allocation with only 147,030,016 bytes charged
+against a 1 GiB session quota. An older, independent 128 MiB context ceiling
+causes the premature OOM; WebRender reports `OutOfMemory` and attempts a device
+reset or software fallback.
+
+Runtime `c1c07347650cc976df8f15eb861f5ea2f6b9f409` removes that duplicate ceiling.
+Host-managed sessions also remove the extra session byte quota and 64 MiB
+native allocation ceiling. The original driver reports its actual heap and
+allocation failures. Live native memory and coherent baselines retain shared
+accounting and release on final drop. Explicit memory-capped sessions keep their
+selected bounded policy. Protocol validation and resource ownership still apply.
+
+The same native-driver regression fails before the correction and passes after:
+three 64 MiB allocations succeed under a 512 MiB explicit session quota; the
+128 MiB explicit quota rejects the third; three 96 MiB allocations succeed in
+host-managed mode. Every case releases the accounted bytes to zero. The
+accounting test additionally accepts more than 2 GiB without allocating RAM and
+rejects arithmetic overflow. Run it with:
+
+```sh
+cargo run --release --locked -p trames-vulkan --example resources -- --budget-only
+```
+
+The corrected signed Mac build loads Wikipedia with hardware WebRender still
+active. WebGL2 retains the exact orange pixel. The user also opened YouTube.
+No native-allocation OOM or panic appears in that browsing run, which closes
+normally with exit 0. All 38 Vulkan unit tests pass. Updated shared-kernel
+conformance passes 212 cases, with 3 existing skips: 206 pass in the sandbox and
+only the 6 local-TCP cases denied by the sandbox are rerun successfully outside
+it. The updated iPad FFI check and affected-package Clippy also pass.
+
+## Native window size follow-up
+
+Applying the guest's maximize state can make AppKit enlarge a 1024×768 guest
+window to a 1920×928 native content view. The old bridge suppressed delegate
+resize callbacks while applying a snapshot and never reported the resulting
+size. Firefox therefore kept drawing its original narrow layout inside a larger
+window. The bridge now publishes the final logical content size after applying
+native geometry and mode, with duplicate requests coalesced until acknowledged.
+Retina drawable pixels remain distinct from Wayland logical coordinates.
+
+The installed signed application confirms matching native and guest dimensions:
+1920×928 maximized and 1024×768 restored. Native GPU presentation completes in
+the same run; all three existing window frame-lifetime tests pass. The normal
+launcher has no automation argument. macOS can initially report the window as
+occluded and the existing presenter then defers drawing until it is visible;
+that first-frame wait is not evidence of a native main-thread deadlock. The
+optional window trace now records that condition and both sizes explicitly.
 
 ## Reproduce and run
 

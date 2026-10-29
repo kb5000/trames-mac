@@ -117,8 +117,8 @@
     "source_built": true,
     "static_library_sha256": "879ef1315236e2836558f3c961a1b0b3b2b9d821449035574576303eb0e73f42"
   },
-  "code_runtime": "f9d3caded5580b4f7929191335e71ce55724a2f0",
-  "installed_runner_sha256": "b965180b41bd3f7120cab1eb08f21a87075da45c0fd0d489590df63d88fa227a",
+  "code_runtime": "c1c07347650cc976df8f15eb861f5ea2f6b9f409",
+  "installed_runner_sha256": "4c6571373efd27c26214ff07af24e07629b6547d6f69e0849318edc99457a02d",
   "normal_launcher": {
     "separate_default_profile": true,
     "forced_preferences": false,
@@ -128,6 +128,62 @@
     "native_close_exit": 0
   },
   "installed_application": {
+    "runner_sha256": "4c6571373efd27c26214ff07af24e07629b6547d6f69e0849318edc99457a02d",
+    "normal_launcher": true,
+    "automation_enabled": false,
+    "native_window_size_verified": true,
+    "url": "https://www.youtube.com/",
+    "left_running_for_manual_use": true
+  },
+  "initial_code_runtime": "f9d3caded5580b4f7929191335e71ce55724a2f0",
+  "wikipedia_regression": {
+    "before": {
+      "session_exit": 139,
+      "requested_bytes": 2113536,
+      "accounted_bytes": 147030016,
+      "session_limit_bytes": 1073741824,
+      "extra_context_limit_bytes": 134217728,
+      "result": "ERROR_OUT_OF_DEVICE_MEMORY"
+    },
+    "host_managed_policy": {
+      "extra_session_byte_quota": null,
+      "extra_context_byte_quota": null,
+      "extra_native_allocation_ceiling": null,
+      "original_driver_heap_and_oom": true,
+      "shared_live_accounting": true
+    },
+    "native_driver_regression": {
+      "before": "fails third 64 MiB allocation despite available 512 MiB quota",
+      "after": "passes 192 MiB bounded and 288 MiB host-managed, explicit 128 MiB quota rejects overcommit, accounting returns to zero"
+    },
+    "after": {
+      "wikipedia_title": "Wikipedia",
+      "wikipedia_document_ready": "complete",
+      "webgl2_pixel": [
+        255,
+        128,
+        0,
+        255
+      ],
+      "compositor": "webrender",
+      "hardware_compositing": "available",
+      "youtube_opened_by_user": true,
+      "native_oom_observed": false,
+      "panic_observed": false,
+      "close_exit": 0
+    },
+    "validation": {
+      "vulkan_unit_tests": 38,
+      "kernel_conformance_passed": 212,
+      "kernel_conformance_ignored": 3,
+      "sandbox_passed": 206,
+      "local_tcp_tests_passed_after_sandbox_denial": 6,
+      "ipad_ffi_check": true,
+      "affected_clippy": true
+    }
+  },
+  "initial_installed_runner_sha256": "b965180b41bd3f7120cab1eb08f21a87075da45c0fd0d489590df63d88fa227a",
+  "initial_installed_application": {
     "runner_sha256": "b965180b41bd3f7120cab1eb08f21a87075da45c0fd0d489590df63d88fa227a",
     "normal_launcher": true,
     "automation_enabled": false,
@@ -142,5 +198,23 @@
     "native_click_count": 1,
     "startup_diagnostics": "Content/utility subprocess launch retries occurred before successful page presentation; startup latency was not characterized.",
     "left_running_for_manual_use": true
+  },
+  "window_size_regression": {
+    "runner_sha256": "4c6571373efd27c26214ff07af24e07629b6547d6f69e0849318edc99457a02d",
+    "before_guest_size": [
+      1024,
+      768
+    ],
+    "maximized_native_and_guest_size": [
+      1920,
+      928
+    ],
+    "restored_native_and_guest_size": [
+      1024,
+      768
+    ],
+    "native_gpu_presentation_completed": true,
+    "window_tests_passed": 3,
+    "normal_launcher_without_automation": true
   }
 }
