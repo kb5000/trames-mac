@@ -948,3 +948,118 @@ not confidence intervals or a claim that every workload improved. The public
 with all component scores in [mac-geekbench.json](../validation/mac-geekbench.json).
 The new totals are 85.8% / 49.1% of the earlier native macOS run; OS, binary,
 library/ISA dispatch and reported 4/24 GiB memory differ. Firefox remained closed.
+
+
+### Native anonymous ranges and live mmap publication (2026-10-29)
+
+Runtime `68552f7bd3b9534fe15fe1fd4a5c4e22b7415998` and Mac source
+`4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a` implement the next two mechanisms above.
+Eligible host-managed private anonymous RW extents retain one stable demand-zero 2
+MiB host allocation and use an L2 block translation. Registration does not touch
+data pages; macOS supplies physical pages as hardware reaches them. The retained
+signed acceptance checks all 512 guest pages with one data translation fault and no
+individual data-page exports. Host virtual/GPA continuity does not require
+contiguous physical host RAM. Later interpreter/native access uses the same common
+owner, permissions and existing region/hardware-borrow gate.
+
+Pure new anonymous RW mmap requests reuse Linux validation/address allocation on the
+existing coordinator service queue. The caller releases its execution slot; peers
+keep running. An insertion-only shared range index publishes the new ownership to
+old Views after a cold lookup miss, retaining stable Frame addresses. No new service
+thread, polling bus or normal byte barrier is introduced. Destructive generations
+rotate the index owner. Permission withdrawal, unmap, discard, fixed/file/shared
+mappings, traced and seccomp paths still join workers. A real interpreter CLONE_VM
+regression reads the new mapping from a running peer's original View with zero VM
+checkpoints and one service.
+
+The host-managed account reports provider residency rather than charging every
+virtual byte. Sparse fork and account rebinding materialize only host granules with
+possible logical contents. Mach page dispositions include compressed and paged-out
+data; failed queries conservatively retain the complete-range fallback. After an old
+VM is destroyed, reached subpages rebind through canonical per-page backing and
+transfer their accounting; old coarse owners retire as legitimate references drain.
+A retained fragment can still keep the complete 2 MiB host allocation, with physical
+residency managed in 16 KiB host granules. This does not promise 4 KiB physical
+reclamation within a live extent.
+
+The retained bounded trials use five shuffled fresh processes per
+variant/policy/workload and identical static Linux pthread fixture bytes and
+validate every value/checksum. Times include mapping, touch, read and unmap, not
+just first touch. Single CPU recreates once; twelve CPUs recreate twice. Concurrent
+thread phase sums overlap and are not added to derive wall time.
+
+| Memory policy / workload | Before median | After median | After / before |
+| --- | ---: | ---: | ---: |
+| Host-managed, 1 CPU, 256 MiB, one word per 4 KiB | 168.877 ms | 19.520 ms | 0.116 |
+| Host-managed, 12 CPUs, 128 MiB each, full stores/reads | 2171.105 ms | 134.185 ms | 0.062 |
+| Host-managed, 12 CPUs, 64 MiB each, one word per 4 KiB | 927.642 ms | 53.474 ms | 0.058 |
+| Strict 4096 MiB, 1 CPU, same sparse workload | 167.916 ms | 170.494 ms | 1.015 |
+| Strict 4096 MiB, 12 CPUs, same dense workload | 2271.118 ms | 2174.117 ms | 0.957 |
+| Strict 4096 MiB, 12 CPUs, same sparse workload | 906.434 ms | 956.094 ms | 1.055 |
+
+The host-managed lifecycle speedups are 8.7x / 16.2x / 17.3x. Strict resident quotas
+and explicit resident working-set targets retain original granule/page admission,
+and the strict control wall changes are +1.54% / -4.27% / +5.48%. File/shared
+mappings and nonuniform permissions retain the fallback too. The bounded trials use
+runtime `e5a2523` / Mac `73ebdb1`; their memory, mmap-addition and Mac HVF sources
+are unchanged in the final revision, so this component evidence is reused. Exact
+older runner identities remain in the raw records. These results do not predict the
+same whole-program speedup. The strict controls show no stable benefit, with the
+sparse twelve-slot case about 5.5% slower in these five trials.
+
+The separate clean full Geekbench comparison uses `auto` on both revisions, twelve
+CPUs and the same unmodified Linux ARM benchmark. Both advertise the host's 24 GiB.
+The preceding implementation scores **3595 single / 9362 multi**; the native-range
+implementation scores **3885 / 12307** (+8.1% / +31.5%). Complete wall time is
+275.85 -> 250.30 s. Multi-core Navigation is 7538 -> 14928, Photo Library 6132 ->
+9777 and Photo Filter 4093 -> 13544. Asset Compression is 16413 -> 15492 (-5.6%);
+Text Processing remains weak at 3367 multi versus 3525 single. These are observed
+component results, not a uniform-speedup claim. Both complete all 32 workloads and
+upload: [same-policy control](https://browser.geekbench.com/v6/cpu/19405122), [new
+implementation](https://browser.geekbench.com/v6/cpu/19405231). Each revision has
+one clean full sample, so component variation and remaining scaling limits must be
+assessed in [the complete component evidence](../validation/mac-geekbench.json). The
+new totals are 90.6% / 66.1% of the earlier [native macOS
+result](https://browser.geekbench.com/v6/cpu/19400588). The latter also reports 24
+GiB but differs in OS, benchmark binary, library/ISA dispatch and date; this is a
+platform comparison, not isolated HVF overhead.
+
+A provisional complete-suite attempt was sampled and stopped when multi-core Photo
+Library exceeded nine times the control stage time. About 71% of its main-thread
+samples were host residency queries during proc refresh. The runtime now observes
+each real address-space owner once per snapshot and reuses that value for
+aggregate/per-thread rows. The one-per-mm fix alone was insufficient: its clean
+intermediate scored 3826/10366 but Photo Library multi fell 6132 -> 1132. A
+temporary proc-path-only diagnostic then recorded 801 missing
+`/proc/sys/kernel/random/uuid` probes before being stopped. Actual VFS traversal now
+projects observation dependencies: independent endpoints and missing kernel keys
+skip task snapshots, maps and other metadata skip residency, and real memory
+observations stay live. A 13-task regression checks zero residency callbacks for
+UUID/cpuinfo/maps and fresh values on the next statm request.
+Alias/cwd/dirfd/missing-process cases are covered. The requested UUID v4 endpoint is
+also implemented using the existing host CSPRNG, read-only runtime pseudo nodes and
+discoverable directories, following [Linux random sysctl
+semantics](https://docs.kernel.org/admin-guide/sysctl/kernel.html#random). No stale
+cross-request timer cache is used. That diagnostic run has no performance score and
+is excluded.
+
+The final normal signed runner SHA-256 is
+`4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683`. The final full
+Geekbench run uses that exact bundled executable; diagnostics are compiled out. The
+native Linux CI VM is stopped and no builds, samplers, other probes or window
+captures run during measurements. Thermal state is nominal and low-power mode off
+before/after. Firefox remains closed.
+
+Local common macOS workspace tests, the full native ARM64 Linux workflow and product
+workflow checks passed. Later memory/provider changes passed scoped final
+format/lint, 148 memory lib tests plus six integration tests on macOS and native
+ARM64 Linux, 39 signed HVF tests, the app pressure test, normal signed release and
+both iOS targets. The final proc/UUID fix additionally passes 202 interpreter
+process conformance cases (three ignored), 325 VFS tests on both macOS and native
+ARM64 Linux, affected lint and both iOS targets. Unchanged
+CPU/Linux/network/graphics acceptance is reused. Existing unrelated network and iPad
+integration work is excluded. Source identities, raw bounded trials and validation
+scopes are in
+[mac-memory-model-probes.json](../validation/mac-memory-model-probes.json). Common
+ownership rules are in [region
+memory](https://github.com/kb5000/trames-runtime/blob/68552f7bd3b9534fe15fe1fd4a5c4e22b7415998/docs/architecture/region-memory.md#native-anonymous-extents-and-additive-publication-2026-10-29).

@@ -815,3 +815,69 @@ reused. Native range backing/block translations and joined shared-mm changes
 remain follow-up work. Full component scores and limits are in
 [mac-geekbench.json](mac-geekbench.json); bounded raw measurements are in
 [mac-memory-model-probes.json](mac-memory-model-probes.json).
+
+
+### Native anonymous extents and live mmap publication (2026-10-29)
+
+Common runtime `68552f7bd3b9534fe15fe1fd4a5c4e22b7415998`, Mac source
+`4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a`, normal signed runner
+`4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683`. Host-managed
+uniform private-anonymous RW extents now use lazy native 2 MiB backing and L2
+blocks, eliminating ordinary per-4KiB data export exits. Actual pages remain
+host-demand-paged. Pure new RW anonymous mmap publishes through an insertion-only
+common index without pausing same-mm peers; destructive changes retain their joined
+boundary. The shared interpreter regression uses the same publication model,
+preserving iPad compatibility.
+
+The retained five fresh shuffled lifecycle trials per configuration validate
+matching values. They use runtime `e5a2523` / Mac `73ebdb1`; final
+memory/mmap-addition/HVF source is unchanged (diff verified), and their exact
+earlier executable hashes remain in the JSON evidence:
+
+| Memory policy / workload | Before median | After median | After / before |
+| --- | ---: | ---: | ---: |
+| Host-managed, 1 CPU, 256 MiB, one word per 4 KiB | 168.877 ms | 19.520 ms | 0.116 |
+| Host-managed, 12 CPUs, 128 MiB each, full stores/reads | 2171.105 ms | 134.185 ms | 0.062 |
+| Host-managed, 12 CPUs, 64 MiB each, one word per 4 KiB | 927.642 ms | 53.474 ms | 0.058 |
+| Strict 4096 MiB, 1 CPU, same sparse workload | 167.916 ms | 170.494 ms | 1.015 |
+| Strict 4096 MiB, 12 CPUs, same dense workload | 2271.118 ms | 2174.117 ms | 0.957 |
+| Strict 4096 MiB, 12 CPUs, same sparse workload | 906.434 ms | 956.094 ms | 1.055 |
+
+Default-policy speedups are bounded to this memory workload. Strict caps and
+explicit working-set targets retain page admission. Strict control changes are
++1.54% / -4.27% / +5.48%; no stable strict-cap gain is claimed. A partial live
+extent can retain 2 MiB host backing; actual host pages are 16 KiB and need not be
+physically contiguous. Sparse fork includes compressed and paged-out contents;
+metadata query failure falls back conservatively. VM replacement preserves canonical
+bytes/accounting while old owners retire.
+
+The separate clean full Geekbench comparison uses `auto` on both revisions, twelve
+CPUs and the same unmodified Linux ARM benchmark. Both advertise the host's 24 GiB.
+The preceding implementation scores **3595 single / 9362 multi**; the native-range
+implementation scores **3885 / 12307** (+8.1% / +31.5%). Complete wall time is
+275.85 -> 250.30 s. Multi-core Navigation is 7538 -> 14928, Photo Library 6132 ->
+9777 and Photo Filter 4093 -> 13544. Asset Compression is 16413 -> 15492 (-5.6%);
+Text Processing remains weak at 3367 multi versus 3525 single. These are observed
+component results, not a uniform-speedup claim. Both complete all 32 workloads and
+upload: [same-policy control](https://browser.geekbench.com/v6/cpu/19405122), [new
+implementation](https://browser.geekbench.com/v6/cpu/19405231). Each revision has
+one clean full sample, so component variation and remaining scaling limits must be
+assessed in [the complete component evidence](mac-geekbench.json). The new totals
+are 90.6% / 66.1% of the earlier [native macOS
+result](https://browser.geekbench.com/v6/cpu/19400588). The latter also reports 24
+GiB but differs in OS, benchmark binary, library/ISA dispatch and date; this is a
+platform comparison, not isolated HVF overhead.
+
+Local verification includes final memory regressions/lints on macOS and native ARM64
+Linux (148 lib tests plus six integration tests), 39 signed HVF tests, one app
+pressure test, normal signed release and both iOS compile targets. The final
+proc/UUID fix passes 202 process conformance cases (three ignored), 325 VFS tests on
+both Mac/Linux, affected lint and both iOS targets; memory/provider checks are
+reused unchanged. Earlier passing workflow results are retained for unchanged
+components. No CI VM, builds or samplers ran during the clean measurements;
+diagnostics were compiled out, thermal state nominal and low-power off before/after.
+Firefox stayed closed. English ownership/limits and filtered evidence are in
+[execution
+backends](../architecture/execution-backends.md#native-anonymous-ranges-and-live-mmap-publication-2026-10-29),
+[memory evidence](mac-memory-model-probes.json) and [all Geekbench
+components](mac-geekbench.json).

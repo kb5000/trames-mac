@@ -8012,5 +8012,639 @@
       "Shared-mm changes still join workers; native range backing and hardware block translations are future work.",
       "File/shared mapping descriptor ceilings and conservative fork accounting remain; large private anonymous mappings now use sparse intervals."
     ]
+  },
+  "native_extent_followup_2026_10_29": {
+    "date": "2026-10-29",
+    "code_mac": "4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a",
+    "runtime_revision": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+    "changes": [
+      "A shared HardwareRange owner retains stable initialized demand-zero bytes and linear GPA/host-VA geometry. The Mac provider lazily registers a private 2MiB allocation; data is not memset or icache-published in bulk.",
+      "Uniform RW anonymous extents use L2 blocks, removing per-4KiB HVC/export/Frame creation. Later common CPU/native accesses refer to the same canonical bytes and existing hardware-borrow/region gates.",
+      "Append-only insertion-stable range publication lets running interpreter/hardware peers find new private-anonymous RW mappings after a cold lookup miss. No new coordination thread or ordinary memory barrier.",
+      "Destructive generations rotate the publication owner. Retained views keep immutable old indexes; shared frame caches are never pruned through the unique-snapshot mutation path.",
+      "Precise affected-chunk invalidation, sparse COW population including nonresident contents, pressure eviction and old-VM backing/account transfer retain existing semantics.",
+      "Actual VFS traversal selects independent endpoints, process metadata or residency. Independent/missing sysctl keys skip task snapshots; maps skip residency; memory observations remain live and once per owner.",
+      "Fresh read-only UUID v4 at /proc/sys/kernel/random/uuid, using the existing host CSPRNG and runtime-only pseudo directory/file."
+    ],
+    "runs": [
+      {
+        "runner_sha256": "11dbfda9d79c39e5b5efa41a726d6adf2bed859b1ce6caf31880cd1647318076",
+        "code_mac": "dc06897373d69f233926dd2ed65805693b2b798e",
+        "code_runtime": "b230398dd102433599268a2fef4630d77a0a600c",
+        "variant": "trames-automib-12cpu-native-before",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793241382.746582,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 275.850602917,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19405122"
+        ],
+        "source": "https://browser.geekbench.com/v6/cpu/19405122",
+        "read_method": "public result accessibility text via in-app browser",
+        "single": 3595,
+        "multi": 9362,
+        "components": {
+          "single": {
+            "File Compression": 2712,
+            "Navigation": 2823,
+            "HTML5 Browser": 4487,
+            "PDF Renderer": 3618,
+            "Photo Library": 3375,
+            "Clang": 4757,
+            "Text Processing": 3474,
+            "Asset Compression": 3640,
+            "Object Detection": 3154,
+            "Background Blur": 3455,
+            "Horizon Detection": 3875,
+            "Object Remover": 4693,
+            "HDR": 4481,
+            "Photo Filter": 2853,
+            "Ray Tracer": 3486,
+            "Structure from Motion": 3872
+          },
+          "multi": {
+            "File Compression": 4907,
+            "Navigation": 7538,
+            "HTML5 Browser": 9898,
+            "PDF Renderer": 6530,
+            "Photo Library": 6132,
+            "Clang": 23945,
+            "Text Processing": 3280,
+            "Asset Compression": 16413,
+            "Object Detection": 8683,
+            "Background Blur": 11568,
+            "Horizon Detection": 15673,
+            "Object Remover": 15035,
+            "HDR": 10497,
+            "Photo Filter": 4093,
+            "Ray Tracer": 21717,
+            "Structure from Motion": 14301
+          }
+        }
+      },
+      {
+        "runner_sha256": "4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683",
+        "code_mac": "4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a",
+        "code_runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+        "variant": "trames-automib-12cpu-native-demand",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793243861.991146,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 250.29906525,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19405231"
+        ],
+        "source": "https://browser.geekbench.com/v6/cpu/19405231",
+        "read_method": "public result accessibility text via in-app browser",
+        "single": 3885,
+        "multi": 12307,
+        "components": {
+          "single": {
+            "File Compression": 3371,
+            "Navigation": 3302,
+            "HTML5 Browser": 4514,
+            "PDF Renderer": 4218,
+            "Photo Library": 3450,
+            "Clang": 5003,
+            "Text Processing": 3525,
+            "Asset Compression": 3636,
+            "Object Detection": 3186,
+            "Background Blur": 3469,
+            "Horizon Detection": 4005,
+            "Object Remover": 4949,
+            "HDR": 4355,
+            "Photo Filter": 4822,
+            "Ray Tracer": 3675,
+            "Structure from Motion": 3881
+          },
+          "multi": {
+            "File Compression": 9146,
+            "Navigation": 14928,
+            "HTML5 Browser": 10946,
+            "PDF Renderer": 8537,
+            "Photo Library": 9777,
+            "Clang": 23854,
+            "Text Processing": 3367,
+            "Asset Compression": 15492,
+            "Object Detection": 10316,
+            "Background Blur": 11456,
+            "Horizon Detection": 20690,
+            "Object Remover": 15874,
+            "HDR": 18340,
+            "Photo Filter": 13544,
+            "Ray Tracer": 21833,
+            "Structure from Motion": 15767
+          }
+        }
+      }
+    ],
+    "comparison": {
+      "same_12cpu_host_managed_policy": true,
+      "advertised_memory_mib_both": 24576,
+      "single_ratio": 1.0806675938803894,
+      "multi_ratio": 1.314569536423841,
+      "wall_ratio": 0.9073718259202496,
+      "components": [
+        {
+          "name": "File Compression",
+          "single_before": 2712,
+          "single_after": 3371,
+          "single_ratio": 1.2429941002949854,
+          "multi_before": 4907,
+          "multi_after": 9146,
+          "multi_ratio": 1.863867943753821
+        },
+        {
+          "name": "Navigation",
+          "single_before": 2823,
+          "single_after": 3302,
+          "single_ratio": 1.1696776478923132,
+          "multi_before": 7538,
+          "multi_after": 14928,
+          "multi_ratio": 1.9803661448660121
+        },
+        {
+          "name": "HTML5 Browser",
+          "single_before": 4487,
+          "single_after": 4514,
+          "single_ratio": 1.006017383552485,
+          "multi_before": 9898,
+          "multi_after": 10946,
+          "multi_ratio": 1.1058799757526774
+        },
+        {
+          "name": "PDF Renderer",
+          "single_before": 3618,
+          "single_after": 4218,
+          "single_ratio": 1.165837479270315,
+          "multi_before": 6530,
+          "multi_after": 8537,
+          "multi_ratio": 1.3073506891271056
+        },
+        {
+          "name": "Photo Library",
+          "single_before": 3375,
+          "single_after": 3450,
+          "single_ratio": 1.0222222222222221,
+          "multi_before": 6132,
+          "multi_after": 9777,
+          "multi_ratio": 1.5944227005870841
+        },
+        {
+          "name": "Clang",
+          "single_before": 4757,
+          "single_after": 5003,
+          "single_ratio": 1.0517132646626024,
+          "multi_before": 23945,
+          "multi_after": 23854,
+          "multi_ratio": 0.996199624138651
+        },
+        {
+          "name": "Text Processing",
+          "single_before": 3474,
+          "single_after": 3525,
+          "single_ratio": 1.0146804835924006,
+          "multi_before": 3280,
+          "multi_after": 3367,
+          "multi_ratio": 1.0265243902439025
+        },
+        {
+          "name": "Asset Compression",
+          "single_before": 3640,
+          "single_after": 3636,
+          "single_ratio": 0.9989010989010989,
+          "multi_before": 16413,
+          "multi_after": 15492,
+          "multi_ratio": 0.9438859440687261
+        },
+        {
+          "name": "Object Detection",
+          "single_before": 3154,
+          "single_after": 3186,
+          "single_ratio": 1.010145846544071,
+          "multi_before": 8683,
+          "multi_after": 10316,
+          "multi_ratio": 1.1880686398710123
+        },
+        {
+          "name": "Background Blur",
+          "single_before": 3455,
+          "single_after": 3469,
+          "single_ratio": 1.0040520984081043,
+          "multi_before": 11568,
+          "multi_after": 11456,
+          "multi_ratio": 0.9903181189488244
+        },
+        {
+          "name": "Horizon Detection",
+          "single_before": 3875,
+          "single_after": 4005,
+          "single_ratio": 1.033548387096774,
+          "multi_before": 15673,
+          "multi_after": 20690,
+          "multi_ratio": 1.3201046385503732
+        },
+        {
+          "name": "Object Remover",
+          "single_before": 4693,
+          "single_after": 4949,
+          "single_ratio": 1.054549328787556,
+          "multi_before": 15035,
+          "multi_after": 15874,
+          "multi_ratio": 1.0558031260392418
+        },
+        {
+          "name": "HDR",
+          "single_before": 4481,
+          "single_after": 4355,
+          "single_ratio": 0.971881276500781,
+          "multi_before": 10497,
+          "multi_after": 18340,
+          "multi_ratio": 1.7471658569114985
+        },
+        {
+          "name": "Photo Filter",
+          "single_before": 2853,
+          "single_after": 4822,
+          "single_ratio": 1.6901507185418858,
+          "multi_before": 4093,
+          "multi_after": 13544,
+          "multi_ratio": 3.3090642560469092
+        },
+        {
+          "name": "Ray Tracer",
+          "single_before": 3486,
+          "single_after": 3675,
+          "single_ratio": 1.0542168674698795,
+          "multi_before": 21717,
+          "multi_after": 21833,
+          "multi_ratio": 1.00534143758346
+        },
+        {
+          "name": "Structure from Motion",
+          "single_before": 3872,
+          "single_after": 3881,
+          "single_ratio": 1.0023243801652892,
+          "multi_before": 14301,
+          "multi_after": 15767,
+          "multi_ratio": 1.1025103139640584
+        }
+      ],
+      "photo_library_stage_seconds": {
+        "before": 12.31,
+        "after": 9.387
+      },
+      "earlier_native": {
+        "source": "https://browser.geekbench.com/v6/cpu/19400588",
+        "single": 4287,
+        "multi": 18616,
+        "after_single_fraction": 0.9062281315605318,
+        "after_multi_fraction": 0.6610979802320585
+      }
+    },
+    "method": "Two sequential clean complete Geekbench 6.7.1 Preview runs, before then after, identical official Linux ARM instructions/data and isolated store, twelve CPUs, default auto memory for BOTH. Normal signed production bytes, diagnostics compiled out, no CI VM/build/profiler/probe/window capture. All 32 workloads completed and upload succeeded in each. Thermal state nominal and low-power off before/after. Ordinary desktop background apps remained; one run per revision.",
+    "bounded_evidence": "mac-memory-model-probes.json#native_extent_followup_2026_10_29",
+    "validation": {
+      "workflow_baseline_runtime": "cfdf413972aa0991103805756baf34147ea4e346",
+      "runtime_macos_baseline": [
+        "workspace tests in a clean tracked-source archive"
+      ],
+      "runtime_native_arm_linux_baseline": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.1292577919999971
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 0.7147237920000009
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 4.1347976269999975
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 39.07585326900001
+        },
+        {
+          "name": "release",
+          "exit": 0,
+          "seconds": 6.422375212000006
+        },
+        {
+          "name": "reclaim",
+          "exit": 0,
+          "seconds": 2.2773404169999907
+        }
+      ],
+      "scoped_final_runtime": {
+        "memory_source_revision_tested": "580b0cb495cdac87079658cec29bbea5201b5a9c",
+        "reused_for_runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+        "macos_memory_format_clippy_and_tests_passed": true,
+        "memory_lib_tests": 148,
+        "memory_allocation_tests": 2,
+        "memory_translation_tests": 4,
+        "native_arm_linux": [
+          {
+            "name": "fmt",
+            "exit": 0,
+            "seconds": 0.11061137499996221
+          },
+          {
+            "name": "clippy",
+            "exit": 0,
+            "seconds": 0.457716333999997
+          },
+          {
+            "name": "tests",
+            "exit": 0,
+            "seconds": 6.737732003000019
+          }
+        ]
+      },
+      "mac_product_baseline": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.102547125
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 0.866931209
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 2.213177333
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 10.327782083999999
+        }
+      ],
+      "mac_product_final": {
+        "code_mac": "4ab04b4f90b9e391d0dca4eb710f6d23d90d2f5a",
+        "runtime_revision": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+        "unchanged_mac_workspace_format_and_lint_reused": true,
+        "final_changed_packages_lint": "VFS/session all-target/all-feature lint on native ARM64 Linux and Mac interpreter conformance lint",
+        "signed_hardware": {
+          "passed": true,
+          "runtime_revision": "580b0cb495cdac87079658cec29bbea5201b5a9c",
+          "rows": [
+            {
+              "target": "trames-mac-run",
+              "executable_sha256": "2d43d6c621d21ea1ce51af4184c304db80c29be47101a322395adbaf4a72a13e",
+              "exit": 0,
+              "passed_tests": 1
+            },
+            {
+              "target": "trames_hvf",
+              "executable_sha256": "eb9524441094144a46b4a3c8132f9fd52c29b72be0c53d765069fbbe7a2e907f",
+              "exit": 0,
+              "passed_tests": 39
+            }
+          ]
+        },
+        "normal_release_build_and_strict_signature_passed": true,
+        "runner_sha256": "4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683",
+        "hardware_reuse": "Memory/provider source unchanged since the 39 signed HVF tests at runtime 580b0cb; later proc/UUID changes have separate process/VFS conformance and final normal-release coverage.",
+        "uuid_guest_smoke": {
+          "exit": 0,
+          "valid_distinct_uuid_v4": 3,
+          "runner_sha256": "4b964e1da487ac2dd5d7c6bebf78bad531a6360a9c63b1f8312a0314fbfac683",
+          "runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998"
+        }
+      },
+      "ipad_product_baseline": [
+        {
+          "name": "boundaries",
+          "exit": 0,
+          "seconds": 0.09386912500000001
+        },
+        {
+          "name": "fmt",
+          "exit": 0,
+          "seconds": 0.954011791
+        },
+        {
+          "name": "clippy",
+          "exit": 0,
+          "seconds": 3.3133703329999995
+        },
+        {
+          "name": "tests",
+          "exit": 0,
+          "seconds": 12.133899000000001
+        },
+        {
+          "name": "device",
+          "exit": 0,
+          "seconds": 2.015588749999999
+        },
+        {
+          "name": "sim",
+          "exit": 0,
+          "seconds": 1.9366316250000004
+        }
+      ],
+      "ipad_final_runtime_device_and_simulator_checks_passed": true,
+      "final_session_residency": {
+        "runtime": "68552f7bd3b9534fe15fe1fd4a5c4e22b7415998",
+        "conformance_passed": 202,
+        "conformance_ignored": 3,
+        "macos_conformance_and_session_clippy_passed": true,
+        "native_arm_linux_session_clippy_passed": true,
+        "ios_targets": [
+          {
+            "name": "device",
+            "exit": 0,
+            "seconds": 2.327944041
+          },
+          {
+            "name": "sim",
+            "exit": 0,
+            "seconds": 1.9886960409999999
+          }
+        ],
+        "final_vfs_tests_macos_passed": 325,
+        "final_vfs_tests_native_arm_linux_passed": 325,
+        "final_linux_checks": [
+          {
+            "name": "fmt",
+            "exit": 0,
+            "seconds": 0.7417396250000081
+          },
+          {
+            "name": "clippy",
+            "exit": 0,
+            "seconds": 1.900050292000003
+          },
+          {
+            "name": "vfs-tests",
+            "exit": 0,
+            "seconds": 8.797042504000004
+          }
+        ],
+        "final_conformance_and_lint": [
+          {
+            "name": "conformance",
+            "exit": 0,
+            "seconds": 1.157945875
+          },
+          {
+            "name": "clippy",
+            "exit": 0,
+            "seconds": 2.523316417
+          }
+        ]
+      },
+      "reuse": "Common macOS workspace tests, the full native ARM64 Linux workflow, and product workflow checks passed. Later changes were isolated to memory and the Mac provider; final memory regressions/lints on macOS and native ARM64 Linux, signed Mac HVF/pressure tests, release build and both iOS targets were rerun. Unchanged CPU/Linux/network/graphics acceptance was reused.",
+      "corrected_during_validation": [
+        "Reserved exception-context error classification",
+        "Sparse L3-to-L2 block promotion",
+        "Explicit working-set target retains granule admission",
+        "Sparse fork includes nonresident logical contents",
+        "VM replacement transfers accounting and retires old native storage"
+      ],
+      "unrelated_work_excluded": [
+        "Runtime network.rs and network/local.rs worktree edits",
+        "iPad tests/integration/multiple-terminals.py worktree edit"
+      ]
+    },
+    "excluded_diagnostic": {
+      "valid_performance_result": false,
+      "reason": "Multi-core Photo Library took over 9x the matching baseline stage without completing; sampled for diagnosis. This run is excluded from the clean paired comparison.",
+      "pid": 8268,
+      "sample": "native-photo-library.sample",
+      "at_unix": 1793241973.969654,
+      "runtime": "580b0cb495cdac87079658cec29bbea5201b5a9c",
+      "mac": "3f90d95aaec40c1ad2313108599636fdf9f3b90d",
+      "baseline_photo_library_seconds": 12.31,
+      "main_thread_sample_count": 1527,
+      "main_thread_native_residency_samples": 1090,
+      "cause": "Proc refresh repeated mincore-backed residency observations for every task sharing one mm and again for totals. Fixed by one live query per real address-space owner per snapshot, reused for totals and per-thread rows. No cross-request TTL or cached mapping-generation residency.",
+      "regression": "13 shared-mm tasks; one provider callback per refresh; the next refresh observes changed residency; zombie owner does not hide live peers."
+    },
+    "intermediate_clean_run_with_regression": {
+      "runner_sha256": "c09b58b096345b3110bb6d612b1790a16b8108864190c1831d263eb5bb99849d",
+      "code_mac": "73ebdb14f0be05a8c5cfe61d25889567829767fc",
+      "code_runtime": "e5a2523c1b206e4086f0b6fb779a400276bef84f",
+      "variant": "trames-automib-12cpu-native-fixed",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793242534.573459,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 268.3500565,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405171"
+      ],
+      "source": "https://browser.geekbench.com/v6/cpu/19405171",
+      "read_method": "public result accessibility text via in-app browser",
+      "single": 3826,
+      "multi": 10366,
+      "components": {
+        "single": {
+          "File Compression": 3359,
+          "Navigation": 3337,
+          "HTML5 Browser": 4444,
+          "PDF Renderer": 4260,
+          "Photo Library": 2725,
+          "Clang": 4968,
+          "Text Processing": 3625,
+          "Asset Compression": 3651,
+          "Object Detection": 3217,
+          "Background Blur": 3274,
+          "Horizon Detection": 3995,
+          "Object Remover": 5145,
+          "HDR": 4365,
+          "Photo Filter": 4880,
+          "Ray Tracer": 3645,
+          "Structure from Motion": 3871
+        },
+        "multi": {
+          "File Compression": 9032,
+          "Navigation": 14341,
+          "HTML5 Browser": 9986,
+          "PDF Renderer": 9402,
+          "Photo Library": 1132,
+          "Clang": 23195,
+          "Text Processing": 3330,
+          "Asset Compression": 15928,
+          "Object Detection": 9861,
+          "Background Blur": 11076,
+          "Horizon Detection": 20221,
+          "Object Remover": 16038,
+          "HDR": 18032,
+          "Photo Filter": 12820,
+          "Ray Tracer": 20718,
+          "Structure from Motion": 15807
+        }
+      },
+      "final": false,
+      "reason": "One-per-mm residency queries removed the catastrophic duplication but still scanned resident extents for independent missing UUID probes. Photo Library multi regressed 6132 -> 1132; replaced by request-field dependency projection plus UUID support."
+    },
+    "proc_path_diagnostic": {
+      "valid_performance_result": false,
+      "counts": {
+        "/proc/self/exe": 4,
+        "/proc/sys/kernel/random/uuid": 801,
+        "/proc/cpuinfo": 5,
+        "fd=Ok(Node([47, 112, 114, 111, 99, 47, 99, 112, 117, 105, 110, 102, 111]))": 11,
+        "/proc/self/maps": 1,
+        "fd=Ok(Node([47, 112, 114, 111, 99, 47, 50, 47, 109, 97, 112, 115]))": 2,
+        "/proc/meminfo": 1,
+        "fd=Ok(Node([47, 112, 114, 111, 99, 47, 109, 101, 109, 105, 110, 102, 111]))": 2
+      },
+      "reason": "Temporary proc-path-only instrumentation; stopped after identifying repeated missing random/uuid probes. Normal source/executable restored."
+    },
+    "remaining_limits": [
+      "Native ranges require default host-managed local and aggregate budgets, uniform RW private-anonymous ownership, no preexisting competing reached-page backing, and no explicit resident working-set target. Other pages retain original per-4KiB exports.",
+      "A pure new eligible mmap uses the existing owner/service queue without pausing same-mm peers. Unmap, permission changes, discard, fixed/file/shared mappings, tracing and seccomp retain joined boundaries.",
+      "A live fragment/subpage can retain its complete 2MiB host virtual backing. Actual physical residency is host-paged in 16KiB granules; block translations do not require contiguous host physical memory. No claim of 4KiB host reclamation within a retained extent.",
+      "Provider residency reports are host-granule counts, not unique physical/PSS accounting. Fork population includes compressed/paged-out data using Mach dispositions; query failure conservatively describes the complete range. Fork/account rebinding can still charge conservatively.",
+      "Retained memory after VM destruction falls back to canonical individual pages as old owners rebind. Page accounting follows the new backing and old storage survives only while legitimate owners remain.",
+      "Strict 4096MiB microbenchmark controls retain per-page admission; observed median wall changes are +1.54% / -4.27% / +5.48%. No stable strict-cap improvement is claimed.",
+      "Memory lifecycle results do not predict Firefox or whole-program speedups. Firefox stayed closed; normal syscall exits and file/shared-page work remain.",
+      "One clean full sample per revision, no confidence interval. Do not compare the new auto run directly with the prior 4096MiB score to isolate implementation effects.",
+      "The earlier native macOS result also reports 24GiB but uses a different OS/binary/library/ISA dispatch and was not rerun contemporaneously. Ratios are platform results, not isolated HVF overhead."
+    ]
   }
 }
