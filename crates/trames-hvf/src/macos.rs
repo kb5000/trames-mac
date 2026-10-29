@@ -585,7 +585,8 @@ impl Executor {
             return Err(Error::Unsupported("reserved exception adapter address"));
         }
         let block_base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
-        if access != Access::Execute && block_base != VECTOR_VA {
+        if access != Access::Execute && block_base != VECTOR_VA && memory.hardware_ranges_enabled()
+        {
             let error = std::cell::Cell::new(None);
             // SAFETY: same hardware-only actor/retained canonical owner contract.
             let range = unsafe {
