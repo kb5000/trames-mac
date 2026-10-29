@@ -18,7 +18,7 @@ use trames_memory::{
 };
 #[cfg(feature = "diagnostics")]
 #[path = "diagnostics.rs"]
-mod diagnostics;
+pub(crate) mod diagnostics;
 #[path = "machine.rs"]
 mod machine;
 use machine::Machine;
@@ -282,6 +282,8 @@ impl Executor {
         let interrupt = Arc::new(Interrupt {
             cpu: std::sync::Mutex::new(Some(unsafe { trames_hvf_cpu_identifier(host.as_ptr()) })),
         });
+        #[cfg(feature = "diagnostics")]
+        diagnostics::cpu_created(unsafe { trames_hvf_cpu_identifier(host.as_ptr()) }, host.as_ptr());
         Ok(Self {
             host,
             machine,
@@ -991,6 +993,10 @@ impl Executor {
             continue_fault = false;
             match event.kind {
                 0 | 1 => {
+                    #[cfg(feature = "diagnostics")]
+                    if event.kind == 1 {
+                        diagnostics::syscall(state.registers[8] as u32, state.registers[2]);
+                    }
                     return Ok(ExecutionExit {
                         reason: if event.kind == 1 {
                             ExitReason::Syscall
@@ -1039,6 +1045,8 @@ impl Drop for Executor {
     fn drop(&mut self) {
         // Make retained handles inert before the creator destroys this CPU.
         // A request already holding the lock completes before invalidation.
+        #[cfg(feature = "diagnostics")]
+        diagnostics::cpu_destroying(unsafe { trames_hvf_cpu_identifier(self.host.as_ptr()) });
         *self.interrupt.cpu.lock().unwrap() = None;
         self.machine.destroy_cpu(self.host);
     }

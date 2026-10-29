@@ -14,6 +14,8 @@ pub struct Cpu {
     vulkan_calls: bool,
     sme_config: SmeConfig,
     sme: Option<Box<SmeState>>,
+    #[cfg(feature = "diagnostics")]
+    execution_thread: Option<(std::thread::ThreadId, bool)>,
 }
 
 #[derive(Default)]
@@ -35,6 +37,8 @@ impl Cpu {
         registry: &mut trames_memory::parallel::Registry,
         quantum: Duration,
     ) -> SliceOutcome {
+        #[cfg(feature = "diagnostics")]
+        crate::macos::diagnostics::binding(&mut self.execution_thread);
         if engine.executor.is_none() {
             match Executor::new() {
                 Ok(executor) => engine.executor = Some(executor),
@@ -195,6 +199,8 @@ impl trames_engine::Cpu for Cpu {
             vulkan_calls: false,
             sme_config: SmeConfig::default(),
             sme: None,
+            #[cfg(feature = "diagnostics")]
+            execution_thread: None,
         }
     }
     fn sp(&self) -> u64 {
@@ -242,8 +248,17 @@ impl trames_engine::Cpu for Cpu {
                 sme: None,
                 sme_config: self.sme_config,
                 vulkan_calls: self.vulkan_calls,
+                #[cfg(feature = "diagnostics")]
+                execution_thread: None,
             }
         } else {
+            #[cfg(feature = "diagnostics")]
+            {
+                let mut child = self.clone();
+                child.execution_thread = None;
+                child
+            }
+            #[cfg(not(feature = "diagnostics"))]
             self.clone()
         }
     }
@@ -264,6 +279,8 @@ impl trames_engine::Cpu for Cpu {
         DecodeStats::default()
     }
     fn run(&mut self, engine: &mut Engine, memory: &mut Memory, _: u64) -> SliceOutcome {
+        #[cfg(feature = "diagnostics")]
+        crate::macos::diagnostics::binding(&mut self.execution_thread);
         if engine.executor.is_none() {
             match Executor::new() {
                 Ok(executor) => engine.executor = Some(executor),
@@ -318,6 +335,8 @@ impl trames_engine::Cpu for Cpu {
         engine.executor.as_mut().and_then(Executor::take_wait)
     }
     fn run_parallel(&mut self, engine: &mut Engine, memory: &mut View, _: u64) -> SliceOutcome {
+        #[cfg(feature = "diagnostics")]
+        crate::macos::diagnostics::binding(&mut self.execution_thread);
         if engine.executor.is_none() {
             match Executor::new() {
                 Ok(executor) => engine.executor = Some(executor),
