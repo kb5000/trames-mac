@@ -1,0 +1,159 @@
+{
+  "date": "2026-10-30",
+  "runtime_revision": "ca4640221e79bd2d9d1431d40be742ca02a42295",
+  "host": {
+    "cpu": "Apple M6",
+    "cpu_count": 12,
+    "ram_gib": 24,
+    "os": "macOS 27.0.1"
+  },
+  "guest": {
+    "firefox": "142.0-r0",
+    "architecture": "aarch64",
+    "cpu_slots": 12,
+    "memory_policy": "host-managed",
+    "window_logical_size": [
+      1920,
+      928
+    ]
+  },
+  "graphics": {
+    "compositor": "webrender",
+    "hwCompositing": {
+      "status": "available"
+    },
+    "gpuProcess": {
+      "status": "unused"
+    },
+    "webrender": {
+      "status": "available"
+    },
+    "wrCompositor": {
+      "status": "blocklisted:FEATURE_FAILURE_WEBRENDER_COMPOSITOR_DISABLED"
+    },
+    "openglCompositing": {
+      "status": "available"
+    },
+    "omtp": {
+      "status": "unused"
+    }
+  },
+  "before_live_sample": {
+    "duration_seconds": 2,
+    "coordinator_samples": 277,
+    "proc_refresh_samples": 268,
+    "argv_read_samples": 241,
+    "interpretation": "Wall-time stack residency on the coordinator, not whole-process CPU percentages; workers mostly blocked."
+  },
+  "intermediate_query_sample": {
+    "duration_seconds": 2,
+    "coordinator_samples": 142,
+    "proc_refresh_samples": 99,
+    "fd_snapshot_samples": 78,
+    "interpretation": "After argv projection, during a requestProcInfo workload; not directly comparable to the earlier live idle/page sample."
+  },
+  "request_proc_info": {
+    "method": "Three sequential ChromeUtils.requestProcInfo() calls in an isolated chrome automation sandbox; same offline page, fresh profile per variant. No profiling during these timing runs.",
+    "before": {
+      "batch_timeout_ms": 35000,
+      "completed_batch": false,
+      "per_call_ms": null
+    },
+    "argv_projection_only": {
+      "per_call_ms": [
+        1810.431249999965,
+        1849.0069169999915,
+        1926.9419169999892
+      ],
+      "total_ms": 5586.380083999946
+    },
+    "argv_and_descriptor_projection": {
+      "per_call_ms": [
+        607.3886249999923,
+        602.1295830000017,
+        593.4684589999961
+      ],
+      "total_ms": 1802.9866669999901
+    },
+    "limitations": [
+      "One ordered run per variant, no shuffled repetitions or confidence intervals.",
+      "Timing capture precedes the final proc-FD-alias dependency guard; that guard is separately regression-tested and the final binary is functionally tested on Wikipedia.",
+      "The old batch has no per-iteration progress, so no individual old call duration or exact speedup is claimed."
+    ]
+  },
+  "native_input": {
+    "method": "Ten native clicks on the same offline count button; source system-uptime timestamps from mouse release to emitted native title change. CUA holds the mouse down for roughly 50 ms, excluded.",
+    "before": {
+      "click_count": 10,
+      "emitted_title_updates": 7,
+      "release_to_title_ms": [
+        81.4315410098061,
+        31.200332974549383,
+        162.31508302735165,
+        72.44879199424759,
+        12.822332966607064,
+        42.950999981258065,
+        24.794625001959503
+      ],
+      "median_ms": 42.950999981258065
+    },
+    "after": {
+      "mouse_down": 10,
+      "mouse_up": 10,
+      "emitted_title_updates": 10,
+      "release_to_title_ms": [
+        234.01700000977144,
+        131.56033400446177,
+        100.28358298586681,
+        22.6255840389058,
+        32.61516598286107,
+        36.79841704433784,
+        16.841916949488223,
+        32.78420801507309,
+        29.666499991435558,
+        12.219584023114294
+      ],
+      "median_ms": 32.69968699896708,
+      "note": "Intermediate titles can coalesce; this is not a presentation timestamp."
+    },
+    "limitations": [
+      "Intermediate title updates can coalesce; only emitted titles have exact matched timings.",
+      "Not screen-present latency, FPS or a native-host comparison.",
+      "Small sample; after run has a 234 ms first response and is not uniformly fast."
+    ]
+  },
+  "ipc_regression": {
+    "scenario": "socketpair sends one byte; recvmsg supplies a 2 MiB iovec capacity",
+    "before": "EMSGSIZE (-90)",
+    "after": "one byte returned",
+    "overflow": "UINT64_MAX length returns EINVAL and does not consume the queued byte",
+    "scope": "Confirmed Linux compatibility bug; no proof that it explains every Firefox child-process launch warning."
+  },
+  "validation": {
+    "kernel_conformance": {
+      "passed": 214,
+      "ignored": 3
+    },
+    "vfs": {
+      "passed": 327,
+      "ignored": 1
+    },
+    "ipad_ffi_aarch64_apple_ios": "pass",
+    "affected_package_clippy": "pass with existing manual_range_contains allowance in unchanged signal-frame code",
+    "signed_mac_release_build": "pass",
+    "normal_wikipedia_navigation": "Wikipedia portal -> English main page visible with original profile and no Marionette",
+    "reused": "Unchanged CPU/HVF and Vulkan tests from the previous acceptance; not rerun."
+  },
+  "remaining": [
+    "Firefox content/utility subprocess launch retries still appear.",
+    "Process statistics still rebuild common task metadata and take about 0.6 seconds in this probe.",
+    "Video decoding and general Vulkan capability completeness remain outside this change."
+  ],
+  "artifacts": {
+    "old_signed_runner_sha256": "4c6571373efd27c26214ff07af24e07629b6547d6f69e0849318edc99457a02d",
+    "final_signed_runner_sha256": "6081564f89d417babc3b3982270724cdad062f149237520f4b3e073af427bfaa"
+  },
+  "privacy": "Only aggregate data and artifact hashes are published. Browser profiles, raw traces, argv, host addresses and browsing logs remain local.",
+  "functional_code_revision": "2c9ab5d75e7653239649ff5e362f2375605975c1",
+  "revision_note": "The pin includes a subsequent comment-only clarification; validated executable code is unchanged."
+}

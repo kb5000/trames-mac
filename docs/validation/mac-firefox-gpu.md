@@ -182,3 +182,59 @@ python3 scripts/run-firefox-gpu.py \
 
 Use `--network loopback` for offline test pages. Headless native Vulkan compute
 still uses `--no-windows --vulkan` independently of this browser launcher.
+
+## Responsiveness follow-up (2026-10-30)
+
+Hardware rendering alone did not remove coordinator stalls. In a two-second
+sample of the slow live browser, 268 of 277 coordinator samples were in proc
+refresh and 241 were reading mutable guest argv. These reads repeatedly entered
+the HVF host-access/protection path while guest workers waited. These are
+coordinator wall-time stack counts, not percentages of whole-process CPU time.
+After removing unrelated argv reads, a separate sample during Firefox's real
+process-info query found 78 of 142 coordinator samples rebuilding descriptor
+snapshots, including path resolution and socket metadata.
+
+Runtime `2c9ab5d75e7653239649ff5e362f2375605975c1` projects these payloads by actual
+VFS demand. Maps and stat/status requests no longer scan argv or enumerate FDs;
+cmdline, fd/fdinfo, network tables and file-nr keep live observations. Newly
+published PIDs are re-probed, and proc FD magic links combine dependencies.
+There is no timer cache, new global lock, service thread or extra memory policy.
+The shared interpreter and iPad paths use the same change.
+
+A separate recvmsg regression reproduces an invalid EMSGSIZE for a 2 MiB receive
+capacity with only one byte queued. Receive capacity is now clipped to a bounded
+transport chunk and may complete short. Send lengths remain intact; signed-iovec
+overflow returns EINVAL before consuming input. This is a confirmed compatibility
+bug; its connection to every Firefox subprocess launch warning is unproven.
+
+The [filtered responsiveness record](mac-firefox-latency.json) retains the
+measurements, methods and limits. All variants use the same offline page, original
+hardware graphics stack, 12 CPU slots, host-managed memory and a visible 1920×928
+window, with a fresh isolated profile per variant.
+
+| Observation | Before | Argv projection | Argv + FD projection |
+| --- | --- | --- | --- |
+| Three sequential `ChromeUtils.requestProcInfo()` calls | Batch exceeds 35 s timeout | 1.810 / 1.849 / 1.927 s per call | 0.607 / 0.602 / 0.593 s per call |
+| Native mouse release → emitted title update, median | 42.95 ms, 7 updates from 10 clicks | 46.84 ms, 8 updates | 32.70 ms, 10 updates |
+| Offline page / WebGL2 | Count 10 / available | Count 10 / available | Count 10 / available |
+
+This is one ordered run, not a stable benchmark distribution. Intermediate titles
+can coalesce, so only emitted titles have matched timestamps. The measurement is
+not screen-present latency or a native-host performance comparison. The final
+run includes a 234 ms first response. Timing capture preceded the final proc-FD
+alias guard; that guard has its own live-argv regression. No exact speedup is
+inferred from the old batch timeout, which has no per-iteration progress.
+
+The final signed build passes 214 common kernel conformance cases (three existing
+skips), 327 VFS tests (one existing skip), the iPad ARM64 FFI check and affected
+package Clippy with the existing signal-frame style allowance. Its normal
+launcher restores the original browser profile, loads Wikipedia and follows a
+native click to the English main page, without an automation port. Raw traces and
+profile data remain local. Unchanged CPU/HVF and Vulkan acceptance results are
+reused.
+
+This removes two sources of unnecessary global work, but does not establish that
+all page sluggishness is solved. Process-statistics queries still rebuild common
+task metadata and cost about 0.6 s in this probe; content/utility subprocess launch
+retries still appear during normal browsing. Those are the next targets before
+claiming consistently fast navigation. Video decoding remains separate.
