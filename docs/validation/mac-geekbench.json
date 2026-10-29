@@ -9441,5 +9441,1534 @@
       "PDF, Photo Library and HTML5 multi scaling still trails native; mapping withdrawal/protection remains a broad mechanism to address.",
       "Both products share the common Linux ABI; Mac-specific execution remains isolated."
     ]
+  },
+  "vm_checkpoint_followup_2026_10_29": {
+    "code": {
+      "runtime": "d21663eb30be8d550c0abdad1e6adaefc0bb49fc",
+      "mac": "8c0eb00b896f9976d85c70d1dfeb032a6c4d408f"
+    },
+    "mechanism": "Optional per-domain vCPU exit authority with destruction-safe retained handles; existing owner batches VM calls under one 250us hardware deadline only when every admitted job is quiescent. Exact-instruction backends retain ordinary budgeted dispatch. Pending non-VM exits dispatch once on workers/join; task and CPU times include owner execution.",
+    "method": "Same Geekbench 6.7.1 Preview Linux AArch64 package/store, 12 CPUs, host-managed memory, signed release binaries, no windows/PTY, metrics counters without HVF diagnostic feature. No concurrent compilers, local Linux VM or samplers. Public uploads previously authorized. One complete sample per variant; no confidence interval or uniform per-workload speedup established.",
+    "control": {
+      "runner_sha256": "d434987efbd12f854f8db573f6115af0b4bb5d3d915abb87afd7688a19d0b67b",
+      "code_mac": "a6bc6839e9ed44daf91fc077057013e7f5349f56",
+      "code_runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4",
+      "variant": "trames-automib-12cpu-checkpoint-control",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793252987.88112,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 248.258357542,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405575"
+      ],
+      "scores": {
+        "single": 4161,
+        "multi": 12329
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3412,
+          "multi": 8530
+        },
+        "Navigation": {
+          "single": 3309,
+          "multi": 13755
+        },
+        "HTML5 Browser": {
+          "single": 4531,
+          "multi": 11675
+        },
+        "PDF Renderer": {
+          "single": 4081,
+          "multi": 7682
+        },
+        "Photo Library": {
+          "single": 3831,
+          "multi": 10457
+        },
+        "Clang": {
+          "single": 5037,
+          "multi": 24544
+        },
+        "Text Processing": {
+          "single": 3681,
+          "multi": 3399
+        },
+        "Asset Compression": {
+          "single": 3663,
+          "multi": 16260
+        },
+        "Object Detection": {
+          "single": 6229,
+          "multi": 11513
+        },
+        "Background Blur": {
+          "single": 4332,
+          "multi": 13308
+        },
+        "Horizon Detection": {
+          "single": 4034,
+          "multi": 20309
+        },
+        "Object Remover": {
+          "single": 5173,
+          "multi": 15784
+        },
+        "HDR": {
+          "single": 4373,
+          "multi": 18609
+        },
+        "Photo Filter": {
+          "single": 4432,
+          "multi": 12193
+        },
+        "Ray Tracer": {
+          "single": 3671,
+          "multi": 22032
+        },
+        "Structure from Motion": {
+          "single": 3885,
+          "multi": 14117
+        }
+      },
+      "checkpoint_phase_us": null,
+      "quiescence_bins": null,
+      "batch_counts": null,
+      "vm_call_counts": [
+        0,
+        38955,
+        0,
+        53,
+        21206,
+        0,
+        151,
+        35
+      ],
+      "session_metrics": {
+        "syscalls": 2941416,
+        "context_switches": 2294488,
+        "hardware_mapped_bytes": 3014656,
+        "guest_resident_bytes": 3469312,
+        "vm_checkpoint_groups": 49641,
+        "vm_checkpoint_spaces": 49641,
+        "backing_domain_checks": 423,
+        "backing_page_checks": 450,
+        "parallel_memory_us": 441996,
+        "instruction_count": null
+      }
+    },
+    "accepted": {
+      "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+      "code_mac": "8c0eb00b896f9976d85c70d1dfeb032a6c4d408f",
+      "code_runtime": "d21663eb30be8d550c0abdad1e6adaefc0bb49fc",
+      "variant": "trames-automib-12cpu-checkpoint-final",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793254463.2727911,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 247.104432125,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405649"
+      ],
+      "scores": {
+        "single": 4136,
+        "multi": 12881
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3324,
+          "multi": 9030
+        },
+        "Navigation": {
+          "single": 3274,
+          "multi": 13478
+        },
+        "HTML5 Browser": {
+          "single": 4404,
+          "multi": 10844
+        },
+        "PDF Renderer": {
+          "single": 4210,
+          "multi": 11651
+        },
+        "Photo Library": {
+          "single": 3833,
+          "multi": 10425
+        },
+        "Clang": {
+          "single": 4912,
+          "multi": 24603
+        },
+        "Text Processing": {
+          "single": 3635,
+          "multi": 3216
+        },
+        "Asset Compression": {
+          "single": 3615,
+          "multi": 17996
+        },
+        "Object Detection": {
+          "single": 6503,
+          "multi": 12298
+        },
+        "Background Blur": {
+          "single": 4245,
+          "multi": 12960
+        },
+        "Horizon Detection": {
+          "single": 3993,
+          "multi": 20524
+        },
+        "Object Remover": {
+          "single": 5091,
+          "multi": 15063
+        },
+        "HDR": {
+          "single": 4367,
+          "multi": 17879
+        },
+        "Photo Filter": {
+          "single": 4461,
+          "multi": 13508
+        },
+        "Ray Tracer": {
+          "single": 3624,
+          "multi": 22618
+        },
+        "Structure from Motion": {
+          "single": 3845,
+          "multi": 16274
+        }
+      },
+      "checkpoint_phase_us": [
+        193889,
+        128699,
+        19465,
+        1501186,
+        20688,
+        50556,
+        809812
+      ],
+      "quiescence_bins": [
+        5654,
+        115,
+        769,
+        623,
+        25,
+        10,
+        1,
+        0
+      ],
+      "batch_counts": [
+        6414,
+        57969,
+        55315
+      ],
+      "vm_call_counts": [
+        0,
+        40251,
+        0,
+        803,
+        21286,
+        0,
+        169,
+        44
+      ],
+      "session_metrics": {
+        "syscalls": 2850913,
+        "context_switches": 2218700,
+        "hardware_mapped_bytes": 2998272,
+        "guest_resident_bytes": 3567616,
+        "vm_checkpoint_groups": 7197,
+        "vm_checkpoint_spaces": 7197,
+        "backing_domain_checks": 438,
+        "backing_page_checks": 451,
+        "parallel_memory_us": 231068,
+        "instruction_count": null
+      }
+    },
+    "prototype_250us_before_capacity_and_accounting_guard": {
+      "runner_sha256": "4115bf7bff7d80ac0d7616a4b420df33c6c009e4c46e00f52d6ffc4f565c7d43",
+      "code_mac": "c00e5b8f5bbef79dc3636abfe88544d5f46559fb+checkpoint-prototype",
+      "code_runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4+checkpoint-prototype",
+      "variant": "trames-automib-12cpu-checkpoint-batch",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793253271.309112,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 245.746255375,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405589"
+      ],
+      "scores": {
+        "single": 4131,
+        "multi": 13020
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3344,
+          "multi": 9285
+        },
+        "Navigation": {
+          "single": 3314,
+          "multi": 15119
+        },
+        "HTML5 Browser": {
+          "single": 4419,
+          "multi": 11374
+        },
+        "PDF Renderer": {
+          "single": 4111,
+          "multi": 11919
+        },
+        "Photo Library": {
+          "single": 3832,
+          "multi": 10593
+        },
+        "Clang": {
+          "single": 4940,
+          "multi": 23235
+        },
+        "Text Processing": {
+          "single": 3627,
+          "multi": 3314
+        },
+        "Asset Compression": {
+          "single": 3652,
+          "multi": 17949
+        },
+        "Object Detection": {
+          "single": 6558,
+          "multi": 13286
+        },
+        "Background Blur": {
+          "single": 4313,
+          "multi": 13457
+        },
+        "Horizon Detection": {
+          "single": 4001,
+          "multi": 20885
+        },
+        "Object Remover": {
+          "single": 5088,
+          "multi": 15783
+        },
+        "HDR": {
+          "single": 4262,
+          "multi": 17664
+        },
+        "Photo Filter": {
+          "single": 4413,
+          "multi": 13157
+        },
+        "Ray Tracer": {
+          "single": 3473,
+          "multi": 19979
+        },
+        "Structure from Motion": {
+          "single": 3896,
+          "multi": 14365
+        }
+      },
+      "checkpoint_phase_us": [
+        206237,
+        127713,
+        12923,
+        1442690,
+        21206,
+        49494,
+        835621
+      ],
+      "quiescence_bins": [
+        5624,
+        112,
+        803,
+        601,
+        18,
+        22,
+        1,
+        1
+      ],
+      "batch_counts": [
+        6482,
+        58349,
+        55579
+      ],
+      "vm_call_counts": [
+        0,
+        39280,
+        0,
+        823,
+        22489,
+        0,
+        174,
+        46
+      ],
+      "session_metrics": {
+        "syscalls": 2889591,
+        "context_switches": 2257224,
+        "hardware_mapped_bytes": 2785280,
+        "guest_resident_bytes": 3567616,
+        "vm_checkpoint_groups": 7182,
+        "vm_checkpoint_spaces": 7182,
+        "backing_domain_checks": 443,
+        "backing_page_checks": 451,
+        "parallel_memory_us": 220671,
+        "instruction_count": null
+      }
+    },
+    "rejected_16us_per_entry_probe": {
+      "runner_sha256": "2a407c59346f183e81e202810cce7696164e5ca985a084005352e81e63efb549",
+      "code_mac": "c00e5b8f5bbef79dc3636abfe88544d5f46559fb+checkpoint-probe16",
+      "code_runtime": "47ddee85b69ec62cde59ce6be234ed3449997df4+checkpoint-probe16",
+      "variant": "trames-automib-12cpu-checkpoint-probe16",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793253786.532489,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 247.794130167,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19405620"
+      ],
+      "scores": {
+        "single": 4104,
+        "multi": 12712
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3349,
+          "multi": 9155
+        },
+        "Navigation": {
+          "single": 3293,
+          "multi": 14103
+        },
+        "HTML5 Browser": {
+          "single": 4509,
+          "multi": 12650
+        },
+        "PDF Renderer": {
+          "single": 4056,
+          "multi": 9070
+        },
+        "Photo Library": {
+          "single": 3819,
+          "multi": 10515
+        },
+        "Clang": {
+          "single": 4669,
+          "multi": 24258
+        },
+        "Text Processing": {
+          "single": 3581,
+          "multi": 3348
+        },
+        "Asset Compression": {
+          "single": 3604,
+          "multi": 18248
+        },
+        "Object Detection": {
+          "single": 6360,
+          "multi": 13077
+        },
+        "Background Blur": {
+          "single": 4299,
+          "multi": 13478
+        },
+        "Horizon Detection": {
+          "single": 3932,
+          "multi": 19458
+        },
+        "Object Remover": {
+          "single": 4975,
+          "multi": 15308
+        },
+        "HDR": {
+          "single": 4333,
+          "multi": 17148
+        },
+        "Photo Filter": {
+          "single": 4559,
+          "multi": 11609
+        },
+        "Ray Tracer": {
+          "single": 3624,
+          "multi": 19986
+        },
+        "Structure from Motion": {
+          "single": 3832,
+          "multi": 15401
+        }
+      },
+      "checkpoint_phase_us": [
+        594510,
+        213623,
+        24095,
+        1449942,
+        31701,
+        80956,
+        495219
+      ],
+      "quiescence_bins": [
+        6107,
+        290,
+        4858,
+        1204,
+        31,
+        34,
+        5,
+        0
+      ],
+      "batch_counts": [
+        11945,
+        55757,
+        47178
+      ],
+      "vm_call_counts": [
+        0,
+        38573,
+        0,
+        113,
+        20999,
+        0,
+        174,
+        47
+      ],
+      "session_metrics": {
+        "syscalls": 2741799,
+        "context_switches": 2155093,
+        "hardware_mapped_bytes": 2736128,
+        "guest_resident_bytes": 3567616,
+        "vm_checkpoint_groups": 12529,
+        "vm_checkpoint_spaces": 12529,
+        "backing_domain_checks": 428,
+        "backing_page_checks": 451,
+        "parallel_memory_us": 244032,
+        "instruction_count": null
+      }
+    },
+    "fixed_work": {
+      "fixture_sha256": "05a59f3288f8d7926052bf2f1708ffc14dfe6fd333cfea3a693d2e084f1a77fe",
+      "runners": {
+        "baseline": "d434987efbd12f854f8db573f6115af0b4bb5d3d915abb87afd7688a19d0b67b",
+        "final": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b"
+      },
+      "samples": [
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.879,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.882,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 4,
+          "cpus": 1,
+          "variant": "final",
+          "process_seconds": 0.023692333
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 38.155,
+          "compute_sum_ms": 2953.484,
+          "wall_ms": 281.984,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 3,
+          "cpus": 12,
+          "variant": "final",
+          "process_seconds": 0.29045891599999996
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 306.586,
+          "compute_sum_ms": 1438.549,
+          "wall_ms": 306.666,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 4,
+          "cpus": 6,
+          "variant": "baseline",
+          "process_seconds": 0.31350633299999997
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 20.0,
+          "compute_sum_ms": 1448.733,
+          "wall_ms": 291.309,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 4,
+          "cpus": 6,
+          "variant": "final",
+          "process_seconds": 0.298198667
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.463,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.465,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 0,
+          "cpus": 1,
+          "variant": "final",
+          "process_seconds": 0.02297145800000011
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.456,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.458,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 0,
+          "cpus": 1,
+          "variant": "baseline",
+          "process_seconds": 0.022428667000000013
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 18.292,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 18.294,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 2,
+          "cpus": 1,
+          "variant": "baseline",
+          "process_seconds": 0.02338091699999989
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 313.443,
+          "compute_sum_ms": 3077.613,
+          "wall_ms": 313.562,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 3,
+          "cpus": 12,
+          "variant": "baseline",
+          "process_seconds": 0.32287441699999997
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 20.131,
+          "compute_sum_ms": 1461.01,
+          "wall_ms": 293.92,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 2,
+          "cpus": 6,
+          "variant": "final",
+          "process_seconds": 0.300413083
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 18.478,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 18.481,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 3,
+          "cpus": 1,
+          "variant": "baseline",
+          "process_seconds": 0.024156708999999887
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 306.075,
+          "compute_sum_ms": 3014.478,
+          "wall_ms": 306.18,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 2,
+          "cpus": 12,
+          "variant": "baseline",
+          "process_seconds": 0.3155076669999999
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 19.1,
+          "compute_sum_ms": 1447.733,
+          "wall_ms": 290.559,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 0,
+          "cpus": 6,
+          "variant": "final",
+          "process_seconds": 0.2972837499999996
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 309.902,
+          "compute_sum_ms": 3087.029,
+          "wall_ms": 310.012,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 1,
+          "cpus": 12,
+          "variant": "baseline",
+          "process_seconds": 0.31920150000000014
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.675,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.678,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 3,
+          "cpus": 1,
+          "variant": "final",
+          "process_seconds": 0.022959292000000353
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.704,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.707,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 1,
+          "cpus": 1,
+          "variant": "baseline",
+          "process_seconds": 0.02317658300000014
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 316.455,
+          "compute_sum_ms": 3120.843,
+          "wall_ms": 316.561,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 0,
+          "cpus": 12,
+          "variant": "baseline",
+          "process_seconds": 0.32555212499999975
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 37.638,
+          "compute_sum_ms": 2973.703,
+          "wall_ms": 281.461,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 4,
+          "cpus": 12,
+          "variant": "final",
+          "process_seconds": 0.2908932499999999
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 312.014,
+          "compute_sum_ms": 1453.652,
+          "wall_ms": 312.074,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 1,
+          "cpus": 6,
+          "variant": "baseline",
+          "process_seconds": 0.3188382500000002
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 304.436,
+          "compute_sum_ms": 1435.466,
+          "wall_ms": 304.502,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 0,
+          "cpus": 6,
+          "variant": "baseline",
+          "process_seconds": 0.31136291699999985
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.556,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.559,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 2,
+          "cpus": 1,
+          "variant": "final",
+          "process_seconds": 0.022701375000000468
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.613,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.654,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 4,
+          "cpus": 1,
+          "variant": "baseline",
+          "process_seconds": 0.023007124999999462
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 19.006,
+          "compute_sum_ms": 1446.413,
+          "wall_ms": 290.67,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 3,
+          "cpus": 6,
+          "variant": "final",
+          "process_seconds": 0.29718258299999967
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 36.709,
+          "compute_sum_ms": 2947.513,
+          "wall_ms": 280.637,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 0,
+          "cpus": 12,
+          "variant": "final",
+          "process_seconds": 0.2895654160000003
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 20.067,
+          "compute_sum_ms": 1452.581,
+          "wall_ms": 291.78,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 1,
+          "cpus": 6,
+          "variant": "final",
+          "process_seconds": 0.2986424999999997
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 322.888,
+          "compute_sum_ms": 3145.494,
+          "wall_ms": 323.005,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 4,
+          "cpus": 12,
+          "variant": "baseline",
+          "process_seconds": 0.3322670839999997
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 53.1,
+          "compute_sum_ms": 3093.872,
+          "wall_ms": 299.651,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 1,
+          "cpus": 12,
+          "variant": "final",
+          "process_seconds": 0.3089216659999998
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 314.888,
+          "compute_sum_ms": 1473.404,
+          "wall_ms": 314.949,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 3,
+          "cpus": 6,
+          "variant": "baseline",
+          "process_seconds": 0.3221391250000005
+        },
+        {
+          "peers": 0,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 17.773,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 17.776,
+          "checksum": 500500,
+          "values": [],
+          "repeat": 1,
+          "cpus": 1,
+          "variant": "final",
+          "process_seconds": 0.023227208000000665
+        },
+        {
+          "peers": 5,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 309.238,
+          "compute_sum_ms": 1447.52,
+          "wall_ms": 309.302,
+          "checksum": 14273687594642799882,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ],
+          "repeat": 2,
+          "cpus": 6,
+          "variant": "baseline",
+          "process_seconds": 0.31597433399999986
+        },
+        {
+          "peers": 11,
+          "rounds": 1000,
+          "iterations": 200000000,
+          "mapping_ms": 37.868,
+          "compute_sum_ms": 2941.815,
+          "wall_ms": 287.989,
+          "checksum": 500500,
+          "values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ],
+          "repeat": 2,
+          "cpus": 12,
+          "variant": "final",
+          "process_seconds": 0.29664008399999986
+        }
+      ],
+      "method": "Five repeats per variant and CPU count, shuffled with seed 20261029; fixed work, same static ELF, no metrics/samplers/builds. Every per-thread value and mapping checksum matches.",
+      "fixture": "tests/fixtures/vm-checkpoint.c",
+      "medians": {
+        "1": {
+          "baseline": {
+            "mapping_ms": 17.704,
+            "compute_sum_ms": 0.0,
+            "wall_ms": 17.707
+          },
+          "final": {
+            "mapping_ms": 17.675,
+            "compute_sum_ms": 0.0,
+            "wall_ms": 17.678
+          }
+        },
+        "6": {
+          "baseline": {
+            "mapping_ms": 309.238,
+            "compute_sum_ms": 1447.52,
+            "wall_ms": 309.302
+          },
+          "final": {
+            "mapping_ms": 20.0,
+            "compute_sum_ms": 1448.733,
+            "wall_ms": 291.309
+          }
+        },
+        "12": {
+          "baseline": {
+            "mapping_ms": 313.443,
+            "compute_sum_ms": 3087.029,
+            "wall_ms": 313.562
+          },
+          "final": {
+            "mapping_ms": 37.868,
+            "compute_sum_ms": 2953.484,
+            "wall_ms": 281.984
+          }
+        }
+      }
+    },
+    "rejected_immediate_exit_without_batching": {
+      "mapping_ms": 512.456,
+      "wall_ms": 521.38,
+      "checkpoint_groups": 3011,
+      "control_mapping_ms": 329.923,
+      "control_wall_ms": 330.03,
+      "control_checkpoint_groups": 152,
+      "fair_requeue_only_wall_ms": 479.25,
+      "disposition": "Not accepted. Shorter individual waits caused more stop/wake cycles and worse throughput."
+    },
+    "phase_order": [
+      "quiescence",
+      "owner_queue",
+      "commit",
+      "linux_calls",
+      "view_rebuild",
+      "resume",
+      "exclusive_cpu"
+    ],
+    "wait_bin_upper_bounds_us": [
+      5,
+      20,
+      100,
+      500,
+      1000,
+      2000,
+      5000,
+      null
+    ],
+    "batch_count_order": [
+      "used_windows",
+      "cpu_entries",
+      "additional_vm_calls"
+    ],
+    "interpretation": "Phase times can overlap across independent domains; their sum is not suite wall time. Diagnostic call/group counts vary with workload adaptation and scheduling, so they are not identical fixed work.",
+    "validation": {
+      "shared_process_conformance": {
+        "passed": 208,
+        "ignored": 3
+      },
+      "signed_hardware": {
+        "passed": true,
+        "runtime_revision": "47ddee85b69ec62cde59ce6be234ed3449997df4",
+        "rows": [
+          {
+            "target": "trames-mac-run",
+            "executable_sha256": "4955bde58644db08142049bc50280b36c5f3cb9c34d18e0dba3eefe21a94df43",
+            "exit": 0,
+            "passed_tests": 1
+          },
+          {
+            "target": "trames_hvf",
+            "executable_sha256": "1378a093b96419e0f8de5117468df4ffa9911101288f9f259de2049cacb41585",
+            "exit": 0,
+            "passed_tests": 46
+          }
+        ],
+        "tested_source_revision": "d21663eb30be8d550c0abdad1e6adaefc0bb49fc",
+        "pin_note": "The harness ran the copied candidate source before the pin update. Every copied shared file was verified byte-identical to this committed revision; the original harness pin metadata is preserved."
+      },
+      "normal_mac_workspace_tests": {
+        "hvf": 4,
+        "mac": 7
+      },
+      "linux_sme": {
+        "passed": true,
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "fixture_sha256": "ec1b1ee9d51bad892be8b7bcf19fe45f8df4e17a16536fe8c233f834512628d9",
+        "rows": [
+          {
+            "cpus": 1,
+            "memory_mib": "4096",
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "memory_mib": "auto",
+            "exit": 0,
+            "passed": true
+          }
+        ]
+      },
+      "linux_signal_oracles": {
+        "passed": true,
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "rows": [
+          {
+            "fixture": "cpu-signals",
+            "arguments": [],
+            "fixture_sha256": "fbd88226b9871493cf59cbe65073eb92d5ec7a52b77ff79adef76dada25c31ac",
+            "oracle_stdout_sha256": "cf72bdc614b10580f66e38c2e13f632d56001d830f49722efa48909f504a891a",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "signal-leaf-stack",
+            "arguments": [],
+            "fixture_sha256": "1e78251bb5581e5c94daa0bde3721cd5c32285190146e58f032b345f11b953cd",
+            "oracle_stdout_sha256": "9bf8b6addab624f569a6416f9b03e1d38e1a8ab413869648030ca7174668ed27",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "task-signals",
+            "arguments": [],
+            "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+            "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "task-signals",
+            "arguments": [
+              "autodisarm"
+            ],
+            "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+            "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+            "returncode": 0,
+            "passed": true
+          }
+        ]
+      },
+      "smp_paging": {
+        "passed": true,
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "fixture_sha256": "44d59d8a85fe632af83887a3bef6ef3df70df8f86286f64a63aa74131668b462",
+        "cases": [
+          {
+            "name": "smp",
+            "cpus": 4,
+            "resident_target_mib": null,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 50708480,
+                "physical_footprint": 41321096
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 120782848,
+                "physical_footprint": 111199120
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 120782848,
+                "physical_footprint": 111182736
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 138903552,
+                "physical_footprint": 73811024
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.41608241700000004
+          },
+          {
+            "name": "paging",
+            "cpus": 4,
+            "resident_target_mib": 16,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 50724864,
+                "physical_footprint": 41353888
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 155631616,
+                "physical_footprint": 146129904
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 160858112,
+                "physical_footprint": 151340016
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 151355392,
+                "physical_footprint": 86312040
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.5036344580000001
+          },
+          {
+            "name": "single-paging",
+            "cpus": 1,
+            "resident_target_mib": 16,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 50675712,
+                "physical_footprint": 41321072
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 148783104,
+                "physical_footprint": 139379432
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 149192704,
+                "physical_footprint": 139772648
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 139296768,
+                "physical_footprint": 72237848
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.519165917
+          }
+        ],
+        "rss_observation": {
+          "populated_delta_bytes": -34848768,
+          "interpretation": "Informational: native-pager deactivation does not guarantee immediate RSS reduction or a total-process RSS cap."
+        }
+      },
+      "ios_targets": [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim"
+      ],
+      "lint": "Mac workspace all targets, shared engine/session libraries, interpreter conformance: clippy -D warnings passed. Pre-existing Cargo manifest warnings remain.",
+      "reuse": "Unchanged CPU, whole Linux/network and graphics suites reused. Only the failed paging measurement was rerun after its script/documentation adjustment.",
+      "paging_measurement_correction": {
+        "old_runner_sha256": "d434987efbd12f854f8db573f6115af0b4bb5d3d915abb87afd7688a19d0b67b",
+        "old_assertion_failed_on_frozen_control": true,
+        "old_control_cases": [
+          {
+            "cpus": 4,
+            "resident_target_mib": null,
+            "functional_passed": true,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51609600,
+                "physical_footprint": 41829024
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 121700352,
+                "physical_footprint": 111739816
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 121700352,
+                "physical_footprint": 111723432
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 140214272,
+                "physical_footprint": 74171472
+              }
+            ]
+          },
+          {
+            "cpus": 4,
+            "resident_target_mib": 16,
+            "functional_passed": true,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51068928,
+                "physical_footprint": 41271944
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 155680768,
+                "physical_footprint": 145769432
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 160874496,
+                "physical_footprint": 150946776
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 153403392,
+                "physical_footprint": 87966848
+              }
+            ]
+          },
+          {
+            "cpus": 1,
+            "resident_target_mib": 16,
+            "functional_passed": true,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51036160,
+                "physical_footprint": 41304736
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 149241856,
+                "physical_footprint": 139494168
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 149651456,
+                "physical_footprint": 139887384
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 141574144,
+                "physical_footprint": 74154824
+              }
+            ]
+          }
+        ],
+        "reason": "Darwin native-pager deactivation retains contents and does not guarantee immediate RSS reduction at low pressure. Preserve RSS/footprint observations; keep complete bytes, fork/COW, page withdrawal/page-in activity as gates."
+      },
+      "execution_boundaries": [
+        "ipad",
+        "mac"
+      ]
+    },
+    "remaining": [
+      "Structural mapping changes still require actual permission/TLB withdrawal and byte-lifetime quiescence.",
+      "Independent address-space cohorts use targeted local checkpoints without owner guest execution.",
+      "Native-pager reclamation does not promise an immediate RSS reduction or total-process RSS cap.",
+      "Presenter/GPU/window source is unchanged. Affected regressions cover hardware memory gates and worker native/GPU handoffs; Firefox stayed closed and no new manual window acceptance is claimed."
+    ],
+    "change_percent": {
+      "single": -0.6008171112713345,
+      "multi": 4.4772487630789115
+    }
   }
 }

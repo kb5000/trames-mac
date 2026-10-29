@@ -1270,11 +1270,12 @@ established. Five observations are not confidence intervals. The new 12-CPU
 mapping samples range from 36.709 to 53.100 ms and total wall from
 280.637 to 299.651 ms. Retain full samples and hashes rather than presenting only the best run.
 Compile the fixture with a static AArch64 Linux musl toolchain (`-O2 -pthread
--ffixed-x18`), then run it headless with identical binaries and parameters:
+-ffixed-x18`), then run it headless with identical binaries and parameters. Timed probes omit `--metrics`; enable it separately for phase
+diagnostics:
 
 ```sh
 trames-mac-run --no-pty --no-windows --network off --memory-mib auto --cpus 12 \
-  --metrics /path/to/vm-checkpoint 11 1000 200000000
+  /path/to/vm-checkpoint 11 1000 200000000
 ```
 
 `--metrics` reports VM phase microseconds in this order: quiescence, owner queue,
@@ -1291,3 +1292,28 @@ PDF multi was 9070 versus 11919. These are one sample per variant, not a confide
 interval. A shorter speculative slice did not reduce the measured complete
 mechanism cost. The final implementation retains the single shared 250
 microsecond deadline plus the whole-cohort capacity guard and full CPU accounting.
+
+
+The final installed release binary (`0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b`)
+uses Mac code `8c0eb00b896f9976d85c70d1dfeb032a6c4d408f` and runtime
+`d21663eb30be8d550c0abdad1e6adaefc0bb49fc`. Fresh complete 12-CPU, host-managed
+Geekbench 6.7.1 Linux runs (both with `--metrics`, without the HVF diagnostic
+feature) score
+[4161/12329 for the frozen control](https://browser.geekbench.com/v6/cpu/19405575)
+and [4136/12881 for the final build](https://browser.geekbench.com/v6/cpu/19405649):
+single -0.6%, multi +4.5%. PDF multi rises from 7682 to 11651 (+51.7%).
+HTML5 multi is 10844 versus 11675 (-7.1%); Photo Library remains essentially
+unchanged. This is one complete sample per variant, not a confidence interval,
+and does not establish a uniform workload improvement. Earlier experimental
+scores are retained separately from the final capacity/accounting-correct build.
+
+The final suite coalesces 55,315 additional mapping calls. Quiescence costs
+194 ms, Linux calls 1501 ms and exclusive CPU 810 ms across the complete suite;
+phase durations can overlap and do not explain all remaining application time.
+Full per-workload scores, fixed-work repetitions, binary hashes, rejected
+experiments and scoped validation are in `vm_checkpoint_followup_2026_10_29`
+in [mac-geekbench.json](../validation/mac-geekbench.json). Paging acceptance now
+retains RSS/footprint as observations: its former immediate 24 MiB RSS-reduction
+assertion also failed on the frozen old runner under the existing native pager.
+Complete bytes, shared atomics, fork/COW and actual withdrawal/page-in activity
+remain gates; no production memory/pager behavior changed in that correction.
