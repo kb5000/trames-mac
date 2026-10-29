@@ -542,6 +542,54 @@ impl Executor {
         diagnostics::end(diagnostics::Work::Sync, measured);
         Ok(())
     }
+    #[inline(never)]
+    fn try_native_range(&mut self, memory: &View, va: u64) -> Result<bool, Error> {
+        let error = std::cell::Cell::new(None);
+        // SAFETY: same hardware-only actor/retained canonical owner contract.
+        let range = unsafe {
+            memory.export_hardware_range(va, || {
+                self.machine.allocate_range().map_err(|e| {
+                    error.set(Some(e));
+                    MemoryError::BackingIo(5)
+                })
+            })
+        }
+        .map_err(|e| error.take().unwrap_or(Error::Memory(e)))?;
+        if let Some(storage) = range {
+            let base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
+            // Promotion after a partial permission edit can leave sparse
+            // leaf translations in this CPU's root. Withdraw those aliases
+            // before replacing the leaf table with one uniform block.
+            let leaves: Vec<_> = self.spaces[&self.active]
+                .pages
+                .range(base..base + trames_memory::HARDWARE_MAPPING_CHUNK_SIZE)
+                .map(|(&va, _)| va)
+                .collect();
+            for address in leaves {
+                self.pte(address, 0, 0)?;
+                let space = self.spaces.get_mut(&self.active).unwrap();
+                let old = space.remove_page(address).unwrap();
+                space.track_write(address, old.write, None);
+            }
+            check(unsafe {
+                trames_hvf_block(self.host.as_ptr(), base, storage.physical_address(), 3)
+            })?;
+            self.spaces.get_mut(&self.active).unwrap().blocks.insert(
+                base,
+                Block {
+                    storage: Arc::downgrade(&storage),
+                    version: memory.hardware_mapping_chunk_version(base),
+                },
+            );
+            memory.mark_hardware_private_writes();
+            #[cfg(test)]
+            {
+                self.translations.blocks += 1;
+            }
+            return Ok(true);
+        }
+        Ok(false)
+    }
     fn fault(&mut self, memory: &View, event: &HostExit) -> Result<(), Error> {
         #[cfg(feature = "diagnostics")]
         diagnostics::count(diagnostics::Count::Fault, 1);
@@ -585,52 +633,13 @@ impl Executor {
             return Err(Error::Unsupported("reserved exception adapter address"));
         }
         let block_base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
-        if access != Access::Execute && block_base != VECTOR_VA && memory.hardware_ranges_enabled()
+        if access != Access::Execute
+            && block_base != VECTOR_VA
+            && memory.hardware_ranges_enabled()
+            && self.machine.native_ranges_enabled()
+            && self.try_native_range(memory, va)?
         {
-            let error = std::cell::Cell::new(None);
-            // SAFETY: same hardware-only actor/retained canonical owner contract.
-            let range = unsafe {
-                memory.export_hardware_range(va, || {
-                    self.machine.allocate_range().map_err(|e| {
-                        error.set(Some(e));
-                        MemoryError::BackingIo(5)
-                    })
-                })
-            }
-            .map_err(|e| error.take().unwrap_or(Error::Memory(e)))?;
-            if let Some(storage) = range {
-                let base = va & !(trames_memory::HARDWARE_MAPPING_CHUNK_SIZE - 1);
-                // Promotion after a partial permission edit can leave sparse
-                // leaf translations in this CPU's root. Withdraw those aliases
-                // before replacing the leaf table with one uniform block.
-                let leaves: Vec<_> = self.spaces[&self.active]
-                    .pages
-                    .range(base..base + trames_memory::HARDWARE_MAPPING_CHUNK_SIZE)
-                    .map(|(&va, _)| va)
-                    .collect();
-                for address in leaves {
-                    self.pte(address, 0, 0)?;
-                    let space = self.spaces.get_mut(&self.active).unwrap();
-                    let old = space.remove_page(address).unwrap();
-                    space.track_write(address, old.write, None);
-                }
-                check(unsafe {
-                    trames_hvf_block(self.host.as_ptr(), base, storage.physical_address(), 3)
-                })?;
-                self.spaces.get_mut(&self.active).unwrap().blocks.insert(
-                    base,
-                    Block {
-                        storage: Arc::downgrade(&storage),
-                        version: memory.hardware_mapping_chunk_version(base),
-                    },
-                );
-                memory.mark_hardware_private_writes();
-                #[cfg(test)]
-                {
-                    self.translations.blocks += 1;
-                }
-                return Ok(());
-            }
+            return Ok(());
         }
         memory.check(event.address, 1, access)?;
         // SAFETY: the scheduler admits every View in hardware mode and joins

@@ -9,6 +9,7 @@ use trames_memory::{HardwareRange, HardwareStorage, HardwareWait, SharedMapping}
 
 unsafe extern "C" {
     fn trames_hvf_pressure_supported() -> i32;
+    fn trames_hvf_populated(memory: *mut c_void, length: usize, groups: *mut u64) -> i32;
     fn trames_hvf_take_pressure() -> u32;
     fn trames_hvf_vm_create(error: *mut i32) -> *mut c_void;
     fn trames_hvf_vm_destroy(vm: *mut c_void);
@@ -213,6 +214,9 @@ impl Machine {
         }
         Ok(slot)
     }
+    pub fn native_ranges_enabled(&self) -> bool {
+        RESIDENT_LIMIT.load(Ordering::Relaxed) == u64::MAX
+    }
     pub fn allocate_range(self: &Arc<Self>) -> Result<Arc<dyn HardwareRange>, Error> {
         const LENGTH: usize = 1 << 21;
         let pointer = unsafe {
@@ -242,7 +246,7 @@ impl Machine {
             pointer: allocation.pointer,
             gpa,
             external: None,
-            native: Some(allocation),
+            native: Some(Box::new(allocation)),
             _arena: None,
             length: LENGTH,
             machine: Arc::downgrade(self),
@@ -260,9 +264,14 @@ impl Machine {
             .lock()
             .unwrap()
             .insert(gpa, Arc::downgrade(&block));
-        Ok(Arc::new(NativeRange {
+        let range = Arc::new(NativeRange {
             slot: Slot { block, index: 0 },
-        }))
+        });
+        let limit = RESIDENT_LIMIT.load(Ordering::Relaxed);
+        if limit != u64::MAX {
+            self.trim_to(limit, gpa)?;
+        }
+        Ok(range)
     }
     fn physical(&self, address: u64) -> Option<Arc<Physical>> {
         self.blocks
@@ -729,7 +738,7 @@ struct Physical {
     pointer: NonNull<u8>,
     gpa: u64,
     external: Option<SharedMapping>,
-    native: Option<NativeAllocation>,
+    native: Option<Box<NativeAllocation>>,
     _arena: Option<ArenaSlot>,
     length: usize,
     machine: Weak<Machine>,
@@ -835,6 +844,18 @@ unsafe impl HardwareStorage for NativeRange {
 }
 // SAFETY: all bytes are demand-zero/stable; mincore reads only host metadata.
 unsafe impl HardwareRange for NativeRange {
+    fn populated_pages(&self) -> Vec<usize> {
+        let mut groups = [0u64; 2];
+        if unsafe { trames_hvf_populated(self.pointer().cast(), self.len(), groups.as_mut_ptr()) }
+            != 0
+        {
+            return (0..self.len()).step_by(PAGE_SIZE as usize).collect();
+        }
+        (0..128)
+            .filter(|&i| groups[i / 64] & (1 << (i % 64)) != 0)
+            .flat_map(|i| (i * 16384..(i + 1) * 16384).step_by(PAGE_SIZE as usize))
+            .collect()
+    }
     fn len(&self) -> usize {
         self.slot.block.length
     }

@@ -1358,6 +1358,7 @@ fn native_range_has_one_fault_for_all_512_pages_and_sparse_real_residency() {
         0,
         "address registration does not populate data"
     );
+    assert!(unpopulated.populated_pages().is_empty());
     drop(unpopulated);
     native_step(&mut executor, &mut memory, 0x200000);
     assert!(
@@ -1507,4 +1508,100 @@ fn native_blocks_promote_after_sparse_leaf_permission_exceptions() {
         memory.read_array::<8>(0x210000).unwrap(),
         1u64.to_le_bytes()
     );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn explicit_resident_target_retains_granular_page_admission() {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            set_resident_limit(None);
+        }
+    }
+    let _reset = Reset;
+    set_resident_limit(Some(8 << 20));
+    let mut executor = Executor::new().unwrap();
+    let mut memory = native_memory();
+    memory.map(0x400000, 14 << 20, Permissions::RW).unwrap();
+    for i in 0..4096 {
+        native_step(&mut executor, &mut memory, 0x200000 + i * PAGE_SIZE);
+    }
+    assert_eq!(
+        executor.translations.blocks, 0,
+        "an explicit working set keeps 16KiB reclamation granules"
+    );
+    assert!(paging_stats().mapped_bytes <= 8 << 20);
+    assert!(paging_stats().page_out_bytes > 0);
+    native_step(&mut executor, &mut memory, 0x200000);
+    assert_eq!(
+        memory.read_array::<8>(0x200000).unwrap(),
+        2u64.to_le_bytes()
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn sparse_native_fork_describes_only_populated_host_granules() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = native_memory();
+    memory.map(0x400000, 128 << 20, Permissions::RW).unwrap();
+    native_step(&mut executor, &mut memory, 0x200000);
+    native_step(&mut executor, &mut memory, 0x4200000);
+    assert!(memory.resident_bytes() < 128 << 10);
+    reclaim(u64::MAX).unwrap(); // nonresident registrations must not lose data
+    let mut child = memory.clone();
+    assert!(
+        child.resident_bytes() < 128 << 10,
+        "fork cannot charge untouched 2MiB extents"
+    );
+    assert_eq!(child.read_array::<8>(0x200000).unwrap(), 1u64.to_le_bytes());
+    assert_eq!(
+        child.read_array::<8>(0x4200000).unwrap(),
+        1u64.to_le_bytes()
+    );
+    child.write_array(0x200000, 99u64.to_le_bytes()).unwrap();
+    native_step(&mut executor, &mut memory, 0x200000);
+    assert_eq!(
+        memory.read_array::<8>(0x200000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    assert_eq!(
+        child.read_array::<8>(0x200000).unwrap(),
+        99u64.to_le_bytes()
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn native_extents_rebind_without_retaining_the_old_vm_range_or_losing_accounting() {
+    let mut first = Executor::new().unwrap();
+    let mut memory = native_memory();
+    native_step(&mut first, &mut memory, 0x200000);
+    native_step(&mut first, &mut memory, 0x3ff000);
+    let before = memory.resident_bytes();
+    drop(first); // no Machine owner: the next executor creates a new VM
+    let mut next = Executor::new().unwrap();
+    for page in [0, 1, 2, 3, 508, 509, 510, 511] {
+        native_step(&mut next, &mut memory, 0x200000 + page * PAGE_SIZE);
+    }
+    assert_eq!(
+        memory.resident_bytes(),
+        before,
+        "new physical pages remain accounted after coarse retirement"
+    );
+    assert_eq!(
+        memory.read_array::<8>(0x200000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    assert_eq!(
+        memory.read_array::<8>(0x3ff000).unwrap(),
+        2u64.to_le_bytes()
+    );
+    assert_eq!(
+        next.machine.stats().native_range_bytes,
+        0,
+        "old extents fall back to canonical pages"
+    );
+    assert!(memory.resident_bytes() > 2 * PAGE_SIZE as usize);
 }

@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
 #include <os/object.h>
 #include <unistd.h>
 
@@ -363,6 +365,20 @@ int trames_hvf_unmap(struct host *h, uint64_t gpa, size_t size) {
     (void)h; return (int)hv_vm_unmap(gpa,size);
 }
 void trames_hvf_icache(void *memory, size_t size) { sys_icache_invalidate(memory,size); }
+// Fork/rebinding metadata only. Include every nonzero disposition, especially
+// PAGED_OUT/compressed contents. mincore alone would silently lose those bytes.
+// Failure asks the caller to retain the conservative complete-range fallback.
+int trames_hvf_populated(void *memory, size_t size, uint64_t *groups) {
+    size_t granule=(size_t)getpagesize();
+    if (granule!=16384 || size!=(1u<<21)) return -1;
+    groups[0]=0; groups[1]=0;
+    for (unsigned i=0;i<128;i++) {
+        integer_t disposition=0, references=0;
+        if (mach_vm_page_query(mach_task_self(),(mach_vm_address_t)memory+i*granule,&disposition,&references)!=KERN_SUCCESS) return -1;
+        if (disposition) groups[i/64]|=UINT64_C(1)<<(i%64);
+    }
+    return 0;
+}
 int trames_hvf_protect(uint64_t gpa, size_t size, unsigned flags) {
     return (int)hv_vm_protect(gpa,size,flags);
 }
