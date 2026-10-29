@@ -1575,3 +1575,140 @@ real Linux threaded clock/fork/exec fixture with 12 reports and zero SDK errors.
 No common runtime changes are included; both product pins remain at 8fb524e, so
 previous unchanged shared-runtime/iOS checks are reused. The restored production
 binary retains the already completed baseline checks and clean benchmark runs.
+
+
+## Translation reuse and pause-frequency experiments (2026-10-29)
+
+The next experiments target the two mechanisms identified above: repeated
+per-vCPU translation population, and pauses around mapping changes. Three
+prototypes were implemented and measured, then removed. The installed signed
+CLI/app remains byte-for-byte at SHA-256
+`846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e`;
+the default exclusive window remains 250 microseconds and both product runtime
+pins remain `8fb524ec5212f7d7dd5783ebcbe93543d702a6e9`.
+
+The translation prototype shares immutable hardware L3 tables across vCPUs.
+Each vCPU retains private upper tables, ASID and EL1 context, and copies a shared
+leaf table before editing it. Import validates current canonical storage IDs,
+GPAs and permission bits, and creates current view write tokens. Cached templates
+hold weak guest-storage references, so they do not keep guest RAM resident.
+Refcount synchronization protects actual table ownership; it does not strengthen
+ordinary guest memory ordering or serialize guest algorithms. Cross-thread
+execution, producer destruction, permission revocation on both CPUs, VA/GPA reuse,
+COW and release tests pass: 49 signed HVF tests plus one application pressure
+test, with workspace/all-targets Clippy also passing.
+
+This tests actual cross-vCPU hardware leaf reuse, but retains per-vCPU upper
+tables and validation/preparation work. It does **not** implement a fully shared,
+mutable per-mm root and metadata structure. Its outcome does not rule out that
+larger architecture; that architecture remains unmeasured.
+
+Six complete normal Geekbench runs use A/B/C/C/B/A order: current baseline,
+immutable L3 sharing, and a 1ms exclusive window. All use 12 CPUs, host-managed
+RAM, metrics enabled and HVF diagnostics disabled, without a window, CI VM,
+compiler, test or sampler running concurrently. Thermal state is zero and
+low-power mode off before and after every run. These are arithmetic means of
+two observations per variant, not confidence intervals. All 16 component scores,
+hashes and public links are retained under
+`translation_pause_followup_2026_10_29` in
+[mac-geekbench.json](../validation/mac-geekbench.json).
+
+| Measure | Current 250us | Shared immutable L3 | Change | 1000us window | Change |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Total single | 4146.5 | 4105.0 | -1.0% | 4105.5 | -1.0% |
+| Total multi | 13099.5 | 13107.0 | +0.1% | 13074.0 | -0.2% |
+| HTML5 Browser single | 4458.0 | 4380.5 | -1.7% | 4459.0 | +0.0% |
+| HTML5 Browser multi | 11072.5 | 11679.0 | +5.5% | 11267.0 | +1.8% |
+| PDF Renderer multi | 11707.0 | 12446.0 | +6.3% | 13283.5 | +13.5% |
+| Photo Library multi | 10163.5 | 11378.0 | +12.0% | 10192.0 | +0.3% |
+| Object Detection multi | 13084.5 | 12236.5 | -6.5% | 12377.0 | -5.4% |
+| HDR multi | 18707.5 | 16738.0 | -10.5% | 17371.0 | -7.1% |
+
+Public baseline runs are [4165/13109](https://browser.geekbench.com/v6/cpu/19406562)
+and [4128/13090](https://browser.geekbench.com/v6/cpu/19406643); shared L3 runs are
+[4137/13068](https://browser.geekbench.com/v6/cpu/19406583) and
+[4073/13146](https://browser.geekbench.com/v6/cpu/19406630); 1ms runs are
+[4092/12904](https://browser.geekbench.com/v6/cpu/19406600) and
+[4119/13244](https://browser.geekbench.com/v6/cpu/19406617). There is a measured
+HTML5/Photo Library improvement in the shared-table means, but a flat aggregate
+and lower means elsewhere. These samples do not justify enabling that added
+ownership/validation machinery by default.
+
+Fixed workloads isolate the mapping path. Each case has five shuffled normal
+release observations at 1/6/12 CPUs, with exact checksums and no timing threshold.
+`memory-paths.c reuse` prewarms a read-only VMA in the parent, then runs 2x CPU
+threads with a 4KiB stride. This excludes the existing uniform RW 2MiB-block
+path. At 12 CPUs, shared L3 reduces median work from 7.964ms to 7.738ms (-2.8%),
+while full process time rises from 37.981ms to 38.557ms (+1.5%). A narrower work
+timer alone would overstate the benefit.
+
+`churn` uses one thread per CPU, each performing 60 disjoint mmap/touch/verify/
+munmap cycles of 64 pages. Shortening the existing exclusive window increases
+checkpoint frequency. In one 12-CPU comparison, 250us/32us/0us produce median
+261/642/642 checkpoint groups, 14.437/34.426/33.662ms quiescence and
+106.051/139.631/135.633ms work. Removing the window makes this workload slower.
+In a separate matched comparison, extending it to 500us/1000us reduces checkpoint
+groups and improves mapping throughput:
+
+| Fixed workload at 12 CPUs (median) | Current 250us | 500us | 1000us |
+| --- | ---: | ---: | ---: |
+| Churn work, ms | 107.407 | 91.879 | 86.095 |
+| Churn checkpoint groups | 256 | 149 | 92 |
+| Churn quiescence, ms | 15.364 | 8.455 | 5.699 |
+| Mapping beside compute peers, ms | 38.437 | 29.808 | 26.125 |
+| Same compute-peer workload wall time, ms | 288.147 | 279.881 | 276.489 |
+
+The 1ms window improves churn work by 19.8% and the concurrent workload's mapping
+portion by 32.0%, but its whole-workload wall time improves only 4.0%. The shared
+deadline bounds additional guest execution while peers are paused; mapping
+syscalls and setup can take longer. Full Geekbench aggregate performance is flat,
+so the production window stays at 250us. This experiment changes only the window
+constant; the interpreter's exact-instruction behavior is unchanged.
+
+A third prototype coalesces final private-arena physical retirements into
+adjacent HVF unmaps, keeping the 250us window. A scoped per-thread transaction
+retains slots and the VM until synchronous unmap completes; GPAs cannot be reused
+early. It merges only exact adjacency in the same VM and never bridges a live
+hole. External/native mappings, host-borrow and page-out transitions retain their
+original behavior. All mapped bits in a run are cleared before releasing slots.
+Tests cover a live hole, reuse, nesting and unwinding: 50 signed HVF tests plus
+one application pressure test and workspace/all-targets Clippy pass.
+
+This prototype improves single-CPU churn median work from 8.610ms to 7.925ms
+(-8.0%), but six CPUs regress from 44.804ms to 46.957ms (+4.8%) and 12 CPUs are
+flat (105.201ms to 104.888ms, -0.3%). Compute-peer total wall time is also flat
+at 12 CPUs (281.367ms to 281.395ms). Separate diagnostic-only captures show why
+the call reduction does not scale uniformly: single CPU unmap calls fall from
+960 to 60, while the 12-CPU prototype queues 1331 private groups into 1058 unmap
+batches, only about 1.26 groups per batch. Scheduling changes group counts, so
+these are attribution captures rather than paired timing results. Diagnostic
+per-operation clocks are excluded from all performance comparisons. This
+prototype and its temporary common-runtime hook are removed too.
+
+Across the three campaigns, all 270 fixed-work observations pass checksums.
+The new C fixture also passes native AArch64 Linux oracles; the existing
+`vm-checkpoint.c` supplies the compute-peer fixture. A reusable local harness
+records shuffled order, hashes, every observation, guest/host durations and
+checkpoint metrics, with an independent finite-work checksum oracle:
+
+```sh
+# Build these fixtures with an AArch64 Linux compiler, with assertions enabled.
+cc -static -O2 -Wall -Wextra -Werror -pthread tests/fixtures/memory-paths.c -o /path/to/memory-paths
+cc -static -O2 -Wall -Wextra -Werror -pthread tests/fixtures/vm-checkpoint.c -o /path/to/vm-checkpoint
+# Run the following on the Mac with already signed, normal release executables.
+python3 tests/integration/mac-memory-paths.py \
+  --fixture /path/to/memory-paths --mapping-pause /path/to/vm-checkpoint \
+  --variant baseline=/path/to/baseline-runner \
+  --variant candidate=/path/to/candidate-runner \
+  --cpus 1 6 12 --modes reuse churn peers --repetitions 5 \
+  --output target/memory-path-comparison
+```
+
+The optional `--power-probe` executable emits `thermal_state` and `low_power`
+JSON before and after the campaign. Keep other builds, tests, VMs and samplers
+stopped. Guest `work_ns` begins before barrier release; `total_ns` includes
+preparation and thread creation/join, but excludes final shared-array munmap.
+Host duration includes complete process startup and teardown. The harness makes
+no timing assertions and does not upload results. It is an opt-in experiment,
+not an addition to routine CI. Existing production/shared-runtime/iOS checks are
+reused because those sources and the installed executable are unchanged.

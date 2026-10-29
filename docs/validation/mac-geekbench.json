@@ -14168,5 +14168,4551 @@
         "constraint": "Reuse one valid memory/permission snapshot without reading or charging untouched mappings; retain hardware memory ordering and avoid global algorithm locks."
       }
     ]
+  },
+  "translation_pause_followup_2026_10_29": {
+    "date": "2026-10-29",
+    "experiment_base": {
+      "heads": {
+        "mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+        "runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "ipad": "6ae5259a6deb29363534896443f21ba522d8bab6"
+      },
+      "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+      "preserved_user_edits_verified": true
+    },
+    "geekbench_method": "Six complete valid Geekbench 6.7.1 Preview Linux AArch64 samples in A/B/C/C/B/A order: baseline, immutable L3 sharing, 1ms checkpoint lease. Two samples per variant; 12 CPUs, host-managed memory, same package/store, signed normal release, metrics enabled, HVF diagnostics disabled, no PTY/windows. No concurrent compiler, CI VM, test or sampler. Power/thermal checked before and after each run. Two observations are not confidence intervals; report every component and regression. Native reference is earlier macOS and uses different OS binaries/libraries.",
+    "geekbench": {
+      "baseline": [
+        {
+          "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+          "variant": "trames-automib-12cpu-mempaths-control",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793271944.975639,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 242.681556166,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406562"
+          ],
+          "scores": {
+            "single": 4165,
+            "multi": 13109
+          },
+          "components": {
+            "File Compression": {
+              "single": 3354,
+              "multi": 8941
+            },
+            "Navigation": {
+              "single": 3315,
+              "multi": 14565
+            },
+            "HTML5 Browser": {
+              "single": 4451,
+              "multi": 11385
+            },
+            "PDF Renderer": {
+              "single": 4297,
+              "multi": 11171
+            },
+            "Photo Library": {
+              "single": 3836,
+              "multi": 10053
+            },
+            "Clang": {
+              "single": 4984,
+              "multi": 24786
+            },
+            "Text Processing": {
+              "single": 3630,
+              "multi": 3701
+            },
+            "Asset Compression": {
+              "single": 3650,
+              "multi": 17690
+            },
+            "Object Detection": {
+              "single": 6611,
+              "multi": 13338
+            },
+            "Background Blur": {
+              "single": 4302,
+              "multi": 13505
+            },
+            "Horizon Detection": {
+              "single": 3943,
+              "multi": 20872
+            },
+            "Object Remover": {
+              "single": 5089,
+              "multi": 15478
+            },
+            "HDR": {
+              "single": 4363,
+              "multi": 18874
+            },
+            "Photo Filter": {
+              "single": 4424,
+              "multi": 12066
+            },
+            "Ray Tracer": {
+              "single": 3663,
+              "multi": 22819
+            },
+            "Structure from Motion": {
+              "single": 3861,
+              "multi": 15544
+            }
+          }
+        },
+        {
+          "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+          "variant": "trames-automib-12cpu-mempaths-control-repeat",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793273162.114793,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 243.25004800000002,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406643"
+          ],
+          "scores": {
+            "single": 4128,
+            "multi": 13090
+          },
+          "components": {
+            "File Compression": {
+              "single": 3284,
+              "multi": 9405
+            },
+            "Navigation": {
+              "single": 3225,
+              "multi": 13979
+            },
+            "HTML5 Browser": {
+              "single": 4465,
+              "multi": 10760
+            },
+            "PDF Renderer": {
+              "single": 4159,
+              "multi": 12243
+            },
+            "Photo Library": {
+              "single": 3752,
+              "multi": 10274
+            },
+            "Clang": {
+              "single": 4936,
+              "multi": 24744
+            },
+            "Text Processing": {
+              "single": 3799,
+              "multi": 3685
+            },
+            "Asset Compression": {
+              "single": 3581,
+              "multi": 18321
+            },
+            "Object Detection": {
+              "single": 6439,
+              "multi": 12831
+            },
+            "Background Blur": {
+              "single": 4292,
+              "multi": 12784
+            },
+            "Horizon Detection": {
+              "single": 4005,
+              "multi": 20627
+            },
+            "Object Remover": {
+              "single": 5026,
+              "multi": 15422
+            },
+            "HDR": {
+              "single": 4295,
+              "multi": 18541
+            },
+            "Photo Filter": {
+              "single": 4758,
+              "multi": 12215
+            },
+            "Ray Tracer": {
+              "single": 3333,
+              "multi": 21475
+            },
+            "Structure from Motion": {
+              "single": 3936,
+              "multi": 15939
+            }
+          }
+        }
+      ],
+      "shared": [
+        {
+          "runner_sha256": "a9919063966161a50ffeefad362e56b7ce37edd31740c07ddd39c30b34a133e0",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae+immutable-l3",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+          "variant": "trames-automib-12cpu-mempaths-shared",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793272187.6967402,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 243.404098417,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406583"
+          ],
+          "scores": {
+            "single": 4137,
+            "multi": 13068
+          },
+          "components": {
+            "File Compression": {
+              "single": 3337,
+              "multi": 9231
+            },
+            "Navigation": {
+              "single": 3319,
+              "multi": 14817
+            },
+            "HTML5 Browser": {
+              "single": 4321,
+              "multi": 11483
+            },
+            "PDF Renderer": {
+              "single": 4266,
+              "multi": 12687
+            },
+            "Photo Library": {
+              "single": 3820,
+              "multi": 11742
+            },
+            "Clang": {
+              "single": 4841,
+              "multi": 24763
+            },
+            "Text Processing": {
+              "single": 3809,
+              "multi": 3638
+            },
+            "Asset Compression": {
+              "single": 3652,
+              "multi": 17352
+            },
+            "Object Detection": {
+              "single": 6463,
+              "multi": 11873
+            },
+            "Background Blur": {
+              "single": 4217,
+              "multi": 13295
+            },
+            "Horizon Detection": {
+              "single": 3935,
+              "multi": 19913
+            },
+            "Object Remover": {
+              "single": 4810,
+              "multi": 15798
+            },
+            "HDR": {
+              "single": 4336,
+              "multi": 15790
+            },
+            "Photo Filter": {
+              "single": 4465,
+              "multi": 11397
+            },
+            "Ray Tracer": {
+              "single": 3663,
+              "multi": 22111
+            },
+            "Structure from Motion": {
+              "single": 3913,
+              "multi": 15205
+            }
+          }
+        },
+        {
+          "runner_sha256": "a9919063966161a50ffeefad362e56b7ce37edd31740c07ddd39c30b34a133e0",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae+immutable-l3",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+          "variant": "trames-automib-12cpu-mempaths-shared-repeat",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793272918.073626,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 243.996596583,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406630"
+          ],
+          "scores": {
+            "single": 4073,
+            "multi": 13146
+          },
+          "components": {
+            "File Compression": {
+              "single": 3248,
+              "multi": 8968
+            },
+            "Navigation": {
+              "single": 3225,
+              "multi": 14020
+            },
+            "HTML5 Browser": {
+              "single": 4440,
+              "multi": 11875
+            },
+            "PDF Renderer": {
+              "single": 3990,
+              "multi": 12205
+            },
+            "Photo Library": {
+              "single": 3553,
+              "multi": 11014
+            },
+            "Clang": {
+              "single": 4888,
+              "multi": 24191
+            },
+            "Text Processing": {
+              "single": 3775,
+              "multi": 3625
+            },
+            "Asset Compression": {
+              "single": 3604,
+              "multi": 18096
+            },
+            "Object Detection": {
+              "single": 6504,
+              "multi": 12600
+            },
+            "Background Blur": {
+              "single": 4240,
+              "multi": 13202
+            },
+            "Horizon Detection": {
+              "single": 3909,
+              "multi": 19261
+            },
+            "Object Remover": {
+              "single": 4964,
+              "multi": 16075
+            },
+            "HDR": {
+              "single": 4292,
+              "multi": 17686
+            },
+            "Photo Filter": {
+              "single": 4250,
+              "multi": 13118
+            },
+            "Ray Tracer": {
+              "single": 3582,
+              "multi": 21397
+            },
+            "Structure from Motion": {
+              "single": 3870,
+              "multi": 15720
+            }
+          }
+        }
+      ],
+      "lease1000": [
+        {
+          "runner_sha256": "47d3db6cdab652f20fc261c6d0fafc39990349f423c646355abb19cef083dbf3",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9+vm-window-1000us",
+          "variant": "trames-automib-12cpu-mempaths-lease1000",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793272431.14019,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 243.907234416,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406600"
+          ],
+          "scores": {
+            "single": 4092,
+            "multi": 12904
+          },
+          "components": {
+            "File Compression": {
+              "single": 3283,
+              "multi": 9287
+            },
+            "Navigation": {
+              "single": 3271,
+              "multi": 13636
+            },
+            "HTML5 Browser": {
+              "single": 4449,
+              "multi": 10833
+            },
+            "PDF Renderer": {
+              "single": 4044,
+              "multi": 12617
+            },
+            "Photo Library": {
+              "single": 3779,
+              "multi": 10264
+            },
+            "Clang": {
+              "single": 4757,
+              "multi": 23516
+            },
+            "Text Processing": {
+              "single": 3798,
+              "multi": 3712
+            },
+            "Asset Compression": {
+              "single": 3616,
+              "multi": 17932
+            },
+            "Object Detection": {
+              "single": 6572,
+              "multi": 11855
+            },
+            "Background Blur": {
+              "single": 4262,
+              "multi": 13553
+            },
+            "Horizon Detection": {
+              "single": 3810,
+              "multi": 20199
+            },
+            "Object Remover": {
+              "single": 4948,
+              "multi": 16056
+            },
+            "HDR": {
+              "single": 4311,
+              "multi": 16703
+            },
+            "Photo Filter": {
+              "single": 4314,
+              "multi": 11685
+            },
+            "Ray Tracer": {
+              "single": 3437,
+              "multi": 22207
+            },
+            "Structure from Motion": {
+              "single": 3874,
+              "multi": 15369
+            }
+          }
+        },
+        {
+          "runner_sha256": "47d3db6cdab652f20fc261c6d0fafc39990349f423c646355abb19cef083dbf3",
+          "code_mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+          "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9+vm-window-1000us",
+          "variant": "trames-automib-12cpu-mempaths-lease1000-repeat",
+          "memory_mib": "auto",
+          "cpus": 12,
+          "power_before": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "start_unix": 1793272675.091292,
+          "upload_authorized": true,
+          "diagnostics": false,
+          "exit": 0,
+          "seconds": 242.93720345900002,
+          "power_after": {
+            "thermal_state": 0,
+            "low_power": false
+          },
+          "public_urls": [
+            "https://browser.geekbench.com/v6/cpu/19406617"
+          ],
+          "scores": {
+            "single": 4119,
+            "multi": 13244
+          },
+          "components": {
+            "File Compression": {
+              "single": 3302,
+              "multi": 8842
+            },
+            "Navigation": {
+              "single": 3279,
+              "multi": 14321
+            },
+            "HTML5 Browser": {
+              "single": 4469,
+              "multi": 11701
+            },
+            "PDF Renderer": {
+              "single": 4084,
+              "multi": 13950
+            },
+            "Photo Library": {
+              "single": 3749,
+              "multi": 10120
+            },
+            "Clang": {
+              "single": 4771,
+              "multi": 24662
+            },
+            "Text Processing": {
+              "single": 3694,
+              "multi": 3769
+            },
+            "Asset Compression": {
+              "single": 3590,
+              "multi": 17028
+            },
+            "Object Detection": {
+              "single": 6478,
+              "multi": 12899
+            },
+            "Background Blur": {
+              "single": 4318,
+              "multi": 12991
+            },
+            "Horizon Detection": {
+              "single": 3964,
+              "multi": 20349
+            },
+            "Object Remover": {
+              "single": 5046,
+              "multi": 15878
+            },
+            "HDR": {
+              "single": 4351,
+              "multi": 18039
+            },
+            "Photo Filter": {
+              "single": 4589,
+              "multi": 13482
+            },
+            "Ray Tracer": {
+              "single": 3603,
+              "multi": 21249
+            },
+            "Structure from Motion": {
+              "single": 3825,
+              "multi": 15604
+            }
+          }
+        }
+      ]
+    },
+    "comparison": [
+      {
+        "workload": "Total",
+        "single": {
+          "baseline": 4146.5,
+          "shared": 4105,
+          "lease1000": 4105.5,
+          "shared_change_percent": -1.001,
+          "lease1000_change_percent": -0.989
+        },
+        "multi": {
+          "baseline": 13099.5,
+          "shared": 13107,
+          "lease1000": 13074,
+          "shared_change_percent": 0.057,
+          "lease1000_change_percent": -0.195
+        }
+      },
+      {
+        "workload": "File Compression",
+        "single": {
+          "baseline": 3319,
+          "shared": 3292.5,
+          "lease1000": 3292.5,
+          "shared_change_percent": -0.798,
+          "lease1000_change_percent": -0.798
+        },
+        "multi": {
+          "baseline": 9173,
+          "shared": 9099.5,
+          "lease1000": 9064.5,
+          "shared_change_percent": -0.801,
+          "lease1000_change_percent": -1.183
+        }
+      },
+      {
+        "workload": "Navigation",
+        "single": {
+          "baseline": 3270,
+          "shared": 3272,
+          "lease1000": 3275,
+          "shared_change_percent": 0.061,
+          "lease1000_change_percent": 0.153
+        },
+        "multi": {
+          "baseline": 14272,
+          "shared": 14418.5,
+          "lease1000": 13978.5,
+          "shared_change_percent": 1.026,
+          "lease1000_change_percent": -2.056
+        }
+      },
+      {
+        "workload": "HTML5 Browser",
+        "single": {
+          "baseline": 4458,
+          "shared": 4380.5,
+          "lease1000": 4459,
+          "shared_change_percent": -1.738,
+          "lease1000_change_percent": 0.022
+        },
+        "multi": {
+          "baseline": 11072.5,
+          "shared": 11679,
+          "lease1000": 11267,
+          "shared_change_percent": 5.478,
+          "lease1000_change_percent": 1.757
+        }
+      },
+      {
+        "workload": "PDF Renderer",
+        "single": {
+          "baseline": 4228,
+          "shared": 4128,
+          "lease1000": 4064,
+          "shared_change_percent": -2.365,
+          "lease1000_change_percent": -3.879
+        },
+        "multi": {
+          "baseline": 11707,
+          "shared": 12446,
+          "lease1000": 13283.5,
+          "shared_change_percent": 6.312,
+          "lease1000_change_percent": 13.466
+        }
+      },
+      {
+        "workload": "Photo Library",
+        "single": {
+          "baseline": 3794,
+          "shared": 3686.5,
+          "lease1000": 3764,
+          "shared_change_percent": -2.833,
+          "lease1000_change_percent": -0.791
+        },
+        "multi": {
+          "baseline": 10163.5,
+          "shared": 11378,
+          "lease1000": 10192,
+          "shared_change_percent": 11.95,
+          "lease1000_change_percent": 0.28
+        }
+      },
+      {
+        "workload": "Clang",
+        "single": {
+          "baseline": 4960,
+          "shared": 4864.5,
+          "lease1000": 4764,
+          "shared_change_percent": -1.925,
+          "lease1000_change_percent": -3.952
+        },
+        "multi": {
+          "baseline": 24765,
+          "shared": 24477,
+          "lease1000": 24089,
+          "shared_change_percent": -1.163,
+          "lease1000_change_percent": -2.73
+        }
+      },
+      {
+        "workload": "Text Processing",
+        "single": {
+          "baseline": 3714.5,
+          "shared": 3792,
+          "lease1000": 3746,
+          "shared_change_percent": 2.086,
+          "lease1000_change_percent": 0.848
+        },
+        "multi": {
+          "baseline": 3693,
+          "shared": 3631.5,
+          "lease1000": 3740.5,
+          "shared_change_percent": -1.665,
+          "lease1000_change_percent": 1.286
+        }
+      },
+      {
+        "workload": "Asset Compression",
+        "single": {
+          "baseline": 3615.5,
+          "shared": 3628,
+          "lease1000": 3603,
+          "shared_change_percent": 0.346,
+          "lease1000_change_percent": -0.346
+        },
+        "multi": {
+          "baseline": 18005.5,
+          "shared": 17724,
+          "lease1000": 17480,
+          "shared_change_percent": -1.563,
+          "lease1000_change_percent": -2.919
+        }
+      },
+      {
+        "workload": "Object Detection",
+        "single": {
+          "baseline": 6525,
+          "shared": 6483.5,
+          "lease1000": 6525,
+          "shared_change_percent": -0.636,
+          "lease1000_change_percent": 0.0
+        },
+        "multi": {
+          "baseline": 13084.5,
+          "shared": 12236.5,
+          "lease1000": 12377,
+          "shared_change_percent": -6.481,
+          "lease1000_change_percent": -5.407
+        }
+      },
+      {
+        "workload": "Background Blur",
+        "single": {
+          "baseline": 4297,
+          "shared": 4228.5,
+          "lease1000": 4290,
+          "shared_change_percent": -1.594,
+          "lease1000_change_percent": -0.163
+        },
+        "multi": {
+          "baseline": 13144.5,
+          "shared": 13248.5,
+          "lease1000": 13272,
+          "shared_change_percent": 0.791,
+          "lease1000_change_percent": 0.97
+        }
+      },
+      {
+        "workload": "Horizon Detection",
+        "single": {
+          "baseline": 3974,
+          "shared": 3922,
+          "lease1000": 3887,
+          "shared_change_percent": -1.309,
+          "lease1000_change_percent": -2.189
+        },
+        "multi": {
+          "baseline": 20749.5,
+          "shared": 19587,
+          "lease1000": 20274,
+          "shared_change_percent": -5.603,
+          "lease1000_change_percent": -2.292
+        }
+      },
+      {
+        "workload": "Object Remover",
+        "single": {
+          "baseline": 5057.5,
+          "shared": 4887,
+          "lease1000": 4997,
+          "shared_change_percent": -3.371,
+          "lease1000_change_percent": -1.196
+        },
+        "multi": {
+          "baseline": 15450,
+          "shared": 15936.5,
+          "lease1000": 15967,
+          "shared_change_percent": 3.149,
+          "lease1000_change_percent": 3.346
+        }
+      },
+      {
+        "workload": "HDR",
+        "single": {
+          "baseline": 4329,
+          "shared": 4314,
+          "lease1000": 4331,
+          "shared_change_percent": -0.347,
+          "lease1000_change_percent": 0.046
+        },
+        "multi": {
+          "baseline": 18707.5,
+          "shared": 16738,
+          "lease1000": 17371,
+          "shared_change_percent": -10.528,
+          "lease1000_change_percent": -7.144
+        }
+      },
+      {
+        "workload": "Photo Filter",
+        "single": {
+          "baseline": 4591,
+          "shared": 4357.5,
+          "lease1000": 4451.5,
+          "shared_change_percent": -5.086,
+          "lease1000_change_percent": -3.039
+        },
+        "multi": {
+          "baseline": 12140.5,
+          "shared": 12257.5,
+          "lease1000": 12583.5,
+          "shared_change_percent": 0.964,
+          "lease1000_change_percent": 3.649
+        }
+      },
+      {
+        "workload": "Ray Tracer",
+        "single": {
+          "baseline": 3498,
+          "shared": 3622.5,
+          "lease1000": 3520,
+          "shared_change_percent": 3.559,
+          "lease1000_change_percent": 0.629
+        },
+        "multi": {
+          "baseline": 22147,
+          "shared": 21754,
+          "lease1000": 21728,
+          "shared_change_percent": -1.775,
+          "lease1000_change_percent": -1.892
+        }
+      },
+      {
+        "workload": "Structure from Motion",
+        "single": {
+          "baseline": 3898.5,
+          "shared": 3891.5,
+          "lease1000": 3849.5,
+          "shared_change_percent": -0.18,
+          "lease1000_change_percent": -1.257
+        },
+        "multi": {
+          "baseline": 15741.5,
+          "shared": 15462.5,
+          "lease1000": 15486.5,
+          "shared_change_percent": -1.772,
+          "lease1000_change_percent": -1.62
+        }
+      }
+    ],
+    "fixed_probes": {
+      "method": "Five shuffled observations per variant/case. Signed normal release, no diagnostics/samplers/builds/CI VM. 1/6/12 CPUs and host-managed RAM. Reuse performs parent prewarm and synchronized read-only 4KiB-stride work; native RW 2MiB blocks excluded. Churn uses disjoint per-thread mmap/touch/verify/munmap cycles. Work timer starts before barrier release. guest total includes preparation/create/join, excludes final shared-array munmap; host_seconds includes full process startup and teardown.",
+      "runner_sha256": {
+        "baseline": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "shared": "a9919063966161a50ffeefad362e56b7ce37edd31740c07ddd39c30b34a133e0",
+        "lease32": "d0f27595cb0a39d4975c39523efaa28b9415fce9059da5d787b8f4365852cf03",
+        "lease0": "dece19bb1f4f22c8cd15a7e04aa397d1f50748f4ade4e6b40e24f30738618c38"
+      },
+      "fixture_sha256": "8f863c6a0cabdb8a30d81e675bb3f3ef50083303c7079ab5cc55c35e82200529",
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "observations": [
+        {
+          "mode": "reuse",
+          "cpus": 1,
+          "variant": "baseline",
+          "work_ms": 0.914458,
+          "guest_total_ms": 15.448541,
+          "host_ms": 21.843207999999947,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            21.736666,
+            21.9355,
+            21.843208,
+            21.859125,
+            21.567959
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            419635200,
+            419635200,
+            419635200,
+            419635200,
+            419635200
+          ],
+          "work_ns_raw": [
+            931250,
+            896667,
+            953625,
+            914458,
+            895834
+          ],
+          "total_ns_raw": [
+            15492750,
+            15466750,
+            15448541,
+            15419375,
+            15187000
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 1,
+          "variant": "shared",
+          "work_ms": 0.960292,
+          "guest_total_ms": 15.881833,
+          "host_ms": 22.35516599999965,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            21.819083,
+            23.357083,
+            22.34125,
+            25.781125,
+            22.355166
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            419635200,
+            419635200,
+            419635200,
+            419635200,
+            419635200
+          ],
+          "work_ns_raw": [
+            960292,
+            994917,
+            902209,
+            1025084,
+            892791
+          ],
+          "total_ns_raw": [
+            15306667,
+            16305708,
+            15833167,
+            18472625,
+            15881833
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 1,
+          "variant": "lease32",
+          "work_ms": 0.915917,
+          "guest_total_ms": 15.473333,
+          "host_ms": 22.195833000000054,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            21.7985,
+            22.195833,
+            22.227625,
+            23.923209,
+            21.394459
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            419635200,
+            419635200,
+            419635200,
+            419635200,
+            419635200
+          ],
+          "work_ns_raw": [
+            974833,
+            915917,
+            916541,
+            876875,
+            880917
+          ],
+          "total_ns_raw": [
+            15450666,
+            15473333,
+            15677750,
+            15817667,
+            15383042
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 1,
+          "variant": "lease0",
+          "work_ms": 0.923,
+          "guest_total_ms": 15.535208,
+          "host_ms": 21.74729200000014,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            21.747292,
+            22.038334,
+            21.66275,
+            21.68575,
+            21.912541
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            419635200,
+            419635200,
+            419635200,
+            419635200,
+            419635200
+          ],
+          "work_ns_raw": [
+            878375,
+            913541,
+            928208,
+            923000,
+            931833
+          ],
+          "total_ns_raw": [
+            15563792,
+            15121041,
+            15202333,
+            15642750,
+            15535208
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 6,
+          "variant": "baseline",
+          "work_ms": 3.454666,
+          "guest_total_ms": 20.67925,
+          "host_ms": 27.55799999999997,
+          "pause_ms": 0.089,
+          "exclusive_ms": 0.254,
+          "groups": 17,
+          "host_ms_raw": [
+            28.138375,
+            27.403125,
+            27.585666,
+            27.4925,
+            27.558
+          ],
+          "groups_raw": [
+            18,
+            17,
+            16,
+            18,
+            17
+          ],
+          "pause_ms_raw": [
+            0.117,
+            0.089,
+            0.034,
+            0.106,
+            0.086
+          ],
+          "exclusive_ms_raw": [
+            0.242,
+            0.275,
+            0.254,
+            0.293,
+            0.237
+          ],
+          "checksums": [
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200
+          ],
+          "work_ns_raw": [
+            3341000,
+            3165875,
+            3604042,
+            3454666,
+            3589750
+          ],
+          "total_ns_raw": [
+            20882875,
+            20193083,
+            20679250,
+            20651083,
+            20687000
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 6,
+          "variant": "shared",
+          "work_ms": 3.332,
+          "guest_total_ms": 20.723542,
+          "host_ms": 27.76754200000031,
+          "pause_ms": 0.079,
+          "exclusive_ms": 0.266,
+          "groups": 17,
+          "host_ms_raw": [
+            27.192792,
+            28.219583,
+            48.931542,
+            27.283333,
+            27.767542
+          ],
+          "groups_raw": [
+            17,
+            17,
+            20,
+            14,
+            17
+          ],
+          "pause_ms_raw": [
+            0.073,
+            0.082,
+            0.153,
+            0.071,
+            0.079
+          ],
+          "exclusive_ms_raw": [
+            0.266,
+            0.249,
+            0.464,
+            0.199,
+            0.269
+          ],
+          "checksums": [
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200
+          ],
+          "work_ns_raw": [
+            3332000,
+            3376625,
+            4613958,
+            2865292,
+            3156959
+          ],
+          "total_ns_raw": [
+            20290833,
+            20864583,
+            36518291,
+            20358000,
+            20723542
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 6,
+          "variant": "lease32",
+          "work_ms": 3.561208,
+          "guest_total_ms": 20.675541,
+          "host_ms": 27.728208999999282,
+          "pause_ms": 0.103,
+          "exclusive_ms": 0.249,
+          "groups": 18,
+          "host_ms_raw": [
+            27.349833,
+            28.155833,
+            34.001917,
+            27.728209,
+            27.227458
+          ],
+          "groups_raw": [
+            19,
+            18,
+            18,
+            18,
+            19
+          ],
+          "pause_ms_raw": [
+            0.121,
+            0.091,
+            0.077,
+            0.103,
+            0.13
+          ],
+          "exclusive_ms_raw": [
+            0.249,
+            0.257,
+            0.252,
+            0.221,
+            0.248
+          ],
+          "checksums": [
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200
+          ],
+          "work_ns_raw": [
+            3388625,
+            3587500,
+            3561208,
+            3656500,
+            3506666
+          ],
+          "total_ns_raw": [
+            20269750,
+            20994875,
+            22477708,
+            20675541,
+            20454125
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 6,
+          "variant": "lease0",
+          "work_ms": 3.63875,
+          "guest_total_ms": 20.580584,
+          "host_ms": 27.61187499999984,
+          "pause_ms": 0.107,
+          "exclusive_ms": 0.0,
+          "groups": 28,
+          "host_ms_raw": [
+            27.284792,
+            27.609792,
+            27.6685,
+            27.611875,
+            27.86625
+          ],
+          "groups_raw": [
+            26,
+            26,
+            28,
+            28,
+            31
+          ],
+          "pause_ms_raw": [
+            0.067,
+            0.086,
+            0.107,
+            0.109,
+            0.213
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200,
+            2517811200
+          ],
+          "work_ns_raw": [
+            3592708,
+            3675750,
+            3538083,
+            3638750,
+            3703084
+          ],
+          "total_ns_raw": [
+            20567375,
+            20833666,
+            20577208,
+            20580584,
+            20989042
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 12,
+          "variant": "baseline",
+          "work_ms": 7.964208,
+          "guest_total_ms": 30.2845,
+          "host_ms": 37.98112499999973,
+          "pause_ms": 0.329,
+          "exclusive_ms": 0.523,
+          "groups": 38,
+          "host_ms_raw": [
+            37.981125,
+            37.516792,
+            38.293458,
+            37.71875,
+            38.68375
+          ],
+          "groups_raw": [
+            43,
+            37,
+            38,
+            36,
+            40
+          ],
+          "pause_ms_raw": [
+            0.675,
+            0.19,
+            0.329,
+            0.237,
+            0.464
+          ],
+          "exclusive_ms_raw": [
+            0.565,
+            0.514,
+            0.542,
+            0.461,
+            0.523
+          ],
+          "checksums": [
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400
+          ],
+          "work_ns_raw": [
+            7780542,
+            7558250,
+            8006917,
+            7964208,
+            8235167
+          ],
+          "total_ns_raw": [
+            29791958,
+            29895792,
+            30432792,
+            30284500,
+            31034708
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 12,
+          "variant": "shared",
+          "work_ms": 7.737875,
+          "guest_total_ms": 30.396541,
+          "host_ms": 38.55729100000005,
+          "pause_ms": 0.398,
+          "exclusive_ms": 0.565,
+          "groups": 40,
+          "host_ms_raw": [
+            37.46225,
+            38.557291,
+            38.585875,
+            37.899167,
+            38.960042
+          ],
+          "groups_raw": [
+            40,
+            37,
+            41,
+            40,
+            35
+          ],
+          "pause_ms_raw": [
+            0.398,
+            0.433,
+            0.258,
+            0.372,
+            0.399
+          ],
+          "exclusive_ms_raw": [
+            0.587,
+            0.557,
+            0.587,
+            0.565,
+            0.536
+          ],
+          "checksums": [
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400
+          ],
+          "work_ns_raw": [
+            7407125,
+            7973333,
+            7737875,
+            7516208,
+            7886792
+          ],
+          "total_ns_raw": [
+            29654375,
+            30741791,
+            30575583,
+            30396541,
+            30155375
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 12,
+          "variant": "lease32",
+          "work_ms": 7.794875,
+          "guest_total_ms": 29.841625,
+          "host_ms": 37.61995800000007,
+          "pause_ms": 0.306,
+          "exclusive_ms": 0.491,
+          "groups": 37,
+          "host_ms_raw": [
+            37.619958,
+            37.765958,
+            37.009459,
+            37.372875,
+            38.260209
+          ],
+          "groups_raw": [
+            37,
+            39,
+            36,
+            41,
+            33
+          ],
+          "pause_ms_raw": [
+            0.225,
+            0.213,
+            0.397,
+            0.378,
+            0.306
+          ],
+          "exclusive_ms_raw": [
+            0.474,
+            0.572,
+            0.491,
+            0.575,
+            0.473
+          ],
+          "checksums": [
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400
+          ],
+          "work_ns_raw": [
+            7841500,
+            7576625,
+            7739459,
+            7904834,
+            7794875
+          ],
+          "total_ns_raw": [
+            29657041,
+            29841625,
+            29422709,
+            29969000,
+            30462042
+          ]
+        },
+        {
+          "mode": "reuse",
+          "cpus": 12,
+          "variant": "lease0",
+          "work_ms": 8.136958,
+          "guest_total_ms": 30.993292,
+          "host_ms": 38.605916999999934,
+          "pause_ms": 0.299,
+          "exclusive_ms": 0.0,
+          "groups": 56,
+          "host_ms_raw": [
+            53.555959,
+            38.329834,
+            38.605917,
+            38.417125,
+            40.513542
+          ],
+          "groups_raw": [
+            52,
+            50,
+            56,
+            56,
+            61
+          ],
+          "pause_ms_raw": [
+            0.299,
+            0.274,
+            0.309,
+            0.27,
+            0.323
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400,
+            5035622400
+          ],
+          "work_ns_raw": [
+            8483041,
+            7820875,
+            8038042,
+            8136958,
+            8412167
+          ],
+          "total_ns_raw": [
+            41951125,
+            30679083,
+            30741667,
+            30993292,
+            31849208
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "baseline",
+          "work_ms": 8.511125,
+          "guest_total_ms": 8.60375,
+          "host_ms": 14.20274999999993,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            353.75975,
+            13.849417,
+            14.156791,
+            14.20275,
+            14.377167
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            18851958,
+            8446166,
+            8398917,
+            8511125,
+            8880125
+          ],
+          "total_ns_raw": [
+            19071791,
+            8518041,
+            8510292,
+            8603750,
+            8947125
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "shared",
+          "work_ms": 8.738875,
+          "guest_total_ms": 8.813459,
+          "host_ms": 14.43295800000044,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            468.763542,
+            14.34475,
+            14.432958,
+            14.047042,
+            15.443875
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            20311166,
+            8423375,
+            8738875,
+            8737667,
+            9185417
+          ],
+          "total_ns_raw": [
+            20558666,
+            8508458,
+            8813459,
+            8809709,
+            9278667
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "lease32",
+          "work_ms": 8.478709,
+          "guest_total_ms": 8.547292,
+          "host_ms": 14.842708999999843,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            683.88025,
+            15.404625,
+            14.139792,
+            14.244542,
+            14.842709
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            13582916,
+            9024916,
+            8478709,
+            8464083,
+            8454083
+          ],
+          "total_ns_raw": [
+            13781250,
+            9114000,
+            8547292,
+            8532291,
+            8533458
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "lease0",
+          "work_ms": 8.419875,
+          "guest_total_ms": 8.492667,
+          "host_ms": 14.484541999999934,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "host_ms_raw": [
+            358.321959,
+            14.581667,
+            13.963125,
+            13.693625,
+            14.484542
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            19847833,
+            8419875,
+            8462917,
+            8271792,
+            8326875
+          ],
+          "total_ns_raw": [
+            20107333,
+            8492667,
+            8538167,
+            8346625,
+            8397917
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "baseline",
+          "work_ms": 45.411083,
+          "guest_total_ms": 46.578416,
+          "host_ms": 53.03404199999928,
+          "pause_ms": 2.568,
+          "exclusive_ms": 24.874,
+          "groups": 131,
+          "host_ms_raw": [
+            53.09175,
+            54.074334,
+            53.034042,
+            52.946833,
+            52.936166
+          ],
+          "groups_raw": [
+            130,
+            131,
+            127,
+            132,
+            132
+          ],
+          "pause_ms_raw": [
+            2.315,
+            2.915,
+            2.678,
+            2.556,
+            2.568
+          ],
+          "exclusive_ms_raw": [
+            24.699,
+            25.122,
+            24.675,
+            25.55,
+            24.874
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            45535625,
+            46457625,
+            45357750,
+            45308500,
+            45411083
+          ],
+          "total_ns_raw": [
+            46705291,
+            47710417,
+            46578416,
+            46558500,
+            46574792
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "shared",
+          "work_ms": 46.000458,
+          "guest_total_ms": 47.274292,
+          "host_ms": 53.43845900000055,
+          "pause_ms": 2.37,
+          "exclusive_ms": 25.368,
+          "groups": 132,
+          "host_ms_raw": [
+            52.96925,
+            54.886875,
+            53.141834,
+            53.438459,
+            53.788708
+          ],
+          "groups_raw": [
+            131,
+            132,
+            127,
+            132,
+            132
+          ],
+          "pause_ms_raw": [
+            2.234,
+            2.465,
+            2.726,
+            2.37,
+            2.361
+          ],
+          "exclusive_ms_raw": [
+            24.927,
+            25.368,
+            24.403,
+            25.693,
+            25.695
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            45579083,
+            47105000,
+            45350125,
+            46000458,
+            46196583
+          ],
+          "total_ns_raw": [
+            46685542,
+            48382167,
+            46647125,
+            47274292,
+            47399208
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "lease32",
+          "work_ms": 55.001375,
+          "guest_total_ms": 56.213917,
+          "host_ms": 62.496166999999936,
+          "pause_ms": 7.82,
+          "exclusive_ms": 3.886,
+          "groups": 325,
+          "host_ms_raw": [
+            62.07225,
+            63.731125,
+            62.473708,
+            63.130416,
+            62.496167
+          ],
+          "groups_raw": [
+            321,
+            325,
+            336,
+            323,
+            337
+          ],
+          "pause_ms_raw": [
+            8.041,
+            7.74,
+            7.82,
+            7.606,
+            7.963
+          ],
+          "exclusive_ms_raw": [
+            3.886,
+            3.693,
+            4.091,
+            3.643,
+            4.102
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            54169000,
+            56008625,
+            54940625,
+            55905917,
+            55001375
+          ],
+          "total_ns_raw": [
+            55493584,
+            57359416,
+            56161458,
+            57125209,
+            56213917
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "lease0",
+          "work_ms": 52.830083,
+          "guest_total_ms": 54.38475,
+          "host_ms": 60.62445800000038,
+          "pause_ms": 7.649,
+          "exclusive_ms": 0.0,
+          "groups": 330,
+          "host_ms_raw": [
+            61.762333,
+            60.624458,
+            61.176708,
+            60.372084,
+            60.514459
+          ],
+          "groups_raw": [
+            327,
+            331,
+            316,
+            332,
+            330
+          ],
+          "pause_ms_raw": [
+            7.673,
+            7.313,
+            7.649,
+            7.483,
+            7.912
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            54060834,
+            52785875,
+            53389959,
+            52830083,
+            52785791
+          ],
+          "total_ns_raw": [
+            55310959,
+            54384750,
+            54594667,
+            54071333,
+            54119375
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "baseline",
+          "work_ms": 106.050792,
+          "guest_total_ms": 109.013292,
+          "host_ms": 115.75779200000014,
+          "pause_ms": 14.437,
+          "exclusive_ms": 49.551,
+          "groups": 261,
+          "host_ms_raw": [
+            113.264542,
+            115.757792,
+            131.909,
+            115.483041,
+            116.500542
+          ],
+          "groups_raw": [
+            258,
+            265,
+            267,
+            261,
+            255
+          ],
+          "pause_ms_raw": [
+            13.462,
+            14.437,
+            14.509,
+            13.715,
+            14.705
+          ],
+          "exclusive_ms_raw": [
+            49.538,
+            50.281,
+            53.189,
+            49.148,
+            49.551
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            103377167,
+            106050792,
+            120426167,
+            105884709,
+            106372583
+          ],
+          "total_ns_raw": [
+            106746875,
+            109013292,
+            123562042,
+            108961625,
+            109527417
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "shared",
+          "work_ms": 102.291708,
+          "guest_total_ms": 105.424875,
+          "host_ms": 112.08075000000007,
+          "pause_ms": 11.915,
+          "exclusive_ms": 48.681,
+          "groups": 254,
+          "host_ms_raw": [
+            113.566167,
+            112.08075,
+            111.007959,
+            109.693291,
+            112.085166
+          ],
+          "groups_raw": [
+            254,
+            261,
+            254,
+            253,
+            253
+          ],
+          "pause_ms_raw": [
+            13.245,
+            11.467,
+            11.915,
+            11.606,
+            12.117
+          ],
+          "exclusive_ms_raw": [
+            48.461,
+            50.016,
+            48.681,
+            48.746,
+            48.405
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            103862792,
+            102291708,
+            101430917,
+            99965417,
+            102373041
+          ],
+          "total_ns_raw": [
+            106947042,
+            105465208,
+            104613959,
+            102813584,
+            105424875
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "lease32",
+          "work_ms": 139.630875,
+          "guest_total_ms": 142.789041,
+          "host_ms": 149.7299999999999,
+          "pause_ms": 34.426,
+          "exclusive_ms": 6.005,
+          "groups": 642,
+          "host_ms_raw": [
+            149.73,
+            149.588,
+            153.000541,
+            149.5475,
+            150.089292
+          ],
+          "groups_raw": [
+            636,
+            648,
+            656,
+            627,
+            642
+          ],
+          "pause_ms_raw": [
+            33.365,
+            34.6,
+            35.1,
+            33.619,
+            34.426
+          ],
+          "exclusive_ms_raw": [
+            5.649,
+            6.105,
+            6.08,
+            5.881,
+            6.005
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            139981291,
+            139630875,
+            142934500,
+            139124500,
+            139431167
+          ],
+          "total_ns_raw": [
+            142979291,
+            142789041,
+            146330083,
+            142379375,
+            142445959
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "lease0",
+          "work_ms": 135.632958,
+          "guest_total_ms": 139.186375,
+          "host_ms": 146.22216700000035,
+          "pause_ms": 33.662,
+          "exclusive_ms": 0.0,
+          "groups": 642,
+          "host_ms_raw": [
+            134.347208,
+            146.251584,
+            150.237666,
+            144.283375,
+            146.222167
+          ],
+          "groups_raw": [
+            634,
+            633,
+            642,
+            644,
+            646
+          ],
+          "pause_ms_raw": [
+            29.723,
+            34.452,
+            34.962,
+            33.214,
+            33.662
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            124250667,
+            136153000,
+            139775250,
+            134117333,
+            135632958
+          ],
+          "total_ns_raw": [
+            127530875,
+            139289542,
+            143234125,
+            137458041,
+            139186375
+          ]
+        }
+      ]
+    },
+    "larger_windows": {
+      "method": "Five shuffled observations per variant/case. Signed normal release, no diagnostics/builds/samplers/CI VM. Existing checksum-verified compute-peer+mapping oracle and new churn fixture; both finite work. 1/6/12 CPUs, host-managed RAM, metrics on.",
+      "runner_sha256": {
+        "baseline": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "lease500": "e18bd5d0bd4b5812e9e56c81dd1ae49c71c2849cadec6da45efc4f237b679ccb",
+        "lease1000": "47d3db6cdab652f20fc261c6d0fafc39990349f423c646355abb19cef083dbf3"
+      },
+      "fixture_sha256": {
+        "memory-paths": "8f863c6a0cabdb8a30d81e675bb3f3ef50083303c7079ab5cc55c35e82200529",
+        "mapping-pause": "05a59f3288f8d7926052bf2f1708ffc14dfe6fd333cfea3a693d2e084f1a77fe"
+      },
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "observations": [
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "baseline",
+          "host_ms": 14.410874999999379,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "work_ms": 8.548167,
+          "host_ms_raw": [
+            14.281833,
+            14.713875,
+            14.410875,
+            14.516625,
+            14.255958
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            8285416,
+            8603834,
+            8548167,
+            8577875,
+            8273333
+          ],
+          "total_ns_raw": [
+            8357291,
+            8679209,
+            8617250,
+            8649833,
+            8344666
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "lease500",
+          "host_ms": 14.192959000000727,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "work_ms": 8.454084,
+          "host_ms_raw": [
+            14.033417,
+            14.762042,
+            14.192959,
+            14.269542,
+            13.998417
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            8533417,
+            8365667,
+            8580083,
+            8454084,
+            8423500
+          ],
+          "total_ns_raw": [
+            8605625,
+            8438083,
+            8646333,
+            8522375,
+            8493250
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "lease1000",
+          "host_ms": 14.268958000000609,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "work_ms": 8.405916,
+          "host_ms_raw": [
+            14.570792,
+            14.375,
+            14.071958,
+            14.019125,
+            14.268958
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            8632209,
+            8360250,
+            8405916,
+            8486458,
+            8303250
+          ],
+          "total_ns_raw": [
+            8735667,
+            8428417,
+            8474625,
+            8556125,
+            8375875
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "baseline",
+          "host_ms": 54.25108299999959,
+          "pause_ms": 2.747,
+          "exclusive_ms": 25.384,
+          "groups": 132,
+          "work_ms": 46.620958,
+          "host_ms_raw": [
+            54.251083,
+            54.435,
+            52.992792,
+            56.444542,
+            52.469375
+          ],
+          "groups_raw": [
+            136,
+            132,
+            128,
+            135,
+            128
+          ],
+          "pause_ms_raw": [
+            2.415,
+            3.118,
+            2.747,
+            2.686,
+            2.959
+          ],
+          "exclusive_ms_raw": [
+            25.617,
+            25.384,
+            24.13,
+            25.76,
+            23.834
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            46687875,
+            46620958,
+            45654208,
+            47688916,
+            44995041
+          ],
+          "total_ns_raw": [
+            47920667,
+            47957292,
+            46900666,
+            49049625,
+            46261416
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "lease500",
+          "host_ms": 49.27370799999942,
+          "pause_ms": 1.92,
+          "exclusive_ms": 27.466,
+          "groups": 76,
+          "work_ms": 41.682458,
+          "host_ms_raw": [
+            50.715666,
+            49.273708,
+            49.265917,
+            49.405875,
+            48.90575
+          ],
+          "groups_raw": [
+            76,
+            74,
+            75,
+            76,
+            76
+          ],
+          "pause_ms_raw": [
+            2.127,
+            1.92,
+            1.934,
+            1.656,
+            1.904
+          ],
+          "exclusive_ms_raw": [
+            27.511,
+            26.71,
+            27.613,
+            27.161,
+            27.466
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            42703042,
+            41652875,
+            41629167,
+            41688167,
+            41682458
+          ],
+          "total_ns_raw": [
+            43982833,
+            42924666,
+            42922500,
+            42944292,
+            42869041
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "lease1000",
+          "host_ms": 47.70745799999965,
+          "pause_ms": 1.014,
+          "exclusive_ms": 29.375,
+          "groups": 46,
+          "work_ms": 40.31625,
+          "host_ms_raw": [
+            46.858167,
+            379.872667,
+            48.51225,
+            47.707458,
+            45.712166
+          ],
+          "groups_raw": [
+            47,
+            53,
+            46,
+            46,
+            46
+          ],
+          "pause_ms_raw": [
+            1.014,
+            1.236,
+            1.062,
+            0.963,
+            0.899
+          ],
+          "exclusive_ms_raw": [
+            28.987,
+            35.804,
+            30.186,
+            29.375,
+            28.582
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            39104666,
+            48276417,
+            40490208,
+            40316250,
+            38652625
+          ],
+          "total_ns_raw": [
+            40392458,
+            50518709,
+            41705000,
+            41699167,
+            39830792
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "baseline",
+          "host_ms": 116.95283299999915,
+          "pause_ms": 15.364,
+          "exclusive_ms": 48.782,
+          "groups": 256,
+          "work_ms": 107.406792,
+          "host_ms_raw": [
+            116.952833,
+            117.804542,
+            114.78725,
+            118.245875,
+            115.885333
+          ],
+          "groups_raw": [
+            255,
+            253,
+            256,
+            260,
+            262
+          ],
+          "pause_ms_raw": [
+            15.364,
+            15.743,
+            14.304,
+            13.682,
+            15.912
+          ],
+          "exclusive_ms_raw": [
+            48.693,
+            48.482,
+            48.782,
+            49.756,
+            50.353
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            107406792,
+            107838125,
+            104860042,
+            107993667,
+            106355000
+          ],
+          "total_ns_raw": [
+            110632334,
+            110980708,
+            108022208,
+            111244708,
+            109227750
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "lease500",
+          "host_ms": 101.97108300000046,
+          "pause_ms": 8.455,
+          "exclusive_ms": 54.463,
+          "groups": 149,
+          "work_ms": 91.879125,
+          "host_ms_raw": [
+            100.001042,
+            103.749792,
+            101.121,
+            101.971083,
+            102.01525
+          ],
+          "groups_raw": [
+            149,
+            152,
+            145,
+            151,
+            149
+          ],
+          "pause_ms_raw": [
+            8.043,
+            8.72,
+            8.342,
+            8.455,
+            8.932
+          ],
+          "exclusive_ms_raw": [
+            55.019,
+            54.463,
+            54.144,
+            54.941,
+            53.473
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            90519834,
+            94041333,
+            90729875,
+            91879125,
+            92256625
+          ],
+          "total_ns_raw": [
+            93289500,
+            97599708,
+            94112833,
+            95052458,
+            95728583
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "lease1000",
+          "host_ms": 95.59658300000073,
+          "pause_ms": 5.699,
+          "exclusive_ms": 58.46,
+          "groups": 92,
+          "work_ms": 86.094667,
+          "host_ms_raw": [
+            95.596583,
+            95.970208,
+            98.245292,
+            95.510833,
+            94.570542
+          ],
+          "groups_raw": [
+            91,
+            93,
+            94,
+            92,
+            92
+          ],
+          "pause_ms_raw": [
+            6.463,
+            5.757,
+            5.682,
+            5.699,
+            5.523
+          ],
+          "exclusive_ms_raw": [
+            58.46,
+            58.528,
+            58.364,
+            57.674,
+            58.603
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            85679375,
+            86094667,
+            88199500,
+            86102208,
+            84961250
+          ],
+          "total_ns_raw": [
+            88781750,
+            89115750,
+            91285209,
+            89163875,
+            87871584
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 1,
+          "variant": "baseline",
+          "host_ms": 20.87666699999957,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "mapping_ms": 15.341,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 15.341,
+          "host_ms_raw": [
+            20.768667,
+            20.876667,
+            19.754583,
+            21.153291,
+            22.161542
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            15.035,
+            15.341,
+            15.031,
+            15.355,
+            16.406
+          ],
+          "compute_sum_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "wall_ms_raw": [
+            15.035,
+            15.341,
+            15.031,
+            15.355,
+            16.406
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 1,
+          "variant": "lease500",
+          "host_ms": 20.746791999999736,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "mapping_ms": 15.227,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 15.227,
+          "host_ms_raw": [
+            24.200625,
+            20.746792,
+            20.604041,
+            20.288125,
+            20.811
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            18.72,
+            15.031,
+            15.325,
+            15.227,
+            15.161
+          ],
+          "compute_sum_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "wall_ms_raw": [
+            18.72,
+            15.031,
+            15.325,
+            15.227,
+            15.161
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 1,
+          "variant": "lease1000",
+          "host_ms": 20.326999999999984,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "mapping_ms": 14.925,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 14.925,
+          "host_ms_raw": [
+            20.26975,
+            20.327,
+            20.414416,
+            19.975833,
+            20.606208
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            15.103,
+            14.832,
+            15.007,
+            14.925,
+            14.902
+          ],
+          "compute_sum_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "wall_ms_raw": [
+            15.103,
+            14.832,
+            15.007,
+            14.925,
+            14.902
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 6,
+          "variant": "baseline",
+          "host_ms": 298.17758299999997,
+          "pause_ms": 1.189,
+          "exclusive_ms": 13.51,
+          "groups": 65,
+          "mapping_ms": 20.369,
+          "compute_sum_ms": 1451.363,
+          "wall_ms": 291.574,
+          "host_ms_raw": [
+            297.007875,
+            298.732333,
+            298.177583,
+            289.404625,
+            299.624542
+          ],
+          "groups_raw": [
+            64,
+            66,
+            65,
+            70,
+            65
+          ],
+          "pause_ms_raw": [
+            1.168,
+            1.284,
+            1.098,
+            1.38,
+            1.189
+          ],
+          "exclusive_ms_raw": [
+            13.34,
+            13.954,
+            13.436,
+            14.416,
+            13.51
+          ],
+          "checksums": [
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882
+          ],
+          "mapping_ms_raw": [
+            18.661,
+            19.829,
+            20.796,
+            20.369,
+            22.387
+          ],
+          "compute_sum_ms_raw": [
+            1444.827,
+            1451.363,
+            1452.174,
+            1387.169,
+            1453.657
+          ],
+          "wall_ms_raw": [
+            290.604,
+            291.821,
+            291.574,
+            282.661,
+            293.13
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 6,
+          "variant": "lease500",
+          "host_ms": 295.61804200000006,
+          "pause_ms": 0.64,
+          "exclusive_ms": 13.153,
+          "groups": 34,
+          "mapping_ms": 16.936,
+          "compute_sum_ms": 1436.364,
+          "wall_ms": 289.084,
+          "host_ms_raw": [
+            295.649375,
+            296.551708,
+            295.618042,
+            295.56525,
+            295.582667
+          ],
+          "groups_raw": [
+            34,
+            35,
+            34,
+            34,
+            33
+          ],
+          "pause_ms_raw": [
+            0.599,
+            0.77,
+            0.631,
+            0.64,
+            0.686
+          ],
+          "exclusive_ms_raw": [
+            13.03,
+            13.791,
+            13.257,
+            13.153,
+            12.842
+          ],
+          "checksums": [
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882
+          ],
+          "mapping_ms_raw": [
+            16.514,
+            17.822,
+            17.422,
+            16.936,
+            16.852
+          ],
+          "compute_sum_ms_raw": [
+            1432.404,
+            1434.289,
+            1439.696,
+            1436.364,
+            1437.052
+          ],
+          "wall_ms_raw": [
+            288.638,
+            289.793,
+            289.16,
+            289.084,
+            289.01
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 6,
+          "variant": "lease1000",
+          "host_ms": 295.0093330000003,
+          "pause_ms": 0.37,
+          "exclusive_ms": 12.933,
+          "groups": 19,
+          "mapping_ms": 15.796,
+          "compute_sum_ms": 1428.875,
+          "wall_ms": 288.146,
+          "host_ms_raw": [
+            294.822042,
+            295.390083,
+            294.23475,
+            295.009333,
+            295.537584
+          ],
+          "groups_raw": [
+            19,
+            19,
+            19,
+            19,
+            20
+          ],
+          "pause_ms_raw": [
+            0.287,
+            0.426,
+            0.381,
+            0.37,
+            0.335
+          ],
+          "exclusive_ms_raw": [
+            13.031,
+            12.819,
+            12.933,
+            12.903,
+            13.418
+          ],
+          "checksums": [
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882
+          ],
+          "mapping_ms_raw": [
+            15.633,
+            15.795,
+            15.852,
+            15.796,
+            16.202
+          ],
+          "compute_sum_ms_raw": [
+            1428.875,
+            1425.657,
+            1428.309,
+            1430.168,
+            1432.58
+          ],
+          "wall_ms_raw": [
+            287.905,
+            288.287,
+            288.146,
+            288.007,
+            288.633
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 12,
+          "variant": "baseline",
+          "host_ms": 296.72795799999994,
+          "pause_ms": 4.142,
+          "exclusive_ms": 13.934,
+          "groups": 74,
+          "mapping_ms": 38.437,
+          "compute_sum_ms": 2927.377,
+          "wall_ms": 288.147,
+          "host_ms_raw": [
+            296.727958,
+            308.769291,
+            290.019542,
+            291.120875,
+            328.308625
+          ],
+          "groups_raw": [
+            74,
+            79,
+            73,
+            72,
+            84
+          ],
+          "pause_ms_raw": [
+            4.112,
+            4.142,
+            4.177,
+            4.07,
+            4.941
+          ],
+          "exclusive_ms_raw": [
+            13.933,
+            14.644,
+            13.76,
+            13.934,
+            15.795
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            35.282,
+            99.017,
+            35.735,
+            38.437,
+            248.894
+          ],
+          "compute_sum_ms_raw": [
+            2911.878,
+            3084.484,
+            2900.053,
+            2927.377,
+            3292.206
+          ],
+          "wall_ms_raw": [
+            288.147,
+            299.743,
+            281.239,
+            282.475,
+            318.284
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 12,
+          "variant": "lease500",
+          "host_ms": 288.6173749999994,
+          "pause_ms": 2.268,
+          "exclusive_ms": 13.639,
+          "groups": 43,
+          "mapping_ms": 29.808,
+          "compute_sum_ms": 2875.118,
+          "wall_ms": 279.881,
+          "host_ms_raw": [
+            291.815625,
+            288.617375,
+            806.940583,
+            288.319959,
+            282.551667
+          ],
+          "groups_raw": [
+            44,
+            42,
+            62,
+            43,
+            41
+          ],
+          "pause_ms_raw": [
+            2.354,
+            2.249,
+            4.732,
+            2.268,
+            2.102
+          ],
+          "exclusive_ms_raw": [
+            13.639,
+            13.857,
+            22.073,
+            13.414,
+            13.175
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            27.958,
+            38.222,
+            64.176,
+            29.808,
+            29.063
+          ],
+          "compute_sum_ms_raw": [
+            2874.311,
+            2875.118,
+            3131.364,
+            2905.758,
+            2852.949
+          ],
+          "wall_ms_raw": [
+            283.362,
+            279.881,
+            307.136,
+            279.839,
+            273.046
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 12,
+          "variant": "lease1000",
+          "host_ms": 285.58612500000004,
+          "pause_ms": 1.219,
+          "exclusive_ms": 13.529,
+          "groups": 27,
+          "mapping_ms": 26.125,
+          "compute_sum_ms": 2867.083,
+          "wall_ms": 276.489,
+          "host_ms_raw": [
+            285.586125,
+            281.258542,
+            292.892166,
+            294.367917,
+            284.614042
+          ],
+          "groups_raw": [
+            27,
+            26,
+            25,
+            29,
+            28
+          ],
+          "pause_ms_raw": [
+            1.256,
+            1.158,
+            1.219,
+            1.3,
+            1.121
+          ],
+          "exclusive_ms_raw": [
+            13.512,
+            13.899,
+            13.242,
+            15.149,
+            13.529
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            22.08,
+            26.125,
+            23.501,
+            39.834,
+            27.488
+          ],
+          "compute_sum_ms_raw": [
+            2836.907,
+            2857.859,
+            2965.502,
+            2914.642,
+            2867.083
+          ],
+          "wall_ms_raw": [
+            276.489,
+            272.468,
+            284.434,
+            285.581,
+            275.384
+          ]
+        }
+      ]
+    },
+    "shared_prototype": {
+      "mac_base": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+      "runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+      "features": [
+        "trames-hvf/shared-leaf-cache"
+      ],
+      "source_sha256": {
+        "crates/trames-hvf/Cargo.toml": "a58dd76adc49af0404a5cc32009f41d963cfbbc717479b77a726e326b764b24b",
+        "crates/trames-hvf/src/host.c": "5afa95db011045c3c69a9c58ebe575a42b8776759b921d71dc422beefd7579fd",
+        "crates/trames-hvf/src/macos.rs": "e22e3dfd00715da82f922680b3499c9734e2b1e5b7162e8569f62b4a597e4b02",
+        "crates/trames-hvf/src/machine.rs": "825e333d42f962f56d7b650cc351f5e5b9ead0477ac288c932482b471998be87",
+        "crates/trames-hvf/src/hardware_tests.rs": "98ceb26d39101b8c2c6463ad4fed483f917b4a718156e626691360f13fdb1820",
+        "crates/trames-hvf/src/shared_leaves.rs": "c505968528a91103277b680af05e1e3c613613a9ae5af3e5ef8cc2be49b82b7d"
+      },
+      "runner_sha256": "a9919063966161a50ffeefad362e56b7ce37edd31740c07ddd39c30b34a133e0",
+      "scope": "Immutable hardware L3 snapshots imported across host-thread-owned vCPUs. Private upper tables/ASIDs/context remain; COW before table edit. Validate current canonical storage ID, GPA and permissions and recreate current view write tokens. Cache holds weak guest-storage references. This is not a fully shared mutable per-mm root/metadata design; that remains unmeasured.",
+      "validation_scope": "Final signed source with acquire sole-owner refcount check paired with release on retiring owners. Cross-thread import/concurrent execution, producer destruction, permission revocation on both CPUs, VA/GPA reuse, COW, fork, paging and guest-storage release. 49 HVF tests plus one app pressure test; Clippy workspace/all-targets -D warnings."
+    },
+    "hardware_validation": {
+      "passed": true,
+      "runtime_revision": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+      "rows": [
+        {
+          "target": "trames-mac-run",
+          "executable_sha256": "a40e8854ab418ece01078c15e102d5f0f58998979e71a21eed49f9dcbbe70b75",
+          "exit": 0,
+          "passed_tests": 1
+        },
+        {
+          "target": "trames_hvf",
+          "executable_sha256": "e015ef33c39868b5aec510df43dabd5f1db46d8e5cefa0602389d5fabf9c7f9b",
+          "exit": 0,
+          "passed_tests": 49
+        }
+      ]
+    },
+    "shared_clippy_passed": true,
+    "physical_retirement": {
+      "method": "Five shuffled observations per variant/case. Signed normal release, no diagnostics/builds/samplers/CI VM. Existing checksum-verified compute-peer+mapping oracle and new churn fixture; both finite work. 1/6/12 CPUs, host-managed RAM, metrics on.",
+      "runner_sha256": {
+        "baseline": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "retirement": "1475cad7a803b7064302f82b2519d34b915140fbecf61a468426c648e15b3c45"
+      },
+      "fixture_sha256": {
+        "memory-paths": "8f863c6a0cabdb8a30d81e675bb3f3ef50083303c7079ab5cc55c35e82200529",
+        "mapping-pause": "05a59f3288f8d7926052bf2f1708ffc14dfe6fd333cfea3a693d2e084f1a77fe"
+      },
+      "observations": [
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "baseline",
+          "host_ms": 14.545374999999972,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "work_ms": 8.610041,
+          "host_ms_raw": [
+            14.545375,
+            16.197166,
+            14.512667,
+            24.744416,
+            14.23875
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            8610041,
+            9270959,
+            8364500,
+            13257875,
+            8317333
+          ],
+          "total_ns_raw": [
+            8690333,
+            9348000,
+            8435708,
+            13390833,
+            8386791
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 1,
+          "variant": "retirement",
+          "host_ms": 13.891582999999486,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "work_ms": 7.925167,
+          "host_ms_raw": [
+            13.547584,
+            13.6515,
+            13.891583,
+            14.020625,
+            13.961959
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            234240,
+            234240,
+            234240,
+            234240,
+            234240
+          ],
+          "work_ns_raw": [
+            7823834,
+            7859458,
+            7957291,
+            7959166,
+            7925167
+          ],
+          "total_ns_raw": [
+            7895084,
+            7929541,
+            8035541,
+            8069666,
+            7995167
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "baseline",
+          "host_ms": 52.79691600000014,
+          "pause_ms": 2.711,
+          "exclusive_ms": 24.986,
+          "groups": 130,
+          "work_ms": 44.803583,
+          "host_ms_raw": [
+            52.504584,
+            53.381583,
+            52.99825,
+            52.796916,
+            52.012334
+          ],
+          "groups_raw": [
+            129,
+            130,
+            131,
+            129,
+            132
+          ],
+          "pause_ms_raw": [
+            2.711,
+            2.621,
+            3.254,
+            2.85,
+            2.282
+          ],
+          "exclusive_ms_raw": [
+            25.081,
+            24.479,
+            25.036,
+            24.772,
+            24.986
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            44803583,
+            45465667,
+            45596458,
+            44656750,
+            44689375
+          ],
+          "total_ns_raw": [
+            46118417,
+            46688208,
+            46895500,
+            46008542,
+            45962583
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 6,
+          "variant": "retirement",
+          "host_ms": 54.89583299999978,
+          "pause_ms": 3.131,
+          "exclusive_ms": 25.275,
+          "groups": 132,
+          "work_ms": 46.957083,
+          "host_ms_raw": [
+            54.937166,
+            834.888708,
+            52.980042,
+            53.163666,
+            54.895833
+          ],
+          "groups_raw": [
+            130,
+            176,
+            129,
+            135,
+            132
+          ],
+          "pause_ms_raw": [
+            3.107,
+            6.427,
+            3.131,
+            2.481,
+            3.248
+          ],
+          "exclusive_ms_raw": [
+            24.96,
+            34.225,
+            24.735,
+            25.886,
+            25.275
+          ],
+          "checksums": [
+            1463040,
+            1463040,
+            1463040,
+            1463040,
+            1463040
+          ],
+          "work_ns_raw": [
+            46957083,
+            73952500,
+            45349709,
+            45892792,
+            47173750
+          ],
+          "total_ns_raw": [
+            48283125,
+            76685459,
+            46590542,
+            46983583,
+            48477000
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "baseline",
+          "host_ms": 114.58904199999998,
+          "pause_ms": 14.282,
+          "exclusive_ms": 49.329,
+          "groups": 258,
+          "work_ms": 105.20125,
+          "host_ms_raw": [
+            117.029208,
+            115.193708,
+            114.535916,
+            114.469125,
+            114.589042
+          ],
+          "groups_raw": [
+            254,
+            258,
+            258,
+            257,
+            263
+          ],
+          "pause_ms_raw": [
+            14.282,
+            14.334,
+            13.881,
+            15.063,
+            14.048
+          ],
+          "exclusive_ms_raw": [
+            48.745,
+            49.329,
+            49.405,
+            49.111,
+            49.728
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            107204666,
+            105929625,
+            105201250,
+            104806083,
+            105051792
+          ],
+          "total_ns_raw": [
+            110264375,
+            108852208,
+            108320041,
+            107823291,
+            107841208
+          ]
+        },
+        {
+          "mode": "churn",
+          "cpus": 12,
+          "variant": "retirement",
+          "host_ms": 114.97754199999966,
+          "pause_ms": 14.182,
+          "exclusive_ms": 49.716,
+          "groups": 259,
+          "work_ms": 104.887916,
+          "host_ms_raw": [
+            114.034708,
+            114.977542,
+            110.888167,
+            116.641,
+            119.622
+          ],
+          "groups_raw": [
+            251,
+            259,
+            257,
+            262,
+            259
+          ],
+          "pause_ms_raw": [
+            14.182,
+            13.583,
+            12.46,
+            15.337,
+            15.231
+          ],
+          "exclusive_ms_raw": [
+            48.672,
+            49.716,
+            49.391,
+            50.042,
+            49.989
+          ],
+          "checksums": [
+            3064320,
+            3064320,
+            3064320,
+            3064320,
+            3064320
+          ],
+          "work_ns_raw": [
+            104096458,
+            104887916,
+            100653916,
+            106483500,
+            107856625
+          ],
+          "total_ns_raw": [
+            107258750,
+            108129708,
+            103896958,
+            109602625,
+            111269584
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 1,
+          "variant": "baseline",
+          "host_ms": 20.325624999999903,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "mapping_ms": 15.138,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 15.138,
+          "host_ms_raw": [
+            20.140416,
+            20.325625,
+            19.752584,
+            21.129667,
+            21.592333
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            15.138,
+            14.649,
+            14.767,
+            15.342,
+            15.951
+          ],
+          "compute_sum_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "wall_ms_raw": [
+            15.138,
+            14.649,
+            14.767,
+            15.342,
+            15.951
+          ],
+          "peer_values": []
+        },
+        {
+          "mode": "peers",
+          "cpus": 1,
+          "variant": "retirement",
+          "host_ms": 20.760124999999796,
+          "pause_ms": 0.0,
+          "exclusive_ms": 0.0,
+          "groups": 0,
+          "mapping_ms": 15.679,
+          "compute_sum_ms": 0.0,
+          "wall_ms": 15.679,
+          "host_ms_raw": [
+            20.542666,
+            20.59925,
+            21.147334,
+            21.10025,
+            20.760125
+          ],
+          "groups_raw": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "pause_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "exclusive_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            15.552,
+            15.77,
+            15.679,
+            15.54,
+            16.023
+          ],
+          "compute_sum_ms_raw": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "wall_ms_raw": [
+            15.552,
+            15.77,
+            15.679,
+            15.54,
+            16.023
+          ],
+          "peer_values": []
+        },
+        {
+          "mode": "peers",
+          "cpus": 6,
+          "variant": "baseline",
+          "host_ms": 298.39904099999967,
+          "pause_ms": 1.16,
+          "exclusive_ms": 13.758,
+          "groups": 66,
+          "mapping_ms": 20.05,
+          "compute_sum_ms": 1452.705,
+          "wall_ms": 291.818,
+          "host_ms_raw": [
+            298.563,
+            299.722,
+            298.399041,
+            298.304625,
+            297.087375
+          ],
+          "groups_raw": [
+            64,
+            66,
+            67,
+            66,
+            66
+          ],
+          "pause_ms_raw": [
+            1.174,
+            1.122,
+            1.22,
+            1.16,
+            1.103
+          ],
+          "exclusive_ms_raw": [
+            13.415,
+            13.658,
+            13.758,
+            13.855,
+            13.795
+          ],
+          "checksums": [
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882
+          ],
+          "mapping_ms_raw": [
+            21.148,
+            22.35,
+            20.05,
+            19.433,
+            19.173
+          ],
+          "compute_sum_ms_raw": [
+            1454.75,
+            1452.705,
+            1453.073,
+            1445.592,
+            1446.106
+          ],
+          "wall_ms_raw": [
+            292.095,
+            292.606,
+            291.818,
+            291.499,
+            290.516
+          ],
+          "peer_values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 6,
+          "variant": "retirement",
+          "host_ms": 299.57983299999967,
+          "pause_ms": 1.215,
+          "exclusive_ms": 14.151,
+          "groups": 68,
+          "mapping_ms": 21.572,
+          "compute_sum_ms": 1455.367,
+          "wall_ms": 292.984,
+          "host_ms_raw": [
+            297.436167,
+            300.57,
+            298.156083,
+            299.579833,
+            300.014625
+          ],
+          "groups_raw": [
+            67,
+            69,
+            67,
+            68,
+            70
+          ],
+          "pause_ms_raw": [
+            1.198,
+            1.13,
+            1.297,
+            1.215,
+            1.498
+          ],
+          "exclusive_ms_raw": [
+            14.007,
+            14.412,
+            13.992,
+            14.151,
+            14.677
+          ],
+          "checksums": [
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882,
+            14273687594642799882
+          ],
+          "mapping_ms_raw": [
+            19.357,
+            23.871,
+            19.994,
+            21.572,
+            21.598
+          ],
+          "compute_sum_ms_raw": [
+            1446.977,
+            1463.147,
+            1449.757,
+            1455.367,
+            1460.743
+          ],
+          "wall_ms_raw": [
+            290.758,
+            294.277,
+            291.53,
+            292.984,
+            293.433
+          ],
+          "peer_values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 12,
+          "variant": "baseline",
+          "host_ms": 289.6063330000003,
+          "pause_ms": 4.164,
+          "exclusive_ms": 13.996,
+          "groups": 75,
+          "mapping_ms": 42.341,
+          "compute_sum_ms": 2927.101,
+          "wall_ms": 281.367,
+          "host_ms_raw": [
+            289.329083,
+            289.606333,
+            306.971417,
+            288.747292,
+            291.542583
+          ],
+          "groups_raw": [
+            75,
+            73,
+            78,
+            74,
+            75
+          ],
+          "pause_ms_raw": [
+            4.217,
+            4.164,
+            4.136,
+            4.023,
+            4.492
+          ],
+          "exclusive_ms_raw": [
+            13.996,
+            13.861,
+            14.327,
+            14.07,
+            13.873
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            39.206,
+            36.495,
+            128.018,
+            42.341,
+            43.329
+          ],
+          "compute_sum_ms_raw": [
+            2927.101,
+            2936.082,
+            3089.024,
+            2923.093,
+            2924.84
+          ],
+          "wall_ms_raw": [
+            280.634,
+            281.367,
+            297.585,
+            280.219,
+            282.559
+          ],
+          "peer_values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ]
+        },
+        {
+          "mode": "peers",
+          "cpus": 12,
+          "variant": "retirement",
+          "host_ms": 290.31699999999995,
+          "pause_ms": 4.434,
+          "exclusive_ms": 14.927,
+          "groups": 77,
+          "mapping_ms": 42.736,
+          "compute_sum_ms": 2970.358,
+          "wall_ms": 281.395,
+          "host_ms_raw": [
+            355.219,
+            298.279292,
+            290.317,
+            288.262625,
+            287.352042
+          ],
+          "groups_raw": [
+            79,
+            78,
+            77,
+            77,
+            76
+          ],
+          "pause_ms_raw": [
+            4.751,
+            4.524,
+            4.434,
+            4.427,
+            4.414
+          ],
+          "exclusive_ms_raw": [
+            15.151,
+            15.04,
+            14.462,
+            14.927,
+            14.415
+          ],
+          "checksums": [
+            500500,
+            500500,
+            500500,
+            500500,
+            500500
+          ],
+          "mapping_ms_raw": [
+            42.736,
+            44.501,
+            40.295,
+            69.764,
+            39.157
+          ],
+          "compute_sum_ms_raw": [
+            3677.734,
+            2986.071,
+            2932.493,
+            2970.358,
+            2926.277
+          ],
+          "wall_ms_raw": [
+            346.869,
+            289.106,
+            281.395,
+            278.878,
+            278.905
+          ],
+          "peer_values": [
+            14273687594642628126,
+            12197152165755433786,
+            8021665718979259684,
+            578795503992253654,
+            14852335336962388680,
+            11622865076048895980,
+            7447516761628525042,
+            12252998300339843692,
+            7790442531894488178,
+            238576764069445974,
+            14220620982235127624
+          ]
+        }
+      ],
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "prototype": {
+        "base": {
+          "mac": "849bb8bad6c0cff1137c86d415152750bcd0b5ae",
+          "runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+          "ipad": "6ae5259a6deb29363534896443f21ba522d8bab6"
+        },
+        "source_sha256": {
+          "crates/trames-hvf/src/diagnostics.rs": "50c7eab8fec2df515222574e6a9b17273b3a5f186efe5bd3f803d17914f43add",
+          "crates/trames-hvf/src/hardware_tests.rs": "f961a4eb4db8d25e29612687bd832242ba57f793c9616356704440cc78d18011",
+          "crates/trames-hvf/src/kernel.rs": "b4ca0123c5767b9cc3ec2862be65781ecbbd047c2a79b1c6d9be7716b1d2fb72",
+          "crates/trames-hvf/src/machine.rs": "82031b4b8f44cc53a27d786d9c54fb9f8ed1e617a8986dd6669314f320ba7940",
+          "crates/trames-hvf/src/macos.rs": "7e8225374dac91257f057734c106ad7712b81e7ad41d2b55ea0a688defb43df4",
+          "crates/trames-hvf/src/retirement.rs": "f93727a32b31a4385135bc2f897e585c57b4414ce6ed691da3e795b45f08cf0e",
+          "runtime/crates/trames-engine/src/lib.rs": "56ec9dc2a98752938494fdf223ddd8706e11356a872ea9b376a6f1ef6193bc60",
+          "runtime/crates/trames-session/src/process.rs": "6e8e194e9b161c1968c0d05576314f3a3d2e186fd50d8734cbe8d6d2b9db5c9f"
+        },
+        "runner_sha256": "1475cad7a803b7064302f82b2519d34b915140fbecf61a468426c648e15b3c45",
+        "diagnostics_after_normal_build": "Only optional diagnostic counters were added after freezing the normal binary.",
+        "window_us": 250
+      },
+      "hardware_validation": {
+        "passed": true,
+        "runtime_revision": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "rows": [
+          {
+            "target": "trames-mac-run",
+            "executable_sha256": "08019387e51c851d87b5ccb01e0f445d069754691fcc93960a1537af256ae3e4",
+            "exit": 0,
+            "passed_tests": 1
+          },
+          {
+            "target": "trames_hvf",
+            "executable_sha256": "494d3ca31c2369a2316132d1718a287854a60787af11af5f25c0a85bcf50f44f",
+            "exit": 0,
+            "passed_tests": 50
+          }
+        ]
+      },
+      "clippy_passed": true,
+      "diagnostics": {
+        "diagnostic_only": true,
+        "captures": [
+          {
+            "variant": "baseline",
+            "cpus": 1,
+            "unmap_calls": 960,
+            "vcpu_errors": 0,
+            "runner_sha256": "8912652ffd6fc65b44e43d607aa6ebddd1fb637cf4235523c4b91e8d33dd432e"
+          },
+          {
+            "variant": "retirement",
+            "cpus": 1,
+            "unmap_calls": 60,
+            "vcpu_errors": 0,
+            "runner_sha256": "bc89154f01395d4584719f643d2156552dc59ba7f2a7e91bcb51d69ea9292243",
+            "private_retirements": 960,
+            "queued": 960,
+            "batches": 60,
+            "native_retirements": 0
+          },
+          {
+            "variant": "baseline",
+            "cpus": 12,
+            "unmap_calls": 1116,
+            "vcpu_errors": 0,
+            "runner_sha256": "8912652ffd6fc65b44e43d607aa6ebddd1fb637cf4235523c4b91e8d33dd432e"
+          },
+          {
+            "variant": "retirement",
+            "cpus": 12,
+            "unmap_calls": 1058,
+            "vcpu_errors": 0,
+            "runner_sha256": "bc89154f01395d4584719f643d2156552dc59ba7f2a7e91bcb51d69ea9292243",
+            "private_retirements": 1331,
+            "queued": 1331,
+            "batches": 1058,
+            "native_retirements": 0
+          }
+        ],
+        "interpretation": "Final cumulative counts per host thread, zero SDK execution-time errors. Per-operation diagnostic clocks are excluded from all timing comparisons. Scheduling changes the number/layout of physical groups, so baseline and prototype totals are not assumed identical. At 12 CPUs the prototype queues 1331 groups into 1058 contiguous unmaps, about 1.26 groups per batch."
+      },
+      "ownership": "Coalesce last-owner private-arena retirements only, not external/native mappings, host-borrow or page-out transitions. Hold VM and slots until synchronous HVF unmap; clear every mapped bit before releasing any slot in a run; do not bridge live holes. Flush before the existing mapping-syscall and view-preparation boundaries return. Nested scopes/unwinding flush; original unmap-failure policy retained. Default 250us exclusive window unchanged."
+    },
+    "checkpoint_window_prototypes": {
+      "path": "runtime/crates/trames-session/src/process_vm.rs",
+      "default_us": 250,
+      "default_source_sha256": "432374b727c8cf68a537f933ca5338505fedc4e210b046cee0bb783d84761997",
+      "variants_us": {
+        "0": {
+          "source_sha256": "f73d7b2c8ff7edd279bd553a5fb5ab010c20b282ee311096180f4f48c116fe81",
+          "only_duration_constant_changed": true
+        },
+        "32": {
+          "source_sha256": "6f7fd9edc4740cf3ae8123f92900e9ef267b2ac1b1b054c83cf8ab73f942f596",
+          "only_duration_constant_changed": true
+        },
+        "500": {
+          "source_sha256": "eb2df56077a5f32af769ddd0903d14590c326ee5fe438d90da5597a46d2f4b7f",
+          "only_duration_constant_changed": true
+        },
+        "1000": {
+          "source_sha256": "4242822b42134836e5a4a72e60d6deac96d82be13a4b3fc9c2618e380bbf57a9",
+          "only_duration_constant_changed": true
+        }
+      },
+      "deadline_scope": "One shared deadline bounds extra quiesced guest execution across all requesters. Mapping syscalls and checkpoint setup may extend total pause duration. The interpreter exact-instruction path remains unchanged."
+    },
+    "local_fixture_validation": {
+      "compile": "Native AArch64 Linux GCC, -static -O2 -Wall -Wextra -Werror -pthread, assertions enabled",
+      "native_oracles": [
+        {
+          "mode": "reuse",
+          "threads": 24,
+          "rounds": 20,
+          "pages": 2048,
+          "checksum": 1007124480
+        },
+        {
+          "mode": "churn",
+          "threads": 12,
+          "rounds": 20,
+          "pages": 64,
+          "checksum": 714240
+        }
+      ],
+      "fixed_work_observations": 270,
+      "all_checksums_match": true,
+      "vm_stopped_before_mac_measurements": true,
+      "reuse_timer_caveat": "work_ns starts before barrier release; total_ns includes preparation/create/join but excludes final shared-array munmap. host duration includes complete process startup and teardown."
+    },
+    "decisions": [
+      {
+        "prototype": "immutable_l3_sharing",
+        "retain": false,
+        "reason": "HTML5 multi mean +5.5% and Photo Library +12.0%, but total multi flat (+0.057%), total single -1.0%, HDR multi -10.5% and Object Detection -6.5%. Two observations per variant do not establish uniform or statistically certain gains. Added ownership/validation complexity not justified as a stable default."
+      },
+      {
+        "prototype": "checkpoint_window",
+        "retain": false,
+        "reason": "32us/0us increase pause frequency and regress churn. 1000us improves 12-CPU churn median work by 19.8% and compute-peer whole-workload wall by 4.0%, but full Geekbench mean is neutral (-0.195% multi, -0.989% single) with mixed components. Keep production 250us."
+      },
+      {
+        "prototype": "private_physical_retirement_coalescing",
+        "retain": false,
+        "reason": "Single-CPU churn median work -8.0%; six-CPU work +4.8% slower; 12-CPU work -0.3% and compute-peer wall flat. Measured adjacency limits batching at 12 CPUs. Rejected hook and Mac implementation restored."
+      }
+    ],
+    "unmeasured_followup": "A fully shared mutable per-mm root and metadata structure may remove more repeated work than immutable L3 imports. No performance claim or implementation is included here; cross-vCPU revocation, ownership/COW, ASID/context lifetime and reclaim still require proof.",
+    "restoration": {
+      "passed": true,
+      "mac_source_clean": true,
+      "runtime_pin": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+      "installed_runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+      "preserved_user_edits": true
+    },
+    "validation_scope": "Production sources, runtime pins and installed runner are restored exactly. Reuse previous unchanged common-runtime/iOS/CPU/Linux/network/graphics checks; only new opt-in fixture/harness and documentation are retained.",
+    "retained_artifacts": [
+      "tests/fixtures/memory-paths.c",
+      "tests/integration/mac-memory-paths.py",
+      "docs/architecture/execution-backends.md",
+      "docs/validation/mac-geekbench.json"
+    ],
+    "retained_harness_validation": {
+      "passed": true,
+      "checksum_oracle_replayed_observations": 270,
+      "a_a_smoke_observations": 6,
+      "smoke_scope": "Two identical normal signed runner hashes; 1 CPU; reuse/churn/compute-peer modes; one shuffled observation per variant/case with reduced work, network/windows disabled. This checks the saved harness, not performance.",
+      "runner_sha256": {
+        "frozen": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "installed": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e"
+      },
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "source_sha256": {
+        "tests/fixtures/memory-paths.c": "0a746d76c451f46f035a89b200467940ee0b4c58e431a74265c6d75f079fc12c",
+        "tests/integration/mac-memory-paths.py": "c2168bec4431d9ab88fdf8b7e744fbe534e6b5d60fc4c9c2734123f6c710ebde"
+      }
+    }
   }
 }
