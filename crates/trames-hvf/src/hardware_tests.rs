@@ -1620,3 +1620,134 @@ fn native_extents_rebind_without_retaining_the_old_vm_range_or_losing_accounting
 
 #[path = "sme_tests.rs"]
 mod sme;
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn cross_thread_cancel_before_entry_preserves_all_state_and_the_next_svc() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    let mut state = state();
+    state.vectors = std::array::from_fn(|i| (i as u128 + 1) * 0x123456789abcdef);
+    state.tpidr_el0 = 0x87654;
+    state.fpcr = 0x400000;
+    state.fpsr = 17;
+    let original = state.clone();
+    let interrupt = executor.interrupt_handle();
+    std::thread::spawn(move || interrupt.request_exit())
+        .join()
+        .unwrap();
+    assert_eq!(
+        executor
+            .run(&mut state, &mut memory, Duration::from_millis(100))
+            .unwrap()
+            .reason,
+        ExitReason::Yield
+    );
+    assert_eq!(state, original);
+    assert_eq!(executor.register_stats().cancellations, 1);
+    assert_eq!(
+        memory.read_array::<8>(0x20000).unwrap(),
+        15u64.to_le_bytes()
+    );
+    svc(&mut executor, &mut state, &mut memory);
+    assert_eq!(
+        memory.read_array::<8>(0x20000).unwrap(),
+        16u64.to_le_bytes()
+    );
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn cross_thread_cancel_returns_a_computing_cpu_and_preserves_its_register_bank() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = memory();
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    // add x2,x2,#1; b -4; svc #0
+    for (i, word) in [0x91000442u32, 0x17ffffff, 0xd4000001]
+        .into_iter()
+        .enumerate()
+    {
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    let mut state = state();
+    state.vectors = std::array::from_fn(|i| i as u128 * 0x112233445566778899);
+    state.tpidr_el0 = 0x123456;
+    let original = state.clone();
+    assert_eq!(
+        executor
+            .run(&mut state, &mut memory, Duration::from_millis(2))
+            .unwrap()
+            .reason,
+        ExitReason::Yield
+    );
+    let interrupt = executor.interrupt_handle();
+    let worker = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(1));
+        interrupt.request_exit();
+    });
+    assert_eq!(
+        executor
+            .run(&mut state, &mut memory, Duration::from_millis(100))
+            .unwrap()
+            .reason,
+        ExitReason::Yield
+    );
+    worker.join().unwrap();
+    // If the sender was descheduled through the timer, consume its latched
+    // request on the next entry. No timing threshold decides correctness.
+    if executor.register_stats().cancellations == 0 {
+        assert_eq!(
+            executor
+                .run(&mut state, &mut memory, Duration::from_millis(100))
+                .unwrap()
+                .reason,
+            ExitReason::Yield
+        );
+    }
+    assert_eq!(executor.register_stats().cancellations, 1);
+    assert_eq!(state.vectors, original.vectors);
+    assert_eq!(state.tpidr_el0, original.tpidr_el0);
+    for i in 0..31 {
+        if i != 2 {
+            assert_eq!(state.registers[i], original.registers[i]);
+        }
+    }
+    assert!(state.registers[2] > 0);
+    assert!([0x10000, 0x10004].contains(&state.pc));
+    state.pc = 0x10008;
+    svc(&mut executor, &mut state, &mut memory);
+    assert_eq!(state.pc, 0x1000c);
+}
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn retained_cancel_handle_is_inert_during_destroy_and_cpu_identifier_reuse() {
+    let executor = Executor::new().unwrap();
+    let interrupt = executor.interrupt_handle();
+    let old = interrupt.clone();
+    let barrier = Arc::new(std::sync::Barrier::new(2));
+    let started = barrier.clone();
+    let requests = std::thread::spawn(move || {
+        started.wait();
+        for _ in 0..1000 {
+            old.request_exit();
+        }
+    });
+    barrier.wait();
+    drop(executor);
+    requests.join().unwrap();
+    let mut memory = memory();
+    for expected in 16..32u64 {
+        let mut executor = Executor::new().unwrap();
+        interrupt.request_exit();
+        svc(&mut executor, &mut state(), &mut memory);
+        assert_eq!(executor.register_stats().cancellations, 0);
+        assert_eq!(
+            memory.read_array::<8>(0x20000).unwrap(),
+            expected.to_le_bytes()
+        );
+    }
+}

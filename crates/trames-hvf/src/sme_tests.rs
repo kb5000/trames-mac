@@ -133,6 +133,22 @@ fn sme_timer_exit_preserves_streaming_vectors_and_predicates() {
     assert_eq!(&original.z[..64], 1f32.to_le_bytes().repeat(16));
     assert_eq!(&original.z[64..128], 2f32.to_le_bytes().repeat(16));
     assert_eq!(&original.p[..8], &[0x11; 8]);
+    let original = original.clone();
+    let before_cancel = s.clone();
+    let interrupt = executor.interrupt_handle();
+    std::thread::spawn(move || interrupt.request_exit())
+        .join()
+        .unwrap();
+    assert_eq!(
+        executor
+            .run_parallel_sme(&mut s, &mut r, 64, &mut view, Duration::from_millis(100))
+            .unwrap()
+            .reason,
+        ExitReason::Yield
+    );
+    assert_eq!(s, before_cancel);
+    assert_eq!(r.as_ref().unwrap(), &original);
+    assert_eq!(executor.register_stats().cancellations, 1);
     s.pc = 0x10000
         + (&raw const trames_sme_yield_finish as u64 - &raw const trames_sme_yield_begin as u64);
     std::thread::spawn(move || {

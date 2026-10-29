@@ -422,6 +422,22 @@ pub fn run(
         );
         eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
         eprintln!(
+            "trames mac vm phases us: {:?}",
+            runtime
+                .metrics
+                .vm_checkpoint_time
+                .map(|time| time.as_micros())
+        );
+        eprintln!(
+            "trames mac vm quiescence bins: {:?}",
+            runtime.metrics.vm_checkpoint_wait_bins
+        );
+        eprintln!(
+            "trames mac vm batch: {:?}",
+            runtime.metrics.vm_checkpoint_batch
+        );
+
+        eprintln!(
             "trames mac vm checkpoint calls: {:?}",
             runtime.metrics.vm_checkpoint_calls
         );

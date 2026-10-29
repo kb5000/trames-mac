@@ -28,6 +28,43 @@ impl Engine {
 }
 
 impl Cpu {
+    fn coordinated_slice(
+        &mut self,
+        engine: &mut Engine,
+        memory: &mut Memory,
+        registry: &mut trames_memory::parallel::Registry,
+        quantum: Duration,
+    ) -> SliceOutcome {
+        if engine.executor.is_none() {
+            match Executor::new() {
+                Ok(executor) => engine.executor = Some(executor),
+                Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
+            }
+        }
+        let result = (|| {
+            <Self as trames_engine::Cpu>::prepare_hardware_memory(memory, registry)?;
+            let mut view = memory
+                .parallel_view(registry)
+                .ok_or(Error::Unsupported("hardware view admission"))?;
+            view.enable_hardware();
+            let executor = engine.executor.as_mut().unwrap();
+            let result = if <Self as trames_engine::Cpu>::sme_config(self).is_some() {
+                executor.run_parallel_sme(
+                    &mut self.state,
+                    &mut self.sme,
+                    self.sme_config.vl,
+                    &mut view,
+                    quantum,
+                )
+            } else {
+                executor.run_parallel(&mut self.state, &mut view, quantum)
+            };
+            drop(view);
+            memory.commit_parallel()?;
+            result
+        })();
+        self.outcome(result, memory)
+    }
     fn outcome(
         &self,
         result: Result<ExecutionExit, Error>,
@@ -121,6 +158,16 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
 
 impl trames_engine::Cpu for Cpu {
     type Engine = Engine;
+    fn execution_interrupt(
+        engine: &mut Engine,
+    ) -> Result<Option<std::sync::Arc<dyn trames_engine::ExecutionInterrupt>>, CpuFault> {
+        if engine.executor.is_none() {
+            engine.executor =
+                Some(Executor::new().map_err(|error| CpuFault::Host(error.to_string()))?);
+        }
+        Ok(Some(engine.executor.as_ref().unwrap().interrupt_handle()))
+    }
+
     const FEATURES: Features = Features {
         hwcap: 3,
         hwcap2: 0,
@@ -242,35 +289,16 @@ impl trames_engine::Cpu for Cpu {
         registry: &mut trames_memory::parallel::Registry,
         _: u64,
     ) -> SliceOutcome {
-        if engine.executor.is_none() {
-            match Executor::new() {
-                Ok(executor) => engine.executor = Some(executor),
-                Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
-            }
-        }
-        let result = (|| {
-            Self::prepare_hardware_memory(memory, registry)?;
-            let mut view = memory
-                .parallel_view(registry)
-                .ok_or(Error::Unsupported("hardware view admission"))?;
-            view.enable_hardware();
-            let executor = engine.executor.as_mut().unwrap();
-            let result = if self.sme_config().is_some() {
-                executor.run_parallel_sme(
-                    &mut self.state,
-                    &mut self.sme,
-                    self.sme_config.vl,
-                    &mut view,
-                    Duration::from_millis(2),
-                )
-            } else {
-                executor.run_parallel(&mut self.state, &mut view, Duration::from_millis(2))
-            };
-            drop(view);
-            memory.commit_parallel()?;
-            result
-        })();
-        self.outcome(result, memory)
+        self.coordinated_slice(engine, memory, registry, Duration::from_millis(2))
+    }
+    fn run_quiesced(
+        &mut self,
+        engine: &mut Engine,
+        memory: &mut Memory,
+        registry: &mut trames_memory::parallel::Registry,
+        quantum: Duration,
+    ) -> Option<SliceOutcome> {
+        Some(self.coordinated_slice(engine, memory, registry, quantum))
     }
     fn prepare_hardware_memory(
         memory: &mut Memory,
@@ -348,6 +376,60 @@ mod tests {
             address: 0,
             syndrome: 0,
         })
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn quiesced_run_has_a_hardware_deadline_and_returns_unhandled_exits() {
+        let (mut cpu, mut memory) = native_stub();
+        let mut engine = Engine::default();
+        let mut registry = trames_memory::parallel::Registry::default();
+        cpu.set_vulkan_calls(true);
+        assert!(matches!(
+            cpu.run_quiesced(
+                &mut engine,
+                &mut memory,
+                &mut registry,
+                Duration::from_millis(2)
+            ),
+            Some(SliceOutcome::NativeCall { pc: 0x100c, .. })
+        ));
+        assert_eq!(cpu.pc(), 0x100c);
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RW)
+            .unwrap();
+        memory
+            .write_array(0x1000, 0xd4000001u32.to_le_bytes())
+            .unwrap();
+        memory
+            .write_array(0x1004, 0x14000000u32.to_le_bytes())
+            .unwrap();
+        memory
+            .protect(0x1000, 4096, trames_memory::Permissions::RX)
+            .unwrap();
+        cpu.set_pc(0x1000);
+        cpu.set_x(8, 172);
+        assert!(matches!(
+            cpu.run_quiesced(
+                &mut engine,
+                &mut memory,
+                &mut registry,
+                Duration::from_millis(2)
+            ),
+            Some(SliceOutcome::Syscall { instructions: 0 })
+        ));
+        assert_eq!(cpu.pc(), 0x1004);
+        // An infinite guest loop returns under the supplied short quantum;
+        // correctness does not depend on a wall-time threshold on the host.
+        assert!(matches!(
+            cpu.run_quiesced(
+                &mut engine,
+                &mut memory,
+                &mut registry,
+                Duration::from_micros(100)
+            ),
+            Some(SliceOutcome::Yield { instructions: 0 })
+        ));
+        assert_eq!(cpu.pc(), 0x1004);
     }
     #[test]
     fn native_transport_is_opt_in_and_keeps_common_authorization() {

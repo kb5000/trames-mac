@@ -39,6 +39,9 @@ unsafe extern "C" {
     fn trames_hvf_sme_output(host: *mut c_void, state: *mut SmeState);
 
     fn trames_hvf_register_stats(host: *mut c_void, stats: *mut RegisterStats);
+    fn trames_hvf_cpu_identifier(host: *mut c_void) -> u64;
+    fn trames_hvf_request_exit(cpu: u64) -> i32;
+
     fn trames_hvf_max_vcpus() -> u32;
     fn trames_hvf_space_current(host: *mut c_void) -> *mut c_void;
     fn trames_hvf_space_create(host: *mut c_void, error: *mut i32) -> *mut c_void;
@@ -125,6 +128,7 @@ pub struct RegisterStats {
     pub fault_continuations: u64,
     pub timer_programs: u64,
     pub publications: u64,
+    pub cancellations: u64,
 }
 #[derive(Debug)]
 pub enum Error {
@@ -220,11 +224,30 @@ struct TranslationStats {
     retired: usize,
     blocks: usize,
 }
+/// Cross-thread exit authority, separate from the !Send executor. The object
+/// lock excludes CPU destruction/ID reuse while a request enters the framework;
+/// it never covers guest execution, bytes or a native algorithm.
+pub struct Interrupt {
+    cpu: std::sync::Mutex<Option<u64>>,
+}
+impl trames_engine::ExecutionInterrupt for Interrupt {
+    fn request_exit(&self) {
+        let cpu = self.cpu.lock().unwrap();
+        if let Some(cpu) = *cpu {
+            // SAFETY: this retained identifier cannot be destroyed/reused
+            // while the object lock is held. HVF permits cross-thread requests.
+            // A failed optional kick falls back to the existing bounded timer.
+            let _ = unsafe { trames_hvf_request_exit(cpu) };
+        }
+    }
+}
+
 /// A thread-affine vCPU with persistent address-space tables in the shared VM.
 /// Canonical physical pages, VFS and native access share one byte authority.
 pub struct Executor {
     host: NonNull<c_void>,
     machine: Arc<Machine>,
+    interrupt: Arc<Interrupt>,
     spaces: BTreeMap<u64, AddressSpace>,
     active: u64,
     clock: u64,
@@ -241,9 +264,13 @@ impl Executor {
         let host = machine.cpu()?;
         let mut registry = Registry::default();
         registry.use_hardware();
+        let interrupt = Arc::new(Interrupt {
+            cpu: std::sync::Mutex::new(Some(unsafe { trames_hvf_cpu_identifier(host.as_ptr()) })),
+        });
         Ok(Self {
             host,
             machine,
+            interrupt,
             spaces: BTreeMap::from([(
                 0,
                 AddressSpace {
@@ -267,9 +294,12 @@ impl Executor {
             _same_thread: PhantomData,
         })
     }
+    pub fn interrupt_handle(&self) -> Arc<dyn trames_engine::ExecutionInterrupt> {
+        self.interrupt.clone()
+    }
     pub fn register_stats(&self) -> RegisterStats {
         let mut stats = RegisterStats::default();
-        // SAFETY: a live creator-thread host and matching three-u64 C layout.
+        // SAFETY: a live creator-thread host and matching register-stats C layout.
         unsafe { trames_hvf_register_stats(self.host.as_ptr(), &mut stats) };
         stats
     }
@@ -992,6 +1022,9 @@ impl Executor {
 }
 impl Drop for Executor {
     fn drop(&mut self) {
+        // Make retained handles inert before the creator destroys this CPU.
+        // A request already holding the lock completes before invalidation.
+        *self.interrupt.cpu.lock().unwrap() = None;
         self.machine.destroy_cpu(self.host);
     }
 }

@@ -227,7 +227,9 @@ python3 tests/integration/mac-smp-paging.py \
 
 The test compares four CPUs, a 16MiB working set, and one CPU. It checks four
 million shared atomic increments, two complete 64MiB byte checksums, fork/COW,
-and live-process RSS before/after reclamation. Shared-map and code-cache fixtures
+and live-process RSS observations before/after reclamation. Native-pager
+deactivation does not promise an immediate RSS decrease; data/fork correctness
+and actual withdrawal/page-in activity remain acceptance gates. Shared-map and code-cache fixtures
 add cross-process MAP_SHARED/VFS coherence and EL0 cache-maintenance/W^X checks.
 Existing session/signals tests cover external commands, PTY/job control,
 persistence, signal frames and precise fault recovery.
@@ -1218,3 +1220,74 @@ during the clean pair. Source revisions, exact installed runner hash, all
 component scores, provisional eager candidate, profile counts and verification
 scope are saved under `sme_followup_2026_10_29` in
 [mac-geekbench.json](../validation/mac-geekbench.json).
+
+
+### Interruptible mapping checkpoint batches (2026-10-29)
+
+The original fixed-work probe attributed 252 ms of a 330 ms mapping phase to
+waiting for related CPUs to return; memory commit, calls and rebuild together
+cost under 2 ms. Merely requesting immediate `hv_vcpus_exit` reduced individual
+waits but regressed total wall time from 330 to 521 ms: checkpoint groups rose
+from 152 to 3,011 while peers repeatedly stopped and woke. Requeueing peers
+first alone still took 479 ms. These prototypes are not accepted speedups.
+
+The implementation combines targeted exits with bounded batching. One retained
+handle is bound per running worker assignment to its actual mm/backing domain.
+Publication and pause use the domain's object lock, covering both pre-entry
+orders without locking guest execution. HVF latches an exit for a CPU not yet
+running. A separate per-CPU lifetime lock makes retained handles inert before
+CPU destruction/ID reuse. The existing 2 ms timer remains a fallback if an
+optional exit request fails. Other address spaces continue executing, and native
+or I/O operations return normally before the checkpoint takes ownership.
+
+While already exclusive, the existing owner runs consecutive VM syscalls in a
+250 microsecond window shared by all requesters in that checkpoint. This also
+requires all admitted cohort jobs to be held in that checkpoint, reserving a
+logical CPU slot without blocking unrelated address spaces. Partial checkpoints use their existing local mapping commit and worker execution. Each guest entry receives only the remaining hardware timer budget.
+Task, aggregate and per-CPU time accounting include these owner CPU entries. It uses the same
+canonical memory/view preparation, permission, byte-lifetime, ASID/TLB and SME
+state path as coordinated execution. All other syscall, native and fault exits
+remain pending on the original job and are handled exactly once by its ordinary
+worker, or the joined kernel if cancellation wins the handoff. No native body
+runs on the owner through this mechanism. Requeueing preempted peers before
+mapping requesters preserves useful progress between windows. The common hook
+is unsupported by default; iPad retains interpreter execution and capabilities.
+
+`tests/fixtures/vm-checkpoint.c` performs 1,000 mmap/mprotect/mprotect/munmap
+rounds beside finite fixed CPU work (200 million xorshift iterations per peer).
+The final implementation has five shuffled old/new repetitions per CPU setting,
+with no concurrent builds, producing these medians in milliseconds. All per-thread results match across
+variants. This is a targeted synchronization probe, not an application score.
+
+| CPUs / compute peers | Old mapping | New mapping | Old total wall | New total wall |
+| --- | ---: | ---: | ---: | ---: |
+| 1 / 0 | 17.704 | 17.675 | 17.707 | 17.678 |
+| 6 / 5 | 309.238 | 20.000 | 309.302 | 291.309 |
+| 12 / 11 | 313.443 | 37.868 | 313.562 | 281.984 |
+
+The 6/12 CPU total improves about 5.8%/10.1%; no single-CPU improvement is
+established. Five observations are not confidence intervals. The new 12-CPU
+mapping samples range from 36.709 to 53.100 ms and total wall from
+280.637 to 299.651 ms. Retain full samples and hashes rather than presenting only the best run.
+Compile the fixture with a static AArch64 Linux musl toolchain (`-O2 -pthread
+-ffixed-x18`), then run it headless with identical binaries and parameters:
+
+```sh
+trames-mac-run --no-pty --no-windows --network off --memory-mib auto --cpus 12 \
+  --metrics /path/to/vm-checkpoint 11 1000 200000000
+```
+
+`--metrics` reports VM phase microseconds in this order: quiescence, owner queue,
+commit, Linux calls, rebuild, resume, exclusive CPU. Wait bins are below
+5/20/100/500/1000/2000/5000 microseconds, then at least 5000. Batch counters are
+used windows, exclusive CPU entries and additional coalesced VM calls. These
+are phase diagnostics; overlapping domain times do not sum to session wall time.
+
+A 16 microsecond per-entry probe cap was also tested and rejected. It reduced
+exclusive CPU time from 836 to 495 ms in one full suite, but checkpoint groups
+rose from 7,182 to 12,529 and quiescence time from 206 to 595 ms. The full score
+was 4104/12712 versus 4131/13020 for the 250 microsecond shared-window prototype;
+PDF multi was 9070 versus 11919. These are one sample per variant, not a confidence
+interval. A shorter speculative slice did not reduce the measured complete
+mechanism cost. The final implementation retains the single shared 250
+microsecond deadline plus the whole-cohort capacity guard and full CPU accounting.

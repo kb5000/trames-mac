@@ -113,7 +113,7 @@ _Static_assert(offsetof(struct context, complete) == 832, "adapter completion of
 _Static_assert(offsetof(struct context, invalidate) == 840, "adapter invalidation mode");
 _Static_assert(offsetof(struct context, operand) == 848, "adapter invalidation operand");
 struct result { uint64_t kind, syndrome, address, pc; };
-struct register_stats { uint64_t mailbox, fallback, completions, entries, invalidations, full_invalidations, restore_interruptions, fault_continuations, timer_programs, publications; };
+struct register_stats { uint64_t mailbox, fallback, completions, entries, invalidations, full_invalidations, restore_interruptions, fault_continuations, timer_programs, publications, cancellations; };
 struct table { void *memory; uint64_t gpa; struct table *next, *previous, *indexed; };
 struct free_gpa { uint64_t value; struct free_gpa *next; };
 struct machine {
@@ -593,6 +593,7 @@ static bool in_save(uint64_t pc) {
 static int finish_run(struct host *h, struct state *s, struct result *out,
                       hv_exit_reason_t reason, uint64_t syndrome, uint64_t physical) {
     hv_return_t e;
+    if (reason==HV_EXIT_REASON_CANCELED) h->registers.cancellations++;
     if (reason==HV_EXIT_REASON_EXCEPTION && syndrome>>26==0x16)
         return (syndrome&0xffff)==EXIT_HVC_IMMEDIATE ? context_result(h,s,out) : -2;
     uint64_t pc, pstate;
@@ -650,6 +651,9 @@ static int finish_run(struct host *h, struct state *s, struct result *out,
     out->pc=s->pc; h->registers.fallback++; return 0;
 }
 void trames_hvf_register_stats(struct host *h, struct register_stats *out) { *out=h->registers; }
+uint64_t trames_hvf_cpu_identifier(struct host *h) { return h->cpu; }
+int trames_hvf_request_exit(uint64_t cpu) { return (int)hv_vcpus_exit(&cpu,1); }
+
 int trames_hvf_run(struct host *h, struct state *s, uint64_t nanoseconds,
                     bool continue_fault, struct result *out) {
     hv_return_t e;
