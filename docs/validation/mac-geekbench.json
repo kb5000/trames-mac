@@ -12986,5 +12986,1187 @@
       "No actual macOS suspend/resume was performed; virtual-counter behavior relies on the public SDK domain contract.",
       "Photo Library and Object Detection multi means regress about 4.0% and 5.2% across the two clean observations; investigate separately rather than claiming uniform application gains."
     ]
+  },
+  "html5_followup_2026_10_29": {
+    "date": "2026-10-29",
+    "method": "Geekbench 6.7.1 Preview Linux AArch64, 12 CPUs, host-managed RAM, same package/store, metrics enabled, diagnostics disabled, no PTY/windows. Two valid samples per variant in old/new/new/old order, with one completed-but-unscored candidate between the valid candidate runs because sandbox DNS blocked upload. The second candidate uses the normally installed signed bundle after whitespace/comment-only source cleanup. No concurrent builds, tests or samplers. Thermal state 0 and low-power mode off for all four runs. Two observations do not define confidence intervals; native macOS uses different OS binaries and libraries.",
+    "mechanism": "Mac-only creator-owned stage-one translation maintenance batches up to 64 unique VAs using all-level VAE1IS in the existing EL1 restore prelude; empty ancestor withdrawal and 2MiB block edits use all-level VA invalidation too. Root changes/ASID reuse and overflow retain full-ASID invalidation. Original DSB ISHST / TLBI / DSB ISH / ISB and interruption completion protocol remain. No ordinary guest-byte synchronization, new resident reservation, common runtime changes or added service threads.",
+    "controls": [
+      {
+        "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-html5-tlbi-control",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793266054.510643,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 242.807285458,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406250"
+        ],
+        "scores": {
+          "single": 4191,
+          "multi": 12972
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3348,
+            "multi": 9180
+          },
+          "Navigation": {
+            "single": 3288,
+            "multi": 13392
+          },
+          "HTML5 Browser": {
+            "single": 4535,
+            "multi": 11772
+          },
+          "PDF Renderer": {
+            "single": 4199,
+            "multi": 13137
+          },
+          "Photo Library": {
+            "single": 3785,
+            "multi": 10364
+          },
+          "Clang": {
+            "single": 5052,
+            "multi": 23888
+          },
+          "Text Processing": {
+            "single": 3866,
+            "multi": 3703
+          },
+          "Asset Compression": {
+            "single": 3691,
+            "multi": 17243
+          },
+          "Object Detection": {
+            "single": 6328,
+            "multi": 12451
+          },
+          "Background Blur": {
+            "single": 4305,
+            "multi": 13564
+          },
+          "Horizon Detection": {
+            "single": 4040,
+            "multi": 19640
+          },
+          "Object Remover": {
+            "single": 5104,
+            "multi": 15441
+          },
+          "HDR": {
+            "single": 4375,
+            "multi": 18418
+          },
+          "Photo Filter": {
+            "single": 4642,
+            "multi": 11529
+          },
+          "Ray Tracer": {
+            "single": 3695,
+            "multi": 22185
+          },
+          "Structure from Motion": {
+            "single": 3926,
+            "multi": 13960
+          }
+        }
+      },
+      {
+        "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-html5-tlbi-control-repeat",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793267378.944633,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 244.63687375,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406322"
+        ],
+        "scores": {
+          "single": 4090,
+          "multi": 12987
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3298,
+            "multi": 9326
+          },
+          "Navigation": {
+            "single": 3272,
+            "multi": 13218
+          },
+          "HTML5 Browser": {
+            "single": 4373,
+            "multi": 13197
+          },
+          "PDF Renderer": {
+            "single": 4099,
+            "multi": 11850
+          },
+          "Photo Library": {
+            "single": 3762,
+            "multi": 10180
+          },
+          "Clang": {
+            "single": 4754,
+            "multi": 24431
+          },
+          "Text Processing": {
+            "single": 3796,
+            "multi": 3736
+          },
+          "Asset Compression": {
+            "single": 3498,
+            "multi": 18642
+          },
+          "Object Detection": {
+            "single": 6509,
+            "multi": 12999
+          },
+          "Background Blur": {
+            "single": 4361,
+            "multi": 12937
+          },
+          "Horizon Detection": {
+            "single": 3953,
+            "multi": 20555
+          },
+          "Object Remover": {
+            "single": 4836,
+            "multi": 13501
+          },
+          "HDR": {
+            "single": 4304,
+            "multi": 17955
+          },
+          "Photo Filter": {
+            "single": 4267,
+            "multi": 12492
+          },
+          "Ray Tracer": {
+            "single": 3625,
+            "multi": 20075
+          },
+          "Structure from Motion": {
+            "single": 3805,
+            "multi": 13816
+          }
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "runner_sha256": "4dca23012801280ac2af0d032ce46a260e1f9a4cc03a21649b8009b812f94928",
+        "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5+va-tlbi-prototype",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-html5-tlbi-probe",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793266297.361023,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 242.975837834,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406261"
+        ],
+        "scores": {
+          "single": 4144,
+          "multi": 12940
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3341,
+            "multi": 9132
+          },
+          "Navigation": {
+            "single": 3294,
+            "multi": 13644
+          },
+          "HTML5 Browser": {
+            "single": 4291,
+            "multi": 12086
+          },
+          "PDF Renderer": {
+            "single": 4135,
+            "multi": 11457
+          },
+          "Photo Library": {
+            "single": 3788,
+            "multi": 10334
+          },
+          "Clang": {
+            "single": 4929,
+            "multi": 24405
+          },
+          "Text Processing": {
+            "single": 3820,
+            "multi": 3682
+          },
+          "Asset Compression": {
+            "single": 3636,
+            "multi": 17354
+          },
+          "Object Detection": {
+            "single": 6598,
+            "multi": 13155
+          },
+          "Background Blur": {
+            "single": 4327,
+            "multi": 12970
+          },
+          "Horizon Detection": {
+            "single": 3978,
+            "multi": 20498
+          },
+          "Object Remover": {
+            "single": 4950,
+            "multi": 14913
+          },
+          "HDR": {
+            "single": 4396,
+            "multi": 17443
+          },
+          "Photo Filter": {
+            "single": 4443,
+            "multi": 11582
+          },
+          "Ray Tracer": {
+            "single": 3624,
+            "multi": 22175
+          },
+          "Structure from Motion": {
+            "single": 3886,
+            "multi": 14995
+          }
+        }
+      },
+      {
+        "runner_sha256": "4cb0730a1720ecd368bc68884b59f3b422ff6c963762cb5fc72722c4257bac11",
+        "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5+va-tlbi-final",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-html5-tlbi-final-installed",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793267135.128343,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 243.776662292,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406309"
+        ],
+        "scores": {
+          "single": 4184,
+          "multi": 12957
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3338,
+            "multi": 9435
+          },
+          "Navigation": {
+            "single": 3343,
+            "multi": 14232
+          },
+          "HTML5 Browser": {
+            "single": 4495,
+            "multi": 11063
+          },
+          "PDF Renderer": {
+            "single": 4333,
+            "multi": 11212
+          },
+          "Photo Library": {
+            "single": 3848,
+            "multi": 10447
+          },
+          "Clang": {
+            "single": 4866,
+            "multi": 23545
+          },
+          "Text Processing": {
+            "single": 3825,
+            "multi": 3688
+          },
+          "Asset Compression": {
+            "single": 3499,
+            "multi": 16680
+          },
+          "Object Detection": {
+            "single": 6636,
+            "multi": 13485
+          },
+          "Background Blur": {
+            "single": 4335,
+            "multi": 13224
+          },
+          "Horizon Detection": {
+            "single": 3935,
+            "multi": 19921
+          },
+          "Object Remover": {
+            "single": 5001,
+            "multi": 15607
+          },
+          "HDR": {
+            "single": 4409,
+            "multi": 18759
+          },
+          "Photo Filter": {
+            "single": 4693,
+            "multi": 11827
+          },
+          "Ray Tracer": {
+            "single": 3667,
+            "multi": 21325
+          },
+          "Structure from Motion": {
+            "single": 3916,
+            "multi": 15616
+          }
+        }
+      }
+    ],
+    "aggregate_comparison": {
+      "single": {
+        "control_mean": 4140.5,
+        "candidate_mean": 4164,
+        "change_percent": 0.568
+      },
+      "multi": {
+        "control_mean": 12979.5,
+        "candidate_mean": 12948.5,
+        "change_percent": -0.239
+      }
+    },
+    "workloads": [
+      {
+        "name": "File Compression",
+        "single": {
+          "control_mean": 3323,
+          "candidate_mean": 3339.5,
+          "change_percent": 0.497,
+          "native": 3513,
+          "native_ratio": 0.950612
+        },
+        "multi": {
+          "control_mean": 9253,
+          "candidate_mean": 9283.5,
+          "change_percent": 0.33,
+          "native": 12298,
+          "native_ratio": 0.754879
+        }
+      },
+      {
+        "name": "Navigation",
+        "single": {
+          "control_mean": 3280,
+          "candidate_mean": 3318.5,
+          "change_percent": 1.174,
+          "native": 3543,
+          "native_ratio": 0.936636
+        },
+        "multi": {
+          "control_mean": 13305,
+          "candidate_mean": 13938,
+          "change_percent": 4.758,
+          "native": 16886,
+          "native_ratio": 0.825418
+        }
+      },
+      {
+        "name": "HTML5 Browser",
+        "single": {
+          "control_mean": 4454,
+          "candidate_mean": 4393,
+          "change_percent": -1.37,
+          "native": 4466,
+          "native_ratio": 0.983654
+        },
+        "multi": {
+          "control_mean": 12484.5,
+          "candidate_mean": 11574.5,
+          "change_percent": -7.289,
+          "native": 21252,
+          "native_ratio": 0.544631
+        }
+      },
+      {
+        "name": "PDF Renderer",
+        "single": {
+          "control_mean": 4149,
+          "candidate_mean": 4234,
+          "change_percent": 2.049,
+          "native": 3968,
+          "native_ratio": 1.067036
+        },
+        "multi": {
+          "control_mean": 12493.5,
+          "candidate_mean": 11334.5,
+          "change_percent": -9.277,
+          "native": 19319,
+          "native_ratio": 0.586702
+        }
+      },
+      {
+        "name": "Photo Library",
+        "single": {
+          "control_mean": 3773.5,
+          "candidate_mean": 3818,
+          "change_percent": 1.179,
+          "native": 3717,
+          "native_ratio": 1.027172
+        },
+        "multi": {
+          "control_mean": 10272,
+          "candidate_mean": 10390.5,
+          "change_percent": 1.154,
+          "native": 23344,
+          "native_ratio": 0.445104
+        }
+      },
+      {
+        "name": "Clang",
+        "single": {
+          "control_mean": 4903,
+          "candidate_mean": 4897.5,
+          "change_percent": -0.112,
+          "native": 4862,
+          "native_ratio": 1.007302
+        },
+        "multi": {
+          "control_mean": 24159.5,
+          "candidate_mean": 23975,
+          "change_percent": -0.764,
+          "native": 29922,
+          "native_ratio": 0.80125
+        }
+      },
+      {
+        "name": "Text Processing",
+        "single": {
+          "control_mean": 3831,
+          "candidate_mean": 3822.5,
+          "change_percent": -0.222,
+          "native": 4123,
+          "native_ratio": 0.927116
+        },
+        "multi": {
+          "control_mean": 3719.5,
+          "candidate_mean": 3685,
+          "change_percent": -0.928,
+          "native": 5545,
+          "native_ratio": 0.664563
+        }
+      },
+      {
+        "name": "Asset Compression",
+        "single": {
+          "control_mean": 3594.5,
+          "candidate_mean": 3567.5,
+          "change_percent": -0.751,
+          "native": 3737,
+          "native_ratio": 0.954643
+        },
+        "multi": {
+          "control_mean": 17942.5,
+          "candidate_mean": 17017,
+          "change_percent": -5.158,
+          "native": 25436,
+          "native_ratio": 0.669012
+        }
+      },
+      {
+        "name": "Object Detection",
+        "single": {
+          "control_mean": 6418.5,
+          "candidate_mean": 6617,
+          "change_percent": 3.093,
+          "native": 6297,
+          "native_ratio": 1.050818
+        },
+        "multi": {
+          "control_mean": 12725,
+          "candidate_mean": 13320,
+          "change_percent": 4.676,
+          "native": 18010,
+          "native_ratio": 0.739589
+        }
+      },
+      {
+        "name": "Background Blur",
+        "single": {
+          "control_mean": 4333,
+          "candidate_mean": 4331,
+          "change_percent": -0.046,
+          "native": 4428,
+          "native_ratio": 0.978094
+        },
+        "multi": {
+          "control_mean": 13250.5,
+          "candidate_mean": 13097,
+          "change_percent": -1.158,
+          "native": 18671,
+          "native_ratio": 0.701462
+        }
+      },
+      {
+        "name": "Horizon Detection",
+        "single": {
+          "control_mean": 3996.5,
+          "candidate_mean": 3956.5,
+          "change_percent": -1.001,
+          "native": 4700,
+          "native_ratio": 0.841809
+        },
+        "multi": {
+          "control_mean": 20097.5,
+          "candidate_mean": 20209.5,
+          "change_percent": 0.557,
+          "native": 25922,
+          "native_ratio": 0.779627
+        }
+      },
+      {
+        "name": "Object Remover",
+        "single": {
+          "control_mean": 4970,
+          "candidate_mean": 4975.5,
+          "change_percent": 0.111,
+          "native": 5143,
+          "native_ratio": 0.967431
+        },
+        "multi": {
+          "control_mean": 14471,
+          "candidate_mean": 15260,
+          "change_percent": 5.452,
+          "native": 20020,
+          "native_ratio": 0.762238
+        }
+      },
+      {
+        "name": "HDR",
+        "single": {
+          "control_mean": 4339.5,
+          "candidate_mean": 4402.5,
+          "change_percent": 1.452,
+          "native": 4938,
+          "native_ratio": 0.891555
+        },
+        "multi": {
+          "control_mean": 18186.5,
+          "candidate_mean": 18101,
+          "change_percent": -0.47,
+          "native": 23779,
+          "native_ratio": 0.761218
+        }
+      },
+      {
+        "name": "Photo Filter",
+        "single": {
+          "control_mean": 4454.5,
+          "candidate_mean": 4568,
+          "change_percent": 2.548,
+          "native": 4753,
+          "native_ratio": 0.961077
+        },
+        "multi": {
+          "control_mean": 12010.5,
+          "candidate_mean": 11704.5,
+          "change_percent": -2.548,
+          "native": 14494,
+          "native_ratio": 0.807541
+        }
+      },
+      {
+        "name": "Ray Tracer",
+        "single": {
+          "control_mean": 3660,
+          "candidate_mean": 3645.5,
+          "change_percent": -0.396,
+          "native": 3718,
+          "native_ratio": 0.9805
+        },
+        "multi": {
+          "control_mean": 21130,
+          "candidate_mean": 21750,
+          "change_percent": 2.934,
+          "native": 26110,
+          "native_ratio": 0.833014
+        }
+      },
+      {
+        "name": "Structure from Motion",
+        "single": {
+          "control_mean": 3865.5,
+          "candidate_mean": 3901,
+          "change_percent": 0.918,
+          "native": 3991,
+          "native_ratio": 0.977449
+        },
+        "multi": {
+          "control_mean": 13888,
+          "candidate_mean": 15305.5,
+          "change_percent": 10.207,
+          "native": 20364,
+          "native_ratio": 0.751596
+        }
+      }
+    ],
+    "profiling": {
+      "before": {
+        "method": "Per-thread first-to-last cumulative delta strictly inside the multi-HTML5 phase. Different endpoints and diagnostic overhead: counts are partial observations, not equal-work complete-workload totals or wall-time percentages.",
+        "phase": {
+          "name": "multi-HTML5 Browser",
+          "start_ms": 1793264062388,
+          "end_ms": 1793264069605
+        },
+        "incomplete_json_lines": 1,
+        "threads": [
+          {
+            "thread": "trames-cpu-0",
+            "records": 3,
+            "first_ms": 1793264062388,
+            "last_ms": 1793264064391
+          },
+          {
+            "thread": "trames-cpu-8",
+            "records": 2,
+            "first_ms": 1793264062423,
+            "last_ms": 1793264063424
+          },
+          {
+            "thread": "trames-cpu-6",
+            "records": 2,
+            "first_ms": 1793264062438,
+            "last_ms": 1793264063439
+          },
+          {
+            "thread": "trames-cpu-11",
+            "records": 2,
+            "first_ms": 1793264062439,
+            "last_ms": 1793264063439
+          },
+          {
+            "thread": "trames-cpu-2",
+            "records": 2,
+            "first_ms": 1793264062448,
+            "last_ms": 1793264063450
+          },
+          {
+            "thread": "trames-cpu-1",
+            "records": 2,
+            "first_ms": 1793264062448,
+            "last_ms": 1793264063449
+          },
+          {
+            "thread": "trames-cpu-4",
+            "records": 2,
+            "first_ms": 1793264062448,
+            "last_ms": 1793264063450
+          },
+          {
+            "thread": "trames-cpu-3",
+            "records": 2,
+            "first_ms": 1793264062449,
+            "last_ms": 1793264063452
+          },
+          {
+            "thread": "trames-cpu-5",
+            "records": 2,
+            "first_ms": 1793264062454,
+            "last_ms": 1793264063454
+          },
+          {
+            "thread": "trames-cpu-7",
+            "records": 2,
+            "first_ms": 1793264062454,
+            "last_ms": 1793264063457
+          },
+          {
+            "thread": "trames-cpu-10",
+            "records": 2,
+            "first_ms": 1793264062454,
+            "last_ms": 1793264063455
+          },
+          {
+            "thread": "trames-cpu-9",
+            "records": 2,
+            "first_ms": 1793264062459,
+            "last_ms": 1793264063460
+          },
+          {
+            "thread": "main",
+            "records": 3,
+            "first_ms": 1793264063418,
+            "last_ms": 1793264069602
+          }
+        ],
+        "totals": {
+          "migrations": 2260,
+          "owner_transitions": 424,
+          "first_storage_faults": 75385,
+          "retained_storage_faults": 10831,
+          "neighbor_installs": 683729,
+          "inspections": 127551,
+          "full_tlb": 2438,
+          "tlb": 2454,
+          "entries": 107865,
+          "run_ns": 2402472198,
+          "sync_ns": 59143629,
+          "fault_ns": 868348452,
+          "vcpu_exec_ns": 1990803540,
+          "vcpu_exec_errors": 0,
+          "svc": {
+            "20": 0,
+            "56": 1,
+            "57": 1,
+            "62": 218,
+            "63": 223,
+            "64": 0,
+            "93": 0,
+            "98": 178,
+            "99": 0,
+            "113": 4,
+            "115": 1,
+            "122": 0,
+            "123": 0,
+            "124": 4479,
+            "134": 0,
+            "135": 0,
+            "160": 0,
+            "169": 5606,
+            "178": 0,
+            "215": 3600,
+            "220": 0,
+            "222": 4106,
+            "226": 75,
+            "233": 0,
+            "260": 0,
+            "278": 0,
+            "17": 0,
+            "23": 0,
+            "29": 0,
+            "48": 0,
+            "49": 0,
+            "61": 0,
+            "78": 0,
+            "79": 0,
+            "80": 0,
+            "96": 0,
+            "172": 0,
+            "173": 0,
+            "174": 0,
+            "179": 0,
+            "214": 0,
+            "221": 0,
+            "261": 0,
+            "293": 0,
+            "435": 0
+          },
+          "mprotect": [
+            0,
+            0,
+            0,
+            75,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "after": {
+        "method": "Per-thread first-to-last cumulative delta strictly inside the multi-HTML5 phase. Different endpoints and diagnostic overhead: counts are partial observations, not equal-work complete-workload totals or wall-time percentages.",
+        "phase": {
+          "name": "multi-HTML5 Browser",
+          "start_ms": 1793266733523,
+          "end_ms": 1793266740072
+        },
+        "incomplete_json_lines": 1,
+        "threads": [
+          {
+            "thread": "trames-cpu-0",
+            "records": 2,
+            "first_ms": 1793266733523,
+            "last_ms": 1793266734524
+          },
+          {
+            "thread": "trames-cpu-2",
+            "records": 2,
+            "first_ms": 1793266733560,
+            "last_ms": 1793266734563
+          },
+          {
+            "thread": "trames-cpu-3",
+            "records": 2,
+            "first_ms": 1793266733575,
+            "last_ms": 1793266734577
+          },
+          {
+            "thread": "trames-cpu-5",
+            "records": 2,
+            "first_ms": 1793266733576,
+            "last_ms": 1793266734578
+          },
+          {
+            "thread": "trames-cpu-7",
+            "records": 2,
+            "first_ms": 1793266733576,
+            "last_ms": 1793266734578
+          },
+          {
+            "thread": "trames-cpu-1",
+            "records": 2,
+            "first_ms": 1793266733593,
+            "last_ms": 1793266734596
+          },
+          {
+            "thread": "trames-cpu-6",
+            "records": 2,
+            "first_ms": 1793266733593,
+            "last_ms": 1793266734594
+          },
+          {
+            "thread": "trames-cpu-11",
+            "records": 2,
+            "first_ms": 1793266733593,
+            "last_ms": 1793266734614
+          },
+          {
+            "thread": "trames-cpu-9",
+            "records": 2,
+            "first_ms": 1793266733594,
+            "last_ms": 1793266734594
+          },
+          {
+            "thread": "trames-cpu-4",
+            "records": 2,
+            "first_ms": 1793266733594,
+            "last_ms": 1793266734596
+          },
+          {
+            "thread": "trames-cpu-8",
+            "records": 2,
+            "first_ms": 1793266733594,
+            "last_ms": 1793266734595
+          },
+          {
+            "thread": "trames-cpu-10",
+            "records": 2,
+            "first_ms": 1793266733594,
+            "last_ms": 1793266734595
+          },
+          {
+            "thread": "main",
+            "records": 2,
+            "first_ms": 1793266734540,
+            "last_ms": 1793266740068
+          }
+        ],
+        "totals": {
+          "migrations": 2264,
+          "owner_transitions": 343,
+          "first_storage_faults": 74125,
+          "retained_storage_faults": 11111,
+          "neighbor_installs": 697769,
+          "inspections": 100060,
+          "full_tlb": 76,
+          "tlb": 1947,
+          "entries": 104091,
+          "run_ns": 2388899861,
+          "sync_ns": 54369001,
+          "fault_ns": 940997467,
+          "vcpu_exec_ns": 2127353417,
+          "vcpu_exec_errors": 0,
+          "svc": {
+            "20": 0,
+            "56": 1,
+            "57": 1,
+            "62": 218,
+            "63": 223,
+            "64": 0,
+            "93": 0,
+            "98": 191,
+            "99": 0,
+            "113": 4,
+            "115": 1,
+            "122": 0,
+            "123": 0,
+            "124": 3534,
+            "134": 0,
+            "135": 0,
+            "160": 0,
+            "169": 3698,
+            "178": 0,
+            "215": 3583,
+            "220": 0,
+            "222": 4085,
+            "226": 62,
+            "233": 0,
+            "260": 0,
+            "278": 0,
+            "17": 0,
+            "23": 0,
+            "29": 0,
+            "48": 0,
+            "49": 0,
+            "61": 0,
+            "78": 0,
+            "79": 0,
+            "80": 0,
+            "96": 0,
+            "172": 0,
+            "173": 0,
+            "174": 0,
+            "179": 0,
+            "214": 0,
+            "221": 0,
+            "261": 0,
+            "293": 0,
+            "435": 0
+          },
+          "mprotect": [
+            0,
+            0,
+            0,
+            62,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "rejected_worker_locality": {
+      "runner_sha256": "4029b7a0ab417d7515399fa44face9ef6ec4c2f5396e586a7ae1fb4d501bf8e9",
+      "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5+diagnostics-gated",
+      "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9+bounded-locality",
+      "variant": "trames-automib-12cpu-html5-locality-probe",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793264863.647098,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 0,
+      "seconds": 242.6614725,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19406194"
+      ],
+      "scores": {
+        "single": 4186,
+        "multi": 12961
+      },
+      "component_scores": {
+        "File Compression": {
+          "single": 3414,
+          "multi": 9050
+        },
+        "Navigation": {
+          "single": 3289,
+          "multi": 13979
+        },
+        "HTML5 Browser": {
+          "single": 4492,
+          "multi": 11338
+        },
+        "PDF Renderer": {
+          "single": 4092,
+          "multi": 12032
+        },
+        "Photo Library": {
+          "single": 3819,
+          "multi": 10340
+        },
+        "Clang": {
+          "single": 5033,
+          "multi": 24050
+        },
+        "Text Processing": {
+          "single": 3860,
+          "multi": 3725
+        },
+        "Asset Compression": {
+          "single": 3694,
+          "multi": 18019
+        },
+        "Object Detection": {
+          "single": 6627,
+          "multi": 12534
+        },
+        "Background Blur": {
+          "single": 4328,
+          "multi": 13264
+        },
+        "Horizon Detection": {
+          "single": 4043,
+          "multi": 20086
+        },
+        "Object Remover": {
+          "single": 5186,
+          "multi": 14749
+        },
+        "HDR": {
+          "single": 4402,
+          "multi": 18673
+        },
+        "Photo Filter": {
+          "single": 4172,
+          "multi": 11058
+        },
+        "Ray Tracer": {
+          "single": 3682,
+          "multi": 22627
+        },
+        "Structure from Motion": {
+          "single": 3950,
+          "multi": 15257
+        }
+      }
+    },
+    "completed_compute_but_upload_failed": {
+      "runner_sha256": "4cb0730a1720ecd368bc68884b59f3b422ff6c963762cb5fc72722c4257bac11",
+      "code_mac": "2fa2dd309af01779689c1fb5283ce821c66406b5+va-tlbi-final",
+      "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+      "variant": "trames-automib-12cpu-html5-tlbi-final-repeat",
+      "memory_mib": "auto",
+      "cpus": 12,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "start_unix": 1793266837.7193978,
+      "upload_authorized": true,
+      "diagnostics": false,
+      "exit": 255,
+      "seconds": 243.737178333,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "public_urls": [],
+      "reason": "All 32 single/multi work items completed; restricted sandbox denied host DNS resolution for result upload. No public score was produced. Reran only this failed sample with previously authorized network access."
+    },
+    "experiment_base_code": {
+      "mac": "2fa2dd309af01779689c1fb5283ce821c66406b5",
+      "runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9"
+    },
+    "tested_candidate_runner_sha256": "4cb0730a1720ecd368bc68884b59f3b422ff6c963762cb5fc72722c4257bac11",
+    "tested_candidate_source_sha256": {
+      "crates/trames-hvf/src/host.c": "204476620766ffe5355628b32866e74df7a9fa794adb03afe751c85a44558eec",
+      "crates/trames-hvf/src/vectors.S": "9157e96fcdc36118c0152fd37dfd7d87b69709eaffd9fe0e4b2db951f2b07870",
+      "crates/trames-hvf/src/kernel.rs": "c4f9fd4d8b394a1c4b171ba6cf628a24d97bcd200c16541f0c71d4277f9b4a5f",
+      "crates/trames-hvf/src/macos.rs": "e19e12d2415d9db361ea5d186522dedd3f7e0553e17fb3bb042b89e29ffae409",
+      "crates/trames-hvf/src/diagnostics.rs": "faa409054da4f31f5f8ea937aee477b90df2536f7f925a27d26d1d92bdf4dfaf",
+      "crates/trames-hvf/src/hardware_tests.rs": "72bb80b7e45edffa7f1f77b4f34b6995b31e322a2307dd156b08c3d5789bcd67"
+    },
+    "validation_of_rejected_tlbi_prototype": {
+      "signed_hvf_tests": 50,
+      "signed_app_pressure_tests": 1,
+      "ordinary_hvf_tests": 4,
+      "ordinary_cli_tests": 7,
+      "clippy": [
+        "default workspace/all-targets -D warnings",
+        "trames-hvf/diagnostics workspace/all-targets -D warnings"
+      ],
+      "real_linux": {
+        "clock_vdso_futex_glibc_loader": 8,
+        "sme_1_and_12_cpu": 2,
+        "signal_oracles": 4,
+        "smp_and_paging": 3
+      },
+      "scope": "These checks apply to the rejected VA-batch experiment, not a retained production TLB change. The final candidate source differed from the scoped-tested prototype only by verified formatting/comments.",
+      "user_edits_preserved": true
+    },
+    "decision": "Rejected both worker-locality and bounded-VA TLBI prototypes. The four valid normal Geekbench runs do not show a repeatable HTML5 gain; the VA-batch two-sample means are lower for HTML5 and PDF. Restore the exact previous signed release binary and original C/assembly/hardware tests. Retain only opt-in attribution tools, which compile out of default builds.",
+    "retained_installed_runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+    "retained_diagnostics": {
+      "code_mac": "dc45efdcb8fda493ecc894cde9eeb9b51fb11cc9",
+      "source_sha256": {
+        "crates/trames-hvf/src/diagnostics.rs": "faa409054da4f31f5f8ea937aee477b90df2536f7f925a27d26d1d92bdf4dfaf",
+        "crates/trames-hvf/src/kernel.rs": "c4f9fd4d8b394a1c4b171ba6cf628a24d97bcd200c16541f0c71d4277f9b4a5f",
+        "crates/trames-hvf/src/macos.rs": "e19e12d2415d9db361ea5d186522dedd3f7e0553e17fb3bb042b89e29ffae409"
+      },
+      "validation": {
+        "passed": true,
+        "reports": 12,
+        "vcpu_exec_errors": 0,
+        "runner_sha256": "f774b6ce467f69ad1a04573ef58c05ca0287a7f2c7b0e82f22bd5cf3c06960ba",
+        "scope": "Retained diagnostic-only source after restoring original C, vector adapter and hardware tests. Real Linux threaded clock, fork/exec, vCPU registration/destruction and SDK accounting."
+      },
+      "default_build": "All new state, SDK accounting and callsites are behind trames-hvf/diagnostics. Default production C/assembly and common runtime are unchanged.",
+      "sdk_time": "Public ARM hv_vcpu_get_exec_time returns mach_absolute_time ticks, converted using mach_timebase_info; includes guest EL0 plus thin EL1 adapter, not instruction retirement. Creator-thread TLS registration/removal brackets raw host-pointer lifetime and vCPU ID reuse.",
+      "fields": "vcpu_exec_ns, vcpu_exec_errors; registers[11] completed-batch statistics; counts[22] appends worker migration and owner transition to the existing twenty counters; svc is sparse SVC-entry counts, not completed-syscall counts; mprotect[8] indexes the low three AArch64 protection bits."
+    },
+    "followup_priorities": [
+      {
+        "candidate": "Reduce repeated per-vCPU stage-one population for the same guest address space",
+        "evidence": "75,385 new-storage faults, 10,831 retained-storage faults and 683,729 retained-neighbor PTE installs in one partial HTML5 interval. A shared per-mm translation design is a larger Mac-only experiment, not implemented or proven faster here.",
+        "constraint": "Keep common guest bytes/permissions authoritative; prove cross-vCPU revocation, ASID/context lifetime, COW and reclaim before adoption."
+      },
+      {
+        "candidate": "Attribute mmap/munmap quiescence and stage-two registration churn",
+        "evidence": "7,706 mmap/munmap SVC entries in the same partial interval. Faster TLB selection alone did not improve application scores.",
+        "constraint": "Do not retain unused guest RAM or bypass permissions to reduce calls; separately measure pause, registration and later refault costs."
+      },
+      {
+        "candidate": "Batch retained-neighbor metadata/PTE preparation",
+        "evidence": "Hundreds of thousands of neighbor PTE installs survive the TLBI change.",
+        "constraint": "Reuse one valid memory/permission snapshot without reading or charging untouched mappings; retain hardware memory ordering and avoid global algorithm locks."
+      }
+    ]
   }
 }

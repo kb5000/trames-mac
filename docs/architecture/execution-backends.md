@@ -684,8 +684,8 @@ Default builds compile out the instrumentation. For attribution, build with
 `--features trames-hvf/diagnostics`, ad-hoc sign the resulting executable with
 `apps/macos/Trames.entitlements`, and set `TRAMES_HVF_PROFILE=1`. Each executing
 host thread emits cumulative JSON to stderr at most once per active second and
-on thread teardown. There is no shared counter lock, monitor thread or guest
-load/store instrumentation. Profiling changes timings; use a normal signed
+on vCPU retirement and thread teardown. There is no shared counter lock, monitor
+thread or guest load/store instrumentation. Profiling changes timings; use a normal signed
 build without samplers for performance scores.
 
 `wall_ns`, `cpu_ns` and `calls` follow this order: translation synchronization,
@@ -700,9 +700,23 @@ do not add them as independent totals.
 leaves, installed leaves, stage-one faults, retired leaves, root switches, peak
 cached leaves per thread, fallback chunk-stamp checks, faults exporting new
 storage, faults reusing retained storage, retained-neighbor PTE installations,
-write/read/execute faults, zero/copy allocations and imports. Compare cumulative
-deltas over workload boundaries; sum only final per-thread records for totals.
-Historical diagnostic builds emitted only the first nine counters.
+write/read/execute faults, zero/copy allocations, imports, SME context exports,
+SME streaming, worker-to-worker migration and worker/owner transitions. Compare
+cumulative deltas over workload boundaries; sum only final per-thread records
+for totals. Historical versions emitted nine or twenty counters.
+
+`vcpu_exec_ns` uses the public ARM `hv_vcpu_get_exec_time` API on the creator
+thread and converts its mach_absolute_time ticks through mach_timebase_info.
+It includes EL0 and the thin EL1 adapter, not retired instructions; it is nested
+inside HVF run time. `vcpu_exec_errors` counts SDK sampling failures. TLS tracks
+live vCPU IDs/host pointers only between Executor creation and destruction and
+accumulates retired totals before IDs can be reused. Other host threads never
+sample those pointers. `registers` orders mailbox exports, fallback exports,
+completed exception saves, HVF entries, completed invalidation batches, full-ASID
+batches, interrupted restores, fault continuations, timer programming, descriptor
+publications and cancellation requests. These are batch counts, not TLBI
+instruction counts. `svc` contains sparse AArch64 SVC-entry pairs, not completed
+syscall counts; `mprotect[8]` indexes the low three protection bits of argument 2.
 
 
 ## Host-managed memory and fused translation maintenance
@@ -1464,3 +1478,100 @@ the earlier broadcast queue while retaining metadata/vDSO changes; the final
 layout-only ELF fix also applies to the installed side. All checksums match.
 The shared metadata probe remains zero-resident and is independent of ELF
 layout. No timing gate is added to correctness tests.
+
+
+## HTML5 investigation and rejected translation prototype (2026-10-29)
+
+Geekbench 6 HTML5 Browser exercises a headless CPU rendering stack: Gumbo,
+litehtml, FreeType, AGG, JPEG and PNG. It renders eight pages in the single-core
+workload and 32 in multi-core. This experiment therefore runs without a Trames
+window or Wayland presenter. See the
+[official benchmark internals](https://www.geekbench.com/doc/geekbench6-benchmark-internals.pdf).
+Native macOS and Linux benchmark binaries use different OS/library stacks; the
+remaining score gap is not a direct measurement of executor overhead alone.
+
+The first diagnostic interval inside multi-core HTML5 contains 75,385 new-storage
+faults, 10,831 retained-storage faults, 683,729 retained-neighbor PTE installs,
+2,260 worker migrations and 7,706 mmap/munmap SVC entries. Full-ASID invalidations
+account for 2,438 of 2,454 completed invalidation batches. These are partial
+per-thread first-to-last cumulative deltas inside the phase, not identical
+workload boundaries or exact wall-time percentages. The phase includes the
+benchmark's intentional approximately five-second pause. Fault timers contain
+nested allocation/map work, and SDK vCPU time includes the thin EL1 adapter;
+neither may be summed as an independent elapsed-time fraction.
+
+A bounded worker-locality prototype preferred the last worker for seven claims
+before a FIFO claim, retaining affinity and idle stealing. Correctness passed,
+but five shuffled fixed-work observations and a complete Geekbench run did not
+establish an HTML5 improvement (HTML5 multi 11,338). It was removed from the common
+runtime and both product copies. No queue policy change is included here.
+
+A second Mac-only prototype batched up to 64 distinct ASID/VA operands in
+the existing EL1 restore prelude. Multiple leaf edits, empty ancestor-table
+withdrawal and valid 2MiB block edits used all-level VAE1IS; root changes, ASID
+reuse and list overflow retained full-ASID ASIDE1IS. It preserved the translation
+barriers and interrupted-restore protocol and fit the existing private 16KiB
+context allocation. This prototype also was rejected and removed. Production
+retains the previous VA/full-ASID selection, original C/assembly/hardware tests
+and exact previously validated signed release executable. There is no common
+Linux/iPad change or added RAM reservation.
+
+A diagnostic interval of the rejected implementation records 76 full-ASID batches
+out of 1,947, versus 2,438 out of 2,454 before (about 4% versus 99%). Its 74,125
+new-storage faults and 697,769 neighbor installs remain large. Each interval has
+different per-thread endpoints; the counts demonstrate changed invalidation
+selection, not a 97% reduction in total execution time or equal-work timings.
+Both captures report zero SDK execution-time errors. Each has one incomplete
+JSON line from terminating the diagnostic process after HTML5; that line is
+excluded explicitly.
+
+| Measure | Current mean | Rejected VA batch mean | Change | Native macOS |
+| --- | ---: | ---: | ---: | ---: |
+| Total single | 4140.5 | 4164.0 | +0.6% | 4287 |
+| Total multi | 12979.5 | 12948.5 | -0.2% | 18616 |
+| HTML5 Browser single | 4454.0 | 4393.0 | -1.4% | 4466 |
+| HTML5 Browser multi | 12484.5 | 11574.5 | -7.3% | 21252 |
+| PDF Renderer multi | 12493.5 | 11334.5 | -9.3% | 19319 |
+
+The comparison uses two normal, signed release samples per variant in
+old/new/new/old order, 12 CPUs and host-managed memory. Metrics are enabled,
+HVF diagnostics disabled, with no concurrent build, CI or sampler. Every run
+starts and ends at thermal state zero with low-power mode off. The second new
+sample uses the normally installed bundle after source formatting/comment
+cleanup; reversing those exact edits reproduces the tested prototype's six
+source hashes. Raw component results, binary/source hashes, public result links,
+profile windows and scoped validation are recorded in
+`html5_followup_2026_10_29` in [mac-geekbench.json](../validation/mac-geekbench.json).
+Two observations per variant do not establish confidence intervals or uniform
+gains; individual workload regressions are retained in that record. One additional
+installed run completed all workloads but could not upload because the restricted
+sandbox denied DNS resolution. It produced no score and is recorded separately;
+only that failed sample was rerun with the previously authorized network access.
+
+The lower two-sample HTML5/PDF means and flat aggregate do not justify shipping
+this complexity. Fewer full-ASID invalidations did not translate to a repeatable
+application gain. The native single-core HTML5 comparison is close; the current
+multi-core mean is about 59% of the earlier native sample. The most useful next
+experiments are reducing repeated per-vCPU page-table population, attributing
+mmap/munmap quiescence and stage-two registration churn, and batching retained
+metadata/PTE preparation. Shared per-mm page tables need separate proof of
+cross-vCPU revocation, ASID/context lifetime, COW and reclaim. None is implemented
+or claimed faster here; unused mappings must keep their demand-allocation policy.
+
+Only the opt-in diagnostics are retained: public SDK vCPU execution accounting,
+register-maintenance counters, worker/owner transitions, SVC-entry histograms and
+mprotect permission-bit counts. Default builds compile out all new state and
+callsites. The current signed production executable is restored byte-for-byte.
+
+The rejected TLBI prototype passed 50 signed HVF tests and the application
+pressure test,
+including batched permission revocation, last-leaf table withdrawal/GPA reuse,
+capacity overflow, interrupted list invalidation, block demotion, fork/COW and
+paging. Its ordinary four HVF and seven CLI tests, eight real-Linux
+clock/futex/glibc-loader cases, two SME cases, four signal oracles and three
+SMP/paging cases passed too. After restoring the original production adapter,
+Clippy with/without diagnostics passes again; a signed diagnostic build runs the
+real Linux threaded clock/fork/exec fixture with 12 reports and zero SDK errors.
+No common runtime changes are included; both product pins remain at 8fb524e, so
+previous unchanged shared-runtime/iOS checks are reused. The restored production
+binary retains the already completed baseline checks and clean benchmark runs.
