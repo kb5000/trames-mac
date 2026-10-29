@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-29",
+  "firefox": "142.0-r0, original signed Alpine ARM64 package",
+  "mesa": "25.1.9 with native Wayland EGL and PBO numeric-type metadata patches",
+  "host_gpu": "Apple M6",
+  "cpus": 12,
+  "memory": "host-managed",
+  "passed": true,
+  "browser_preferences_forced": [],
+  "content_sandbox_disabled": false,
+  "wayland_proxy_disabled": false,
+  "frame_rate_override": false,
+  "gl_version_override": false,
+  "software_gpu": false,
+  "graphics_features": {
+    "compositor": "webrender",
+    "hwCompositing": {
+      "status": "available"
+    },
+    "gpuProcess": {
+      "status": "unused"
+    },
+    "webrender": {
+      "status": "available"
+    },
+    "wrCompositor": {
+      "status": "blocklisted:FEATURE_FAILURE_WEBRENDER_COMPOSITOR_DISABLED"
+    },
+    "openglCompositing": {
+      "status": "available"
+    },
+    "omtp": {
+      "status": "unused"
+    }
+  },
+  "webgl2": {
+    "webgl2": true,
+    "pixel": [
+      255,
+      128,
+      0,
+      255
+    ],
+    "renderer": "Generic Renderer",
+    "version": "WebGL 2.0"
+  },
+  "native_input": {
+    "ascii_text": "GPU input ",
+    "click_count": 1,
+    "unicode_ime_not_validated": true
+  },
+  "resize": {
+    "before": [
+      1024,
+      603
+    ],
+    "after": [
+      973,
+      578
+    ]
+  },
+  "native_frames": {
+    "observations": 744,
+    "gpu_frames": 736,
+    "gpu_present_completed": true
+  },
+  "close": {
+    "action": "native window close button",
+    "exit": 0
+  },
+  "validation": {
+    "memory_tests": 150,
+    "vfs_tests": 326,
+    "gpu_queue_tests": 23,
+    "signed_hvf_tests": 47,
+    "signed_app_pressure_tests": 1,
+    "ipad_ffi_check": true,
+    "pbo": {
+      "passed": true,
+      "inputs": {
+        "zink-pbo": "9ebc6a45e4c1c3a2d217621032635a5ff45ff958351bc41920f7ff66ffb5e2c1",
+        "libgallium-25.1.9.so": "bed7fd21427414dce5ceae41ae7ab2dbc31e3885071dafe8bd93b982adc98912",
+        "libEGL.so.1": "0fa0e1bbd4494aefa9f4739c65722c78db1d17c33588fccbdcd91aecd265eb8d",
+        "compiler.txt": "a76eb39445192f52e395316b7eca923cb86139d727f20cf29481e537947782d4",
+        "packages.txt": "836c0dac1358502e09a94154b8c8f0667cfd3df2bc25ec65c9a7cbeedd4bbcb9"
+      },
+      "fixture_source_sha256": "79ce26d15c2b5d39a63eb090f140f16367e80cd7b460d0b8f309207f8ec03fee",
+      "rows": [
+        {
+          "variant": "original",
+          "exit": 139
+        },
+        {
+          "variant": "fixed",
+          "exit": 0
+        }
+      ]
+    },
+    "kernel_conformance": {
+      "passed": 211,
+      "ignored": 3
+    },
+    "mac_clippy": "workspace/all-targets -D warnings",
+    "common_clippy": "affected packages/all-targets -D warnings -A clippy::manual_range_contains; existing unchanged signal/frame.rs style warning only",
+    "native_close_session_exit_verified": true,
+    "product_boundaries": "Mac and iPad passed"
+  },
+  "limitations": [
+    "Firefox optional wrCompositor remains blocklisted; hardware WebRender EGL is active.",
+    "Video decoding through VA-API is not implemented; rendering acceleration does not establish hardware video decoding.",
+    "Mesa warns about unavailable logicOp/custom-border-color/line-rasterization/depth-clip features; no capability overrides are applied.",
+    "Browser WebGL renderer string is privacy-sanitized to Generic Renderer; the native graphics probe identifies Apple M6 via MoltenVK."
+  ],
+  "candidate_runner_sha256": "07f23ad794c796260edd3e04ffd0af44bfb19998d2b78cdf7f7fcb1fbfc345f0",
+  "native_driver": {
+    "upstream_commit": "db66022459ffb663aa2b50f6b018bc2e124f5edf",
+    "source_built": true,
+    "static_library_sha256": "879ef1315236e2836558f3c961a1b0b3b2b9d821449035574576303eb0e73f42"
+  },
+  "code_runtime": "f9d3caded5580b4f7929191335e71ce55724a2f0",
+  "installed_runner_sha256": "b965180b41bd3f7120cab1eb08f21a87075da45c0fd0d489590df63d88fa227a",
+  "normal_launcher": {
+    "separate_default_profile": true,
+    "forced_preferences": false,
+    "automation_enabled": false,
+    "gpu_preflight_passed": true,
+    "synthetic_page_title": "Trames GPU WebGL2 OK",
+    "native_close_exit": 0
+  },
+  "installed_application": {
+    "runner_sha256": "b965180b41bd3f7120cab1eb08f21a87075da45c0fd0d489590df63d88fa227a",
+    "normal_launcher": true,
+    "automation_enabled": false,
+    "synthetic_page_title": "Trames GPU WebGL2 OK",
+    "visible_webgl2_pixel": [
+      255,
+      128,
+      0,
+      255
+    ],
+    "native_input_text": "GPU ready",
+    "native_click_count": 1,
+    "startup_diagnostics": "Content/utility subprocess launch retries occurred before successful page presentation; startup latency was not characterized.",
+    "left_running_for_manual_use": true
+  }
+}

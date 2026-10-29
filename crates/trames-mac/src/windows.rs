@@ -189,6 +189,15 @@ impl Bridge {
             if images.is_empty() {
                 continue;
             }
+            if std::env::var_os("TRAMES_MAC_WINDOW_TRACE").is_some() {
+                eprintln!(
+                    "trames mac frame sources: window={} revision={} shm={} gpu={}",
+                    window.id,
+                    window.revision,
+                    images.iter().filter(|image| image.kind == 1).count(),
+                    images.iter().filter(|image| image.kind == 2).count()
+                );
+            }
             let title = CString::new(window.title.replace('\0', " ")).map_err(|e| e.to_string())?;
             let info = Window {
                 id: window.id,

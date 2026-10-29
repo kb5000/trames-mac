@@ -1712,3 +1712,12 @@ Host duration includes complete process startup and teardown. The harness makes
 no timing assertions and does not upload results. It is an opt-in experiment,
 not an addition to routine CI. Existing production/shared-runtime/iOS checks are
 reused because those sources and the installed executable are unchanged.
+
+## Native Firefox graphics (2026-10-29)
+
+The opt-in native Vulkan path now completes real Firefox hardware WebRender and
+WebGL2 presentation through Zink, source-built MoltenVK and Metal. The common
+resident-file snapshot and GPU checkpoint fixes are shared with iPad; Mac SDK
+linking and on-demand presentation remain product-specific. See the
+[acceptance and reproducible launcher](../validation/mac-firefox-gpu.md) for
+exact scope, pixel checks and remaining video/driver limitations.
