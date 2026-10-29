@@ -96,12 +96,12 @@ pub fn feature_names() -> &'static str {
             (13, "i8mm"),
             (14, "bf16"),
             (23, "sme"),
-            (24, "sme_i16i64"),
-            (25, "sme_f64f64"),
-            (26, "sme_i8i32"),
-            (27, "sme_f16f32"),
-            (28, "sme_b16f32"),
-            (29, "sme_f32f32"),
+            (24, "smei16i64"),
+            (25, "smef64f64"),
+            (26, "smei8i32"),
+            (27, "smef16f32"),
+            (28, "smeb16f32"),
+            (29, "smef32f32"),
             (37, "sme2"),
         ] {
             if feature.hwcap2 & (1 << bit) != 0 {
