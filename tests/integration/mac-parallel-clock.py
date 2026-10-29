@@ -12,19 +12,24 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--runner', type=Path, required=True)
 parser.add_argument('--clock', type=Path, required=True, help='Static-musl linux-clock.c ELF')
 parser.add_argument('--ring', type=Path, required=True, help='Static-musl futex-ring.c ELF')
+parser.add_argument('--dynamic-loader-probe', type=Path, help='vdso-loader.S PIE with glibc PT_INTERP')
+parser.add_argument('--glibc-loader', type=Path, help='Real AArch64 ld-linux-aarch64.so.1')
+parser.add_argument('--rootfs', type=Path, help='Rootfs containing the /lib directory for the loader probe')
 parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
+dynamic = [args.dynamic_loader_probe, args.glibc_loader, args.rootfs]
+assert all(dynamic) or not any(dynamic), 'Supply all three dynamic-loader options together'
 args.output.mkdir(parents=True, exist_ok=False)
 report = dict(passed=False, rows=[], sha256={name: hashlib.sha256(path.read_bytes()).hexdigest()
               for name, path in [('runner', args.runner), ('clock', args.clock), ('ring', args.ring)]})
 
 
-def run(name, cpus, fixture, arguments, metrics=False):
+def run(name, cpus, fixture, arguments, metrics=False, extra=(), guest_path=None):
     command = [str(args.runner.resolve()), '--no-pty', '--no-windows', '--network', 'off',
                '--cpus', str(cpus), '--memory-mib', 'auto', '--timeout', '20']
     if metrics:
         command.append('--metrics')
-    result = subprocess.run(command + [str(fixture.resolve()), *arguments],
+    result = subprocess.run(command + list(extra) + [guest_path or str(fixture.resolve()), *arguments],
                             capture_output=True, timeout=25,
                             env={**os.environ, 'TRAMES_MAC_BUNDLED': '1'})
     (args.output / (name + '.stdout')).write_bytes(result.stdout)
@@ -36,6 +41,17 @@ def run(name, cpus, fixture, arguments, metrics=False):
 
 
 try:
+    if all(dynamic):
+        for name, path in [('dynamic_loader_probe', args.dynamic_loader_probe),
+                           ('glibc_loader', args.glibc_loader), ('rootfs', args.rootfs)]:
+            report['sha256'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        row, result = run('glibc-loader', 12, args.dynamic_loader_probe, [], extra=[
+            '--rootfs', str(args.rootfs.resolve()),
+            '--exec-file', '/lib/ld-linux-aarch64.so.1=' + str(args.glibc_loader.resolve()),
+            '--exec-file', '/vdso-loader=' + str(args.dynamic_loader_probe.resolve()),
+        ], guest_path='/vdso-loader')
+        assert result.stdout == b'vDSO dynamic loader: ok\n' and not result.stderr, result
+        row['passed'] = True
     expected = (b'clock-exec-ok\nclock: ELF/versioned symbols, libc, syscall agreement, '
                 b'threads, fork/exec passed\n')
     for cpus in [1, 12]:

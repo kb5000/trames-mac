@@ -1384,3 +1384,25 @@ checks, both iOS embedding targets and existing real Linux SME, signal and SMP
 paging fixtures pass. No actual macOS suspend/resume test was performed; the
 counter-domain behavior relies on the public SDK contract, rather than an
 unverified private commpage layout or periodic synchronization thread.
+
+
+The first candidate failed before Geekbench main in glibc's vDSO registration.
+Its two `PT_LOAD` headers triggered the older loader's zero-address sentinel,
+producing a one-page load-bias error. The accepted layout describes only the
+code in the ELF load segment; calibration lives in its adjacent R mapping.
+`vdso-loader.S` is a freestanding dynamic PIE using the real glibc interpreter.
+It fails with SIGSEGV on the saved two-load candidate and reaches its success
+marker after the layout fix. Geekbench dynamic startup also passes. No failed
+startup is counted as a benchmark result. This extends coverage beyond the
+initial static-musl tests, which could not expose the dynamic-loader defect.
+
+Link this probe with an AArch64 Linux linker using `-pie -e _start` and
+`--dynamic-linker=/lib/ld-linux-aarch64.so.1`. Add these arguments to the harness
+above to exercise the actual supplied glibc loader (no libc dependency is
+required by the probe):
+
+```sh
+  --dynamic-loader-probe /path/to/vdso-loader \
+  --glibc-loader /path/to/ld-linux-aarch64.so.1 \
+  --rootfs /path/to/Alpine.tar.gz
+```
