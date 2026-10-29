@@ -1349,11 +1349,11 @@ not application speedups or confidence intervals:
 | Metadata queries | 1 thread, 200k iterations | 6.824 ms | 3.424 ms |
 | Metadata queries | 6 threads, 200k each | 127.874 ms | 23.191 ms |
 | Metadata queries | 12 threads, 200k each | 382.359 ms | 74.767 ms |
-| Futex token ring | 1 CPU, 2 threads, 1k turns each | 2.575 ms | 2.603 ms |
-| Futex token ring | 6 CPUs, 6 threads, 1k turns each | 36.352 ms | 33.684 ms |
-| Futex token ring | 12 CPUs, 12 threads, 1k turns each | 166.771 ms | 83.052 ms |
-| libc monotonic clock | 1 CPU, one caller, 200k calls | 1270.7 ns/call | 15.0 ns/call |
-| libc monotonic clock | 12 CPUs, one caller, 200k calls | 1277.3 ns/call | 15.2 ns/call |
+| Futex token ring | 1 CPU, 2 threads, 1k turns each | 2.639 ms | 2.625 ms |
+| Futex token ring | 6 CPUs, 6 threads, 1k turns each | 35.059 ms | 33.799 ms |
+| Futex token ring | 12 CPUs, 12 threads, 1k turns each | 169.582 ms | 82.139 ms |
+| libc monotonic clock | 1 CPU, one caller, 200k calls | 1274.0 ns/call | 15.0 ns/call |
+| libc monotonic clock | 12 CPUs, one caller, 200k calls | 1274.1 ns/call | 15.2 ns/call |
 
 Metadata checksums match and remain at zero guest resident bytes. The ring
 isolates directed wakeups using controls that both already have metadata/vDSO
@@ -1406,3 +1406,61 @@ required by the probe):
   --glibc-loader /path/to/ld-linux-aarch64.so.1 \
   --rootfs /path/to/Alpine.tar.gz
 ```
+
+
+The final normal signed CLI/app has SHA-256
+`846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e`, Mac
+code `e4000c18593ea411424834250a50ef5af007af5d` and runtime
+`8fb524ec5212f7d7dd5783ebcbe93543d702a6e9`. Four complete Geekbench 6.7.1
+Preview Linux runs used old/new/new/old order, 12 CPUs and host-managed memory,
+with metrics enabled and HVF diagnostics disabled. No compiler, CI job or sampler
+ran during them; thermal state stayed normal and low-power mode was off.
+
+Frozen controls are [4110/12836](https://browser.geekbench.com/v6/cpu/19405938)
+and [4075/12743](https://browser.geekbench.com/v6/cpu/19406037). The installed
+version is [4174/13020](https://browser.geekbench.com/v6/cpu/19405988) and
+[4115/13007](https://browser.geekbench.com/v6/cpu/19406023). Arithmetic means
+move from 4092.5/12789.5 to 4144.5/13013.5: +1.3% single and +1.8% multi.
+These are two samples per variant, not confidence intervals. Relative to the
+earlier [native macOS 4287/18616](https://browser.geekbench.com/v6/cpu/19400588)
+sample, the new means are 96.7%/69.9%; OS binaries/libraries differ.
+
+PDF and Text Processing multi improve about 12.7%/12.6%. HTML5 is essentially
+flat. Photo Library and Object Detection multi regress about 4.0%/5.2%; the
+metadata and handoff microbenchmarks do not imply a uniform application gain.
+Photo Library and HTML5 still show the largest gaps to the earlier native
+sample. Remaining executor cost must be separated from platform/library work;
+no claim is made that all of those gaps are runtime overhead or mapping waits.
+
+The table compares multi-core scores. Control/new columns are means of the two
+fresh samples; previous published and native columns are their earlier single
+samples. Full single-core/component results, every raw observation and hashes
+are in `parallel_clock_followup_2026_10_29` in
+[mac-geekbench.json](../validation/mac-geekbench.json).
+
+| Workload (multi) | Previous published | Fresh control mean | New mean | Change | Native macOS |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| File Compression | 9030 | 9086.0 | 9164.0 | +0.9% | 12298 |
+| Navigation | 13478 | 14120.0 | 14154.5 | +0.2% | 16886 |
+| HTML5 Browser | 10844 | 11144.0 | 11197.5 | +0.5% | 21252 |
+| PDF Renderer | 11651 | 10764.0 | 12133.5 | +12.7% | 19319 |
+| Photo Library | 10425 | 10428.0 | 10014.0 | -4.0% | 23344 |
+| Clang | 24603 | 24766.0 | 24774.0 | +0.0% | 29922 |
+| Text Processing | 3216 | 3297.0 | 3713.5 | +12.6% | 5545 |
+| Asset Compression | 17996 | 17577.0 | 17804.5 | +1.3% | 25436 |
+| Object Detection | 12298 | 12533.0 | 11883.0 | -5.2% | 18010 |
+| Background Blur | 12960 | 12830.5 | 13579.0 | +5.8% | 18671 |
+| Horizon Detection | 20524 | 20452.5 | 19847.0 | -3.0% | 25922 |
+| Object Remover | 15063 | 15683.0 | 15707.5 | +0.2% | 20020 |
+| HDR | 17879 | 18291.5 | 18367.5 | +0.4% | 23779 |
+| Photo Filter | 13508 | 11566.5 | 12531.0 | +8.3% | 14494 |
+| Ray Tracer | 22618 | 21554.0 | 21743.0 | +0.9% | 26110 |
+| Structure from Motion | 16274 | 15817.5 | 15503.5 | -2.0% | 20364 |
+
+The final installed binary repeats all five shuffled clock/ring observations
+shown above. Its libc clock counter runs record four total syscalls for 200,000
+monotonic reads, versus 200,006 on the frozen old binary. The futex control uses
+the earlier broadcast queue while retaining metadata/vDSO changes; the final
+layout-only ELF fix also applies to the installed side. All checksums match.
+The shared metadata probe remains zero-resident and is independent of ELF
+layout. No timing gate is added to correctness tests.

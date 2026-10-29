@@ -10970,5 +10970,2021 @@
       "single": -0.6008171112713345,
       "multi": 4.4772487630789115
     }
+  },
+  "parallel_clock_followup_2026_10_29": {
+    "date": "2026-10-29",
+    "code": {
+      "runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+      "mac": "e4000c18593ea411424834250a50ef5af007af5d",
+      "ipad": "6ae5259a6deb29363534896443f21ba522d8bab6"
+    },
+    "installed_runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+    "method": "Geekbench 6.7.1 Preview Linux AArch64, 12 CPUs, host-managed memory, same package/store, signed release binaries, no PTY/windows, metrics enabled without HVF diagnostic feature. Clean order old/new/new/old, two complete samples each, no concurrent builds, CI or samplers. All runs thermal state 0 and low power off. Two observations per variant are not confidence intervals and do not establish uniform gains. Native macOS uses a different OS binary/library stack.",
+    "mechanism": "Frozen-View frame/chunk metadata reuse; existing canonical pages skip native-range admission lock; worker-slot condition variables with affinity-aware directed notification under the original queue mutex; optional common Linux monotonic vDSO using public HVF/Mach counter domain, with interpreter default unsupported and realtime syscall fallback.",
+    "control": [
+      {
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "code_mac": "ffddda6ecad81a5492de2ce555ccff3a888edcbe",
+        "code_runtime": "d21663eb30be8d550c0abdad1e6adaefc0bb49fc",
+        "variant": "trames-automib-12cpu-parallel-control",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793259732.412747,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 246.68123175,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19405938"
+        ],
+        "scores": {
+          "single": 4110,
+          "multi": 12836
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3306,
+            "multi": 8973
+          },
+          "Navigation": {
+            "single": 3274,
+            "multi": 14197
+          },
+          "HTML5 Browser": {
+            "single": 4146,
+            "multi": 10989
+          },
+          "PDF Renderer": {
+            "single": 4027,
+            "multi": 10867
+          },
+          "Photo Library": {
+            "single": 3821,
+            "multi": 10439
+          },
+          "Clang": {
+            "single": 4868,
+            "multi": 25008
+          },
+          "Text Processing": {
+            "single": 3622,
+            "multi": 3322
+          },
+          "Asset Compression": {
+            "single": 3631,
+            "multi": 18048
+          },
+          "Object Detection": {
+            "single": 6542,
+            "multi": 12495
+          },
+          "Background Blur": {
+            "single": 4323,
+            "multi": 13061
+          },
+          "Horizon Detection": {
+            "single": 3950,
+            "multi": 20410
+          },
+          "Object Remover": {
+            "single": 5050,
+            "multi": 15693
+          },
+          "HDR": {
+            "single": 4370,
+            "multi": 18172
+          },
+          "Photo Filter": {
+            "single": 4564,
+            "multi": 11908
+          },
+          "Ray Tracer": {
+            "single": 3652,
+            "multi": 21346
+          },
+          "Structure from Motion": {
+            "single": 3890,
+            "multi": 15794
+          }
+        },
+        "checkpoint_phase_us": [
+          211819,
+          132146,
+          19780,
+          1542218,
+          20917,
+          51441,
+          865840
+        ],
+        "quiescence_bins": [
+          5707,
+          133,
+          853,
+          684,
+          18,
+          13,
+          1,
+          0
+        ],
+        "batch_counts": [
+          6646,
+          58247,
+          55361
+        ],
+        "vm_call_counts": [
+          0,
+          39740,
+          0,
+          848,
+          22004,
+          0,
+          170,
+          49
+        ],
+        "session_metrics": {
+          "syscalls": 2798227,
+          "context_switches": 2168753,
+          "hardware_mapped_bytes": 2670592,
+          "guest_resident_bytes": 3469312,
+          "vm_checkpoint_groups": 7409,
+          "vm_checkpoint_spaces": 7409,
+          "backing_domain_checks": 423,
+          "backing_page_checks": 451,
+          "parallel_memory_us": 222981,
+          "instruction_count": null
+        }
+      },
+      {
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "code_mac": "ffddda6ecad81a5492de2ce555ccff3a888edcbe",
+        "code_runtime": "d21663eb30be8d550c0abdad1e6adaefc0bb49fc",
+        "variant": "trames-automib-12cpu-parallel-control-repeat",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793261449.764648,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 247.657139833,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406037"
+        ],
+        "scores": {
+          "single": 4075,
+          "multi": 12743
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3297,
+            "multi": 9199
+          },
+          "Navigation": {
+            "single": 3277,
+            "multi": 14043
+          },
+          "HTML5 Browser": {
+            "single": 4474,
+            "multi": 11299
+          },
+          "PDF Renderer": {
+            "single": 4163,
+            "multi": 10661
+          },
+          "Photo Library": {
+            "single": 3765,
+            "multi": 10417
+          },
+          "Clang": {
+            "single": 4813,
+            "multi": 24524
+          },
+          "Text Processing": {
+            "single": 3534,
+            "multi": 3272
+          },
+          "Asset Compression": {
+            "single": 3587,
+            "multi": 17106
+          },
+          "Object Detection": {
+            "single": 6222,
+            "multi": 12571
+          },
+          "Background Blur": {
+            "single": 4294,
+            "multi": 12600
+          },
+          "Horizon Detection": {
+            "single": 3933,
+            "multi": 20495
+          },
+          "Object Remover": {
+            "single": 4976,
+            "multi": 15673
+          },
+          "HDR": {
+            "single": 4269,
+            "multi": 18411
+          },
+          "Photo Filter": {
+            "single": 4245,
+            "multi": 11225
+          },
+          "Ray Tracer": {
+            "single": 3616,
+            "multi": 21762
+          },
+          "Structure from Motion": {
+            "single": 3787,
+            "multi": 15841
+          }
+        },
+        "checkpoint_phase_us": [
+          203017,
+          130275,
+          19832,
+          1546551,
+          22216,
+          51529,
+          857946
+        ],
+        "quiescence_bins": [
+          5885,
+          120,
+          829,
+          636,
+          19,
+          15,
+          2,
+          0
+        ],
+        "batch_counts": [
+          6720,
+          59274,
+          56466
+        ],
+        "vm_call_counts": [
+          5,
+          40962,
+          0,
+          843,
+          21982,
+          0,
+          178,
+          49
+        ],
+        "session_metrics": {
+          "syscalls": 2879562,
+          "context_switches": 2249033,
+          "hardware_mapped_bytes": 2932736,
+          "guest_resident_bytes": 3469312,
+          "vm_checkpoint_groups": 7506,
+          "vm_checkpoint_spaces": 7506,
+          "backing_domain_checks": 443,
+          "backing_page_checks": 451,
+          "parallel_memory_us": 235393,
+          "instruction_count": null
+        }
+      }
+    ],
+    "accepted_installed": [
+      {
+        "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "code_mac": "e4000c18593ea411424834250a50ef5af007af5d",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-parallel-elf-final",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793260663.673887,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 242.693659916,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19405988"
+        ],
+        "scores": {
+          "single": 4174,
+          "multi": 13020
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3413,
+            "multi": 9316
+          },
+          "Navigation": {
+            "single": 3291,
+            "multi": 13833
+          },
+          "HTML5 Browser": {
+            "single": 4517,
+            "multi": 11339
+          },
+          "PDF Renderer": {
+            "single": 4376,
+            "multi": 12385
+          },
+          "Photo Library": {
+            "single": 3744,
+            "multi": 9871
+          },
+          "Clang": {
+            "single": 4946,
+            "multi": 24346
+          },
+          "Text Processing": {
+            "single": 3826,
+            "multi": 3723
+          },
+          "Asset Compression": {
+            "single": 3640,
+            "multi": 17865
+          },
+          "Object Detection": {
+            "single": 6574,
+            "multi": 12078
+          },
+          "Background Blur": {
+            "single": 4306,
+            "multi": 13444
+          },
+          "Horizon Detection": {
+            "single": 3999,
+            "multi": 20710
+          },
+          "Object Remover": {
+            "single": 5159,
+            "multi": 15386
+          },
+          "HDR": {
+            "single": 4383,
+            "multi": 19177
+          },
+          "Photo Filter": {
+            "single": 4255,
+            "multi": 11668
+          },
+          "Ray Tracer": {
+            "single": 3575,
+            "multi": 21763
+          },
+          "Structure from Motion": {
+            "single": 3851,
+            "multi": 15421
+          }
+        },
+        "checkpoint_phase_us": [
+          151028,
+          27871,
+          10950,
+          1439502,
+          19169,
+          26185,
+          801512
+        ],
+        "quiescence_bins": [
+          5522,
+          161,
+          1053,
+          281,
+          16,
+          8,
+          2,
+          0
+        ],
+        "batch_counts": [
+          6332,
+          56520,
+          53796
+        ],
+        "vm_call_counts": [
+          0,
+          39686,
+          0,
+          841,
+          20123,
+          0,
+          194,
+          46
+        ],
+        "session_metrics": {
+          "syscalls": 2559811,
+          "context_switches": 2255220,
+          "hardware_mapped_bytes": 2605056,
+          "guest_resident_bytes": 3481600,
+          "vm_checkpoint_groups": 7043,
+          "vm_checkpoint_spaces": 7043,
+          "backing_domain_checks": 429,
+          "backing_page_checks": 451,
+          "parallel_memory_us": 202167,
+          "instruction_count": null
+        }
+      },
+      {
+        "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+        "code_mac": "e4000c18593ea411424834250a50ef5af007af5d",
+        "code_runtime": "8fb524ec5212f7d7dd5783ebcbe93543d702a6e9",
+        "variant": "trames-automib-12cpu-parallel-final-repeat",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793261206.5742002,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 0,
+        "seconds": 243.1457825,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19406023"
+        ],
+        "scores": {
+          "single": 4115,
+          "multi": 13007
+        },
+        "component_scores": {
+          "File Compression": {
+            "single": 3333,
+            "multi": 9012
+          },
+          "Navigation": {
+            "single": 3274,
+            "multi": 14476
+          },
+          "HTML5 Browser": {
+            "single": 4113,
+            "multi": 11056
+          },
+          "PDF Renderer": {
+            "single": 4214,
+            "multi": 11882
+          },
+          "Photo Library": {
+            "single": 3801,
+            "multi": 10157
+          },
+          "Clang": {
+            "single": 4817,
+            "multi": 25202
+          },
+          "Text Processing": {
+            "single": 3738,
+            "multi": 3704
+          },
+          "Asset Compression": {
+            "single": 3646,
+            "multi": 17744
+          },
+          "Object Detection": {
+            "single": 6477,
+            "multi": 11688
+          },
+          "Background Blur": {
+            "single": 4319,
+            "multi": 13714
+          },
+          "Horizon Detection": {
+            "single": 3905,
+            "multi": 18984
+          },
+          "Object Remover": {
+            "single": 4994,
+            "multi": 16029
+          },
+          "HDR": {
+            "single": 4324,
+            "multi": 17558
+          },
+          "Photo Filter": {
+            "single": 4452,
+            "multi": 13394
+          },
+          "Ray Tracer": {
+            "single": 3636,
+            "multi": 21723
+          },
+          "Structure from Motion": {
+            "single": 3924,
+            "multi": 15586
+          }
+        },
+        "checkpoint_phase_us": [
+          145402,
+          24103,
+          11102,
+          1505512,
+          19872,
+          26407,
+          800525
+        ],
+        "quiescence_bins": [
+          5687,
+          158,
+          987,
+          320,
+          17,
+          8,
+          0,
+          0
+        ],
+        "batch_counts": [
+          6391,
+          56214,
+          53505
+        ],
+        "vm_call_counts": [
+          1,
+          40674,
+          0,
+          836,
+          18986,
+          0,
+          180,
+          47
+        ],
+        "session_metrics": {
+          "syscalls": 2559690,
+          "context_switches": 2253807,
+          "hardware_mapped_bytes": 2932736,
+          "guest_resident_bytes": 3481600,
+          "vm_checkpoint_groups": 7177,
+          "vm_checkpoint_spaces": 7177,
+          "backing_domain_checks": 429,
+          "backing_page_checks": 451,
+          "parallel_memory_us": 205240,
+          "instruction_count": null
+        }
+      }
+    ],
+    "aggregate_comparison": {
+      "single": {
+        "control_mean": 4092.5,
+        "accepted_mean": 4144.5,
+        "change_percent": 1.271,
+        "native_ratio": 0.96676
+      },
+      "multi": {
+        "control_mean": 12789.5,
+        "accepted_mean": 13013.5,
+        "change_percent": 1.751,
+        "native_ratio": 0.699049
+      }
+    },
+    "workloads": [
+      {
+        "name": "File Compression",
+        "prior_published": {
+          "single": 3324,
+          "multi": 9030
+        },
+        "single": {
+          "control_mean": 3301.5,
+          "accepted_mean": 3373,
+          "native": 3513,
+          "change_percent": 2.166,
+          "native_ratio": 0.960148
+        },
+        "multi": {
+          "control_mean": 9086,
+          "accepted_mean": 9164,
+          "native": 12298,
+          "change_percent": 0.858,
+          "native_ratio": 0.745162
+        }
+      },
+      {
+        "name": "Navigation",
+        "prior_published": {
+          "single": 3274,
+          "multi": 13478
+        },
+        "single": {
+          "control_mean": 3275.5,
+          "accepted_mean": 3282.5,
+          "native": 3543,
+          "change_percent": 0.214,
+          "native_ratio": 0.926475
+        },
+        "multi": {
+          "control_mean": 14120,
+          "accepted_mean": 14154.5,
+          "native": 16886,
+          "change_percent": 0.244,
+          "native_ratio": 0.838239
+        }
+      },
+      {
+        "name": "HTML5 Browser",
+        "prior_published": {
+          "single": 4404,
+          "multi": 10844
+        },
+        "single": {
+          "control_mean": 4310,
+          "accepted_mean": 4315,
+          "native": 4466,
+          "change_percent": 0.116,
+          "native_ratio": 0.966189
+        },
+        "multi": {
+          "control_mean": 11144,
+          "accepted_mean": 11197.5,
+          "native": 21252,
+          "change_percent": 0.48,
+          "native_ratio": 0.526892
+        }
+      },
+      {
+        "name": "PDF Renderer",
+        "prior_published": {
+          "single": 4210,
+          "multi": 11651
+        },
+        "single": {
+          "control_mean": 4095,
+          "accepted_mean": 4295,
+          "native": 3968,
+          "change_percent": 4.884,
+          "native_ratio": 1.082409
+        },
+        "multi": {
+          "control_mean": 10764,
+          "accepted_mean": 12133.5,
+          "native": 19319,
+          "change_percent": 12.723,
+          "native_ratio": 0.62806
+        }
+      },
+      {
+        "name": "Photo Library",
+        "prior_published": {
+          "single": 3833,
+          "multi": 10425
+        },
+        "single": {
+          "control_mean": 3793,
+          "accepted_mean": 3772.5,
+          "native": 3717,
+          "change_percent": -0.54,
+          "native_ratio": 1.014931
+        },
+        "multi": {
+          "control_mean": 10428,
+          "accepted_mean": 10014,
+          "native": 23344,
+          "change_percent": -3.97,
+          "native_ratio": 0.428975
+        }
+      },
+      {
+        "name": "Clang",
+        "prior_published": {
+          "single": 4912,
+          "multi": 24603
+        },
+        "single": {
+          "control_mean": 4840.5,
+          "accepted_mean": 4881.5,
+          "native": 4862,
+          "change_percent": 0.847,
+          "native_ratio": 1.004011
+        },
+        "multi": {
+          "control_mean": 24766,
+          "accepted_mean": 24774,
+          "native": 29922,
+          "change_percent": 0.032,
+          "native_ratio": 0.827953
+        }
+      },
+      {
+        "name": "Text Processing",
+        "prior_published": {
+          "single": 3635,
+          "multi": 3216
+        },
+        "single": {
+          "control_mean": 3578,
+          "accepted_mean": 3782,
+          "native": 4123,
+          "change_percent": 5.702,
+          "native_ratio": 0.917293
+        },
+        "multi": {
+          "control_mean": 3297,
+          "accepted_mean": 3713.5,
+          "native": 5545,
+          "change_percent": 12.633,
+          "native_ratio": 0.669702
+        }
+      },
+      {
+        "name": "Asset Compression",
+        "prior_published": {
+          "single": 3615,
+          "multi": 17996
+        },
+        "single": {
+          "control_mean": 3609,
+          "accepted_mean": 3643,
+          "native": 3737,
+          "change_percent": 0.942,
+          "native_ratio": 0.974846
+        },
+        "multi": {
+          "control_mean": 17577,
+          "accepted_mean": 17804.5,
+          "native": 25436,
+          "change_percent": 1.294,
+          "native_ratio": 0.699972
+        }
+      },
+      {
+        "name": "Object Detection",
+        "prior_published": {
+          "single": 6503,
+          "multi": 12298
+        },
+        "single": {
+          "control_mean": 6382,
+          "accepted_mean": 6525.5,
+          "native": 6297,
+          "change_percent": 2.249,
+          "native_ratio": 1.036287
+        },
+        "multi": {
+          "control_mean": 12533,
+          "accepted_mean": 11883,
+          "native": 18010,
+          "change_percent": -5.186,
+          "native_ratio": 0.6598
+        }
+      },
+      {
+        "name": "Background Blur",
+        "prior_published": {
+          "single": 4245,
+          "multi": 12960
+        },
+        "single": {
+          "control_mean": 4308.5,
+          "accepted_mean": 4312.5,
+          "native": 4428,
+          "change_percent": 0.093,
+          "native_ratio": 0.973916
+        },
+        "multi": {
+          "control_mean": 12830.5,
+          "accepted_mean": 13579,
+          "native": 18671,
+          "change_percent": 5.834,
+          "native_ratio": 0.727278
+        }
+      },
+      {
+        "name": "Horizon Detection",
+        "prior_published": {
+          "single": 3993,
+          "multi": 20524
+        },
+        "single": {
+          "control_mean": 3941.5,
+          "accepted_mean": 3952,
+          "native": 4700,
+          "change_percent": 0.266,
+          "native_ratio": 0.840851
+        },
+        "multi": {
+          "control_mean": 20452.5,
+          "accepted_mean": 19847,
+          "native": 25922,
+          "change_percent": -2.961,
+          "native_ratio": 0.765643
+        }
+      },
+      {
+        "name": "Object Remover",
+        "prior_published": {
+          "single": 5091,
+          "multi": 15063
+        },
+        "single": {
+          "control_mean": 5013,
+          "accepted_mean": 5076.5,
+          "native": 5143,
+          "change_percent": 1.267,
+          "native_ratio": 0.98707
+        },
+        "multi": {
+          "control_mean": 15683,
+          "accepted_mean": 15707.5,
+          "native": 20020,
+          "change_percent": 0.156,
+          "native_ratio": 0.78459
+        }
+      },
+      {
+        "name": "HDR",
+        "prior_published": {
+          "single": 4367,
+          "multi": 17879
+        },
+        "single": {
+          "control_mean": 4319.5,
+          "accepted_mean": 4353.5,
+          "native": 4938,
+          "change_percent": 0.787,
+          "native_ratio": 0.881632
+        },
+        "multi": {
+          "control_mean": 18291.5,
+          "accepted_mean": 18367.5,
+          "native": 23779,
+          "change_percent": 0.415,
+          "native_ratio": 0.772425
+        }
+      },
+      {
+        "name": "Photo Filter",
+        "prior_published": {
+          "single": 4461,
+          "multi": 13508
+        },
+        "single": {
+          "control_mean": 4404.5,
+          "accepted_mean": 4353.5,
+          "native": 4753,
+          "change_percent": -1.158,
+          "native_ratio": 0.915948
+        },
+        "multi": {
+          "control_mean": 11566.5,
+          "accepted_mean": 12531,
+          "native": 14494,
+          "change_percent": 8.339,
+          "native_ratio": 0.864565
+        }
+      },
+      {
+        "name": "Ray Tracer",
+        "prior_published": {
+          "single": 3624,
+          "multi": 22618
+        },
+        "single": {
+          "control_mean": 3634,
+          "accepted_mean": 3605.5,
+          "native": 3718,
+          "change_percent": -0.784,
+          "native_ratio": 0.969742
+        },
+        "multi": {
+          "control_mean": 21554,
+          "accepted_mean": 21743,
+          "native": 26110,
+          "change_percent": 0.877,
+          "native_ratio": 0.832746
+        }
+      },
+      {
+        "name": "Structure from Motion",
+        "prior_published": {
+          "single": 3845,
+          "multi": 16274
+        },
+        "single": {
+          "control_mean": 3838.5,
+          "accepted_mean": 3887.5,
+          "native": 3991,
+          "change_percent": 1.277,
+          "native_ratio": 0.974067
+        },
+        "multi": {
+          "control_mean": 15817.5,
+          "accepted_mean": 15503.5,
+          "native": 20364,
+          "change_percent": -1.985,
+          "native_ratio": 0.761319
+        }
+      }
+    ],
+    "previous_published": {
+      "source": "https://browser.geekbench.com/v6/cpu/19405649",
+      "scores": {
+        "single": 4136,
+        "multi": 12881
+      }
+    },
+    "native_reference": {
+      "source": "https://browser.geekbench.com/v6/cpu/19400588",
+      "single": 4287,
+      "multi": 18616
+    },
+    "fixed_work": {
+      "metadata": {
+        "samples": [
+          {
+            "repeat": 4,
+            "cpus": 1,
+            "variant": "after",
+            "microseconds": 3619,
+            "checksum": 400000
+          },
+          {
+            "repeat": 3,
+            "cpus": 12,
+            "variant": "after",
+            "microseconds": 73189,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 4,
+            "cpus": 6,
+            "variant": "before",
+            "microseconds": 136752,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 4,
+            "cpus": 6,
+            "variant": "after",
+            "microseconds": 27652,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 0,
+            "cpus": 1,
+            "variant": "after",
+            "microseconds": 4497,
+            "checksum": 400000
+          },
+          {
+            "repeat": 0,
+            "cpus": 1,
+            "variant": "before",
+            "microseconds": 6854,
+            "checksum": 400000
+          },
+          {
+            "repeat": 2,
+            "cpus": 1,
+            "variant": "before",
+            "microseconds": 6824,
+            "checksum": 400000
+          },
+          {
+            "repeat": 3,
+            "cpus": 12,
+            "variant": "before",
+            "microseconds": 328743,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 2,
+            "cpus": 6,
+            "variant": "after",
+            "microseconds": 19784,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 3,
+            "cpus": 1,
+            "variant": "before",
+            "microseconds": 6756,
+            "checksum": 400000
+          },
+          {
+            "repeat": 2,
+            "cpus": 12,
+            "variant": "before",
+            "microseconds": 458052,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 0,
+            "cpus": 6,
+            "variant": "after",
+            "microseconds": 20553,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 1,
+            "cpus": 12,
+            "variant": "before",
+            "microseconds": 412675,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 3,
+            "cpus": 1,
+            "variant": "after",
+            "microseconds": 3382,
+            "checksum": 400000
+          },
+          {
+            "repeat": 1,
+            "cpus": 1,
+            "variant": "before",
+            "microseconds": 6765,
+            "checksum": 400000
+          },
+          {
+            "repeat": 0,
+            "cpus": 12,
+            "variant": "before",
+            "microseconds": 382359,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 4,
+            "cpus": 12,
+            "variant": "after",
+            "microseconds": 74767,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 1,
+            "cpus": 6,
+            "variant": "before",
+            "microseconds": 125649,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 0,
+            "cpus": 6,
+            "variant": "before",
+            "microseconds": 127874,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 2,
+            "cpus": 1,
+            "variant": "after",
+            "microseconds": 3343,
+            "checksum": 400000
+          },
+          {
+            "repeat": 4,
+            "cpus": 1,
+            "variant": "before",
+            "microseconds": 7069,
+            "checksum": 400000
+          },
+          {
+            "repeat": 3,
+            "cpus": 6,
+            "variant": "after",
+            "microseconds": 23191,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 0,
+            "cpus": 12,
+            "variant": "after",
+            "microseconds": 91161,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 1,
+            "cpus": 6,
+            "variant": "after",
+            "microseconds": 29843,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 4,
+            "cpus": 12,
+            "variant": "before",
+            "microseconds": 357494,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 1,
+            "cpus": 12,
+            "variant": "after",
+            "microseconds": 70088,
+            "checksum": 4800000
+          },
+          {
+            "repeat": 3,
+            "cpus": 6,
+            "variant": "before",
+            "microseconds": 131286,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 1,
+            "cpus": 1,
+            "variant": "after",
+            "microseconds": 3424,
+            "checksum": 400000
+          },
+          {
+            "repeat": 2,
+            "cpus": 6,
+            "variant": "before",
+            "microseconds": 124883,
+            "checksum": 2400000
+          },
+          {
+            "repeat": 2,
+            "cpus": 12,
+            "variant": "after",
+            "microseconds": 101335,
+            "checksum": 4800000
+          }
+        ],
+        "executable_sha256": {
+          "before": "99b4a4829f2189b1e7a15ec819724578dd5164bebf876346d544ee5b9bc1cce1",
+          "after": "0b4d1889451e70a2a1a414b9953fadcda6bf25e4d35c7608c0123e73a2f3ca44"
+        },
+        "rounds_per_thread": 200000,
+        "method": "Five seeded shuffled repetitions at 1/6/12 threads; fixed metadata work and exact checksums; zero guest resident bytes; not an application speedup. The initial compilation-overlap run is excluded."
+      },
+      "clock": {
+        "runners": {
+          "before": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+          "after": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e"
+        },
+        "fixture_sha256": "957866e18a7da6e9b8ae0fde1f66914b8ca4bb41f42cd7ae7f0fc7e5f8c8151e",
+        "samples": [
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 254800625,
+            "checksum": 25959570300072,
+            "variant": "before",
+            "cpus": 1,
+            "repeat": 3,
+            "ns_per_call": 1274.003125
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 253039792,
+            "checksum": 25447738191732,
+            "variant": "before",
+            "cpus": 1,
+            "repeat": 0,
+            "ns_per_call": 1265.19896
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 2960167,
+            "checksum": 442926541709,
+            "variant": "after",
+            "cpus": 1,
+            "repeat": 2,
+            "ns_per_call": 14.800835
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3045000,
+            "checksum": 434563063448,
+            "variant": "after",
+            "cpus": 12,
+            "repeat": 0,
+            "ns_per_call": 15.225
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 253284125,
+            "checksum": 25473226803052,
+            "variant": "before",
+            "cpus": 1,
+            "repeat": 2,
+            "ns_per_call": 1266.420625
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3036125,
+            "checksum": 441878190232,
+            "variant": "after",
+            "cpus": 1,
+            "repeat": 3,
+            "ns_per_call": 15.180625
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3008792,
+            "checksum": 429563070080,
+            "variant": "after",
+            "cpus": 1,
+            "repeat": 1,
+            "ns_per_call": 15.04396
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3030458,
+            "checksum": 432509836586,
+            "variant": "after",
+            "cpus": 12,
+            "repeat": 3,
+            "ns_per_call": 15.15229
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 2988458,
+            "checksum": 427754242964,
+            "variant": "after",
+            "cpus": 1,
+            "repeat": 0,
+            "ns_per_call": 14.94229
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 254119209,
+            "checksum": 25472122874145,
+            "variant": "before",
+            "cpus": 12,
+            "repeat": 1,
+            "ns_per_call": 1270.596045
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3115000,
+            "checksum": 439420736244,
+            "variant": "after",
+            "cpus": 12,
+            "repeat": 4,
+            "ns_per_call": 15.575
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 257948750,
+            "checksum": 25470078644086,
+            "variant": "before",
+            "cpus": 12,
+            "repeat": 2,
+            "ns_per_call": 1289.74375
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 264693959,
+            "checksum": 27379506843671,
+            "variant": "before",
+            "cpus": 1,
+            "repeat": 4,
+            "ns_per_call": 1323.469795
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 253229625,
+            "checksum": 25450555904076,
+            "variant": "before",
+            "cpus": 12,
+            "repeat": 0,
+            "ns_per_call": 1266.148125
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 256658542,
+            "checksum": 25712589283639,
+            "variant": "before",
+            "cpus": 1,
+            "repeat": 1,
+            "ns_per_call": 1283.29271
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 259481958,
+            "checksum": 26123756145928,
+            "variant": "before",
+            "cpus": 12,
+            "repeat": 4,
+            "ns_per_call": 1297.40979
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 2983208,
+            "checksum": 454778255910,
+            "variant": "after",
+            "cpus": 12,
+            "repeat": 2,
+            "ns_per_call": 14.91604
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 2979541,
+            "checksum": 436983633078,
+            "variant": "after",
+            "cpus": 12,
+            "repeat": 1,
+            "ns_per_call": 14.897705
+          },
+          {
+            "vdso": false,
+            "calls": 200000,
+            "elapsed_ns": 254828042,
+            "checksum": 25727780220814,
+            "variant": "before",
+            "cpus": 12,
+            "repeat": 3,
+            "ns_per_call": 1274.14021
+          },
+          {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3040709,
+            "checksum": 429710316419,
+            "variant": "after",
+            "cpus": 1,
+            "repeat": 4,
+            "ns_per_call": 15.203545
+          }
+        ]
+      },
+      "futex_ring": {
+        "runners": {
+          "broadcast": "603e88214598c32ca84e823056d241883e1b0277a48ce0ed38df22424011769f",
+          "targeted": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e"
+        },
+        "fixture_sha256": "a71099befa1140696796daca82ab07a17bd251d718d9b0857d11fd12fa85e24d",
+        "samples": [
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2625084,
+            "checksum": 2000,
+            "repeat": 4,
+            "cpus": 1,
+            "variant": "targeted"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 83591875,
+            "checksum": 12000,
+            "repeat": 3,
+            "cpus": 12,
+            "variant": "targeted"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 34593084,
+            "checksum": 6000,
+            "repeat": 4,
+            "cpus": 6,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 33722417,
+            "checksum": 6000,
+            "repeat": 4,
+            "cpus": 6,
+            "variant": "targeted"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2626500,
+            "checksum": 2000,
+            "repeat": 0,
+            "cpus": 1,
+            "variant": "targeted"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2638625,
+            "checksum": 2000,
+            "repeat": 0,
+            "cpus": 1,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2671250,
+            "checksum": 2000,
+            "repeat": 2,
+            "cpus": 1,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 169581750,
+            "checksum": 12000,
+            "repeat": 3,
+            "cpus": 12,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 34010542,
+            "checksum": 6000,
+            "repeat": 2,
+            "cpus": 6,
+            "variant": "targeted"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2613500,
+            "checksum": 2000,
+            "repeat": 3,
+            "cpus": 1,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 168226875,
+            "checksum": 12000,
+            "repeat": 2,
+            "cpus": 12,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 34503417,
+            "checksum": 6000,
+            "repeat": 0,
+            "cpus": 6,
+            "variant": "targeted"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 170756709,
+            "checksum": 12000,
+            "repeat": 1,
+            "cpus": 12,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2637833,
+            "checksum": 2000,
+            "repeat": 3,
+            "cpus": 1,
+            "variant": "targeted"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2696041,
+            "checksum": 2000,
+            "repeat": 1,
+            "cpus": 1,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 169910792,
+            "checksum": 12000,
+            "repeat": 0,
+            "cpus": 12,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 82266833,
+            "checksum": 12000,
+            "repeat": 4,
+            "cpus": 12,
+            "variant": "targeted"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 35956458,
+            "checksum": 6000,
+            "repeat": 1,
+            "cpus": 6,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 33773834,
+            "checksum": 6000,
+            "repeat": 0,
+            "cpus": 6,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2615583,
+            "checksum": 2000,
+            "repeat": 2,
+            "cpus": 1,
+            "variant": "targeted"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2584166,
+            "checksum": 2000,
+            "repeat": 4,
+            "cpus": 1,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 31772208,
+            "checksum": 6000,
+            "repeat": 3,
+            "cpus": 6,
+            "variant": "targeted"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 82138542,
+            "checksum": 12000,
+            "repeat": 0,
+            "cpus": 12,
+            "variant": "targeted"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 33799417,
+            "checksum": 6000,
+            "repeat": 1,
+            "cpus": 6,
+            "variant": "targeted"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 169297875,
+            "checksum": 12000,
+            "repeat": 4,
+            "cpus": 12,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 81892625,
+            "checksum": 12000,
+            "repeat": 1,
+            "cpus": 12,
+            "variant": "targeted"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 35059417,
+            "checksum": 6000,
+            "repeat": 3,
+            "cpus": 6,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 2,
+            "rounds": 1000,
+            "elapsed_ns": 2603333,
+            "checksum": 2000,
+            "repeat": 1,
+            "cpus": 1,
+            "variant": "targeted"
+          },
+          {
+            "threads": 6,
+            "rounds": 1000,
+            "elapsed_ns": 35762375,
+            "checksum": 6000,
+            "repeat": 2,
+            "cpus": 6,
+            "variant": "broadcast"
+          },
+          {
+            "threads": 12,
+            "rounds": 1000,
+            "elapsed_ns": 81336458,
+            "checksum": 12000,
+            "repeat": 2,
+            "cpus": 12,
+            "variant": "targeted"
+          }
+        ]
+      }
+    },
+    "counter_proof": {
+      "baseline": {
+        "variant": "old",
+        "runner_sha256": "0757afcb6e6943ec8e90bd0f2356c98ff1065b6340e2b0c10c97c950573b3e0b",
+        "syscalls": 200006,
+        "calls": 200000
+      },
+      "installed": [
+        {
+          "name": "clock-counters-1",
+          "cpus": 1,
+          "exit": 0,
+          "passed": true,
+          "work": {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3071000,
+            "checksum": 434342541418
+          },
+          "syscalls": 4
+        },
+        {
+          "name": "clock-counters-12",
+          "cpus": 12,
+          "exit": 0,
+          "passed": true,
+          "work": {
+            "vdso": true,
+            "calls": 200000,
+            "elapsed_ns": 3128792,
+            "checksum": 433755344077
+          },
+          "syscalls": 4
+        }
+      ],
+      "interpretation": "200000 libc monotonic calls: old process 200006 syscalls, final process 4; counter runs are separate from clean timing."
+    },
+    "rejected_initial_elf": {
+      "code": {
+        "runtime": "7876ea71e3412cbcccd6c916315a3934b1392d49",
+        "mac": "89e7ce55668f75348b03c3163c937d69a83c25b4",
+        "ipad": "c5404581feb64255a76eb933bb8da0e2aa101587"
+      },
+      "startup": {
+        "runner_sha256": "e4a0e56172727aa96741b772e0d50a6d894cb67b5095f750f45020339e20abcf",
+        "code_mac": "89e7ce55668f75348b03c3163c937d69a83c25b4",
+        "code_runtime": "7876ea71e3412cbcccd6c916315a3934b1392d49",
+        "variant": "trames-automib-12cpu-parallel-final",
+        "memory_mib": "auto",
+        "cpus": 12,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793260005.591147,
+        "upload_authorized": true,
+        "diagnostics": false,
+        "exit": 139,
+        "seconds": 0.045384707999999996,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": []
+      },
+      "negative_control": [
+        {
+          "variant": "broken",
+          "exit": 139,
+          "runner_sha256": "e4a0e56172727aa96741b772e0d50a6d894cb67b5095f750f45020339e20abcf",
+          "stdout": ""
+        },
+        {
+          "variant": "fixed",
+          "exit": 0,
+          "runner_sha256": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+          "stdout": "vDSO dynamic loader: ok\n"
+        }
+      ],
+      "cause": "Older glibc uses zero load address as an unset sentinel; the second PT_LOAD yielded a one-page vDSO bias error. Final ELF has one code PT_LOAD plus an adjacent independently protected calibration mapping. No failed startup is counted as a score."
+    },
+    "profiling": {
+      "scope": "Three short baseline HTML5/PDF/Photo Library host-stack samples suggested repeated anonymous metadata locks and condition waits. Waits mix guest synchronization, idle slots and runtime coordination, so they are not all removable overhead.",
+      "accounting": "Darwin proc_pid_rusage CPU times are Mach ticks; this host timebase is 125/3. No useful-guest-core occupancy is inferred from process CPU accounting."
+    },
+    "validation": {
+      "memory": "test result: ok. 150 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.12s",
+      "linux": "test result: ok. 143 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.16s",
+      "conformance": "test result: ok. 210 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 1.11s",
+      "hvf": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.01s",
+        "test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.26s"
+      ],
+      "mac_cli": [
+        "test result: ok. 7 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      ],
+      "mac_lib": [
+        "test result: ok. 4 passed; 0 failed; 47 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "linux_clock_and_handoffs": {
+        "passed": true,
+        "rows": [
+          {
+            "name": "glibc-loader",
+            "cpus": 12,
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "name": "clock-1",
+            "cpus": 1,
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "name": "clock-counters-1",
+            "cpus": 1,
+            "exit": 0,
+            "passed": true,
+            "work": {
+              "vdso": true,
+              "calls": 200000,
+              "elapsed_ns": 3071000,
+              "checksum": 434342541418
+            },
+            "syscalls": 4
+          },
+          {
+            "name": "clock-12",
+            "cpus": 12,
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "name": "clock-counters-12",
+            "cpus": 12,
+            "exit": 0,
+            "passed": true,
+            "work": {
+              "vdso": true,
+              "calls": 200000,
+              "elapsed_ns": 3128792,
+              "checksum": 433755344077
+            },
+            "syscalls": 4
+          },
+          {
+            "name": "ring-1",
+            "cpus": 1,
+            "exit": 0,
+            "passed": true,
+            "work": {
+              "threads": 2,
+              "rounds": 1000,
+              "elapsed_ns": 2705417,
+              "checksum": 2000
+            }
+          },
+          {
+            "name": "ring-6",
+            "cpus": 6,
+            "exit": 0,
+            "passed": true,
+            "work": {
+              "threads": 6,
+              "rounds": 1000,
+              "elapsed_ns": 33761417,
+              "checksum": 6000
+            }
+          },
+          {
+            "name": "ring-12",
+            "cpus": 12,
+            "exit": 0,
+            "passed": true,
+            "work": {
+              "threads": 12,
+              "rounds": 1000,
+              "elapsed_ns": 82230792,
+              "checksum": 12000
+            }
+          }
+        ],
+        "sha256": {
+          "runner": "846b2b8500f489ccee246e6da38e7eef66a80ebb151ebc8b5a6b31d17c79b27e",
+          "clock": "957866e18a7da6e9b8ae0fde1f66914b8ca4bb41f42cd7ae7f0fc7e5f8c8151e",
+          "ring": "a71099befa1140696796daca82ab07a17bd251d718d9b0857d11fd12fa85e24d",
+          "dynamic_loader_probe": "bbebbccc0a0212586d329531cf49f139a4ba1193eff1bec6169fcf89695557a3",
+          "glibc_loader": "49005ef8e9db9a45691ff875e6ca18dd8723c7ec5c1a863a276a1186dbf22774",
+          "rootfs": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe"
+        }
+      },
+      "sme": {
+        "passed": true,
+        "runner_sha256": "e4a0e56172727aa96741b772e0d50a6d894cb67b5095f750f45020339e20abcf",
+        "fixture_sha256": "ec1b1ee9d51bad892be8b7bcf19fe45f8df4e17a16536fe8c233f834512628d9",
+        "rows": [
+          {
+            "cpus": 1,
+            "memory_mib": "4096",
+            "exit": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "memory_mib": "auto",
+            "exit": 0,
+            "passed": true
+          }
+        ]
+      },
+      "linux_signal_oracles": {
+        "passed": true,
+        "runner_sha256": "e4a0e56172727aa96741b772e0d50a6d894cb67b5095f750f45020339e20abcf",
+        "rows": [
+          {
+            "fixture": "cpu-signals",
+            "arguments": [],
+            "fixture_sha256": "fbd88226b9871493cf59cbe65073eb92d5ec7a52b77ff79adef76dada25c31ac",
+            "oracle_stdout_sha256": "cf72bdc614b10580f66e38c2e13f632d56001d830f49722efa48909f504a891a",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "signal-leaf-stack",
+            "arguments": [],
+            "fixture_sha256": "1e78251bb5581e5c94daa0bde3721cd5c32285190146e58f032b345f11b953cd",
+            "oracle_stdout_sha256": "9bf8b6addab624f569a6416f9b03e1d38e1a8ab413869648030ca7174668ed27",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "task-signals",
+            "arguments": [],
+            "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+            "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+            "returncode": 0,
+            "passed": true
+          },
+          {
+            "fixture": "task-signals",
+            "arguments": [
+              "autodisarm"
+            ],
+            "fixture_sha256": "ba3a39b16c2e7bc0561a3df76b0835a648337975d5771601c6172018b1b62e1b",
+            "oracle_stdout_sha256": "75ecaf2874730551f70cb97b6c0acc7e269dfcf2438c017c0410346e810ab300",
+            "returncode": 0,
+            "passed": true
+          }
+        ]
+      },
+      "smp_paging": {
+        "passed": true,
+        "runner_sha256": "e4a0e56172727aa96741b772e0d50a6d894cb67b5095f750f45020339e20abcf",
+        "fixture_sha256": "44d59d8a85fe632af83887a3bef6ef3df70df8f86286f64a63aa74131668b462",
+        "cases": [
+          {
+            "name": "smp",
+            "cpus": 4,
+            "resident_target_mib": null,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51249152,
+                "physical_footprint": 41419424
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 121241600,
+                "physical_footprint": 111215528
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 121257984,
+                "physical_footprint": 111215528
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 139182080,
+                "physical_footprint": 73598008
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.415270709
+          },
+          {
+            "name": "paging",
+            "cpus": 4,
+            "resident_target_mib": 16,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51167232,
+                "physical_footprint": 41321096
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 156188672,
+                "physical_footprint": 146195392
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 161431552,
+                "physical_footprint": 151438296
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 153124864,
+                "physical_footprint": 87606376
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.501430291
+          },
+          {
+            "name": "single-paging",
+            "cpus": 1,
+            "resident_target_mib": 16,
+            "samples": [
+              {
+                "phase": "BASELINE",
+                "rss": 51118080,
+                "physical_footprint": 41337528
+              },
+              {
+                "phase": "POPULATED",
+                "rss": 149225472,
+                "physical_footprint": 139428656
+              },
+              {
+                "phase": "VERIFIED",
+                "rss": 149635072,
+                "physical_footprint": 139821872
+              },
+              {
+                "phase": "UNMAPPED",
+                "rss": 139673600,
+                "physical_footprint": 72205152
+              }
+            ],
+            "passed": true,
+            "exit": 0,
+            "seconds": 0.500684291
+          }
+        ],
+        "rss_observation": {
+          "populated_delta_bytes": -34947072,
+          "interpretation": "Informational: native-pager deactivation does not guarantee immediate RSS reduction or a total-process RSS cap."
+        }
+      },
+      "checks": [
+        "Mac workspace/all-targets and shared engine/session/Linux/memory Clippy -D warnings",
+        "Interpreter session-conformance Clippy -D warnings",
+        "iOS device and simulator FFI checks, repeated for the ELF fix",
+        "vDSO generator ran twice with identical output",
+        "Unchanged passing CPU/network/graphics/full CI results reused per repository scope rules; ELF-only fix reran its unit/lint and real loader/clock cases"
+      ],
+      "scope": "Scoped local verification before push, not a new physical iPad acceptance or a macOS suspend test. The final ELF-only header fix reuses unchanged hardware/session/memory/SME/signal/paging results."
+    },
+    "remaining": [
+      "Photo Library and HTML5 multi remain the largest gaps to the earlier native sample.",
+      "Faster metadata and handoffs do not remove the remaining address-space checkpoints or make all cross-OS workload differences executor overhead.",
+      "No actual macOS suspend/resume was performed; virtual-counter behavior relies on the public SDK domain contract.",
+      "Photo Library and Object Detection multi means regress about 4.0% and 5.2% across the two clean observations; investigate separately rather than claiming uniform application gains."
+    ]
   }
 }
