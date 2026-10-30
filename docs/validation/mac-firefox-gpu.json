@@ -2325,5 +2325,815 @@
         "The in-app browser was not remeasured in this run."
       ]
     }
+  },
+  "resource_projection_follow_up": {
+    "date": "2026-10-30",
+    "base_runtime_revision": "94e603cd479d45fc9900c22d3f44c904c2c60df5",
+    "baseline_mac_source_revision": "9b7dbd9bcb5b59f0fa5bb53e94311916ae91aebe",
+    "runtime_source_sha256": {
+      "crates/trames-session/src/process.rs": "2dc41b366ef3a27a878a53f0fedf8c6c29e931095d73356be67485163756c4d3",
+      "crates/trames-vfs/src/fd_table.rs": "63f6e63f3c9c8dfad25f1a61261dbfa0d3c7ab8838e535bb484f3b9630db9f5a",
+      "crates/trames-vfs/src/ipc/native.rs": "549d3907ae03d6ece03e99bd1941bd8d522e4d2a7858442c469fe599728e89af",
+      "crates/trames-vfs/src/lib.rs": "f3c02a5563d5cecf84d1649fb083ad8139a1f8d9107602550805a328759e34d3",
+      "crates/trames-vfs/src/pseudo.rs": "e92b70bfda29acf1655ea183e62d02b64564bf725254674c52439d0661aeb7b6",
+      "crates/trames-vfs/src/storage.rs": "7ea5e8c1d4abd4eef917ac28a02651e30657641ee03f48f45df295bc7b52f67e",
+      "crates/trames-vfs/src/storage_tests.rs": "31e279cddf69e1a686020bb0023b9787fa491284bcc3db97a8ec587a9fd6ceef"
+    },
+    "intermediate_runtime_sources": {
+      "intermediate": {
+        "crates/trames-session/src/process.rs": "2dc41b366ef3a27a878a53f0fedf8c6c29e931095d73356be67485163756c4d3",
+        "crates/trames-vfs/src/fd_table.rs": "a670bc369bdc2b2104a4fb492c7ab2b2ec5654739316d1e9927dd2be59096c42",
+        "crates/trames-vfs/src/ipc/native.rs": "73f9debf1bffd86ca015182ed74d82b496741a18235f6b8d59dfcd349d73cb18",
+        "crates/trames-vfs/src/lib.rs": "a749460cd3fbd3cc1ba1a7bb1455804fe679ba37f9fbeda4ef2c72bcb3bf70ce",
+        "crates/trames-vfs/src/pseudo.rs": "ca815ce3fc385cdf6f7cad45d10839adbb1b3ff15601d8cd210c3e6fbf5f3123",
+        "crates/trames-vfs/src/storage.rs": "7ea5e8c1d4abd4eef917ac28a02651e30657641ee03f48f45df295bc7b52f67e",
+        "crates/trames-vfs/src/storage_tests.rs": "31e279cddf69e1a686020bb0023b9787fa491284bcc3db97a8ec587a9fd6ceef"
+      },
+      "field-set": {
+        "crates/trames-session/src/process.rs": "2dc41b366ef3a27a878a53f0fedf8c6c29e931095d73356be67485163756c4d3",
+        "crates/trames-vfs/src/fd_table.rs": "a670bc369bdc2b2104a4fb492c7ab2b2ec5654739316d1e9927dd2be59096c42",
+        "crates/trames-vfs/src/ipc/native.rs": "73f9debf1bffd86ca015182ed74d82b496741a18235f6b8d59dfcd349d73cb18",
+        "crates/trames-vfs/src/lib.rs": "f3c02a5563d5cecf84d1649fb083ad8139a1f8d9107602550805a328759e34d3",
+        "crates/trames-vfs/src/pseudo.rs": "e92b70bfda29acf1655ea183e62d02b64564bf725254674c52439d0661aeb7b6",
+        "crates/trames-vfs/src/storage.rs": "7ea5e8c1d4abd4eef917ac28a02651e30657641ee03f48f45df295bc7b52f67e",
+        "crates/trames-vfs/src/storage_tests.rs": "31e279cddf69e1a686020bb0023b9787fa491284bcc3db97a8ec587a9fd6ceef"
+      }
+    },
+    "runner_sha256": {
+      "baseline_and_control_recheck": "2e3ad6248629a505a8192d663a4f591e8d9ea7d314e4ef4aae464e0c40b7e065",
+      "prototype": "46261bcd8c2da84c26f6be0b6430de882959d44ffe22b20367e003c17ebf92b8",
+      "field_set": "355284f643fb514bf9c73c51ec6036a2cf72815893fa749e71f71c4090e8aed0",
+      "owned_cache": "8c569ab69e090556ca330e740dae43274198a6ee24ab5c9e3e64d23cdd21de88"
+    },
+    "controller_sha256": "e086d25b0e396fe11dfd75bf327e1c384b22bc82b30d297dbab9797a46ff4193",
+    "native_driver_sha256": {
+      "macos-arm64-7d93983f18ed9ded45ab": "8df0c873b11d921091b0ddafb572c7c368852f6bcccd8f098ed5ea7bcae8bb5d",
+      "ios-arm64-3d0303018930f923aa0c": "ca028482256e3419438422f61df9cdff86e7b63688b6c8999adb53ee44ca8841"
+    },
+    "guest_icd_sha256": "4a6fb1d0d7f05b27ee243d1abff89988580f72fc7f6cec14bb44918571b1e9cd",
+    "conditions": {
+      "ordered_phases": [
+        "baseline",
+        "prototype",
+        "field_set",
+        "owned_cache",
+        "control_recheck"
+      ],
+      "cpus": 12,
+      "memory": "host-managed",
+      "fresh_profile_per_process": true,
+      "site_order_each_round": [
+        "wiki",
+        "github",
+        "bilibili"
+      ],
+      "excluded_first_visits_per_site": 1,
+      "formal_trials_per_site": 3,
+      "viewport_css_pixels": [
+        1920,
+        792
+      ],
+      "default_graphics_security_cache_process_preferences": true,
+      "build_ci_sampler_overlap_retained_trials": false
+    },
+    "mechanisms": {
+      "fsync": "Sync original file data, then only its retained owning filesystem namespace if linked. Anonymous/unlinked data keeps its sync but has no namespace entry. Detached mounts retain their owner; named persistent checkpoint errors remain observable.",
+      "wayland": "Cache validated grants in real SharedFiles membership under its existing object mutex. Every owner/worker membership mutation retires inactive grants immediately. Native service identity and connection generation handle topology changes; compositor inode registration remains live.",
+      "proc": "Resolve actual proc dependencies through aliases, then union exact payload bits. Mapping text, environment and auxiliary data are produced only on demand. Combining descriptor traversal and another payload no longer promotes the query to all fields. Mutable argument bytes remain live when requested."
+    },
+    "runs": {
+      "baseline": {
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793351281.13999,
+            "click_command_ms": 1492.997667,
+            "content_ms": 5758.15925,
+            "observed_elapsed_ms": 5758.160333,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793351291.9829388,
+            "click_command_ms": 1602.6520829999988,
+            "content_ms": 6173.5226669999965,
+            "observed_elapsed_ms": 6173.5238329999975,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793351324.968786,
+            "click_command_ms": 1411.2374589999988,
+            "content_ms": 11230.479834,
+            "observed_elapsed_ms": 11230.481042000001,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793351357.2324631,
+            "click_command_ms": 1244.859875000003,
+            "content_ms": 5406.783750000002,
+            "observed_elapsed_ms": 5406.785250000013,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793351364.79398,
+            "click_command_ms": 2353.578958,
+            "content_ms": 10899.916833000007,
+            "observed_elapsed_ms": 10899.918499999998,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793351390.5168068,
+            "click_command_ms": 595.4506659999907,
+            "content_ms": 12293.183624999998,
+            "observed_elapsed_ms": 12293.185457999996,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793351406.224511,
+            "click_command_ms": 3248.478583000008,
+            "content_ms": 12295.44041600002,
+            "observed_elapsed_ms": 12295.441875000022,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793351421.4892669,
+            "click_command_ms": 553.6487500000078,
+            "content_ms": 9765.221749999995,
+            "observed_elapsed_ms": 9765.222834000013,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793351443.696979,
+            "click_command_ms": 824.402125000006,
+            "content_ms": 6052.8147500000105,
+            "observed_elapsed_ms": 6052.815791000001,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793351459.135649,
+            "click_command_ms": 1099.3540000000053,
+            "content_ms": 4354.623000000003,
+            "observed_elapsed_ms": 4354.626375000009,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793351470.3327959,
+            "click_command_ms": 2262.0377909999834,
+            "content_ms": 6781.0859159999945,
+            "observed_elapsed_ms": 6781.087249999984,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793351490.498687,
+            "click_command_ms": 2515.466125000017,
+            "content_ms": 8309.764333000005,
+            "observed_elapsed_ms": 8309.765458000016,
+            "warmup": false
+          }
+        ],
+        "cases": {
+          "wiki": {
+            "formal_median_ms": 5406.783750000002,
+            "formal_min_ms": 4354.623000000003,
+            "formal_max_ms": 12295.44041600002
+          },
+          "github": {
+            "formal_median_ms": 9765.221749999995,
+            "formal_min_ms": 6781.0859159999945,
+            "formal_max_ms": 10899.916833000007
+          },
+          "bilibili": {
+            "formal_median_ms": 8309.764333000005,
+            "formal_min_ms": 6052.8147500000105,
+            "formal_max_ms": 12293.183624999998
+          }
+        }
+      },
+      "prototype": {
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793353701.3744261,
+            "click_command_ms": 1246.997291,
+            "content_ms": 4405.743665999999,
+            "observed_elapsed_ms": 4405.744791,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793353710.162165,
+            "click_command_ms": 883.3359170000001,
+            "content_ms": 4928.070667,
+            "observed_elapsed_ms": 4928.073249999999,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793353733.271574,
+            "click_command_ms": 444.424374999997,
+            "content_ms": 11249.239209000003,
+            "observed_elapsed_ms": 11249.249624999997,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793353766.158559,
+            "click_command_ms": 1142.2073330000017,
+            "content_ms": 6127.163957999997,
+            "observed_elapsed_ms": 6127.165417,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793353778.1027148,
+            "click_command_ms": 1671.7616669999984,
+            "content_ms": 6297.828125000009,
+            "observed_elapsed_ms": 6297.829458999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793353797.8990579,
+            "click_command_ms": 1107.5862090000044,
+            "content_ms": 13709.919416999996,
+            "observed_elapsed_ms": 13709.920874999994,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793353816.77886,
+            "click_command_ms": 1006.4024169999897,
+            "content_ms": 3807.1690839999947,
+            "observed_elapsed_ms": 3807.1703339999913,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793353823.1143181,
+            "click_command_ms": 546.5244579999933,
+            "content_ms": 17328.833999999988,
+            "observed_elapsed_ms": 17328.835582999985,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793353857.0863218,
+            "click_command_ms": 812.2567919999995,
+            "content_ms": 13380.121500000001,
+            "observed_elapsed_ms": 13380.124959,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793353889.670627,
+            "click_command_ms": 2641.0580419999974,
+            "content_ms": 5422.994499999987,
+            "observed_elapsed_ms": 5422.995708999992,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793353898.843759,
+            "click_command_ms": 1358.7994160000108,
+            "content_ms": 7396.116625000019,
+            "observed_elapsed_ms": 7396.1180410000225,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793353922.295108,
+            "click_command_ms": 566.5645420000089,
+            "content_ms": 13286.514209000017,
+            "observed_elapsed_ms": 13286.515542000017,
+            "warmup": false
+          }
+        ],
+        "cases": {
+          "wiki": {
+            "formal_median_ms": 5422.994499999987,
+            "formal_min_ms": 3807.1690839999947,
+            "formal_max_ms": 6127.163957999997
+          },
+          "github": {
+            "formal_median_ms": 7396.116625000019,
+            "formal_min_ms": 6297.828125000009,
+            "formal_max_ms": 17328.833999999988
+          },
+          "bilibili": {
+            "formal_median_ms": 13380.121500000001,
+            "formal_min_ms": 13286.514209000017,
+            "formal_max_ms": 13709.919416999996
+          }
+        }
+      },
+      "field_set": {
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793354666.427407,
+            "click_command_ms": 1259.7715,
+            "content_ms": 5789.357875,
+            "observed_elapsed_ms": 5789.359459,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793354679.057631,
+            "click_command_ms": 797.8053340000013,
+            "content_ms": 6016.1668340000015,
+            "observed_elapsed_ms": 6016.168375000001,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793354708.176907,
+            "click_command_ms": 1851.8310000000042,
+            "content_ms": 7457.880584000001,
+            "observed_elapsed_ms": 7457.881667000002,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793354722.0503218,
+            "click_command_ms": 418.6559999999986,
+            "content_ms": 7950.547165999999,
+            "observed_elapsed_ms": 7950.548208000007,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793354734.029514,
+            "click_command_ms": 6170.267249999995,
+            "content_ms": 10213.406207999995,
+            "observed_elapsed_ms": 10213.407332999992,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793354759.387278,
+            "click_command_ms": 2546.0930830000025,
+            "content_ms": 12441.833250000001,
+            "observed_elapsed_ms": 12441.834624999998,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793354786.2854831,
+            "click_command_ms": 2281.9996669999937,
+            "content_ms": 4938.613457999992,
+            "observed_elapsed_ms": 4938.6145,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793354796.0393941,
+            "click_command_ms": 901.6497920000006,
+            "content_ms": 6238.236999999998,
+            "observed_elapsed_ms": 6238.239082999997,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793354813.1013298,
+            "click_command_ms": 1085.092875000015,
+            "content_ms": 11397.890042,
+            "observed_elapsed_ms": 11397.891250000015,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793354841.827897,
+            "click_command_ms": 538.9293329999987,
+            "content_ms": 2325.3497919999973,
+            "observed_elapsed_ms": 2325.351041999994,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793354849.608939,
+            "click_command_ms": 866.018749999995,
+            "content_ms": 7830.355832999999,
+            "observed_elapsed_ms": 7830.35745799998,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793354868.840862,
+            "click_command_ms": 1576.122292000008,
+            "content_ms": 8447.705584000005,
+            "observed_elapsed_ms": 8447.707292000017,
+            "warmup": false
+          }
+        ],
+        "cases": {
+          "wiki": {
+            "formal_median_ms": 4938.613457999992,
+            "formal_min_ms": 2325.3497919999973,
+            "formal_max_ms": 7950.547165999999
+          },
+          "github": {
+            "formal_median_ms": 7830.355832999999,
+            "formal_min_ms": 6238.236999999998,
+            "formal_max_ms": 10213.406207999995
+          },
+          "bilibili": {
+            "formal_median_ms": 11397.890042,
+            "formal_min_ms": 8447.705584000005,
+            "formal_max_ms": 12441.833250000001
+          }
+        }
+      },
+      "owned_cache": {
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793355971.6114008,
+            "click_command_ms": 672.8019999999999,
+            "content_ms": 8372.753125,
+            "observed_elapsed_ms": 8372.754541999999,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793355985.800798,
+            "click_command_ms": 806.6803329999992,
+            "content_ms": 6493.531166000001,
+            "observed_elapsed_ms": 6493.532583,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793356013.065941,
+            "click_command_ms": 2718.7806660000006,
+            "content_ms": 10464.702416000002,
+            "observed_elapsed_ms": 10464.703833000001,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793356030.943341,
+            "click_command_ms": 513.6580840000065,
+            "content_ms": 2735.815875000007,
+            "observed_elapsed_ms": 2735.8173339999967,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793356041.74201,
+            "click_command_ms": 1142.7410829999899,
+            "content_ms": 9651.895624999994,
+            "observed_elapsed_ms": 9651.896874999991,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793356065.10308,
+            "click_command_ms": 869.3133750000044,
+            "content_ms": 13956.734999999995,
+            "observed_elapsed_ms": 13956.736457999994,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793356091.494793,
+            "click_command_ms": 1035.3611249999944,
+            "content_ms": 7302.839000000005,
+            "observed_elapsed_ms": 7302.840333000006,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793356109.2076108,
+            "click_command_ms": 558.1861249999918,
+            "content_ms": 9142.564166,
+            "observed_elapsed_ms": 9142.56524999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793356130.444397,
+            "click_command_ms": 1004.568790999997,
+            "content_ms": 7927.683790999992,
+            "observed_elapsed_ms": 7927.685540999988,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793356145.959578,
+            "click_command_ms": 1118.1334590000063,
+            "content_ms": 4374.176500000004,
+            "observed_elapsed_ms": 4374.177583999995,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793356153.697351,
+            "click_command_ms": 938.8424580000105,
+            "content_ms": 6840.032790999999,
+            "observed_elapsed_ms": 6840.034958000018,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793356171.2515981,
+            "click_command_ms": 1720.9685830000012,
+            "content_ms": 9937.605875000003,
+            "observed_elapsed_ms": 9937.607332999989,
+            "warmup": false
+          }
+        ],
+        "cases": {
+          "wiki": {
+            "formal_median_ms": 4374.176500000004,
+            "formal_min_ms": 2735.815875000007,
+            "formal_max_ms": 7302.839000000005
+          },
+          "github": {
+            "formal_median_ms": 9142.564166,
+            "formal_min_ms": 6840.032790999999,
+            "formal_max_ms": 9651.895624999994
+          },
+          "bilibili": {
+            "formal_median_ms": 9937.605875000003,
+            "formal_min_ms": 7927.683790999992,
+            "formal_max_ms": 13956.734999999995
+          }
+        }
+      },
+      "control_recheck": {
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793356323.4161391,
+            "click_command_ms": 566.4880829999998,
+            "content_ms": 5774.783208000001,
+            "observed_elapsed_ms": 5774.784542000001,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793356331.641835,
+            "click_command_ms": 1949.4536250000003,
+            "content_ms": 11329.906584,
+            "observed_elapsed_ms": 11329.909125,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793356374.770638,
+            "click_command_ms": 1519.658249999999,
+            "content_ms": 9064.936208,
+            "observed_elapsed_ms": 9064.937707999996,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793356404.972592,
+            "click_command_ms": 1620.0204160000026,
+            "content_ms": 4266.136708000005,
+            "observed_elapsed_ms": 4266.137541000006,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793356413.424793,
+            "click_command_ms": 1379.7233749999975,
+            "content_ms": 7697.391416000002,
+            "observed_elapsed_ms": 7697.392540999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793356434.4796119,
+            "click_command_ms": 591.4077500000019,
+            "content_ms": 20652.256292000005,
+            "observed_elapsed_ms": 20652.257666999987,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793356468.568922,
+            "click_command_ms": 1203.0021660000045,
+            "content_ms": 14113.730750000002,
+            "observed_elapsed_ms": 14113.73254099999,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793356485.9661388,
+            "click_command_ms": 3559.2089999999816,
+            "content_ms": 10099.68062499999,
+            "observed_elapsed_ms": 10099.681666999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793356508.082546,
+            "click_command_ms": 2249.729000000002,
+            "content_ms": 8938.578959000011,
+            "observed_elapsed_ms": 8938.580374999987,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793356524.4880798,
+            "click_command_ms": 1644.7460409999906,
+            "content_ms": 3597.1773329999905,
+            "observed_elapsed_ms": 3597.1787080000013,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793356534.151256,
+            "click_command_ms": 968.2633749999923,
+            "content_ms": 6412.861749999991,
+            "observed_elapsed_ms": 6412.862832999991,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793356554.25992,
+            "click_command_ms": 376.6532919999861,
+            "content_ms": 9295.534957999991,
+            "observed_elapsed_ms": 9295.536207999987,
+            "warmup": false
+          }
+        ],
+        "cases": {
+          "wiki": {
+            "formal_median_ms": 4266.136708000005,
+            "formal_min_ms": 3597.1773329999905,
+            "formal_max_ms": 14113.730750000002
+          },
+          "github": {
+            "formal_median_ms": 7697.391416000002,
+            "formal_min_ms": 6412.861749999991,
+            "formal_max_ms": 10099.68062499999
+          },
+          "bilibili": {
+            "formal_median_ms": 9295.534957999991,
+            "formal_min_ms": 8938.578959000011,
+            "formal_max_ms": 20652.256292000005
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "profile": {
+        "wiki": {
+          "coordinator_samples": 1857,
+          "inclusive_counts": {
+            "Filesystem10checkpoint": 374,
+            "refresh_proc_observed": 255,
+            "process_info": 249,
+            "wayland_auth_snapshot": 131,
+            "prepare_parallel_views": 167,
+            "update_parallel_snapshot": 140
+          }
+        },
+        "github": {
+          "coordinator_samples": 1777,
+          "inclusive_counts": {
+            "Filesystem10checkpoint": 220,
+            "refresh_proc_observed": 95,
+            "process_info": 93,
+            "prepare_parallel_views": 232,
+            "update_parallel_snapshot": 193,
+            "wayland_auth_snapshot": 200
+          }
+        }
+      },
+      "after-profile": {
+        "wiki": {
+          "coordinator_samples": 1743,
+          "inclusive_counts": {
+            "refresh_proc_observed": 429,
+            "process_info": 417,
+            "Filesystem10checkpoint": 135,
+            "prepare_parallel_views": 220,
+            "update_parallel_snapshot": 136,
+            "wayland_auth_snapshot": 3
+          }
+        },
+        "github": {
+          "coordinator_samples": 1636,
+          "inclusive_counts": {
+            "Filesystem10checkpoint": 150,
+            "refresh_proc_observed": 78,
+            "process_info": 74,
+            "prepare_parallel_views": 231,
+            "update_parallel_snapshot": 191,
+            "wayland_auth_snapshot": 3
+          }
+        }
+      },
+      "field-set-profile": {
+        "wiki": {
+          "coordinator_samples": 1566,
+          "inclusive_counts": {
+            "prepare_parallel_views": 358,
+            "update_parallel_snapshot": 320,
+            "Filesystem10checkpoint": 123,
+            "refresh_proc_observed": 12,
+            "process_info": 12,
+            "wayland_auth_snapshot": 2
+          }
+        }
+      }
+    },
+    "diagnostic_limits": "Five-second all-thread samples in separate diagnostic visits. Reported counts are inclusive coordinator wall-stack observations, not process CPU percentages or matched-work speed ratios. The field-set diagnostic precedes the final FD-cache ownership correction; its proc implementation is identical.",
+    "validation": {
+      "macos_vfs_passed": 330,
+      "linux_vfs_passed": 331,
+      "vfs_existing_skips_per_os": 1,
+      "common_kernel_passed_per_os": 224,
+      "kernel_existing_skips_per_os": 3,
+      "affected_strict_clippy": true,
+      "mac_all_targets_strict_clippy": true,
+      "ipad_arm64_ffi_with_matching_driver": true,
+      "signed_mac_release": true,
+      "retirement_negative_control_failed_as_expected": true,
+      "negative_control": "Omitting inactive grant retirement from the final membership mutation path fails the worker-close regression. Production source is restored byte-for-byte before validation/build.",
+      "unchanged_gpu_memory_cpu_mesa_loader_validation_reused": true
+    },
+    "limits": [
+      "Three ordered formal observations per site; no randomized pairs or confidence intervals.",
+      "Dynamic site responses and HTTP/DNS/CDN caches remain uncontrolled.",
+      "DOM-marker readiness does not mean complete subresource loading, pixel presentation or interactive/video latency.",
+      "Prototype timing runs are retained even though their cache-retirement design was rejected before integration.",
+      "Persistent-root full manifest serialization/durable commit and memory-view preparation remain on their existing joined paths.",
+      "The in-app browser was not remeasured."
+    ],
+    "runtime_revision": "e4b58fb73797258f7bc62094f866b93f0ee2c578"
   }
 }

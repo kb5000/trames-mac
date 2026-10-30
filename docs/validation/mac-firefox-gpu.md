@@ -796,3 +796,68 @@ runner ignores the dynamic-library override; that argument alone is not proof of
 which driver executed. Run the unchanged Firefox fixture controller with
 `--rounds 9` for the longer comparison. All warmup/formal samples, intermediate source
 identities and driver/ICD hashes are in [the GPU record](mac-firefox-gpu.json).
+
+## Resource-scoped runtime projections (2026-10-30)
+
+Navigation-time diagnostics found repeated cold work in the coordinator:
+filesystem namespace checkpoints, process projections, and Wayland authorization
+captures. The shared runtime changes three mechanisms, for both Mac and iPad:
+
+- File sync retains its original data sync, then checkpoints only the file's
+  owning filesystem when linked. Memfd/unlinked files have no namespace entry;
+  tmpfs and detached mounts do not flush the unrelated persistent root. Named
+  persistent errors, synchronous durability and the global sync API remain.
+- Wayland grants are cached in the actual shared FD membership under its existing
+  object mutex. Owner and worker close/dup/replace retire inactive grants at the
+  membership change, without another lock or service thread. Native connection
+  changes invalidate independently of FD membership. Shared inode registration is
+  still resolved live; a guessed FD or copied bytes cannot mint a grant.
+- Proc observations carry the exact union of required payload bits through real
+  alias/FD traversal. Reading maps, environ or auxv constructs only that payload.
+  A descriptor link into another proc file no longer promotes the request to
+  Full and rereads every process's arguments. Requested mutable argv stays live.
+
+The first caching prototype retained closed shared-file allocations until the
+next capture. It was rejected before integration. The final cache belongs to
+membership itself; a regression checks an actual worker pipe close retires its
+inactive grants, followed by an owner memfd close returning its charged pages.
+Removing retirement from the final implementation makes that regression fail.
+Only the final owned-cache variant is integrated; both prototype timings remain.
+
+### Ordered public-page observations
+
+All phases use the unchanged controller and content markers, 12 CPUs,
+host-managed memory, fresh profiles and a visible 1920×792 CSS viewport. Each
+phase excludes one first visit per site and retains three formal rounds in
+Wikipedia/GitHub/Bilibili order. The old signed binary is preserved for A2.
+Driver, guest ICD/Mesa/loader and graphics/security/cache/process preferences
+match. No build, local CI or sampler overlaps these retained observations.
+
+| Median, seconds | Old A1 | Prototype B1 | Field-set C1 | Final owned cache D1 | Old recheck A2 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Wikipedia | 5.407 | 5.423 | 4.939 | 4.374 | 4.266 |
+| GitHub | 9.765 | 7.396 | 7.830 | 9.143 | 7.697 |
+| Bilibili | 8.310 | 13.380 | 11.398 | 9.938 | 9.296 |
+
+All 60 first-visit/formal target markers complete, with no content timeout or
+automation failure. The results remain mixed across sites and processes; they
+do not establish a general public-page speedup. These are click-command-start
+to DOM-marker observations, not complete loading or screen-present latency.
+All samples, source/binary identities and limitations are retained in the
+`resource_projection_follow_up` section of [the GPU record](mac-firefox-gpu.json).
+
+Separate five-second diagnostic visits expose the mechanisms without entering
+the timing summaries. Initial Wikipedia/GitHub coordinator snapshots contain
+131/1857 and 200/1777 inclusive Wayland-auth samples. The first cached prototype
+has 3/1743 and 3/1636. Its Wikipedia proc refresh still has 429/1743 samples;
+after exact dependency unions, the separate Wikipedia snapshot has 12/1566.
+These are wall-stack observations in differing visits, not CPU percentages or
+controlled speed ratios. Memory-view preparation and persistent-root checkpoint
+serialization/durable commits remain material work; they are not removed here.
+
+Final local validation passes 330 macOS and 331 native ARM64 Linux VFS tests
+(one existing skip per OS), plus 224 common-kernel tests per OS (three existing
+skips). Strict affected/Mac lints, the ARM64 iPad FFI compile with the matching
+native archive and the signed Mac release build pass. Unchanged CPU execution,
+GPU-memory ownership and guest Mesa/loader validation are reused. The normal
+non-automation Firefox profile is restored after timing.
