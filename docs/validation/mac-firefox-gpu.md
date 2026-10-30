@@ -1020,3 +1020,37 @@ adds no coordinator/service thread, CPU tensor implementation or per-access
 publication barrier. There is no full CTS, model benchmark or physical iPad GPU
 claim. The active Firefox session is left running; new launches use the updated
 paired guest artifact.
+
+
+## Promoted Vulkan 1.2 paths (2026-10-30)
+
+The paired common runtime/ICD now supports selected 1.1/1.2 aggregate query and
+creation paths, SPIR-V 1.5, host query reset, nonzero dispatch base, singleton
+device masks, descriptor-layout support, inline buffer updates and render-area
+granularity. Native sampler min/max reduction and mirror clamp are enabled from
+actual driver support. The common implementation, API/conformance boundary and
+remaining graphics work are recorded in
+[trames-ipad](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-compute.md#promoted-vulkan-12-paths-2026-10-30).
+
+The new [core 1.2 harness](../../tests/integration/mac-vulkan-core12.py) takes the
+same runner/store/loader/output options as the neural harness. Its `--inputs`
+directory contains the paired ICD, `vulkan-core12` and `vulkan-core12.spv`.
+Use a disposable store with no concurrent runner; no window/network is required.
+
+| Final Apple M6/MoltenVK acceptance | Result |
+| --- | --- |
+| Original native reference and one/twelve guest CPUs | SPIR-V 1.5 dynamic subgroup broadcast, nonzero dispatch base, host query reset, descriptor support, core renderpass2/granularity and exact GPU output pass |
+| Sampler min/max and mirror clamp | Exact image values 2/9/2 pass |
+| Large shared mapping | 68 MiB mapping receives an inline GPU update in its final four bytes and retains CPU sentinels; no fixed map ceiling |
+| Transfers | Three shared maps cover 71,303,708 bytes; zero CPU upload/download and scanned synchronization bytes |
+| Original regressions on the same runner/ICD hashes | Neural FP16/INT8/subgroup/atomic/GPU-address and GLES 3.1/indirect/image/ASTC pass one/twelve CPUs; 128 integer PBO components and required type errors pass |
+| Affected local checks | 53 Vulkan tests per macOS/ARM64 Linux, strict lints, signed Mac release, Linux CLI, both product boundaries and ARM64 iPad FFI compile pass |
+
+ARM64 Linux also passes one/four CPUs with original shared and forced shadow
+mapping, using a 32 MiB fixture under its unchanged bounded allocation policy.
+The native SDK archives, CPU and kernel implementations are unchanged. This adds
+no coordinator/service thread or CPU shader implementation. Full Vulkan 1.2 CTS,
+complete graphics coverage, model inference/performance and physical iPad GPU
+acceptance remain unmeasured. The active Firefox session stays running; new
+launches use the paired ICD. Hashes/results are under `core12_follow_up` in
+[the GPU record](mac-firefox-gpu.json).

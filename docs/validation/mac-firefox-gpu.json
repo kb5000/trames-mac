@@ -3992,5 +3992,113 @@
     "physical_ipad_gpu": "not tested",
     "model_inference_performance": "not measured",
     "active_firefox": "left running; no restart or profile changes"
+  },
+  "core12_follow_up": {
+    "date": "2026-10-30",
+    "runtime_revision": "6735b345f1c8307cbdb7d3b4b118c29ac394e5dd",
+    "wire_revision": 11,
+    "scope": "Selected promoted Vulkan 1.1/1.2 application and compute paths; not complete Vulkan 1.2 or CTS conformance",
+    "mac_core12": {
+      "passed": true,
+      "scope": "selected Vulkan 1.2 core/SPIR-V 1.5 outputs and large mapping; not complete CTS",
+      "runner_sha256": "fe8eb771f4ce5be366d29f5a697aa4dabcf2be48f334bda7a0b037b70b72e403",
+      "inputs": {
+        "libtrames_vulkan_icd.so": "4db3f55845da913c89f8d26f7f889a440c2d22b740a8d383326d3fbf049ac8ef",
+        "vulkan-core12": "dc8976fb55ee75b34e0520bff8dc25362903caa23afd3c98cc76d96fb9d67cbf",
+        "vulkan-core12.spv": "0e18d79a301c2a9a80357179debc6a32d8db4d29a29a63b3882bcd0d69cab309",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "icd.json": "1ebe161790a62d918d8cf96791416dc21e41f16978f2c78329210e49ac07c10f"
+      },
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "mac_shared_mapping_metrics": {
+      "maps": 3,
+      "mapped_bytes": 71303708,
+      "upload_bytes": 0,
+      "download_bytes": 0,
+      "upload_scanned_bytes": 0,
+      "download_scanned_bytes": 0
+    },
+    "sampler_outputs": {
+      "min": 2,
+      "max": 9,
+      "mirror_clamp": 2
+    },
+    "checks": {
+      "macos_vulkan_unit": 53,
+      "arm64_linux_vulkan_unit": 53,
+      "vulkan_strict_clippy": "pass",
+      "mac_product_strict_clippy": "pass",
+      "linux_release_cli": "pass",
+      "signed_mac_release_build": "pass",
+      "arm64_ipad_ffi_compile": "pass",
+      "paired_schema_generation": "pass",
+      "both_product_boundaries": "pass"
+    },
+    "shared_record": "https://github.com/kb5000/trames-ipad/blob/main/docs/validation/vulkan-compute-data.json",
+    "regressions": {
+      "mac_neural_regression": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "cleanup_exit": 0,
+        "runner_sha256": "fe8eb771f4ce5be366d29f5a697aa4dabcf2be48f334bda7a0b037b70b72e403",
+        "icd_sha256": "4db3f55845da913c89f8d26f7f889a440c2d22b740a8d383326d3fbf049ac8ef"
+      },
+      "mac_gles31_regression": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "cleanup_exit": 0,
+        "runner_sha256": "fe8eb771f4ce5be366d29f5a697aa4dabcf2be48f334bda7a0b037b70b72e403",
+        "icd_sha256": "4db3f55845da913c89f8d26f7f889a440c2d22b740a8d383326d3fbf049ac8ef"
+      },
+      "mac_pbo_regression": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "cleanup_exit": 0,
+        "runner_sha256": "fe8eb771f4ce5be366d29f5a697aa4dabcf2be48f334bda7a0b037b70b72e403",
+        "icd_sha256": "4db3f55845da913c89f8d26f7f889a440c2d22b740a8d383326d3fbf049ac8ef"
+      }
+    },
+    "active_firefox": "left running; no profile/preference changes"
   }
 }

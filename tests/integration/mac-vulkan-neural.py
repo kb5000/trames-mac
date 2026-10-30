@@ -45,7 +45,7 @@ try:
         (a.output / f'{cpus}.stdout').write_bytes(result.stdout)
         (a.output / f'{cpus}.stderr').write_bytes(result.stderr)
         passed = (result.returncode == 0 and all(marker in result.stdout for marker in
-                  (b'API=1.1', b'neural-main-ok:', b'neural-dot-ok:', b'neural-compute-ok'))
+                  (b'API=1.', b'neural-main-ok:', b'neural-dot-ok:', b'neural-compute-ok'))
                   and b'with 0 MB of GPU memory still allocated' in result.stderr
                   and b'trames mac windows:' not in result.stderr)
         report['cases'].append({'cpus': cpus, 'exit_code': result.returncode, 'passed': passed})
