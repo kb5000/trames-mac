@@ -654,3 +654,117 @@ socket tests initially hit sandbox permission denial; only those six are rerun
 outside the sandbox and pass. Unchanged CPU-executor and guest graphics artifact
 results are reused. Complete filtered samples, source identities and validation
 scope are appended to [the GPU record](mac-firefox-gpu.json).
+
+## Shared resource memory and completion notifications
+
+The next implementation removes coherent shadows for eligible mappings rather
+than making their byte comparisons faster. One initialized, aligned host payload
+is imported into Vulkan with VK_EXT_external_memory_host and into the common
+guest memory model. New ICDs negotiate the optional capability; unsupported
+imports and old hosts/ICDs retain the scoped shadow fallback. The guest still
+receives a guest virtual address. Shared allocation/page owners retain its bytes
+through partial maps, fork, unmap and native device teardown.
+
+Source-built MoltenVK also publishes fence completion after releasing its native
+fence mutex. Fence/timeline waits park owned jobs on the existing run queue and
+return the CPU slot. Completion and finite deadlines resume them without a new
+wait/service thread or a 1 ms guest sleep loop. The existing future-host-signal
+submission and image-acquisition retry loops remain separate. Normal browser
+preferences, security, graphics features and the Wayland proxy remain unchanged.
+The matching static archive must include the host observer patch; the runtime
+rejects stale archives at build time. The same source builds for the iPad SDK.
+
+The initial shared mapping prototype exposed another cost: every unrelated
+backing change checked the imported pages individually. Its Firefox process
+recorded 730,871,959 page checks. Immutable imported data metadata now uses one
+stable domain per mapping, while live bytes and code/monitor versions remain
+uncached. Executable mappings retain conservative observations. A unit regression
+bounds the data-page checks to zero after a byte change. The metadata-only run
+recorded 145,336,098 page checks; these unequal whole-session totals diagnose the
+mechanism, not a controlled CPU-time or speed ratio.
+
+The final implementation also publishes external code versions at the existing
+successful Vulkan observation boundaries. Both serial/worker decoder identities
+and exclusive tokens notice device writes without shadow writeback. Ordinary
+data loads/stores do not query that token or acquire a new barrier. This preserves
+the original application's synchronization responsibilities. Details are in the
+[common ownership contract](../../runtime/docs/architecture/region-memory.md#shared-gpu-resource-mappings-and-completion-waits-2026-10-30).
+
+### Fixed-work results, including intermediate runs
+
+The fixture, graphics artifacts and browser preferences match the preceding
+scoped comparison. Every process has a fresh profile and one excluded warmup;
+all formal observations are retained. The same newly built ICD is used throughout:
+the old control declines the optional host capability and takes its compatible
+fallback. The control is runtime b97ab40 plus the already-published Mac product.
+All candidates use the same source-built native driver with only the additional
+completion observer. No builds, local CI or sampler overlap the retained trials.
+The longer control and both later candidates explicitly activate the visible native window.
+
+| Median | Scoped control A1 | Initial shared B1 | Metadata fix C1 | Scoped control A2 | Publication D1 | Final E1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Formal trials | 3 | 3 | 3 | 9 | 9 | 9 |
+| Fixture elapsed | 3.018 s | 2.705 s | 3.594 s | 2.667 s | 1.169 s | 1.211 s |
+| Draw/update/finish sections | 2.271 s | 1.970 s | 2.662 s | 2.076 s | 0.658 s | 0.728 s |
+| Click command to result observation | 3.249 s | 4.134 s | 4.295 s | 3.745 s | 1.223 s | 1.269 s |
+
+All 42 warmup/formal pixel checks pass with `[64,128,191,255]`, GL error 0 and
+no context loss. Final E1 includes the global decoder-epoch correction: the
+decoder may cache a page identity until its address-space epoch changes, so a
+per-page external version alone is insufficient for executable GPU mappings.
+Both identities now change; ordinary data-only mappings keep their epoch stable.
+Compared with control A2, final E1 fixture elapsed improves 2.20× and
+draw/update/finish time improves 2.85×. Earlier small batches remain mixed and
+include regressions; the process order is not randomized. These results
+support the fixed workload, not a universal browser or complex-page speedup.
+`gpu_work_ms` is JavaScript wall time inside those sections, not a GPU timestamp.
+Automation transport and unrelated browser work can delay result observation;
+the first A1 formal host observation is 9.810 seconds and is not discarded.
+
+The final Firefox process reports 14 shared maps covering 29,360,128 mapped bytes,
+with upload/download/scanned bytes and coherent range scans all zero. Control A2
+still compares 1,733,468,052 upload bytes and 1,717,787,580 download bytes. Those
+are startup/workload/background totals with unequal process lifetimes; do not
+interpret their ratio as a fixed-load CPU percentage or memory-bandwidth result.
+Zero bridge transfer does not eliminate native GPU resource copies required by
+rendering. The page's masked Generic Renderer string is not device identification.
+
+### Acceptance and reproduction
+
+The signed HVF acceptance runs the original guest fixtures, including computation
+with one/four CPUs, coherent memory, descriptor templates, headless rendering,
+resource lifetimes and timeline waits with one/four CPUs. All eight enabled cases
+use shared mappings and report zero bridge transfers/scans; the disabled control
+initializes no native GPU. Timeline coverage includes 64-bit counters, wait-any/all,
+timeouts, cross-thread signals and inter-submit dependencies. The native resource
+oracle separately checks nonzero partial maps, 64 exact device-copy results,
+code-version publication and retained guest bytes after device teardown; the
+budget releases after its last guest mapping. The legacy zero-hint oracle still
+passes its scoped transfer and 256-result checks. Explicit quota acceptance and
+rejection remain correct, with final release to zero.
+
+Local checks pass 155 memory unit tests (one existing skip) plus six integration
+cases, 45 Vulkan tests and 224 common-kernel tests (three existing skips) on both
+macOS and native ARM64 Linux. Six macOS localhost tests retain their successful
+unsandboxed results; only affected mapping/scheduler checks are repeated after
+follow-ups. Strict affected/Mac lints, the ARM64 iPad FFI check using the new native
+archive, both Apple driver SDK builds and the signed Mac release build pass.
+CPU execution and unchanged Mesa/loader results are reused.
+
+Rebuild the native archive with the existing trames-ipad `build-moltenvk.py`
+recipe and guest ICD with `build-vulkan-guest.sh`. Keep their returned/source-bound
+artifacts paired with the runtime. The opt-in extended native acceptance is:
+
+```sh
+python3 tests/integration/mac-native-devices.py --extended \
+  --runner /path/to/signed/trames-mac-run --rootfs /path/to/alpine-rootfs.tar.gz \
+  --fixtures /path/to/validated-fixtures --icd /path/to/new-guest-icd.so \
+  --loader /path/to/guest/libvulkan.so.1 --library /path/to/dynamic/MoltenVK.dylib \
+  --static-driver /path/to/embedded/libMoltenVK.a --output /path/to/local-results
+```
+
+`--static-driver` records the archive used to build the runner. A statically linked
+runner ignores the dynamic-library override; that argument alone is not proof of
+which driver executed. Run the unchanged Firefox fixture controller with
+`--rounds 9` for the longer comparison. All warmup/formal samples, intermediate source
+identities and driver/ICD hashes are in [the GPU record](mac-firefox-gpu.json).

@@ -464,6 +464,7 @@ pub fn run(
             runtime.metrics.gpu_transfers.direct_bytes,
             runtime.metrics.gpu_transfers.buffered_bytes
         );
+        eprintln!("trames mac shared GPU: maps={} mapped_bytes={}", runtime.metrics.gpu_transfers.shared_maps, runtime.metrics.gpu_transfers.shared_map_bytes);
         eprintln!(
             "trames mac coherent: boundaries={} ranges={} upload_scanned_bytes={} download_scanned_bytes={}",
             runtime.metrics.gpu_transfers.coherent_syncs,

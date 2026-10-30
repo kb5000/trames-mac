@@ -740,5 +740,1400 @@
       "Previously documented unsupported graphics features and third-party resource warnings remain."
     ],
     "candidate_runtime_revision": "b97ab40e89e63e34ffbb37790e108cc8ee85496b"
+  },
+  "shared_resource_follow_up": {
+    "date": "2026-10-30",
+    "base_runtime_revision": "b97ab40e89e63e34ffbb37790e108cc8ee85496b",
+    "control_mac_revision": "f798c6e13d7c6175e541e503c2d9ca8fe4a98aba",
+    "runtime_source_sha256": {
+      "crates/trames-memory/src/backing.rs": "e87ab5081237ab5d7d545e0df309c76c5cdf6cd7a71a07c74ac81aa21ccf188a",
+      "crates/trames-memory/src/cpu_memory.rs": "4cbcf3707bf315b09291508dbb8644ade9e21408a4644fcd6c2ff1166d8cc793",
+      "crates/trames-memory/src/hardware_shared.rs": "43505ec869a68720969debafbc5787092727b56f2504d725b1680dc4de0e7cc1",
+      "crates/trames-memory/src/lib.rs": "54dd4b3e3d6550476a139c6e0b312753e61201b12de8807a5dd4039dbfb8d7ac",
+      "crates/trames-memory/src/mmu/mod.rs": "a3fd36311a3a067b80baab1038026e138737155293945895acab077862a40202",
+      "crates/trames-memory/src/parallel.rs": "319f7e8acca36cb469518ac40548774b8f478b61d13fa3ccd740675c79b79ba6",
+      "crates/trames-memory/src/parallel/page.rs": "5427fefba2269b1c2dce1313953c91037121e348751ed2ed2519dd0de055995f",
+      "crates/trames-memory/src/parallel/snapshot.rs": "c6afa15b3653530eaf2294acc1b9ae24c92069047320b449e6c859b5551d9028",
+      "crates/trames-session/src/gpu.rs": "d8ae7ed82eb6e7681c2b9febbd962a54a35e1f413caedd347a22c436925fb3c5",
+      "crates/trames-session/src/process.rs": "2c88b4653306b47e14c60736704f2d91398c0682ba6740909147465630dd9cca",
+      "crates/trames-session/src/run_queue.rs": "e453ea79defce7796b108bd3a131e464acce8c28726fec02037648447aab214e",
+      "crates/trames-session/src/workers.rs": "6740146425e63da24bc36cb33af0cca9057422ff6dde7cb1c8beee2aa958e266",
+      "crates/trames-vulkan/build.rs": "83d2480b356f4984cab634ba11ca227478040eb0c541c2b6553d2281b3c4de89",
+      "crates/trames-vulkan/examples/feedback.rs": "1a68d4c2f55222456179efc2ad70a64894fb867daa973a1273a5b4a23ebc15a5",
+      "crates/trames-vulkan/examples/resources.rs": "b37f3fd59b7832feec74a68530a5a24e2c3b33988ca7e76018b949fb426a528a",
+      "crates/trames-vulkan/src/backend.rs": "c6392b1d8dec3082951405b9fe4267fa7c1cb51e3f396f7d16b31b426a39d3f8",
+      "crates/trames-vulkan/src/backend/coherent.rs": "d730c2a5b740895edef23152501aec3ff5e0a22def4e969a2617a5d28a6697fa",
+      "crates/trames-vulkan/src/backend/zink.rs": "f6460cf6670f014b78efc4190e3b54d0a0488ab667f8fded799942fd6756621a",
+      "crates/trames-vulkan/src/context.rs": "77c34dfed4127993151fcc8ed10e582b04b7a61bc0418d21ba13941cf96a8471",
+      "crates/trames-memory/src/imported.rs": "52f9ef3bf5384cfcd113c44fab5d3b48520972cd7a60686786d60a3c56676994",
+      "crates/trames-vulkan/src/backend/completion.rs": "d2cc59035c51b0428326cb7f2c17bb79a920e69651664496a9b8d90acec53d9c",
+      "crates/trames-vulkan/src/backend/shared_memory.rs": "e79f027e51d103f9d1b1d9d03e62045573aa7c1359ff031f7093ad0258a7252a"
+    },
+    "intermediate_runtime_source_sha256": {
+      "crates/trames-memory/src/cpu_memory.rs": "4cbcf3707bf315b09291508dbb8644ade9e21408a4644fcd6c2ff1166d8cc793",
+      "crates/trames-memory/src/hardware_shared.rs": "e534f221aa151c445ee2d312f5c03c096184a60f12e73831675619f83b9db7c1",
+      "crates/trames-memory/src/lib.rs": "f2d16cad6000d10729e73ab09fb27db36d600951eeb3558200e74a2fd598f07a",
+      "crates/trames-memory/src/mmu/mod.rs": "a3fd36311a3a067b80baab1038026e138737155293945895acab077862a40202",
+      "crates/trames-session/src/gpu.rs": "d8ae7ed82eb6e7681c2b9febbd962a54a35e1f413caedd347a22c436925fb3c5",
+      "crates/trames-session/src/process.rs": "2c88b4653306b47e14c60736704f2d91398c0682ba6740909147465630dd9cca",
+      "crates/trames-session/src/run_queue.rs": "e453ea79defce7796b108bd3a131e464acce8c28726fec02037648447aab214e",
+      "crates/trames-session/src/workers.rs": "6740146425e63da24bc36cb33af0cca9057422ff6dde7cb1c8beee2aa958e266",
+      "crates/trames-vulkan/examples/feedback.rs": "1a68d4c2f55222456179efc2ad70a64894fb867daa973a1273a5b4a23ebc15a5",
+      "crates/trames-vulkan/examples/resources.rs": "a85f4acddfacafd586a902fc81197d13b384cd780f081b58a503da5359ae9b6f",
+      "crates/trames-vulkan/src/backend.rs": "c6392b1d8dec3082951405b9fe4267fa7c1cb51e3f396f7d16b31b426a39d3f8",
+      "crates/trames-vulkan/src/backend/zink.rs": "f6460cf6670f014b78efc4190e3b54d0a0488ab667f8fded799942fd6756621a",
+      "crates/trames-vulkan/src/context.rs": "77c34dfed4127993151fcc8ed10e582b04b7a61bc0418d21ba13941cf96a8471",
+      "crates/trames-memory/src/imported.rs": "715fa7661d59eafb37567be617abe9a5dbd5afb164e88d62e68f6c80d9a7f4e1",
+      "crates/trames-vulkan/src/backend/completion.rs": "d2cc59035c51b0428326cb7f2c17bb79a920e69651664496a9b8d90acec53d9c",
+      "crates/trames-vulkan/src/backend/shared_memory.rs": "7a102373bba33fed79be0f87d6cd84f6b423ddd461816cde1ec42e16bc39dd9e"
+    },
+    "metadata_runtime_source_sha256": {
+      "crates/trames-memory/src/backing.rs": "10935243c8d2c3a9709a70a91e85187bb0743459910b614901639d625a807fca",
+      "crates/trames-memory/src/cpu_memory.rs": "4cbcf3707bf315b09291508dbb8644ade9e21408a4644fcd6c2ff1166d8cc793",
+      "crates/trames-memory/src/hardware_shared.rs": "1814904f4981fa7b9babaa5b0079ff22cb9db53e48042e3ae99746f22002dbec",
+      "crates/trames-memory/src/lib.rs": "f2d16cad6000d10729e73ab09fb27db36d600951eeb3558200e74a2fd598f07a",
+      "crates/trames-memory/src/mmu/mod.rs": "a3fd36311a3a067b80baab1038026e138737155293945895acab077862a40202",
+      "crates/trames-memory/src/parallel.rs": "4800ba0595fb57adca00666c56b1ddf7d92fe17575f719b42612e0c78d14bbc2",
+      "crates/trames-memory/src/parallel/page.rs": "7c8f5f17f4915785b5d2123fd68e9873c775740c9f01251a3509feaecdb88fc5",
+      "crates/trames-memory/src/parallel/snapshot.rs": "0590ab074b39ef6e96d69aae0adafe3031be71cb4787e9e3009d95d51773b061",
+      "crates/trames-session/src/gpu.rs": "d8ae7ed82eb6e7681c2b9febbd962a54a35e1f413caedd347a22c436925fb3c5",
+      "crates/trames-session/src/process.rs": "2c88b4653306b47e14c60736704f2d91398c0682ba6740909147465630dd9cca",
+      "crates/trames-session/src/run_queue.rs": "e453ea79defce7796b108bd3a131e464acce8c28726fec02037648447aab214e",
+      "crates/trames-session/src/workers.rs": "6740146425e63da24bc36cb33af0cca9057422ff6dde7cb1c8beee2aa958e266",
+      "crates/trames-vulkan/build.rs": "6a600f8b367632fc336b49794ccbe51fdf9609058412050a82921ef7abcf7241",
+      "crates/trames-vulkan/examples/feedback.rs": "1a68d4c2f55222456179efc2ad70a64894fb867daa973a1273a5b4a23ebc15a5",
+      "crates/trames-vulkan/examples/resources.rs": "a85f4acddfacafd586a902fc81197d13b384cd780f081b58a503da5359ae9b6f",
+      "crates/trames-vulkan/src/backend.rs": "c6392b1d8dec3082951405b9fe4267fa7c1cb51e3f396f7d16b31b426a39d3f8",
+      "crates/trames-vulkan/src/backend/coherent.rs": "946e5c8db2611e0eb9b6a777999306a4612088b40dc8ea8e63c379220a8c9457",
+      "crates/trames-vulkan/src/backend/zink.rs": "f6460cf6670f014b78efc4190e3b54d0a0488ab667f8fded799942fd6756621a",
+      "crates/trames-vulkan/src/context.rs": "77c34dfed4127993151fcc8ed10e582b04b7a61bc0418d21ba13941cf96a8471",
+      "crates/trames-memory/src/imported.rs": "b625ff91740b30297a1238027e4f2ab2ae1e338560cabf1b02e61436363ed4d0",
+      "crates/trames-vulkan/src/backend/completion.rs": "d2cc59035c51b0428326cb7f2c17bb79a920e69651664496a9b8d90acec53d9c",
+      "crates/trames-vulkan/src/backend/shared_memory.rs": "7a102373bba33fed79be0f87d6cd84f6b423ddd461816cde1ec42e16bc39dd9e"
+    },
+    "mac_metrics_source_sha256": "518738495fac27bfbff8a2d581623228d5146ec05f5ac1a7e5e1fab3b05c2e69",
+    "driver_patch_sha256": "2fe664ea69e926c07f28b1cfccbbf1cb94435bf0e6987278d2ecb817e411b176",
+    "driver_recipe_sha256": "e7585b8bdc7afbd2005c9d08792b6c6dd1da899b7d8ee8d50ce28d425ab898f4",
+    "native_driver_sha256": {
+      "macos-arm64-7d93983f18ed9ded45ab": "8df0c873b11d921091b0ddafb572c7c368852f6bcccd8f098ed5ea7bcae8bb5d",
+      "ios-arm64-3d0303018930f923aa0c": "ca028482256e3419438422f61df9cdff86e7b63688b6c8999adb53ee44ca8841"
+    },
+    "guest_icd_sha256": "4a6fb1d0d7f05b27ee243d1abff89988580f72fc7f6cec14bb44918571b1e9cd",
+    "guest_icd_source_sha256": {
+      "accelerator/vulkan/icd.c": "a905685820d4c6842a1d027356743353ef54a0e41ef973b5161df199cb1fff1c",
+      "accelerator/vulkan/zink.inc": "b482f2dcd3b713d51a79fea00ee63103687439a3e3ac643105fc8a031abb4a70",
+      "accelerator/vulkan/calls.S": "6b5a0aa9a39039b059d115b42330646e8eb30312ea9dd75c40a838887b3a08d8"
+    },
+    "benchmark_fixture_sha256": "c12c29db89f00e336a26bc4dd6251cf5e0a9d1c62380e87cb7bdd7e74a8752f4",
+    "conditions": {
+      "cpus": 12,
+      "memory": "host-managed",
+      "same_updated_guest_icd_per_phase": true,
+      "fixture": "unchanged 64 batches x 8 draws, 16 retained unrelated 1 MiB buffers",
+      "fresh_profile_per_process": true,
+      "one_excluded_warmup_per_process": true,
+      "visible_native_window": true,
+      "longer_pair_window_explicitly_activated": true,
+      "forced_graphics_preferences": [],
+      "sandbox_disabled": false,
+      "wayland_proxy_disabled": false,
+      "build_ci_sampler_overlap": false,
+      "ordered_phases": [
+        "control",
+        "shared",
+        "final",
+        "control-recheck",
+        "published",
+        "epoch"
+      ]
+    },
+    "runs": {
+      "control": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 5909,
+            "gpu_work_ms": 4314,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 6458.343332999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3219,
+            "gpu_work_ms": 2432,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 9810.492500000002
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3018,
+            "gpu_work_ms": 2271,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 3249.2741659999992
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2339,
+            "gpu_work_ms": 1682,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 2444.193791
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 3018,
+          "gpu_work_ms": 2271,
+          "host_ms": 3249.2741659999992
+        },
+        "whole_session_unmatched_duration": {
+          "coherent": {
+            "boundaries": 1336,
+            "ranges": 6706,
+            "upload_scanned_bytes": 842954112,
+            "download_scanned_bytes": 825128320
+          },
+          "native": {
+            "calls": 78538,
+            "gpu_compiles": 74,
+            "gpu_wait_us": 70025,
+            "upload_bytes": 18003395,
+            "download_bytes": 30943684,
+            "direct_bytes": 29360128,
+            "buffered_bytes": 19586951
+          },
+          "metrics": {
+            "syscalls": 1990965,
+            "context_switches": 781162,
+            "hardware_mapped_bytes": 59965440,
+            "guest_resident_bytes": 337182720,
+            "vm_checkpoint_groups": 188509,
+            "vm_checkpoint_spaces": 188509,
+            "backing_domain_checks": 39567396,
+            "backing_page_checks": 119413760,
+            "parallel_memory_us": 21602265,
+            "instruction_count": null
+          }
+        }
+      },
+      "shared": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 4712,
+            "gpu_work_ms": 3670,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 5267.2297499999995
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2012,
+            "gpu_work_ms": 1507,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 5212.233167000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2705,
+            "gpu_work_ms": 1970,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 2831.2649579999984
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3756,
+            "gpu_work_ms": 3237,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 4133.642375000001
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 2705,
+          "gpu_work_ms": 1970,
+          "host_ms": 4133.642375000001
+        },
+        "whole_session_unmatched_duration": {
+          "coherent": {
+            "boundaries": 996,
+            "ranges": 0,
+            "upload_scanned_bytes": 0,
+            "download_scanned_bytes": 0
+          },
+          "shared GPU": {
+            "maps": 14,
+            "mapped_bytes": 29360128
+          },
+          "native": {
+            "calls": 70555,
+            "gpu_compiles": 74,
+            "gpu_wait_us": 208878,
+            "upload_bytes": 0,
+            "download_bytes": 0,
+            "direct_bytes": 0,
+            "buffered_bytes": 0
+          },
+          "metrics": {
+            "syscalls": 2866317,
+            "context_switches": 1041237,
+            "hardware_mapped_bytes": 63913984,
+            "guest_resident_bytes": 358150144,
+            "vm_checkpoint_groups": 195285,
+            "vm_checkpoint_spaces": 195285,
+            "backing_domain_checks": 45416131,
+            "backing_page_checks": 730871959,
+            "parallel_memory_us": 43492437,
+            "instruction_count": null
+          }
+        }
+      },
+      "final": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1978,
+            "gpu_work_ms": 1433,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 5001.7829169999995
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3186,
+            "gpu_work_ms": 2425,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 4294.920959000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 5417,
+            "gpu_work_ms": 4565,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 5866.409624999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3594,
+            "gpu_work_ms": 2662,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 3692.8633750000017
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 3594,
+          "gpu_work_ms": 2662,
+          "host_ms": 4294.920959000001
+        },
+        "whole_session_unmatched_duration": {
+          "coherent": {
+            "boundaries": 1117,
+            "ranges": 0,
+            "upload_scanned_bytes": 0,
+            "download_scanned_bytes": 0
+          },
+          "shared GPU": {
+            "maps": 14,
+            "mapped_bytes": 29360128
+          },
+          "native": {
+            "calls": 75849,
+            "gpu_compiles": 77,
+            "gpu_wait_us": 309273,
+            "upload_bytes": 0,
+            "download_bytes": 0,
+            "direct_bytes": 0,
+            "buffered_bytes": 0
+          },
+          "metrics": {
+            "syscalls": 3577679,
+            "context_switches": 1246893,
+            "hardware_mapped_bytes": 12681216,
+            "guest_resident_bytes": 348954624,
+            "vm_checkpoint_groups": 195723,
+            "vm_checkpoint_spaces": 195725,
+            "backing_domain_checks": 42023922,
+            "backing_page_checks": 145336098,
+            "parallel_memory_us": 26255549,
+            "instruction_count": null
+          }
+        }
+      },
+      "control-recheck": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 6859,
+            "gpu_work_ms": 5021,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 7364.800791000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3541,
+            "gpu_work_ms": 2639,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 3745.435167
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 6767,
+            "gpu_work_ms": 4931,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 6858.5722909999995
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3568,
+            "gpu_work_ms": 3039,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 7701.651040999998
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2049,
+            "gpu_work_ms": 1486,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 4848.918832999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2118,
+            "gpu_work_ms": 1442,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 2161.8131670000053
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2041,
+            "gpu_work_ms": 1417,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 6,
+            "warmup": false,
+            "host_ms": 5154.237791999996
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2315,
+            "gpu_work_ms": 1710,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 7,
+            "warmup": false,
+            "host_ms": 2562.1105410000027
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2905,
+            "gpu_work_ms": 2303,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 8,
+            "warmup": false,
+            "host_ms": 3145.4433749999994
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2667,
+            "gpu_work_ms": 2076,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 9,
+            "warmup": false,
+            "host_ms": 3063.3483330000004
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 2667,
+          "gpu_work_ms": 2076,
+          "host_ms": 3745.435167
+        },
+        "whole_session_unmatched_duration": {
+          "coherent": {
+            "boundaries": 2902,
+            "ranges": 12472,
+            "upload_scanned_bytes": 1733468052,
+            "download_scanned_bytes": 1717787580
+          },
+          "native": {
+            "calls": 138985,
+            "gpu_compiles": 73,
+            "gpu_wait_us": 87470,
+            "upload_bytes": 18519630,
+            "download_bytes": 30943708,
+            "direct_bytes": 29360128,
+            "buffered_bytes": 20103210
+          },
+          "metrics": {
+            "syscalls": 2937865,
+            "context_switches": 1054388,
+            "hardware_mapped_bytes": 63373312,
+            "guest_resident_bytes": 356098048,
+            "vm_checkpoint_groups": 181899,
+            "vm_checkpoint_spaces": 181899,
+            "backing_domain_checks": 43044199,
+            "backing_page_checks": 371062958,
+            "parallel_memory_us": 39676404,
+            "instruction_count": null
+          }
+        }
+      },
+      "published": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2764,
+            "gpu_work_ms": 2166,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 4070.3492499999998
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1137,
+            "gpu_work_ms": 649,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 1223.3469589999997
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1180,
+            "gpu_work_ms": 689,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 1220.2997920000005
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1123,
+            "gpu_work_ms": 653,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 1178.5838329999995
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1901,
+            "gpu_work_ms": 1358,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 2084.034041999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1165,
+            "gpu_work_ms": 658,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 1220.3980829999991
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1169,
+            "gpu_work_ms": 618,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 6,
+            "warmup": false,
+            "host_ms": 1227.574334
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1062,
+            "gpu_work_ms": 595,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 7,
+            "warmup": false,
+            "host_ms": 1111.766417
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1334,
+            "gpu_work_ms": 791,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 8,
+            "warmup": false,
+            "host_ms": 1386.0927089999998
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1279,
+            "gpu_work_ms": 803,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 9,
+            "warmup": false,
+            "host_ms": 2352.916209
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 1169,
+          "gpu_work_ms": 658,
+          "host_ms": 1223.3469589999997
+        },
+        "whole_session_unmatched_duration": {
+          "coherent": {
+            "boundaries": 2094,
+            "ranges": 0,
+            "upload_scanned_bytes": 0,
+            "download_scanned_bytes": 0
+          },
+          "shared GPU": {
+            "maps": 14,
+            "mapped_bytes": 29360128
+          },
+          "native": {
+            "calls": 141645,
+            "gpu_compiles": 75,
+            "gpu_wait_us": 580425,
+            "upload_bytes": 0,
+            "download_bytes": 0,
+            "direct_bytes": 0,
+            "buffered_bytes": 0
+          },
+          "metrics": {
+            "syscalls": 5554308,
+            "context_switches": 1815722,
+            "hardware_mapped_bytes": 61603840,
+            "guest_resident_bytes": 338993152,
+            "vm_checkpoint_groups": 208032,
+            "vm_checkpoint_spaces": 208032,
+            "backing_domain_checks": 45407310,
+            "backing_page_checks": 71417345,
+            "parallel_memory_us": 20654130,
+            "instruction_count": null
+          }
+        }
+      },
+      "epoch": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2153,
+            "gpu_work_ms": 1484,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 4235.692750000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1353,
+            "gpu_work_ms": 834,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 1403.110209000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1160,
+            "gpu_work_ms": 700,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 1223.7879580000008
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1211,
+            "gpu_work_ms": 707,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 1248.4449580000003
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1254,
+            "gpu_work_ms": 771,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 1305.9737499999997
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1171,
+            "gpu_work_ms": 690,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 1237.647291
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1227,
+            "gpu_work_ms": 728,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 6,
+            "warmup": false,
+            "host_ms": 1269.290625
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1294,
+            "gpu_work_ms": 806,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 7,
+            "warmup": false,
+            "host_ms": 1323.0562500000005
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1157,
+            "gpu_work_ms": 700,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 8,
+            "warmup": false,
+            "host_ms": 1206.1993340000008
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1203,
+            "gpu_work_ms": 728,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 9,
+            "warmup": false,
+            "host_ms": 3990.9018750000023
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 1211,
+          "gpu_work_ms": 728,
+          "host_ms": 1269.290625
+        },
+        "whole_session_unmatched_duration": {
+          "native": {
+            "calls": 125410,
+            "gpu_compiles": 74,
+            "gpu_wait_us": 650061,
+            "upload_bytes": 0,
+            "download_bytes": 0,
+            "direct_bytes": 0,
+            "buffered_bytes": 0
+          },
+          "shared GPU": {
+            "maps": 14,
+            "mapped_bytes": 29360128
+          },
+          "coherent": {
+            "boundaries": 1787,
+            "ranges": 0,
+            "upload_scanned_bytes": 0,
+            "download_scanned_bytes": 0
+          },
+          "metrics": {
+            "syscalls": 5893259,
+            "context_switches": 1899274,
+            "hardware_mapped_bytes": 61259776,
+            "guest_resident_bytes": 349278208,
+            "vm_checkpoint_groups": 195775,
+            "vm_checkpoint_spaces": 195775,
+            "backing_domain_checks": 44288499,
+            "backing_page_checks": 364701907,
+            "parallel_memory_us": 40054797,
+            "instruction_count": null
+          }
+        }
+      }
+    },
+    "native_acceptance": {
+      "passed": true,
+      "rows": [
+        {
+          "name": "disabled",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.6053,
+          "calls": 0,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 0,
+          "shared_mapped_bytes": 0,
+          "coherent_boundaries": 0,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "compute-one",
+          "cpus": 1,
+          "passed": true,
+          "seconds": 0.0964,
+          "calls": 176,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 5,
+          "shared_mapped_bytes": 81901,
+          "coherent_boundaries": 10,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "compute-four",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.0679,
+          "calls": 177,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 5,
+          "shared_mapped_bytes": 81901,
+          "coherent_boundaries": 10,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "coherent",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.0676,
+          "calls": 175,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 6,
+          "shared_mapped_bytes": 98477,
+          "coherent_boundaries": 10,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "template",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.0676,
+          "calls": 177,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 5,
+          "shared_mapped_bytes": 81901,
+          "coherent_boundaries": 10,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "render-headless",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.062,
+          "calls": 124,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 1,
+          "shared_mapped_bytes": 196608,
+          "coherent_boundaries": 4,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "timeline-one",
+          "cpus": 1,
+          "passed": true,
+          "seconds": 0.0831,
+          "calls": 110,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 1,
+          "shared_mapped_bytes": 512,
+          "coherent_boundaries": 9,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "timeline-four",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.0823,
+          "calls": 110,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 1,
+          "shared_mapped_bytes": 512,
+          "coherent_boundaries": 9,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        },
+        {
+          "name": "resources",
+          "cpus": 4,
+          "passed": true,
+          "seconds": 0.0689,
+          "calls": 141,
+          "upload_bytes": 0,
+          "download_bytes": 0,
+          "direct_fragment_bytes": 0,
+          "buffered_fragment_bytes": 0,
+          "shared_maps": 5,
+          "shared_mapped_bytes": 1060,
+          "coherent_boundaries": 2,
+          "coherent_ranges": 0,
+          "coherent_upload_scanned_bytes": 0,
+          "coherent_download_scanned_bytes": 0
+        }
+      ],
+      "inputs": {
+        "usr/lib/libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "usr/lib/libtrames_vulkan_icd.so": "4a6fb1d0d7f05b27ee243d1abff89988580f72fc7f6cec14bb44918571b1e9cd",
+        "tmp/vulkan-compute": "0bc3554d233808eb4d3cc5c874e0181c279252ac6c35203b1ba8e056bc3ba224",
+        "tmp/vulkan-compute.spv": "46a8dfd85c78c7ef9f39212b0699503b4800184a04b1e8a4bd81b07143a44072",
+        "tmp/vulkan-render": "ab2e925a68468f88aa7ea6e67a131a95c5ab9fb75ab26de2438de4573a6f94b6",
+        "tmp/vulkan-render.vert.spv": "2a710d624169328c6d65cad1c4e55b4ef8e0664e94dbbf650cb2568dc2ea21ef",
+        "tmp/vulkan-render.frag.spv": "2a5b5fd35bb932901571f73b2bcc199b823e036397df505f748a9d55eb8757ce",
+        "tmp/vulkan-timeline": "8efc489b61077e01f98fb24064cbaf20565bff90ee819af544263f8b60a3ef0c",
+        "tmp/vulkan-resources": "3b7c787dca1092b3fada2e919f3e7f3607f4734393ad3c1d36137a42363bc0bc",
+        "tmp/vulkan-resources.spv": "eb1e5137832042e5b97003a79764221cd1a6f95621a917bf92202b5b9510866e"
+      },
+      "runner_sha256": "2e3ad6248629a505a8192d663a4f591e8d9ea7d314e4ef4aae464e0c40b7e065",
+      "library_argument_sha256": "a6ad2265bc514c13e88d3f3ba144b009ca3600709dfb3f007182615c59a43f07",
+      "driver_binding": "static",
+      "static_driver_sha256": "8df0c873b11d921091b0ddafb572c7c368852f6bcccd8f098ed5ea7bcae8bb5d",
+      "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe"
+    },
+    "validation": {
+      "memory_unit_passed_per_os": 155,
+      "memory_existing_skips_per_os": 1,
+      "memory_integration_passed_per_os": 6,
+      "vulkan_tests_per_os": 45,
+      "kernel_tests_per_os": 224,
+      "kernel_existing_skips_per_os": 3,
+      "macos_localhost_passed_and_reused": 6,
+      "strict_affected_lints": true,
+      "mac_all_targets_lints": true,
+      "ipad_ffi_with_new_native_archive": true,
+      "macos_and_ios_native_driver_builds": true,
+      "signed_mac_build": true,
+      "native_shared_code_visibility_oracle": true,
+      "legacy_scoped_and_resource_oracles": true,
+      "explicit_native_budget_oracle": true,
+      "unchanged_cpu_and_mesa_loader_results_reused": true,
+      "serial_and_worker_global_code_epoch_and_exclusive_regression": true
+    },
+    "limits": [
+      "Ordered process batches are not randomized paired trials; earlier small samples are mixed and include regressions.",
+      "Fixed WebGL work is not full page-load latency or a whole-browser/native-parity result.",
+      "gpu_work_ms is JavaScript wall time in draw/update/finish sections, not a GPU hardware timestamp.",
+      "Host observations include automation/other browser work; no formal sample is dropped.",
+      "Whole-session counters include startup and unequal idle/background periods.",
+      "Future-host-signal submit and image-acquisition retry loops remain; no general polling removal is claimed.",
+      "Vulkan application synchronization responsibilities and existing unsupported graphics features remain."
+    ],
+    "runner_sha256": {
+      "control": "ff1015f62eedfe913f9b80d8407a88b86dff836422172db0a1a9512408678b67",
+      "initial_shared": "96c57bddbaa2dec6b3c4a2eb366399ef2908d77480f4f012f4bbfaf58082cb47",
+      "metadata": "0a0329f1637a9e062a0c8598821548912cdd6501ef6c6f87ac99da8bb625721b",
+      "published": "e7d48adb7c34691a6f5631c0deee00b1a8560b5e8df1829feaa8d41b42e64f76",
+      "epoch": "2e3ad6248629a505a8192d663a4f591e8d9ea7d314e4ef4aae464e0c40b7e065"
+    },
+    "control_native_driver_sha256": "879ef1315236e2836558f3c961a1b0b3b2b9d821449035574576303eb0e73f42",
+    "publication_runtime_source_sha256": {
+      "crates/trames-memory/src/backing.rs": "10935243c8d2c3a9709a70a91e85187bb0743459910b614901639d625a807fca",
+      "crates/trames-memory/src/cpu_memory.rs": "4cbcf3707bf315b09291508dbb8644ade9e21408a4644fcd6c2ff1166d8cc793",
+      "crates/trames-memory/src/hardware_shared.rs": "43505ec869a68720969debafbc5787092727b56f2504d725b1680dc4de0e7cc1",
+      "crates/trames-memory/src/lib.rs": "f2d16cad6000d10729e73ab09fb27db36d600951eeb3558200e74a2fd598f07a",
+      "crates/trames-memory/src/mmu/mod.rs": "a3fd36311a3a067b80baab1038026e138737155293945895acab077862a40202",
+      "crates/trames-memory/src/parallel.rs": "79241672b5c92e2981d80d552193d6924233207985662ce9091a230b513e1777",
+      "crates/trames-memory/src/parallel/page.rs": "83e8295a0613e4046885fa2af45630fc5339ad4286fd7e60d0fc6ad2f77a024f",
+      "crates/trames-memory/src/parallel/snapshot.rs": "0590ab074b39ef6e96d69aae0adafe3031be71cb4787e9e3009d95d51773b061",
+      "crates/trames-session/src/gpu.rs": "d8ae7ed82eb6e7681c2b9febbd962a54a35e1f413caedd347a22c436925fb3c5",
+      "crates/trames-session/src/process.rs": "2c88b4653306b47e14c60736704f2d91398c0682ba6740909147465630dd9cca",
+      "crates/trames-session/src/run_queue.rs": "e453ea79defce7796b108bd3a131e464acce8c28726fec02037648447aab214e",
+      "crates/trames-session/src/workers.rs": "6740146425e63da24bc36cb33af0cca9057422ff6dde7cb1c8beee2aa958e266",
+      "crates/trames-vulkan/build.rs": "83d2480b356f4984cab634ba11ca227478040eb0c541c2b6553d2281b3c4de89",
+      "crates/trames-vulkan/examples/feedback.rs": "1a68d4c2f55222456179efc2ad70a64894fb867daa973a1273a5b4a23ebc15a5",
+      "crates/trames-vulkan/examples/resources.rs": "d77973472663508e22b62fdc0fe471b63afb855dafe1cb9d985f14a714915395",
+      "crates/trames-vulkan/src/backend.rs": "c6392b1d8dec3082951405b9fe4267fa7c1cb51e3f396f7d16b31b426a39d3f8",
+      "crates/trames-vulkan/src/backend/coherent.rs": "1ce9c6c1f9bc2d589833db08d3c813ea712e1c87ad51307e6637283f0ca06525",
+      "crates/trames-vulkan/src/backend/zink.rs": "f6460cf6670f014b78efc4190e3b54d0a0488ab667f8fded799942fd6756621a",
+      "crates/trames-vulkan/src/context.rs": "77c34dfed4127993151fcc8ed10e582b04b7a61bc0418d21ba13941cf96a8471",
+      "crates/trames-memory/src/imported.rs": "a0efb28986d47e7c6f1707ec173e1cfecf38ac5a115ddab12d08bdf1c41ade84",
+      "crates/trames-vulkan/src/backend/completion.rs": "d2cc59035c51b0428326cb7f2c17bb79a920e69651664496a9b8d90acec53d9c",
+      "crates/trames-vulkan/src/backend/shared_memory.rs": "e79f027e51d103f9d1b1d9d03e62045573aa7c1359ff031f7093ad0258a7252a"
+    },
+    "phase_labels": {
+      "control": "Scoped control A1",
+      "shared": "Initial shared B1",
+      "final": "Metadata fix C1",
+      "control-recheck": "Scoped control A2",
+      "published": "Publication D1 (before global decoder-epoch correction)",
+      "epoch": "Final E1 (global and per-page decoder invalidation)"
+    },
+    "candidate_runtime_revision": "94e603cd479d45fc9900c22d3f44c904c2c60df5"
   }
 }
