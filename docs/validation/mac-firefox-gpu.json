@@ -2134,6 +2134,196 @@
       "published": "Publication D1 (before global decoder-epoch correction)",
       "epoch": "Final E1 (global and per-page decoder invalidation)"
     },
-    "candidate_runtime_revision": "94e603cd479d45fc9900c22d3f44c904c2c60df5"
+    "candidate_runtime_revision": "94e603cd479d45fc9900c22d3f44c904c2c60df5",
+    "public_page_navigation": {
+      "date": "2026-10-30",
+      "mac_revision": "9b7dbd9bcb5b59f0fa5bb53e94311916ae91aebe",
+      "runtime_revision": "94e603cd479d45fc9900c22d3f44c904c2c60df5",
+      "runner_sha256": "2e3ad6248629a505a8192d663a4f591e8d9ea7d314e4ef4aae464e0c40b7e065",
+      "controller": "scripts/benchmark-firefox-navigation.py",
+      "controller_sha256": "e086d25b0e396fe11dfd75bf327e1c384b22bc82b30d297dbab9797a46ff4193",
+      "method": "Trusted browser link-click command start to the existing site-specific content marker entering the target DOM",
+      "conditions": {
+        "cpus": 12,
+        "memory": "host-managed",
+        "fresh_isolated_profile": true,
+        "one_excluded_first_visit_per_site": true,
+        "formal_rounds": 3,
+        "site_order_per_round": [
+          "wiki",
+          "github",
+          "bilibili"
+        ],
+        "timeout_seconds": 30,
+        "viewport_css_pixels": [
+          1920,
+          792
+        ],
+        "device_pixel_ratio": 1,
+        "visible_focused_after_run": true,
+        "forced_graphics_preferences": [],
+        "sandbox_disabled": false,
+        "cache_disabled": false,
+        "build_ci_sampler_overlap": false
+      },
+      "samples": [
+        {
+          "case": "wiki",
+          "trial": 0,
+          "click_start_unix": 1793351281.13999,
+          "click_command_ms": 1492.997667,
+          "content_ms": 5758.15925,
+          "observed_elapsed_ms": 5758.160333,
+          "warmup": true
+        },
+        {
+          "case": "github",
+          "trial": 0,
+          "click_start_unix": 1793351291.9829388,
+          "click_command_ms": 1602.6520829999988,
+          "content_ms": 6173.5226669999965,
+          "observed_elapsed_ms": 6173.5238329999975,
+          "warmup": true
+        },
+        {
+          "case": "bilibili",
+          "trial": 0,
+          "click_start_unix": 1793351324.968786,
+          "click_command_ms": 1411.2374589999988,
+          "content_ms": 11230.479834,
+          "observed_elapsed_ms": 11230.481042000001,
+          "warmup": true
+        },
+        {
+          "case": "wiki",
+          "trial": 1,
+          "click_start_unix": 1793351357.2324631,
+          "click_command_ms": 1244.859875000003,
+          "content_ms": 5406.783750000002,
+          "observed_elapsed_ms": 5406.785250000013,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 1,
+          "click_start_unix": 1793351364.79398,
+          "click_command_ms": 2353.578958,
+          "content_ms": 10899.916833000007,
+          "observed_elapsed_ms": 10899.918499999998,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 1,
+          "click_start_unix": 1793351390.5168068,
+          "click_command_ms": 595.4506659999907,
+          "content_ms": 12293.183624999998,
+          "observed_elapsed_ms": 12293.185457999996,
+          "warmup": false
+        },
+        {
+          "case": "wiki",
+          "trial": 2,
+          "click_start_unix": 1793351406.224511,
+          "click_command_ms": 3248.478583000008,
+          "content_ms": 12295.44041600002,
+          "observed_elapsed_ms": 12295.441875000022,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 2,
+          "click_start_unix": 1793351421.4892669,
+          "click_command_ms": 553.6487500000078,
+          "content_ms": 9765.221749999995,
+          "observed_elapsed_ms": 9765.222834000013,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 2,
+          "click_start_unix": 1793351443.696979,
+          "click_command_ms": 824.402125000006,
+          "content_ms": 6052.8147500000105,
+          "observed_elapsed_ms": 6052.815791000001,
+          "warmup": false
+        },
+        {
+          "case": "wiki",
+          "trial": 3,
+          "click_start_unix": 1793351459.135649,
+          "click_command_ms": 1099.3540000000053,
+          "content_ms": 4354.623000000003,
+          "observed_elapsed_ms": 4354.626375000009,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 3,
+          "click_start_unix": 1793351470.3327959,
+          "click_command_ms": 2262.0377909999834,
+          "content_ms": 6781.0859159999945,
+          "observed_elapsed_ms": 6781.087249999984,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 3,
+          "click_start_unix": 1793351490.498687,
+          "click_command_ms": 2515.466125000017,
+          "content_ms": 8309.764333000005,
+          "observed_elapsed_ms": 8309.765458000016,
+          "warmup": false
+        }
+      ],
+      "summary": {
+        "wiki": {
+          "first_visit_ms": 5758.15925,
+          "formal_samples_ms": [
+            5406.783750000002,
+            12295.44041600002,
+            4354.623000000003
+          ],
+          "formal_median_ms": 5406.783750000002,
+          "formal_min_ms": 4354.623000000003,
+          "formal_max_ms": 12295.44041600002,
+          "formal_successes": 3,
+          "formal_attempts": 3
+        },
+        "github": {
+          "first_visit_ms": 6173.5226669999965,
+          "formal_samples_ms": [
+            10899.916833000007,
+            9765.221749999995,
+            6781.0859159999945
+          ],
+          "formal_median_ms": 9765.221749999995,
+          "formal_min_ms": 6781.0859159999945,
+          "formal_max_ms": 10899.916833000007,
+          "formal_successes": 3,
+          "formal_attempts": 3
+        },
+        "bilibili": {
+          "first_visit_ms": 11230.479834,
+          "formal_samples_ms": [
+            12293.183624999998,
+            6052.8147500000105,
+            8309.764333000005
+          ],
+          "formal_median_ms": 8309.764333000005,
+          "formal_min_ms": 6052.8147500000105,
+          "formal_max_ms": 12293.183624999998,
+          "formal_successes": 3,
+          "formal_attempts": 3
+        }
+      },
+      "all_attempts_succeeded": true,
+      "limits": [
+        "DOM-marker readiness is not pixel presentation, complete subresource load, video startup or interactive latency.",
+        "HTTP/DNS/CDN caches and dynamic page responses are uncontrolled; three ordered formal samples per site are not a stable speed ratio.",
+        "Earlier public-page observations use other builds and sample counts; no matched before/after page-load improvement is inferred from them.",
+        "The in-app browser was not remeasured in this run."
+      ]
+    }
   }
 }

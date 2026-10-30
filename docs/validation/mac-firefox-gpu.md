@@ -729,6 +729,34 @@ interpret their ratio as a fixed-load CPU percentage or memory-bandwidth result.
 Zero bridge transfer does not eliminate native GPU resource copies required by
 rendering. The page's masked Generic Renderer string is not device identification.
 
+### Public-page navigation on the final shared-memory build
+
+The same signed final runner is measured separately from the fixed WebGL fixture,
+using runtime `94e603cd479d` and Mac product `9b7dbd9bcb5b`. The unchanged
+[navigation controller](../../scripts/benchmark-firefox-navigation.py) visits
+Wikipedia, GitHub and Bilibili in that order each round. A fresh isolated profile
+has one excluded first visit per site, followed by three formal rounds. All 12
+attempts succeed without a content timeout or automation failure. The visible,
+focused viewport is 1920×792 CSS pixels with devicePixelRatio 1. CPU count remains
+12, memory host-managed, and graphics/security/cache/process defaults unchanged.
+No build, CI, sampler or verbose network trace overlaps these measurements.
+
+| Page | First visit, excluded | Three formal samples | Formal median |
+| --- | ---: | --- | ---: |
+| Wikipedia Firefox article | 5.758 s | 5.407 / 12.295 / 4.355 s | **5.407 s** |
+| GitHub Firefox source | 6.174 s | 10.900 / 9.765 / 6.781 s | **9.765 s** |
+| Bilibili home | 11.230 s | 12.293 / 6.053 / 8.310 s | **8.310 s** |
+
+The metric is click-command start to the existing DOM marker, not complete page
+resources, screen-present time or video startup. Wikipedia still ranges from
+4.355 to 12.295 seconds, so this build does not establish consistently fast public
+navigation. The fixed WebGL result cannot substitute for these site timings.
+Caches and dynamic HTTP/CDN responses are uncontrolled; earlier single-site
+observations are not matched before/after trials. The in-app browser is not
+remeasured here. All first visits and formal samples are retained in the
+`public_page_navigation` section of [the GPU record](mac-firefox-gpu.json).
+The original non-automation Firefox profile is restored after testing.
+
 ### Acceptance and reproduction
 
 The signed HVF acceptance runs the original guest fixtures, including computation
