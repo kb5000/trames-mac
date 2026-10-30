@@ -1142,3 +1142,26 @@ records the artifact/source hashes and limits. The active Firefox session and
 profile were retained; this is GPU compatibility acceptance, not a fresh browser
 performance measurement. A new IPA, physical iPad GPU execution and CTS
 certification were not performed.
+
+## Experimental VideoToolbox VA-API
+
+The shared runtime now has an opt-in H.264 video module and retained native
+image FDs. Use `--video` for direct guest clients. The Firefox launcher accepts
+`--video-driver /absolute/path/trames_drv_video.so` together with the new paired
+Mesa EGL/Gallium libraries and ICD. It sets the driver and actual virtual render
+node environment; no browser hardware force preference or sandbox bypass is
+required. Keep the native Apple frameworks in the shared Apple backend so the
+iPad interpreter and Mac HVF product use the same kernel, memory and FD model.
+
+Stock Firefox 142 and FFmpeg 7 select VA-API in the RDD process, display the
+decoded picture with hardware WebRender, and survive backward seek and looping.
+The browser's normal broker policy discovers canonical virtual platform-device
+sysfs links. Imported frame planes retain the same VideoToolbox allocation
+through SCM_RIGHTS and EGL/Zink; GPU pixel oracles pass in two guest processes.
+
+This is functional integration, not a stable video release or a native-speed
+claim. A foreground 720p30 interval advances 300 frames in 10.034 seconds but
+drops 122, displaying 17.74 FPS. Further end-to-end playback profiling is needed.
+The shared adapter currently implements progressive H.264 8-bit 4:2:0, POC0/2;
+HEVC/AV1, encoding, audio output/A-V sync and physical iPad video are not tested.
+See the [shared implementation and exact acceptance scope](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md).

@@ -12,9 +12,9 @@ use trames_execution::{
     Aarch64State, ExecutionExit, ExitReason, Features, InstructionCount, SmeState,
 };
 use trames_memory::{
+    parallel::{Registry, View},
     Access, CpuMemory, HardwarePageInfo, HardwareStorage, HardwareWait, Memory, MemoryError,
     PAGE_SIZE,
-    parallel::{Registry, View},
 };
 #[cfg(feature = "diagnostics")]
 #[path = "diagnostics.rs"]
@@ -22,7 +22,7 @@ pub(crate) mod diagnostics;
 #[path = "machine.rs"]
 mod machine;
 use machine::Machine;
-pub use machine::{PagingStats, paging_stats, reclaim, set_resident_limit, take_memory_pressure};
+pub use machine::{paging_stats, reclaim, set_resident_limit, take_memory_pressure, PagingStats};
 const VECTOR_VA: u64 = 0xffffffe00000;
 #[repr(C)]
 #[derive(Default)]
@@ -283,7 +283,10 @@ impl Executor {
             cpu: std::sync::Mutex::new(Some(unsafe { trames_hvf_cpu_identifier(host.as_ptr()) })),
         });
         #[cfg(feature = "diagnostics")]
-        diagnostics::cpu_created(unsafe { trames_hvf_cpu_identifier(host.as_ptr()) }, host.as_ptr());
+        diagnostics::cpu_created(
+            unsafe { trames_hvf_cpu_identifier(host.as_ptr()) },
+            host.as_ptr(),
+        );
         Ok(Self {
             host,
             machine,

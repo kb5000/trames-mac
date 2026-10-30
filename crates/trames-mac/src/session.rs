@@ -184,6 +184,7 @@ pub struct Command {
     resident_limit: Option<u64>,
     pub windows: bool,
     vulkan: bool,
+    video: bool,
     pty: bool,
     argv: Vec<String>,
 }
@@ -208,6 +209,7 @@ impl Command {
         let mut resident_limit = None;
         let mut windows = true;
         let mut vulkan = false;
+        let mut video = false;
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
@@ -257,6 +259,7 @@ impl Command {
                 }
                 "--no-windows" => windows = false,
                 "--vulkan" => vulkan = true,
+                "--video" => video = true,
                 "--trace" => trace = true,
                 "--metrics" => metrics = true,
                 "--pty" => pty = true,
@@ -264,7 +267,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -288,6 +291,7 @@ impl Command {
             resident_limit,
             windows,
             vulkan,
+            video,
             pty,
             argv,
         }))
@@ -310,6 +314,7 @@ pub fn run(
         resident_limit,
         windows,
         vulkan,
+        video,
         pty,
         argv,
     } = command;
@@ -318,6 +323,7 @@ pub fn run(
         .ok_or("an ELF program or --rootfs is required; use --help")?;
     let options = RuntimeOptions {
         vulkan_accelerator: vulkan,
+        video_accelerator: video,
         memory_limits: MemoryLimits {
             per_process: limit,
             total: limit,
@@ -432,7 +438,10 @@ pub fn run(
         let mut returned: Vec<_> = runtime.metrics.cohort_return_syscalls.iter().collect();
         returned.sort_unstable_by_key(|(_, count)| std::cmp::Reverse(**count));
         eprintln!("trames mac cohort-return syscalls: {returned:?}");
-        eprintln!("trames mac cohort-return native: {:?}", runtime.metrics.cohort_return_native);
+        eprintln!(
+            "trames mac cohort-return native: {:?}",
+            runtime.metrics.cohort_return_native
+        );
         eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
         eprintln!(
             "trames mac vm phases us: {:?}",
@@ -464,7 +473,11 @@ pub fn run(
             runtime.metrics.gpu_transfers.direct_bytes,
             runtime.metrics.gpu_transfers.buffered_bytes
         );
-        eprintln!("trames mac shared GPU: maps={} mapped_bytes={}", runtime.metrics.gpu_transfers.shared_maps, runtime.metrics.gpu_transfers.shared_map_bytes);
+        eprintln!(
+            "trames mac shared GPU: maps={} mapped_bytes={}",
+            runtime.metrics.gpu_transfers.shared_maps,
+            runtime.metrics.gpu_transfers.shared_map_bytes
+        );
         eprintln!(
             "trames mac coherent: boundaries={} ranges={} upload_scanned_bytes={} download_scanned_bytes={}",
             runtime.metrics.gpu_transfers.coherent_syncs,
@@ -505,13 +518,11 @@ mod tests {
         assert!(parse(&["/bin/echo", "--no-windows"]).windows);
         assert!(parse(&["--", "/bin/echo", "--no-windows"]).windows);
         assert!(parse(&["/bin/sh"]).windows);
-        assert!(
-            Command::parse(
-                ["--vulkan", "--unknown"].into_iter().map(str::to_owned),
-                false
-            )
-            .is_err()
-        );
+        assert!(Command::parse(
+            ["--vulkan", "--unknown"].into_iter().map(str::to_owned),
+            false
+        )
+        .is_err());
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]

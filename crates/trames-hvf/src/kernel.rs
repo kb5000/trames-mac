@@ -6,12 +6,13 @@ use trames_engine::{CpuFault, DecodeStats, SliceOutcome};
 use trames_execution::{
     Aarch64State, ExecutionExit, ExitReason, Features, Registers, SmeConfig, SmeState,
 };
-use trames_memory::{CpuMemory, Memory, MemoryError, parallel::View};
+use trames_memory::{parallel::View, CpuMemory, Memory, MemoryError};
 
 #[derive(Clone, Default)]
 pub struct Cpu {
     pub state: Aarch64State,
     vulkan_calls: bool,
+    video_calls: bool,
     sme_config: SmeConfig,
     sme: Option<Box<SmeState>>,
     #[cfg(feature = "diagnostics")]
@@ -80,8 +81,8 @@ impl Cpu {
                 ExitReason::Yield => SliceOutcome::Yield { instructions: 0 },
             },
             Err(error) => {
-                if self.vulkan_calls
-                    && self.state.x(16) == trames_accel::native::VULKAN_PROFILE
+                if (self.vulkan_calls && self.state.x(16) == trames_accel::native::VULKAN_PROFILE
+                    || self.video_calls && self.state.x(16) == trames_accel::native::VIDEO_PROFILE)
                     && matches!(&error, Error::Fault { pc, syndrome, .. }
                         if *pc == self.state.pc && syndrome >> 26 == 0)
                 {
@@ -162,7 +163,9 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
 
 impl trames_engine::Cpu for Cpu {
     type Engine = Engine;
-    fn clock_sample() -> Option<trames_engine::ClockSample> { crate::clock_sample() }
+    fn clock_sample() -> Option<trames_engine::ClockSample> {
+        crate::clock_sample()
+    }
 
     fn execution_interrupt(
         engine: &mut Engine,
@@ -197,6 +200,7 @@ impl trames_engine::Cpu for Cpu {
                 ..Default::default()
             },
             vulkan_calls: false,
+            video_calls: false,
             sme_config: SmeConfig::default(),
             sme: None,
             #[cfg(feature = "diagnostics")]
@@ -248,6 +252,7 @@ impl trames_engine::Cpu for Cpu {
                 sme: None,
                 sme_config: self.sme_config,
                 vulkan_calls: self.vulkan_calls,
+                video_calls: self.video_calls,
                 #[cfg(feature = "diagnostics")]
                 execution_thread: None,
             }
@@ -270,6 +275,9 @@ impl trames_engine::Cpu for Cpu {
     }
     fn set_vulkan_calls(&mut self, enabled: bool) {
         self.vulkan_calls = enabled;
+    }
+    fn set_video_calls(&mut self, enabled: bool) {
+        self.video_calls = enabled;
     }
     fn clear_exclusive(&mut self) {}
     fn fault_retired(&self) -> u64 {
@@ -470,11 +478,9 @@ mod tests {
             }
         ));
         let mut registry = trames_accel::native::Registry::default();
-        assert!(
-            registry
-                .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
-                .is_ok()
-        );
+        assert!(registry
+            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+            .is_ok());
         // A matching HLT is transport only; a modified prefix grants no host authority.
         memory
             .protect(0x1000, 4096, trames_memory::Permissions::RW)
@@ -485,11 +491,9 @@ mod tests {
         memory
             .protect(0x1000, 4096, trames_memory::Permissions::RX)
             .unwrap();
-        assert!(
-            registry
-                .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
-                .is_err()
-        );
+        assert!(registry
+            .authorize_stateful(&memory, cpu.pc(), cpu.x(16), cpu.x(17))
+            .is_err());
         cpu.set_x(16, trames_accel::native::PROFILE);
         assert!(matches!(
             cpu.outcome(undefined(cpu.pc()), &memory),

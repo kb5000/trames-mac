@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--graphics-dir', type=Path, required=True, help='Fixed Mesa libEGL.so.1 and libgallium-25.1.9.so')
     parser.add_argument('--icd', type=Path, required=True, help='Linux libtrames_vulkan_icd.so')
     parser.add_argument('--loader', type=Path, required=True, help='Original Linux libvulkan.so.1')
+    parser.add_argument('--video-driver', type=Path, help='Enable the paired VideoToolbox VA-API driver (H.264)')
     parser.add_argument('--profile', default='/root/firefox-native-gpu')
     parser.add_argument('--cpus', type=int, default=os.cpu_count() or 1)
     parser.add_argument('--timeout', type=int, default=86400)
@@ -38,6 +39,8 @@ def main():
     files = {'libEGL.so.1': args.graphics_dir / 'libEGL.so.1',
              'libgallium-25.1.9.so': args.graphics_dir / 'libgallium-25.1.9.so',
              'libtrames_vulkan_icd.so': args.icd, 'libvulkan.so.1': args.loader}
+    if args.video_driver:
+        files['trames_drv_video.so'] = args.video_driver
     digest = hashlib.sha256()
     for name, path in sorted(files.items()):
         if not path.is_file():
@@ -57,12 +60,17 @@ def main():
         command = [str(args.runner.resolve()), '--storage', str(args.storage.resolve()),
                    '--vulkan', '--no-pty', '--cpus', str(args.cpus), '--memory-mib', 'auto',
                    '--network', args.network, '--timeout', str(args.timeout)]
+        if args.video_driver:
+            command += ['--video']
         setup = ['mkdir -p ' + quote(guest) + ' ' + quote(args.profile)]
         for name, path in files.items():
             incoming = transfer + '/' + name
             command += ['--exec-file', incoming + '=' + str(path.resolve())]
             setup.append('cp ' + quote(incoming) + ' ' + quote(guest + '/' + name))
             setup.append('rm ' + quote(incoming))
+        if args.video_driver:
+            setup.append('export LIBVA_DRIVER_NAME=trames LIBVA_DRIVERS_PATH=' + quote(guest) +
+                         ' MOZ_DRM_DEVICE=/dev/dri/renderD128')
         setup += ['rmdir ' + quote(transfer),
                   'export LD_LIBRARY_PATH=' + quote(guest),
                   'export VK_DRIVER_FILES=' + quote(guest + '/trames.json'),

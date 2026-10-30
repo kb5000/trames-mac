@@ -138,11 +138,9 @@ fn unrelated_guest_pages_reuse_partial_physical_granules() {
         drop(page.take());
     }
     let replacements: Vec<_> = (0..3).map(|_| machine.allocate(None).unwrap()).collect();
-    assert!(
-        replacements
-            .iter()
-            .all(|p| p.physical_address() & !16383 == base)
-    );
+    assert!(replacements
+        .iter()
+        .all(|p| p.physical_address() & !16383 == base));
     assert_eq!(machine.stats().mapped_bytes, before);
 }
 
@@ -318,12 +316,10 @@ fn warm_address_spaces_switch_without_reexport_or_page_walks() {
     svc(&mut executor, &mut state(), &mut a);
     svc(&mut executor, &mut state(), &mut b);
     let warm = executor.translations;
-    assert!(
-        executor
-            .spaces
-            .values()
-            .all(|space| space.publications.is_empty() && space.private_writable == 1)
-    );
+    assert!(executor
+        .spaces
+        .values()
+        .all(|space| space.publications.is_empty() && space.private_writable == 1));
     for _ in 0..64 {
         svc(&mut executor, &mut state(), &mut a);
         svc(&mut executor, &mut state(), &mut b);
@@ -644,12 +640,10 @@ fn private_writable_code_reuses_metadata_across_joined_epochs() {
         svc(&mut executor, &mut state(), &mut memory);
         assert_eq!(memory.hardware_page_info(0x10000).unwrap(), original);
     }
-    assert!(
-        executor
-            .spaces
-            .values()
-            .all(|space| space.publications.is_empty())
-    );
+    assert!(executor
+        .spaces
+        .values()
+        .all(|space| space.publications.is_empty()));
     assert_eq!(executor.translations.inspections, warm.inspections);
     assert_eq!(executor.translations.exports, warm.exports);
     assert_eq!(executor.translations.updates, warm.updates);
@@ -756,12 +750,10 @@ fn guest_code_stores_use_guest_cache_maintenance_across_cpus() {
                 .instruction_revision,
             revision
         );
-        assert!(
-            executor
-                .spaces
-                .values()
-                .all(|space| space.publications.is_empty())
-        );
+        assert!(executor
+            .spaces
+            .values()
+            .all(|space| space.publications.is_empty()));
     }
     drop(request);
     worker.join().unwrap();
@@ -1506,11 +1498,9 @@ fn native_blocks_promote_after_sparse_leaf_permission_exceptions() {
     native_step(&mut executor, &mut memory, 0x210000);
     assert_eq!(executor.translations.blocks, 2);
     assert_eq!(executor.spaces[&executor.active].blocks.len(), 1);
-    assert!(
-        !executor.spaces[&executor.active]
-            .pages
-            .contains_key(&0x200000)
-    );
+    assert!(!executor.spaces[&executor.active]
+        .pages
+        .contains_key(&0x200000));
     native_step(&mut executor, &mut memory, 0x200000);
     assert_eq!(
         memory.read_array::<8>(0x200000).unwrap(),
