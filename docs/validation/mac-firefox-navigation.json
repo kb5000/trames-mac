@@ -611,5 +611,1307 @@
       "Bilibili still emitted third-party script/chunk-loading errors; content markers do not prove all scripts/resources or video playback work.",
       "Ordinary coherent copies use up to two bounded 4 KiB stack buffers. Entire mapped ranges are still scanned; native zero-copy GPU import is not implemented by this change."
     ]
+  },
+  "native_cohort_follow_up": {
+    "date": "2026-10-30",
+    "baseline_runtime_revision": "42eb0c9d56e9a0bee963f286ab67970c6b6e08f5",
+    "display_only_runtime_revision": "76d61313c4213258626119cca30df6dfd6043698",
+    "final_runtime_revision": "60b14caf1ef4c13d1fde10650cba07138498bbf0",
+    "method": {
+      "sequence": "One separate fresh Firefox profile/process per phase; Wikipedia, GitHub, Bilibili in each round, one excluded warmup and three formal rounds per site. Default graphics/security/cache/process preferences, 12 CPU slots, host-managed memory, visible window, --metrics enabled in all phases.",
+      "metric": "Host click-command start to the existing target DOM marker; includes browser command/wait overhead, excludes initial Marionette session setup.",
+      "sampler_exclusions": "Baseline Wikipedia trial 2 and display-only GitHub trial 3 overlap a two-second diagnostic sampler. Raw results remain tagged; only their summary medians exclude them. The final phase had no concurrent build, CI or sampler.",
+      "limits": [
+        "Three ordered observations per site, with some summaries reduced to two by sampler exclusions; no randomization or confidence intervals.",
+        "Fresh profiles, evolving HTTP/DNS/CDN caches, third-party content and different browser work remain uncontrolled.",
+        "DOM attachment is not pixel presentation, full resource completion or interactive/video latency.",
+        "No whole-browser speedup is claimed from the route counters or these changing observations."
+      ]
+    },
+    "phases": {
+      "before": {
+        "cases": {
+          "wiki": {
+            "trials": [
+              {
+                "case": "wiki",
+                "trial": 0,
+                "click_command_ms": 1036.025499999999,
+                "content_ms": 6193.023499999999,
+                "observed_elapsed_ms": 6193.025166999998,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 1,
+                "click_command_ms": 837.0764579999985,
+                "content_ms": 12118.833041000002,
+                "observed_elapsed_ms": 12118.834666000012,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 2,
+                "click_command_ms": 1097.9775419999953,
+                "content_ms": 7513.802083000001,
+                "observed_elapsed_ms": 7513.8034999999945,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": true
+              },
+              {
+                "case": "wiki",
+                "trial": 3,
+                "click_command_ms": 2805.19429200001,
+                "content_ms": 7366.225041999996,
+                "observed_elapsed_ms": 7366.22679200002,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 2,
+            "median_ms_without_sampler_overlap": 9742.529041499998,
+            "complete": true
+          },
+          "github": {
+            "trials": [
+              {
+                "case": "github",
+                "trial": 0,
+                "click_command_ms": 1546.9567079999997,
+                "content_ms": 6369.635416000001,
+                "observed_elapsed_ms": 6369.6366659999985,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 1,
+                "click_command_ms": 9816.160459000002,
+                "content_ms": 18245.618292000003,
+                "observed_elapsed_ms": 18245.619875000004,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 2,
+                "click_command_ms": 3801.0226659999944,
+                "content_ms": 19980.67850000001,
+                "observed_elapsed_ms": 19980.681457999992,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 3,
+                "click_command_ms": 1741.009958999996,
+                "content_ms": 15919.554959000037,
+                "observed_elapsed_ms": 15919.556,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 18245.618292000003,
+            "complete": true
+          },
+          "bilibili": {
+            "trials": [
+              {
+                "case": "bilibili",
+                "trial": 0,
+                "click_command_ms": 2326.180417000003,
+                "content_ms": 9818.733792000003,
+                "observed_elapsed_ms": 9818.735916999998,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 1,
+                "click_command_ms": 1696.6201249999813,
+                "content_ms": 14609.732165999987,
+                "observed_elapsed_ms": 14609.734207999993,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 2,
+                "click_command_ms": 1958.2622910000111,
+                "content_ms": 22419.81583299997,
+                "observed_elapsed_ms": 22419.817416,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 3,
+                "click_command_ms": 1653.7675409999792,
+                "content_ms": 11053.297583000018,
+                "observed_elapsed_ms": 11053.298832999986,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 14609.732165999987,
+            "complete": true
+          }
+        },
+        "complete": true
+      },
+      "after": {
+        "cases": {
+          "wiki": {
+            "trials": [
+              {
+                "case": "wiki",
+                "trial": 0,
+                "click_command_ms": 1003.2145830000001,
+                "content_ms": 4991.072000000001,
+                "observed_elapsed_ms": 4991.073042,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 1,
+                "click_command_ms": 5772.151457999997,
+                "content_ms": 15778.442124999998,
+                "observed_elapsed_ms": 15778.445208000008,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 2,
+                "click_command_ms": 1130.7399580000208,
+                "content_ms": 11054.567750000018,
+                "observed_elapsed_ms": 11054.568708000004,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 3,
+                "click_command_ms": 1232.8807499999925,
+                "content_ms": 8295.05949999998,
+                "observed_elapsed_ms": 8295.060457999967,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 11054.567750000018,
+            "complete": true
+          },
+          "github": {
+            "trials": [
+              {
+                "case": "github",
+                "trial": 0,
+                "click_command_ms": 1280.3012919999971,
+                "content_ms": 10632.053208999994,
+                "observed_elapsed_ms": 10632.054499999998,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 1,
+                "click_command_ms": 2099.9415420000105,
+                "content_ms": 15601.621333999987,
+                "observed_elapsed_ms": 15601.622416999988,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 2,
+                "click_command_ms": 1170.2037499999847,
+                "content_ms": 15377.653707999996,
+                "observed_elapsed_ms": 15377.655791999985,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 3,
+                "click_command_ms": 1277.3280000000113,
+                "content_ms": 14143.819957999995,
+                "observed_elapsed_ms": 14143.821290999995,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": true
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 2,
+            "median_ms_without_sampler_overlap": 15489.637520999991,
+            "complete": true
+          },
+          "bilibili": {
+            "trials": [
+              {
+                "case": "bilibili",
+                "trial": 0,
+                "click_command_ms": 1016.4437910000004,
+                "content_ms": 13816.728208,
+                "observed_elapsed_ms": 13816.729583000011,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 1,
+                "click_command_ms": 1442.5138329999925,
+                "content_ms": 12963.962874999994,
+                "observed_elapsed_ms": 12963.964250000005,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 2,
+                "click_command_ms": 2636.511041999995,
+                "content_ms": 49565.099792000015,
+                "observed_elapsed_ms": 49565.10120900004,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 3,
+                "click_command_ms": 1502.0680840000296,
+                "content_ms": 19241.892458999984,
+                "observed_elapsed_ms": 19241.893667,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 19241.892458999984,
+            "complete": true
+          }
+        },
+        "complete": true
+      },
+      "scoped": {
+        "cases": {
+          "wiki": {
+            "trials": [
+              {
+                "case": "wiki",
+                "trial": 0,
+                "click_command_ms": 1258.028875,
+                "content_ms": 4733.86175,
+                "observed_elapsed_ms": 4733.862875,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 1,
+                "click_command_ms": 1546.7451249999867,
+                "content_ms": 8280.266333999989,
+                "observed_elapsed_ms": 8280.26754199999,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 2,
+                "click_command_ms": 787.3642079999854,
+                "content_ms": 11553.267957999993,
+                "observed_elapsed_ms": 11553.271749999993,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "wiki",
+                "trial": 3,
+                "click_command_ms": 1781.6847080000002,
+                "content_ms": 6962.813874999994,
+                "observed_elapsed_ms": 6962.815374999991,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 8280.266333999989,
+            "complete": true
+          },
+          "github": {
+            "trials": [
+              {
+                "case": "github",
+                "trial": 0,
+                "click_command_ms": 1422.8065829999998,
+                "content_ms": 8990.569583,
+                "observed_elapsed_ms": 8990.571083,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 1,
+                "click_command_ms": 1878.8408749999944,
+                "content_ms": 17841.210667,
+                "observed_elapsed_ms": 17841.211791999995,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 2,
+                "click_command_ms": 10602.025416999993,
+                "content_ms": 20257.303834,
+                "observed_elapsed_ms": 20257.305124999988,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "github",
+                "trial": 3,
+                "click_command_ms": 1590.5307500000276,
+                "content_ms": 19776.85737500002,
+                "observed_elapsed_ms": 19776.858791999985,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 19776.85737500002,
+            "complete": true
+          },
+          "bilibili": {
+            "trials": [
+              {
+                "case": "bilibili",
+                "trial": 0,
+                "click_command_ms": 775.4688329999979,
+                "content_ms": 13189.061832999996,
+                "observed_elapsed_ms": 13189.063417,
+                "warmup": true,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 1,
+                "click_command_ms": 2778.8627920000126,
+                "content_ms": 12726.467750000013,
+                "observed_elapsed_ms": 12726.469333000012,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 2,
+                "click_command_ms": 2100.870499999985,
+                "content_ms": 14930.25937499999,
+                "observed_elapsed_ms": 14930.261083000005,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              },
+              {
+                "case": "bilibili",
+                "trial": 3,
+                "click_command_ms": 4965.519416999996,
+                "content_ms": 13950.677750000012,
+                "observed_elapsed_ms": 13950.678874999994,
+                "warmup": false,
+                "status": "content_marker_found",
+                "sampler_overlap": false
+              }
+            ],
+            "successful_formal_trials": 3,
+            "summary_samples": 3,
+            "median_ms_without_sampler_overlap": 13950.677750000012,
+            "complete": true
+          }
+        },
+        "complete": true
+      }
+    },
+    "mechanism": {
+      "display_bridge": "An active native service no longer ends the cohort on control checks or idle admission. Owner Rc/SCM_RIGHTS bookkeeping stays on its original thread; byte queues and clipboard pipes retain existing shared synchronization.",
+      "filtered_memory": "Original BPF entry evaluated once on the mm owner. ALLOW stays mm-local; other actions retain a full joined boundary with a result bound to number, PC, all arguments and immutable filter identity.",
+      "negative_controls": "Old display path rebuilt eight cohorts for eight control checks. Removing filtered mapping admission makes both unrelated-CPU progress tests fail; restored admission passes.",
+      "profiling": "Counts are pending calls observed at whole-cohort joins, including calls caught by another task stop, not unique first-stop causes or wall-time shares."
+    },
+    "diagnostics_90_seconds": {
+      "before_filtered_memory": {
+        "cohorts": {
+          "rounds": 61588,
+          "control_checks": 19163,
+          "services": 18528,
+          "memory_us": 20054187,
+          "dispatch_us": 11712195,
+          "stop_us": 6468227
+        },
+        "returned_syscall_occurrences": [
+          [
+            233,
+            19925
+          ],
+          [
+            56,
+            4319
+          ],
+          [
+            222,
+            3830
+          ],
+          [
+            79,
+            2942
+          ],
+          [
+            57,
+            2630
+          ],
+          [
+            207,
+            2554
+          ],
+          [
+            215,
+            2376
+          ],
+          [
+            278,
+            2269
+          ],
+          [
+            226,
+            2140
+          ],
+          [
+            216,
+            1877
+          ],
+          [
+            48,
+            1658
+          ],
+          [
+            73,
+            1626
+          ],
+          [
+            68,
+            1491
+          ],
+          [
+            135,
+            1325
+          ],
+          [
+            211,
+            1228
+          ],
+          [
+            167,
+            1124
+          ],
+          [
+            212,
+            1002
+          ],
+          [
+            78,
+            889
+          ],
+          [
+            23,
+            539
+          ],
+          [
+            165,
+            428
+          ],
+          [
+            220,
+            367
+          ],
+          [
+            46,
+            347
+          ],
+          [
+            43,
+            334
+          ],
+          [
+            199,
+            325
+          ],
+          [
+            139,
+            290
+          ],
+          [
+            208,
+            269
+          ],
+          [
+            21,
+            268
+          ],
+          [
+            63,
+            253
+          ],
+          [
+            141,
+            239
+          ],
+          [
+            25,
+            236
+          ],
+          [
+            140,
+            236
+          ],
+          [
+            206,
+            225
+          ],
+          [
+            38,
+            217
+          ],
+          [
+            198,
+            199
+          ],
+          [
+            134,
+            198
+          ],
+          [
+            279,
+            158
+          ],
+          [
+            203,
+            156
+          ],
+          [
+            34,
+            150
+          ],
+          [
+            64,
+            129
+          ],
+          [
+            82,
+            123
+          ],
+          [
+            29,
+            102
+          ],
+          [
+            61,
+            101
+          ],
+          [
+            27,
+            100
+          ],
+          [
+            204,
+            93
+          ],
+          [
+            55,
+            90
+          ],
+          [
+            93,
+            75
+          ],
+          [
+            44,
+            72
+          ],
+          [
+            205,
+            70
+          ],
+          [
+            35,
+            63
+          ],
+          [
+            59,
+            57
+          ],
+          [
+            80,
+            49
+          ],
+          [
+            209,
+            44
+          ],
+          [
+            200,
+            42
+          ],
+          [
+            261,
+            42
+          ],
+          [
+            65,
+            41
+          ],
+          [
+            17,
+            40
+          ],
+          [
+            47,
+            30
+          ],
+          [
+            67,
+            27
+          ],
+          [
+            123,
+            26
+          ],
+          [
+            179,
+            23
+          ],
+          [
+            277,
+            20
+          ],
+          [
+            283,
+            20
+          ],
+          [
+            96,
+            19
+          ],
+          [
+            24,
+            18
+          ],
+          [
+            223,
+            16
+          ],
+          [
+            19,
+            14
+          ],
+          [
+            20,
+            13
+          ],
+          [
+            66,
+            10
+          ],
+          [
+            291,
+            9
+          ],
+          [
+            53,
+            8
+          ],
+          [
+            101,
+            7
+          ],
+          [
+            260,
+            4
+          ],
+          [
+            221,
+            4
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            439,
+            4
+          ],
+          [
+            232,
+            3
+          ],
+          [
+            119,
+            3
+          ],
+          [
+            122,
+            3
+          ],
+          [
+            214,
+            2
+          ],
+          [
+            94,
+            2
+          ],
+          [
+            36,
+            2
+          ],
+          [
+            236,
+            2
+          ],
+          [
+            126,
+            1
+          ],
+          [
+            88,
+            1
+          ],
+          [
+            98,
+            1
+          ],
+          [
+            26,
+            1
+          ],
+          [
+            242,
+            1
+          ],
+          [
+            120,
+            1
+          ],
+          [
+            148,
+            1
+          ],
+          [
+            121,
+            1
+          ],
+          [
+            150,
+            1
+          ],
+          [
+            201,
+            1
+          ]
+        ],
+        "vm_checkpoint_calls": [
+          12,
+          8121,
+          7313,
+          1530,
+          6769,
+          2,
+          80000,
+          150
+        ],
+        "runtime_summary": {
+          "syscalls": 1819980,
+          "context_switches": 624185,
+          "hardware_mapped_bytes": 62259200,
+          "guest_resident_bytes": 363311104,
+          "vm_checkpoint_groups": 101900,
+          "vm_checkpoint_spaces": 101900,
+          "backing_domain_checks": 31736055,
+          "backing_page_checks": 180074485,
+          "parallel_memory_us": 20054187,
+          "instruction_count": null
+        }
+      },
+      "after_filtered_memory": {
+        "cohorts": {
+          "rounds": 52239,
+          "control_checks": 20446,
+          "services": 25818,
+          "memory_us": 13896860,
+          "dispatch_us": 9591058,
+          "stop_us": 6880580
+        },
+        "returned_syscall_occurrences": [
+          [
+            233,
+            8391
+          ],
+          [
+            56,
+            4572
+          ],
+          [
+            207,
+            3828
+          ],
+          [
+            79,
+            3310
+          ],
+          [
+            222,
+            2911
+          ],
+          [
+            57,
+            2676
+          ],
+          [
+            278,
+            2432
+          ],
+          [
+            73,
+            2041
+          ],
+          [
+            48,
+            1891
+          ],
+          [
+            226,
+            1743
+          ],
+          [
+            68,
+            1726
+          ],
+          [
+            216,
+            1514
+          ],
+          [
+            135,
+            1332
+          ],
+          [
+            215,
+            1289
+          ],
+          [
+            167,
+            1255
+          ],
+          [
+            211,
+            1217
+          ],
+          [
+            212,
+            999
+          ],
+          [
+            78,
+            931
+          ],
+          [
+            43,
+            541
+          ],
+          [
+            23,
+            528
+          ],
+          [
+            165,
+            480
+          ],
+          [
+            46,
+            445
+          ],
+          [
+            220,
+            370
+          ],
+          [
+            208,
+            331
+          ],
+          [
+            199,
+            325
+          ],
+          [
+            206,
+            300
+          ],
+          [
+            139,
+            290
+          ],
+          [
+            63,
+            248
+          ],
+          [
+            141,
+            243
+          ],
+          [
+            140,
+            240
+          ],
+          [
+            38,
+            237
+          ],
+          [
+            25,
+            236
+          ],
+          [
+            21,
+            228
+          ],
+          [
+            198,
+            224
+          ],
+          [
+            34,
+            209
+          ],
+          [
+            134,
+            201
+          ],
+          [
+            203,
+            177
+          ],
+          [
+            279,
+            158
+          ],
+          [
+            82,
+            125
+          ],
+          [
+            55,
+            121
+          ],
+          [
+            61,
+            113
+          ],
+          [
+            64,
+            109
+          ],
+          [
+            204,
+            106
+          ],
+          [
+            29,
+            102
+          ],
+          [
+            27,
+            100
+          ],
+          [
+            205,
+            87
+          ],
+          [
+            93,
+            79
+          ],
+          [
+            44,
+            72
+          ],
+          [
+            35,
+            69
+          ],
+          [
+            59,
+            57
+          ],
+          [
+            47,
+            55
+          ],
+          [
+            209,
+            49
+          ],
+          [
+            200,
+            46
+          ],
+          [
+            261,
+            42
+          ],
+          [
+            65,
+            41
+          ],
+          [
+            17,
+            40
+          ],
+          [
+            80,
+            27
+          ],
+          [
+            123,
+            26
+          ],
+          [
+            179,
+            23
+          ],
+          [
+            67,
+            21
+          ],
+          [
+            277,
+            20
+          ],
+          [
+            283,
+            20
+          ],
+          [
+            96,
+            19
+          ],
+          [
+            24,
+            18
+          ],
+          [
+            223,
+            16
+          ],
+          [
+            19,
+            14
+          ],
+          [
+            20,
+            13
+          ],
+          [
+            66,
+            12
+          ],
+          [
+            291,
+            9
+          ],
+          [
+            53,
+            6
+          ],
+          [
+            221,
+            5
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            101,
+            4
+          ],
+          [
+            260,
+            4
+          ],
+          [
+            439,
+            4
+          ],
+          [
+            178,
+            3
+          ],
+          [
+            232,
+            3
+          ],
+          [
+            236,
+            2
+          ],
+          [
+            94,
+            2
+          ],
+          [
+            122,
+            2
+          ],
+          [
+            119,
+            2
+          ],
+          [
+            214,
+            2
+          ],
+          [
+            36,
+            2
+          ],
+          [
+            201,
+            1
+          ],
+          [
+            88,
+            1
+          ],
+          [
+            242,
+            1
+          ],
+          [
+            126,
+            1
+          ],
+          [
+            120,
+            1
+          ],
+          [
+            148,
+            1
+          ],
+          [
+            150,
+            1
+          ],
+          [
+            26,
+            1
+          ],
+          [
+            121,
+            1
+          ]
+        ],
+        "vm_checkpoint_calls": [
+          12,
+          13642,
+          7676,
+          2652,
+          10595,
+          2,
+          161518,
+          227
+        ],
+        "runtime_summary": {
+          "syscalls": 1871528,
+          "context_switches": 721979,
+          "hardware_mapped_bytes": 59572224,
+          "guest_resident_bytes": 340463616,
+          "vm_checkpoint_groups": 193732,
+          "vm_checkpoint_spaces": 193732,
+          "backing_domain_checks": 45058514,
+          "backing_page_checks": 49392383,
+          "parallel_memory_us": 13896860,
+          "instruction_count": null
+        }
+      },
+      "scope": "Separate fresh-profile Wikipedia startup/idle runs, not identical work. The first diagnostic overlapped local CI startup. Raw aggregates show execution routing and are not a controlled CPU-speed benchmark.",
+      "before_behavior_revision": "76d61313c4213258626119cca30df6dfd6043698",
+      "before_instrumentation": "Profiling-only maps added to the three session files; the same instrumentation ships in final_runtime_revision.",
+      "before_instrumentation_file_sha256": {
+        "runtime/crates/trames-session/src/process.rs": "8aeb34e4deb826fffaaaa238f4b5ec1253684ce795c77fc6d184da736ff7c5b9",
+        "runtime/crates/trames-session/src/process_vm.rs": "805102881f4edd80f0069959bbb3702eb79bf741178504e11840427ad976badf",
+        "runtime/crates/trames-session/src/lib.rs": "94837f83d9f9d3eb99cdfe99d9593c1ffa9b7a2b89a7385c125926e87c8a90f7"
+      }
+    },
+    "observations": {
+      "display_only_emfile": "Firefox reported a sandbox broker EMFILE during the display-only mixed-site run. A later host FD observation was 110 with soft maxfiles 256; VFS also contains a fixed MAX_FDS=256. This observation does not establish whether the error was a transient host limit, guest capacity, or retained ownership. No descriptor-cap change is included.",
+      "other_errors": "Third-party script/chunk-loading and WebGL/context-loss warnings remain; target marker success does not prove those resources work.",
+      "remaining_boundaries": "Task/FD lifecycle, seccomp non-ALLOW actions, required same-mm/backing mapping synchronization and other unsupported operations still return to their existing owners."
+    },
+    "validation": {
+      "kernel_macos": 223,
+      "kernel_linux_arm64": 223,
+      "ignored_kernel_tests_per_os": 3,
+      "native_bridge_tests_per_os": 4,
+      "strict_affected_clippy": "pass",
+      "ipad_arm64_ffi": "pass",
+      "signed_mac_release": "pass",
+      "unchanged_reused": "VFS/memory/network/Vulkan/CPU-executor validation from the preceding source-bound runs; no backend or guest graphics binary changed."
+    },
+    "signed_final_runner_sha256": "5d42fdb477d781559fd31a9e236b0b8814f84084e616365cd99537df94004450"
   }
 }

@@ -420,6 +420,19 @@ pub fn run(
             runtime.metrics.worker_chunks,
             runtime.metrics.cpu_time.as_micros()
         );
+        eprintln!(
+            "trames mac cohorts: rounds={} control_checks={} services={} memory_us={} dispatch_us={} stop_us={}",
+            runtime.metrics.parallel_rounds,
+            runtime.metrics.persistent_control_checks,
+            runtime.metrics.service_requests,
+            runtime.metrics.parallel_memory_time.as_micros(),
+            runtime.metrics.parallel_dispatch_time.as_micros(),
+            runtime.metrics.parallel_stop_time.as_micros()
+        );
+        let mut returned: Vec<_> = runtime.metrics.cohort_return_syscalls.iter().collect();
+        returned.sort_unstable_by_key(|(_, count)| std::cmp::Reverse(**count));
+        eprintln!("trames mac cohort-return syscalls: {returned:?}");
+        eprintln!("trames mac cohort-return native: {:?}", runtime.metrics.cohort_return_native);
         eprintln!("trames mac paging: {:?}", trames_hvf::paging_stats());
         eprintln!(
             "trames mac vm phases us: {:?}",

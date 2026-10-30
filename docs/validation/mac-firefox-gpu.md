@@ -479,3 +479,89 @@ sampling phases differ, so no aggregate CPU-percentage improvement is inferred.
 Reducing unnecessary whole-mapping scans or importing eligible native GPU memory
 remains a distinct next step; this change does not claim zero-copy GPU sharing.
 The normal Firefox profile is restored after testing without Marionette.
+
+
+## Native display control and sandboxed memory checkpoints
+
+The shared runtime now removes two sources of unnecessary full-cohort stops:
+
+- An active Wayland/XWM bridge used to return every CPU at each host control
+  check. The existing owner now pumps its bounded resource adapter while workers
+  retain their Views/translations; it also retains native I/O progress with all
+  jobs parked. Real-worker coverage completes wl_display.sync in one cohort;
+  the old active-peer case rebuilt eight cohorts for eight checks.
+- Firefox content processes install seccomp filters. Their structural memory
+  calls previously bypassed local mm checkpoints. The mm owner now evaluates
+  the exact entry once and runs ALLOW in that domain. Other actions retain the
+  full joined handler with a cached result bound to number, PC, six arguments
+  and immutable filter identity. The sandbox remains enabled. A stale entry or
+  changed policy cannot reuse an earlier decision; denial leaves memory intact.
+
+These are common Mac/iPad scheduler changes. They add no resource-service thread,
+ordinary memory barrier or function-wide safety lock. Same-mm peers still stop
+for structural mapping changes. Filtered calls do not use the optional hardware
+exclusive batching window, so each new entry receives its own decision.
+
+Runtime progression is `42eb0c9d56e9` → display-only `76d61313c421` → combined
+`60b14caf1ef4`. Both products pin the combined runtime. Mac --metrics exposes
+cohort counts, preparation/dispatch/drain time, and pending syscall/native
+occurrences returned at full joins. Several pending calls can share a stop;
+these are not unique initiating causes or CPU-time percentages.
+
+Two separate 90-second Wikipedia startup/idle diagnostics observed madvise in
+19,925 versus 8,391 returned entries, with 61,588 versus 52,239 cohort rounds.
+The earlier run used the display-only behavior plus the same profiling additions.
+Its exact three changed runtime source hashes are retained in the JSON record.
+Different startup/background work and local CI overlap in the earlier run
+preclude a controlled CPU-speed claim. Real-worker tests, rather than those raw
+frequency ratios, prove that allowed filtered mappings keep unrelated CPUs
+running and evaluate BPF once. Temporarily disabling the new admission makes
+both unrelated-CPU tests fail.
+
+### Ordered mixed-site navigation after the coordinator changes
+
+Each phase uses one fresh Firefox process/profile, 12 CPU slots, host-managed
+memory, default graphics/security/cache/process preferences and a visible window.
+Every round visits Wikipedia, GitHub, then Bilibili. One warmup per site is
+excluded and three formal target-marker observations per site are retained.
+This differs from the preceding per-site batches, which launched each site in
+a separate process. All nine formal target markers complete in each phase.
+
+A two-second sampler overlapped baseline Wikipedia trial 2 and display-only
+GitHub trial 3. Their raw observations stay in the JSON, tagged as overlapping;
+only the summary medians below exclude them. The combined phase has no concurrent
+build, local CI or sampler. The medians count DOM-marker readiness from click
+command start, rather than presentation, full resource loading or usable-page
+latency.
+
+| Site | Before both changes | Display-only intermediate | Combined change |
+| --- | ---: | ---: | ---: |
+| Wikipedia | 9.743 s (n=2) | 11.055 s (n=3) | 8.280 s (n=3) |
+| GitHub | 18.246 s (n=3) | 15.490 s (n=2) | 19.777 s (n=3) |
+| Bilibili | 14.610 s (n=3) | 19.242 s (n=3) | 13.951 s (n=3) |
+
+The display-only intermediate is not hidden: it did not produce a general page
+speedup. The combined result also remains mixed, with substantial site/CDN and
+browser-work variation; it does not establish a stable whole-browser speedup.
+Ordered small samples, fresh profiles and evolving HTTP/DNS/CDN caches remain
+uncontrolled. Raw samples include the display-only 49.565-second Bilibili outlier
+and the configured implicit wait being overrun by a busy renderer.
+
+Firefox emitted one sandbox-broker EMFILE in the display-only run. A later host
+observation found 110 FDs with soft maxfiles 256; the guest VFS separately has a
+fixed MAX_FDS=256. This does not establish transient host exhaustion, guest
+capacity or retained ownership as the cause. The final nine-load run did not
+reproduce EMFILE, and the descriptor cap remains a separate capacity issue.
+Third-party chunk/script loading and WebGL/context-loss warnings still occur.
+No cache, sandbox, process or graphics preference was relaxed to obtain these
+results. Native coherent GPU synchronization still scans mapped shadows;
+unsupported FD/task operations and necessary same-mm/backing synchronization
+retain their existing boundaries.
+
+Local validation passes 223 common-kernel tests per OS (macOS and native ARM64
+Linux; three existing skips), four native bridge checks per OS, strict affected
+Clippy, the ARM64 iPad FFI compile and a signed Mac release build. Unchanged
+network/memory/VFS/Vulkan and CPU-executor results from the preceding source-bound
+runs are reused. English contracts and the complete filtered observations are
+in [region memory](../../runtime/docs/architecture/region-memory.md#filtered-memory-calls)
+and [navigation data](mac-firefox-navigation.json).
