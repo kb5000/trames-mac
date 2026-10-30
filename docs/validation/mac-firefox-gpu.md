@@ -1096,3 +1096,49 @@ Full CTS, physical iPad GPU acceptance, a new IPA and overall browser-performanc
 improvements are not claimed. Firefox stays running with its current profile;
 new launches use the paired ICD. The full evidence is under
 `color_msaa_follow_up` in [the GPU record](mac-firefox-gpu.json).
+
+
+## Promoted Vulkan 1.1/1.2 completion (2026-10-31)
+
+The common runtime and paired ICD now execute multiview, descriptor indexing,
+depth/stencil resolve and independent layouts/usage, multiple subpasses and
+input attachments, secondary command buffers, native events, linear images,
+dedicated allocations and immutable-sampler YCbCr conversion. The core ABI
+inventory contains all 178 commands through Vulkan 1.2 (238 exported names
+including aliases). Native capabilities determine optional feature availability;
+full CTS/conformance is not claimed.
+
+The maintained [GPU harness](../../tests/integration/mac-vulkan12-complete.py)
+passes one and twelve guest CPUs. It checks nonuniform descriptor arrays,
+112/128 variable allocations with unbound slots, large templates/copies, late
+updates and updates during a real future-timeline wait, an unbacked unused
+dynamic descriptor in a separate layout, sparse view masks and inactive-layer
+preservation, SAMPLE_ZERO/MIN/MAX depth resolve and stencil readback, preserved
+input attachments across three subpasses and inherited secondary drawing.
+
+The original native driver performs queue waits on future timeline values; the
+submitting guest thread returns and can signal them later. The old CPU pre-poll
+is removed. MoltenVK patch 0008 corrects queued event reset sequencing using
+event-local relaxed metadata and original Metal events. No new service thread,
+global algorithm lock, CPU shader/resolve or ordinary-memory barrier is added.
+
+The ARM64 Linux reference passes one/four CPUs with both shared and forced
+shadow mappings, including driver-supported GPU-written indirect counts and
+64-bit buffer/shared atomics. The native fixture passes Khronos validation
+1.3.275 with zero errors. Direct Lavapipe reproduces a resolve-only inactive-layer
+modification; the bridge records it, while independent direct-render multiview
+tests still require unchanged inactive layers. Apple resolve results preserve
+those layers as well.
+
+Focused checks pass 56 Vulkan unit tests on each host, strict lints, signed Mac
+and Linux CLI release builds, product boundaries and iPad ARM64 FFI compilation.
+Existing selected-core12, MSAA, neural, GLES and integer PBO regressions pass.
+The explicit tiny dedicated-buffer test uses a 256-byte native readback; ordinary
+shared maps retain their direct path. Metal's native teardown metric remains
+1 MiB for this workload and is separate from Vulkan live-object ownership.
+
+[Full shared implementation and evidence](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-compute.md#promoted-vulkan-11-and-12-paths-2026-10-31)
+records the artifact/source hashes and limits. The active Firefox session and
+profile were retained; this is GPU compatibility acceptance, not a fresh browser
+performance measurement. A new IPA, physical iPad GPU execution and CTS
+certification were not performed.

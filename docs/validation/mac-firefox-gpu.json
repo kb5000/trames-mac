@@ -4298,5 +4298,176 @@
     },
     "shared_record": "https://github.com/kb5000/trames-ipad/blob/main/docs/validation/vulkan-compute-data.json",
     "active_firefox": "Left running; no profile or preference changes. New launches use the paired ICD."
+  },
+  "vulkan12_completion": {
+    "date": "2026-10-31",
+    "passed": true,
+    "runtime_revision": "c871946f591ff8109ee0b7fdbc9b78d4bb38478d",
+    "scope": "Promoted Vulkan 1.1/1.2 native render, descriptor and synchronization paths; not full CTS/conformance",
+    "wire_revision": 13,
+    "public_entrypoints": 238,
+    "core_inventory": {
+      "VK_VERSION_1_0": {
+        "total": 137,
+        "implemented": 137,
+        "missing": []
+      },
+      "VK_VERSION_1_1": {
+        "total": 28,
+        "implemented": 28,
+        "missing": []
+      },
+      "VK_VERSION_1_2": {
+        "total": 13,
+        "implemented": 13,
+        "missing": []
+      }
+    },
+    "mac": {
+      "passed": true,
+      "scope": "native multiview, descriptor indexing, depth/stencil resolve, subpasses, secondary commands, events, linear images and YCbCr output oracles; not complete CTS",
+      "runner_sha256": "029304b37c4ffb27ada4e07a8716c33b2886e9558f836cac5d2f193edf52a792",
+      "inputs": {
+        "libtrames_vulkan_icd.so": "d3a4025c664f17ab34245a9bf653ae6ecf372be925034498640b73983ca60682",
+        "vulkan12-complete": "1ff4752971ae77203812ed9446ae3d8f9ced54ae69be0493a2e01b4e5c024155",
+        "vulkan12-index.comp.spv": "a24ffc837e6b21f530bdc450cf882900dbc0902ed24e3c069055d888331b6bfa",
+        "vulkan12-views.vert.spv": "6f8198437f63e1d052907a1f93f540e5b189d7f9435d889ee3f757de2c523c7e",
+        "vulkan12-views.frag.spv": "1d26cee8c5e85090fa7f08a16b0dcafbf6658ce453b31807516e8fb8e0d13841",
+        "vulkan12-input.frag.spv": "002b31ed4c0fb4edf3fdcfc5f8fff744ca01ffcc77cd697a1679867132390021",
+        "vulkan12-ycbcr.comp.spv": "acdaa502f89e984b8ff29fd605641375f0303a5f16792c35098723d510613df0",
+        "vulkan12-atomic64.comp.spv": "108d3a749ac544a3658ac8ecee306de6d522e4983197c20472d99c5e5a42048a",
+        "vulkan12-multiview.frag.spv": "7d7591b1853360ede51edcf033676d619457fadef42987f9264cace25534e462",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "icd.json": "0246b6fc2b109904589a4fc43bc186b24c52572897cbdd03eb9ccfc8ebd963d0"
+      },
+      "teardown_metric_scope": "Metal currentAllocatedSize before MTLDevice release; includes native driver/autoreleased resources, not a Vulkan live-object count",
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "linux": {
+      "acceptance": {
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 4,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "shadow": {
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 4,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    "native_sdk": {
+      "macos": {
+        "library_sha256": "538c5a1f3f73dbcf1bdb91d80353ea9b6997d4724769227eb373569af6eec77d",
+        "event_patch": {
+          "before": {
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.h": "e444dbef9fa1e66b775aa13b55685dc8f180fc1f701a5743a7fb16532cfbe0c3",
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.mm": "73ce0001847349db5873cd086df5d93c42a4f7ff7dfe718f2059ded717a7833d"
+          },
+          "after": {
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.h": "7b1cc7b78cfe2e848a55b442c0e1ee9229ba0ab9404611dab2e25c4aa6034c44",
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.mm": "7a676efaf32402c35c8411b3e27c511322c822bca67bf195847677e3c5ec971c"
+          },
+          "patch_sha256": "813fc05148f7b3b60152cf949392521bc3736e8a416fb4cb2d3cdd0426670a25"
+        },
+        "sdk": "27.2",
+        "platform": "macos"
+      },
+      "ipad": {
+        "library_sha256": "2b629b4c9049dcf9c778a13717c62cfcb82245437030122ce8ca3d1edf1c1d02",
+        "event_patch": {
+          "before": {
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.h": "e444dbef9fa1e66b775aa13b55685dc8f180fc1f701a5743a7fb16532cfbe0c3",
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.mm": "73ce0001847349db5873cd086df5d93c42a4f7ff7dfe718f2059ded717a7833d"
+          },
+          "after": {
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.h": "7b1cc7b78cfe2e848a55b442c0e1ee9229ba0ab9404611dab2e25c4aa6034c44",
+            "MoltenVK/MoltenVK/GPUObjects/MVKSync.mm": "7a676efaf32402c35c8411b3e27c511322c822bca67bf195847677e3c5ec971c"
+          },
+          "patch_sha256": "813fc05148f7b3b60152cf949392521bc3736e8a416fb4cb2d3cdd0426670a25"
+        },
+        "sdk": "27.2",
+        "platform": "ios"
+      }
+    },
+    "mac_transfer_metrics": {
+      "1": {
+        "upload_bytes": 0,
+        "download_bytes": 256,
+        "direct_bytes": 256,
+        "buffered_bytes": 0,
+        "maps": 20,
+        "mapped_bytes": 57544,
+        "upload_scanned_bytes": 512,
+        "download_scanned_bytes": 0
+      },
+      "12": {
+        "upload_bytes": 0,
+        "download_bytes": 256,
+        "direct_bytes": 256,
+        "buffered_bytes": 0,
+        "maps": 20,
+        "mapped_bytes": 57544,
+        "upload_scanned_bytes": 512,
+        "download_scanned_bytes": 0
+      }
+    },
+    "checks": {
+      "vulkan_units_per_host": 56,
+      "strict_vulkan_mac_clippy": true,
+      "signed_mac_release_build": true,
+      "linux_cli_release_build": true,
+      "ipad_arm64_ffi_check": true,
+      "product_boundaries": true,
+      "generator_catalog_and_registry_inventory": true,
+      "unchanged_cpu_linux_network_checks_reused": true
+    },
+    "limitations": {
+      "cts_run": false,
+      "physical_ipad_gpu_run": false,
+      "new_ipa_installed": false,
+      "active_firefox_restarted": false,
+      "geometry_tessellation_enabled": false,
+      "native_apple_draw_indirect_count": false,
+      "native_apple_int64_atomics": false,
+      "address_capture_replay_enabled": false,
+      "native_linux_inactive_resolve_layer_modification": true,
+      "metal_current_allocated_teardown_mib": 1,
+      "metal_teardown_is_not_live_vulkan_object_count": true
+    },
+    "shared_validation_record": "https://github.com/kb5000/trames-ipad/blob/main/docs/validation/vulkan-compute-data.json"
   }
 }
