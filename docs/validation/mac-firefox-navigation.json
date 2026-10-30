@@ -199,5 +199,417 @@
     "runner_sha256": "044cbe0f7f0f46e2039b15de4bb55a73b0ea37bc926098eb1f22c0e7984ee45c",
     "benchmark_script_sha256": "e086d25b0e396fe11dfd75bf327e1c384b22bc82b30d297dbab9797a46ff4193"
   },
-  "privacy": "Only aggregate timings, public target URLs, error categories and hashes are published. Guest profiles, raw HTTP logs/cookies, host addresses and traces remain local."
+  "privacy": "Only aggregate timings, public target URLs, error categories and hashes are published. Guest profiles, raw HTTP logs/cookies, host addresses and traces remain local.",
+  "forkserver_dns_follow_up": {
+    "runtime_revision": "478e5992a73e867c478f1cf54601fb42e7cc4dab",
+    "metric": "same host click-command start to target DOM marker; fresh Firefox process per site, one excluded warmup, three requested trials; 1920x792 CSS pixels, 12 CPU slots, host-managed memory, default graphics/security/process prefs",
+    "binary_sha256": "ed8f9124a23dadd7b14760cc0a66c260b4220c30051576c8568fab8faad94a53",
+    "mechanisms": {
+      "blocked_recvmsg": "restore all six saved syscall arguments and syscall number on worker checkpoint; do not reinterpret owner-side -EAGAIN as a new FD; original OFD/poll ownership and already-retired PC are preserved",
+      "typed_dns": "forward IN RR queries through host resolver on existing workers, retain getaddrinfo for A/AAAA, echo valid questions on errors, keep local names local, preserve complete compressed RR bytes or request TCP retry, normalize stripped additional-record counts"
+    },
+    "resolver_probe_ms": {
+      "localhost_before": {
+        "HTTPS": 5000.881,
+        "TXT": 4999.838,
+        "A": 3.38
+      },
+      "localhost_fixed": {
+        "HTTPS": 0.708,
+        "TXT": 0.187,
+        "A": 2.519
+      },
+      "public_fixed": {
+        "HTTPS_NODATA": 2.63,
+        "TXT": 222.865,
+        "A": 4.825
+      }
+    },
+    "forkserver_diagnostics": {
+      "before_FSC_launch_warnings": 14,
+      "fixed_three_site_FSC_launch_warnings": 0,
+      "old_owner_fd_argument": -11,
+      "original_fd": 3,
+      "warning_counts_are_diagnostic_observations_not_a_failure_rate_estimate": true
+    },
+    "validation": {
+      "network_macos": 67,
+      "network_linux_arm64": 67,
+      "common_kernel_macos": 215,
+      "common_kernel_linux_arm64": 215,
+      "existing_kernel_skips": 3,
+      "signed_hvf": 47,
+      "signed_mac_pressure": 1,
+      "ipad_arm64_ffi": "pass",
+      "affected_clippy": "pass",
+      "musl_c_adapter_compile_and_static_link": "pass"
+    },
+    "cases": {
+      "wiki": {
+        "trials": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_command_ms": 2158.1825,
+            "content_ms": 4848.716292,
+            "observed_elapsed_ms": 4848.717500000001,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_command_ms": 1686.5546249999993,
+            "content_ms": 4745.001875,
+            "observed_elapsed_ms": 4745.003000000001,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_command_ms": 6444.140749999999,
+            "content_ms": 9628.146667000003,
+            "observed_elapsed_ms": 9628.148791999998,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_command_ms": 1229.0522079999987,
+            "content_ms": 6112.459416,
+            "observed_elapsed_ms": 6112.460374999998,
+            "warmup": false
+          }
+        ],
+        "median_ms": 6112.459416,
+        "between_trial_setup_ms": [
+          6954.842280120849,
+          2743.3540671081537,
+          3098.16742160779
+        ],
+        "complete": true
+      },
+      "github": {
+        "trials": [
+          {
+            "case": "github",
+            "trial": 0,
+            "click_command_ms": 1237.9672910000004,
+            "content_ms": 4929.216958,
+            "observed_elapsed_ms": 4929.218208,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_command_ms": 1502.4026249999984,
+            "content_ms": 10306.954165999998,
+            "observed_elapsed_ms": 10306.955833,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_command_ms": 1165.8974169999965,
+            "content_ms": 7127.299375,
+            "observed_elapsed_ms": 7127.301084000002,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_command_ms": 969.8190419999975,
+            "content_ms": 14272.279624999996,
+            "observed_elapsed_ms": 14272.280834,
+            "warmup": false
+          }
+        ],
+        "median_ms": 10306.954165999998,
+        "between_trial_setup_ms": [
+          11266.495788887207,
+          14401.926022010986,
+          14862.00894216882
+        ],
+        "complete": true
+      },
+      "bilibili": {
+        "trials": [
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_command_ms": 796.6608750000006,
+            "content_ms": 7537.578415999999,
+            "observed_elapsed_ms": 7537.579791,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_command_ms": 1608.4513330000013,
+            "content_ms": 16375.226250000005,
+            "observed_elapsed_ms": 16375.227833000004,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_command_ms": 3274.045874999999,
+            "content_ms": 29635.339583999994,
+            "observed_elapsed_ms": 29635.340791999995,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_command_ms": 1959.081583999989,
+            "content_ms": 47622.64454199999,
+            "observed_elapsed_ms": 47622.64575,
+            "warmup": false
+          }
+        ],
+        "median_ms": 29635.339583999994,
+        "between_trial_setup_ms": [
+          13377.92633349646,
+          40507.930135521114,
+          40933.557170570195
+        ],
+        "complete": true
+      }
+    },
+    "limits": [
+      "Different engines, caches and network/CDN responses remain uncontrolled; prior in-app results are a reference only.",
+      "DOM attachment is not pixel presentation, full resource loading or usable-page latency.",
+      "No whole-browser speedup is inferred from resolver microprobes or a small changing sample.",
+      "A mixed-site stress run still timed out in Bilibili automation and emitted WebGL context loss / script timeouts; it used the build before the final EDNS count normalization and is retained separately."
+    ],
+    "mixed_site_stress": {
+      "trials": [
+        {
+          "case": "wiki",
+          "trial": 0,
+          "click_command_ms": 2271.3776250000005,
+          "content_ms": 4646.062584,
+          "observed_elapsed_ms": 4646.064249999999,
+          "warmup": true
+        },
+        {
+          "case": "github",
+          "trial": 0,
+          "click_command_ms": 2936.499625,
+          "content_ms": 10487.204542,
+          "observed_elapsed_ms": 10487.205833999999,
+          "warmup": true
+        },
+        {
+          "case": "bilibili",
+          "trial": 0,
+          "click_command_ms": 1912.8354169999966,
+          "content_ms": 23568.882541999996,
+          "observed_elapsed_ms": 23568.883542000003,
+          "warmup": true
+        },
+        {
+          "case": "wiki",
+          "trial": 1,
+          "click_command_ms": 1606.9125830000103,
+          "content_ms": 11416.635458000002,
+          "observed_elapsed_ms": 11416.636791000003,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 1,
+          "click_command_ms": 1785.2565839999954,
+          "content_ms": 26790.835541999997,
+          "observed_elapsed_ms": 26790.836499999998,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 1,
+          "automation_error": "timed out"
+        }
+      ],
+      "completion": "aborted on target-element RPC timeout during Bilibili trial 1"
+    }
+  },
+  "coherent_copy_follow_up": {
+    "runtime_revision": "42eb0c9d56e9a0bee963f286ab67970c6b6e08f5",
+    "binary_sha256": "af43eb683ad7f6a1dbc95ac6bec02cb1fe177dd75d7f4431708d867031873071",
+    "method": "same host click-command start to target DOM marker; fresh Firefox process per site, one excluded warmup, three requested trials; 1920x792 CSS pixels, 12 CPU slots, host-managed memory, default graphics/security/process prefs",
+    "cases": {
+      "wiki": {
+        "trials": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_command_ms": 2448.8474169999995,
+            "content_ms": 4544.655584000001,
+            "observed_elapsed_ms": 4544.65675,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_command_ms": 794.0166249999994,
+            "content_ms": 3847.036042000001,
+            "observed_elapsed_ms": 3847.0375830000007,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_command_ms": 783.6994999999973,
+            "content_ms": 2605.908666999998,
+            "observed_elapsed_ms": 2605.909999999998,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_command_ms": 1254.817083999999,
+            "content_ms": 5425.218167000001,
+            "observed_elapsed_ms": 5425.219625000001,
+            "warmup": false
+          }
+        ],
+        "median_ms": 3847.036042000001,
+        "between_trial_setup_ms": [
+          6454.343322479248,
+          7179.097384803954,
+          3069.1548021698018
+        ],
+        "complete": true
+      },
+      "github": {
+        "trials": [
+          {
+            "case": "github",
+            "trial": 0,
+            "click_command_ms": 2686.4920420000003,
+            "content_ms": 6427.791209,
+            "observed_elapsed_ms": 6427.792542,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_command_ms": 952.8622090000027,
+            "content_ms": 3990.3764170000004,
+            "observed_elapsed_ms": 3990.378917000001,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_command_ms": 1564.546,
+            "content_ms": 8753.354833000003,
+            "observed_elapsed_ms": 8753.355958,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_command_ms": 787.9930420000037,
+            "content_ms": 3989.9438749999945,
+            "observed_elapsed_ms": 3989.945042000002,
+            "warmup": false
+          }
+        ],
+        "median_ms": 3990.3764170000004,
+        "between_trial_setup_ms": [
+          11558.566577415284,
+          12095.6909053114,
+          13446.702979072754
+        ],
+        "complete": true
+      },
+      "bilibili": {
+        "trials": [
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_command_ms": 1872.321834,
+            "content_ms": 8827.613209000001,
+            "observed_elapsed_ms": 8827.61425,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_command_ms": 4241.720707999999,
+            "content_ms": 11341.297041,
+            "observed_elapsed_ms": 11341.298708,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_command_ms": 1171.4045000000012,
+            "content_ms": 13096.820082999997,
+            "observed_elapsed_ms": 13096.824208000002,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_command_ms": 1583.8979170000016,
+            "content_ms": 12319.35591700001,
+            "observed_elapsed_ms": 12319.357417000007,
+            "warmup": false
+          }
+        ],
+        "median_ms": 12319.35591700001,
+        "between_trial_setup_ms": [
+          8439.332781021118,
+          15945.888153038208,
+          4843.422850868406
+        ],
+        "complete": true
+      }
+    },
+    "before_profile": {
+      "thread": "GPU worker 0",
+      "samples": 1066,
+      "inside_vulkan_coherent_sync": 665,
+      "appkit_samples": 1066,
+      "appkit_idle_samples": 1062,
+      "scope": "2-second post-Bilibili session-setup sample, before the subsequent recorded navigation; counts are not whole-process CPU percentages"
+    },
+    "after_profile": {
+      "scope": "2-second post-Bilibili sample, after retained timing, before the follow-up transition; different sample phase, no controlled CPU-percentage comparison",
+      "hv_vm_protect_frames_observed": false
+    },
+    "separate_loopback_transition_ms": {
+      "before_total": 70630.838125,
+      "before_navigate_command": 7309.914459,
+      "after_total": 6811.630042,
+      "after_navigate_command": 794.362375,
+      "metric": "Navigate command start to unique launcher DOM marker in separately instrumented post-Bilibili runs; initial session-creation wait is excluded"
+    },
+    "mechanism_test": {
+      "before_upload_hardware_borrows": 1,
+      "fixed_upload_and_download_hardware_borrows": 0,
+      "independent_cpu_input": "preserved",
+      "failed_output_baseline": "uncommitted runs restored for retry",
+      "write_only_mapping": "original checked borrow retained"
+    },
+    "validation": {
+      "vulkan_macos": 43,
+      "vulkan_linux_arm64": 43,
+      "affected_clippy": "pass",
+      "ipad_arm64_ffi": "pass",
+      "signed_mac_release": "pass",
+      "real_moltenvk_resources": "256 GPU results, descriptor and image operations correct; budget released",
+      "unchanged_results_reused": "network 67 / kernel 215 per OS; HVF 47 + Mac pressure 1"
+    },
+    "limits": [
+      "Different engines, caches and network/CDN responses remain uncontrolled; prior in-app results are a reference only.",
+      "DOM attachment is not pixel presentation, full resource loading or usable-page latency.",
+      "No whole-browser speedup is inferred from resolver microprobes or a small changing sample.",
+      "Consecutive ordered runs, three retained observations per site, evolving HTTP/CDN caches and content; observed median reductions are not a general browser speedup guarantee.",
+      "The older in-app medians are a reference, not a fresh same-time or same-engine CPU comparison.",
+      "Bilibili still emitted third-party script/chunk-loading errors; content markers do not prove all scripts/resources or video playback work.",
+      "Ordinary coherent copies use up to two bounded 4 KiB stack buffers. Entire mapped ranges are still scanned; native zero-copy GPU import is not implemented by this change."
+    ]
+  }
 }

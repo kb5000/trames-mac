@@ -328,3 +328,154 @@ native regression proves the policy bug; it does not prove that every browser
 failure has the same cause. Complex-page latency still needs work on remaining
 snapshot/worker coordination and cross-site/network failures. No page-load speedup
 percentage is inferred across the differently instrumented prototype runs.
+
+
+## Forkserver and typed DNS follow-up (2026-10-30)
+
+Runtime `478e5992a73e867c478f1cf54601fb42e7cc4dab` fixes two independently
+reproduced compatibility failures in the common runtime. Neither fix adds a
+Firefox preference, a new coordinator thread, a global lock or a memory policy.
+
+A blocked `recvmsg` can initially be attempted by the joined kernel, leaving
+`-EAGAIN` in CPU register x0 while its pending call retains the original arguments.
+When SCM_RIGHTS later arrives, the worker must defer descriptor reception to the
+owner before consuming bytes. That checkpoint previously discarded the saved
+entry ABI and dispatched the syscall using x0 as a new FD. Guest-side tracing
+showed forkserver `recvmsg(3, ...)` fail with EBADF while the owner actually
+received FD `-11`; the real FD 3 still closed successfully afterward. This was
+an argument handoff bug, rather than an incorrectly shared fork descriptor table.
+
+The checkpoint now restores x0–x5 and x8 from its saved call before returning to
+the joined kernel. Existing retained-OFD and poll ownership remain unchanged;
+the SVC is not re-executed. A real worker regression queues one byte plus an FD,
+starts from the owner-blocked CPU state, verifies all original arguments and PC,
+and confirms neither the byte nor rights were consumed before the handoff.
+It fails on the old implementation with x0=-11 instead of 3 and passes after the
+fix. In the diagnostic Firefox run before this correction, 14 FSC launch warnings
+were recorded. A subsequent three-site diagnostic run created further content
+processes without reproducing those warnings. This does not guarantee that every
+future subprocess failure has the same cause.
+
+The DNS endpoint previously rejected every RR type except A/AAAA with NOTIMP.
+It also omitted a valid question from those error replies. Echoing the question
+is required for ordinary query matching; see [RFC 5452, section 9.1](https://www.rfc-editor.org/rfc/rfc5452.html#section-9.1).
+However, fixing that alone does not remove the delay: musl deliberately ignores
+NOTIMP/refusal and waits for another usable reply. The static Linux resolver
+probe reproduced about five seconds per HTTPS/TXT request.
+
+Typed IN queries now use the host's configured resolver through `res_nsend`,
+with a private resolver context per call on Apple/glibc and stateless `res_send`
+on musl, on the existing two bounded DNS workers. A/AAAA retain getaddrinfo and
+platform name-service behavior. Real record bytes and upstream negative results
+are preserved; localhost and virtual .trames names remain local. Oversized wire
+answers request TCP retry rather than splitting compressed resource records.
+Stripping an incoming OPT trailer also clears its record count. Invalid or
+unsupported classes retain a matchable error response. This does not implement
+a separate encrypted DNS client or claim complete platform split-DNS semantics
+beyond these system resolver interfaces.
+
+| Static Linux resolver probe | Before | Fixed |
+| --- | ---: | ---: |
+| localhost HTTPS/type 65 | 5,000.881 ms, retry failure | 0.708 ms, NO_DATA |
+| localhost TXT/type 16 | 4,999.838 ms, retry failure | 0.187 ms, NO_DATA |
+| localhost A | 3.380 ms | 2.519 ms |
+
+An additional public-domain probe returned the host's real HTTPS NODATA in
+2.630 ms, a TXT answer in 222.865 ms, and an A answer in 4.825 ms. These are
+individual observations, not DNS throughput or page-load speedup estimates.
+Firefox may still log a failed typed lookup for a genuine NODATA response;
+the relevant correction is avoiding the synthetic NOTIMP retry timeout.
+
+Local validation passes 67 network cases and 215 common kernel cases on both
+macOS and native ARM64 Linux (three existing kernel skips), strict affected
+Clippy, 47 signed HVF hardware cases plus the Mac pressure case, the iPad ARM64
+FFI check, and the signed Mac release build. A pre-existing Clippy-only test
+Vec was changed to an array. Unchanged memory/Vulkan/guest graphics results from
+the previous section are reused. Temporary socket interposers and Rust tracing
+are excluded from the product and retained timing build.
+
+
+### Coherent shadow transfers without per-page hardware revocation
+
+The first two compatibility fixes did not make page loading consistently fast.
+A separate two-second post-Bilibili sample found 665 of 1,066 samples on GPU
+worker 0 inside Vulkan coherent synchronization. Many descended into
+`HardwareStorage::begin_host_access`/`end_host_access`, `hv_vm_protect` and the
+hypervisor's mapped-range vector maintenance. The AppKit thread was idle in
+1,062 of its 1,066 samples. These are thread sample counts, not whole-process CPU
+percentages or proof of an entire navigation's time distribution. The sample
+preceded recorded navigation, during session setup. The subsequent Navigate-start
+→ unique loopback launcher DOM marker took 70.631 seconds, including 7.310 seconds
+inside the Navigate command; its initial session-creation wait is excluded.
+
+Runtime `42eb0c9d56e9a0bee963f286ab67970c6b6e08f5` removes this borrowed-slice
+path from ordinary coherent uploads/downloads. The existing shadow mapping was
+already comparing guest/native/baseline bytes. It now uses bounded owned buffers
+and the common `CpuMemory::read`/`write` operations, whose hardware Views use the
+existing raw-region access model. It creates no Rust slice referring to live
+guest hardware bytes and therefore needs no extra stage-two revocation for
+these copies. The bounded staging costs up to two 4 KiB stack buffers; it does
+not introduce a persistent allocation, permission policy or synchronization
+thread. Presentation continues through its separate native image path.
+
+Downloads write only runs changed by the GPU. CPU-owned input bytes remain
+untouched, unchanged output does not dirty guest pages, and a failed write rolls
+back the uncommitted baseline so a later synchronization can retry correctly.
+The original checked chunk path remains available for write-only mappings;
+ordinary read permission is not newly required. Guest Vulkan synchronization
+responsibilities and volatile native accesses remain unchanged.
+
+A frozen hardware-export View regression fails before the change because an
+upload enters a hardware byte borrow. Afterward upload/download complete without
+any such borrow, while preserving independent CPU input and GPU output. Separate
+tests cover a failed second output run and write-only mappings. All 43 Vulkan
+cases pass on macOS and native ARM64 Linux with strict Clippy; the iPad FFI check
+and signed Mac build pass. The real MoltenVK resource oracle also verifies 256
+GPU results, dynamic offsets, texel buffers, storage images, pipeline-cache
+round trips, pool reuse and final budget release. Earlier unchanged kernel,
+network and HVF acceptance results are reused.
+
+
+### Ordered page-load observations after the coherent change
+
+The [filtered record](mac-firefox-navigation.json) retains all warmups and trials
+for both builds, the earlier failed mixed-site stress batch, binary hashes, DNS
+probes and validation counts. Each site uses a new Firefox process with the same
+previously visited isolated profile, one excluded warmup, three retained trials,
+1920×792 CSS pixels, 12 CPU slots, host-managed memory and default graphics/
+security/process settings. No build, sampler or verbose HTTP log runs during
+retained timings. The earlier in-app measurements are retained as a reference.
+
+| Page | Before coherent change, three samples (median), seconds | After, three samples (median), seconds | Earlier in-app median |
+| --- | --- | --- | ---: |
+| Wikipedia | 4.745 / 9.628 / 6.112 (**6.112**) | 3.847 / 2.606 / 5.425 (**3.847**) | 0.554 s |
+| GitHub | 10.307 / 7.127 / 14.272 (**10.307**) | 3.990 / 8.753 / 3.990 (**3.990**) | 0.472 s |
+| Bilibili | 16.375 / 29.635 / 47.623 (**29.635**) | 11.341 / 13.097 / 12.319 (**12.319**) | 0.598 s |
+
+All nine requested target markers complete in each per-site batch. The 47.623 s
+sample is preserved even though Firefox's busy renderer overran its nominal
+30 s implicit wait. An earlier mixed-site stress batch still aborted on a
+Bilibili target-element RPC timeout; it is not silently discarded or relabelled
+as a measured page-load duration. Third-party WebGL/context-loss, script-timeout
+and chunk-loading messages are observations, not proven explanations for every
+stall. Some chunk-loading errors also remain after the coherent change.
+
+These are click-command-start → DOM-marker measurements, not pixel presentation,
+complete page/resource loading or interactive latency. Ordered small samples,
+cache changes and dynamic origin/CDN responses preclude a stable whole-browser
+speedup claim. The reduced medians are encouraging, while the substantial gap to
+the earlier in-app reference and the remaining variation are explicit.
+
+Between successive Bilibili trials, returning to the unique launcher and finding
+its next link took 13.378 / 40.508 / 40.934 seconds before this change versus
+8.439 / 15.946 / 4.843 seconds after. This combined setup includes browser command
+and DOM-wait overhead and is separate from the target-page times above. A later
+standalone loopback transition was 6.812 seconds after versus 70.631 before; this
+is a separate diagnostic observation, not a fourth controlled page-load trial.
+
+The post-change two-second sample contains no `hv_vm_protect` frames, while
+Vulkan coherent synchronization still scans/computes over mapped buffers. The
+sampling phases differ, so no aggregate CPU-percentage improvement is inferred.
+Reducing unnecessary whole-mapping scans or importing eligible native GPU memory
+remains a distinct next step; this change does not claim zero-copy GPU sharing.
+The normal Firefox profile is restored after testing without Marionette.
