@@ -3737,5 +3737,154 @@
       "Mapped/overlay and directory sync, namespace mutation commits and required cohort joins remain. This change does not remove every coordinator disk wait or snapshot cost."
     ],
     "local_artifact_root": "/Users/main/dev/trames/target/checkpoint-opt-20261030"
+  },
+  "gles31_native_follow_up": {
+    "date": "2026-10-30",
+    "base_runtime_revision": "802a7c2c0062f771a6e2cd9063e7b58d2fe7f99c",
+    "runtime_revision": "85346b8c4eb6c11e687642ae3c82d00a8c0ddc5c",
+    "base_ipad_revision": "634088e2060bb96982c19b6315849d2a4a108d77",
+    "base_mac_revision": "200525d9751acb43f6589a2e37c3014284fef73f",
+    "source_sha256": {
+      "runtime/crates/trames-vulkan/src/backend.rs": "c0e297c9355c24c13c88fd8c4dc286bdf380fc4b60000c046f3a4efea242da77",
+      "runtime/crates/trames-vulkan/src/backend/graphics.rs": "4704a79166189d687ff3dc38f4c4d669b46eb98384f32f30645e1dba470676f7",
+      "runtime/crates/trames-vulkan/src/backend/core_features.rs": "1b4991227963bd5897737c49303c490d29443cd05390d2a30fab6f753551e6f2",
+      "accelerator/vulkan/icd.c": "3fb4034cbc617e0d6b2ae5f2f2dc32a14e6b20c4cff482849cf0313c79dce7f4",
+      "accelerator/vulkan/graphics.inc": "fcdfe3022e0272f11635b78de211f99cb940991c6d4761bdfa57ba66dbcc3548",
+      "accelerator/vulkan/entrypoints.inc": "3acaffb23bf4e504bb02e6acc847d6c1e6c6ebd03048fa1e9e104d27a30032f8",
+      "scripts/build-vulkan-guest.sh": "0b3ab1eac6c2c67f8073102c71735971db8df29700a822520653947f89dd5afb",
+      "tests/fixtures/zink-es31.c": "a6becb6cbb012cd0b71ebfd108023992aa4b5da35b88c07d1ef5549304c56be4"
+    },
+    "mac_harness_sha256": "eb85ed38f3ce344950307529d15c171fe59737030395ca5c593abc78b706148d",
+    "runner_sha256": "cca40815af200d9e862d272f0a77095f171e1f78e57f36e232f5aea4fe251000",
+    "icd_sha256": "0a277a730daa2f040cee2e55febd0ade9f7c1fe1bd4e3b2e6f1836101f82ddfd",
+    "fixture_sha256": "bf3d82151d7b5e59317d90c77f18f5ade8badfdb1f80f72417bec9cff5bbcb0f",
+    "vulkan_headers_revision": "cfebfc96b2b0bce93da7d12f2c14cc01793ae25c (1.3.281)",
+    "guest_manifest": {
+      "profile": 65542,
+      "auxv_key": "0x54520008",
+      "wire_revision": 9,
+      "optional_host_bridge": {
+        "capability_operation": 200,
+        "shared_mapping_bit": 1,
+        "completion_wait_bit": 2,
+        "shared_map_hint": "0x534841524544",
+        "fence_wait_operation": 201,
+        "timeline_wait_operation": 202
+      },
+      "gpu_indirect_commands": {
+        "draw": 203,
+        "draw_indexed": 204,
+        "dispatch": 205
+      },
+      "compressed_texture_blocks": "native-supported ETC2/EAC, ASTC LDR and BC",
+      "experimental": true,
+      "instance_api": "1.1.0",
+      "device_api": "1.0.0",
+      "scope": "selected compute, graphics, queries, descriptor templates, Wayland and fixed-display WSI API; not Vulkan conformance or complete Zink",
+      "icd_sha256": "0a277a730daa2f040cee2e55febd0ade9f7c1fe1bd4e3b2e6f1836101f82ddfd",
+      "loader": "unmodified distro libvulkan.so.1",
+      "headers": "1.3.281",
+      "native_moltenvk": "1.4.2",
+      "default_enabled": false
+    },
+    "native_driver_sha256": {
+      "macos-arm64-7d93983f18ed9ded45ab": "8df0c873b11d921091b0ddafb572c7c368852f6bcccd8f098ed5ea7bcae8bb5d",
+      "ios-arm64-3d0303018930f923aa0c": "ca028482256e3419438422f61df9cdff86e7b63688b6c8999adb53ee44ca8841"
+    },
+    "native_archives_source_unchanged": true,
+    "core_feature_wire_bits": {
+      "0": "sampler_anisotropy",
+      "1": "logic_op",
+      "2": "fill_mode_non_solid",
+      "3": "shader_clip_distance",
+      "4": "independent_blend",
+      "5": "image_cube_array",
+      "6": "sample_rate_shading",
+      "7": "shader_image_gather_extended",
+      "8": "shader_storage_image_extended_formats",
+      "9": "shader_storage_image_read_without_format",
+      "10": "shader_storage_image_write_without_format",
+      "11": "vertex_pipeline_stores_and_atomics",
+      "12": "fragment_stores_and_atomics",
+      "13": "shader_uniform_buffer_array_dynamic_indexing",
+      "14": "shader_sampled_image_array_dynamic_indexing",
+      "15": "shader_storage_buffer_array_dynamic_indexing",
+      "16": "shader_storage_image_array_dynamic_indexing",
+      "17": "multi_draw_indirect",
+      "18": "draw_indirect_first_instance",
+      "19": "texture_compression_etc2",
+      "20": "texture_compression_astc_ldr",
+      "21": "texture_compression_bc"
+    },
+    "mechanisms": [
+      "One selected native-field definition governs physical feature queries and host device enablement. Legacy bits 0-6 are preserved; bits 7-21 expose only actual native image/storage/atomic/indexing/indirect/compression support.",
+      "Operations 203/204/205 record native draw, indexed-draw and dispatch indirect commands. Original argument-buffer/memory ownership joins the existing command graph, without CPU argument readback/expansion, descriptor rescan or a new synchronization barrier.",
+      "Mesa aggregate graphics-shader barrier masks omit only absent geometry/tessellation stages; active producer/consumer stages remain. Individual unsupported stage requests remain rejected.",
+      "Native ETC2/EAC, ASTC-LDR and BC paths use block dimensions/bytes for format admission and transfer footprints, including mip edges, row padding, array slices, matching compressed image copies and compatible views."
+    ],
+    "native_gpu_acceptance": {
+      "passed": true,
+      "scope": "selected GLES 3.1 GPU/ASTC output oracles, not full CTS",
+      "runner_sha256": "cca40815af200d9e862d272f0a77095f171e1f78e57f36e232f5aea4fe251000",
+      "inputs": {
+        "libEGL.so.1": "0fa0e1bbd4494aefa9f4739c65722c78db1d17c33588fccbdcd91aecd265eb8d",
+        "libgallium-25.1.9.so": "bed7fd21427414dce5ceae41ae7ab2dbc31e3885071dafe8bd93b982adc98912",
+        "libGLESv2.so.2": "1be4cbcf9ccb483a0135f5af76644f6fd7aa894ca4b39dac09857176b1d4dce7",
+        "libtrames_vulkan_icd.so": "0a277a730daa2f040cee2e55febd0ade9f7c1fe1bd4e3b2e6f1836101f82ddfd",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "zink-es31": "bf3d82151d7b5e59317d90c77f18f5ade8badfdb1f80f72417bec9cff5bbcb0f",
+        "icd.json": "f30a9da3fd89c733d5a13f80111d0ee0851a0ceed5e4ec17e5199f1d4416c891"
+      },
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "oracle_chain": "Compute shader writes dispatch and both draw records; indirect compute then both indirect draws are recorded before any CPU verification readback. The source argument buffer is deleted before the final readback. Verify compute values, four atomic increments, fragment atomic count and image pixels.",
+    "astc_oracle": "8x6 ASTC blocks in a 9x7 texture: native upload, 1x1 logical-edge subimage update, image-to-image copy and 63 exact red/green/blue pixels.",
+    "legacy_pbo_oracle": "128 exact signed/unsigned integer components and two required cross-signedness errors pass on the final pinned-header ICD.",
+    "firefox": {
+      "probe_version": "OpenGL ES 3.1 Mesa 25.1.9",
+      "renderer": "zink Vulkan 1.0(Apple M6 (MOLTENVK))",
+      "original_profile_unchanged": true,
+      "normal_launch_without_automation": true,
+      "wikipedia_presented": true,
+      "version_override": false
+    },
+    "validation": {
+      "vulkan_unit_tests_passed_macos": 48,
+      "vulkan_unit_tests_passed_linux_arm64": 48,
+      "strict_vulkan_all_targets_lint": true,
+      "strict_mac_all_targets_lint": true,
+      "signed_mac_release_build": true,
+      "ipad_arm64_ffi_compile": true,
+      "execution_boundaries_both_products": true,
+      "native_one_and_twelve_cpus": true,
+      "test_only_final_change": "Use div_ceil in an existing footprint test for lint; equivalent passing production/GPU builds and Linux runs reused. The final oracle-only C change reruns only the focused GPU harness.",
+      "unchanged_checks_reused": "CPU/interpreter, kernel, memory/VFS, native driver SDK/archive and unrelated GPU acceptance retain their prior passing results."
+    },
+    "development_diagnostics": [
+      "The original aggregate shader-stage barrier rejection is reproduced and corrected; active-stage unit regression covers it.",
+      "An early oracle texture was incomplete before copy; the final test sets its minification filter before copying and passes.",
+      "The initial RAM-only fixture rootfs exceeds its existing VFS capacity with the Mesa bundle; all final cases use a separate disposable disk store. No guest memory policy is changed.",
+      "Final repository-pinned-header artifact is retested after its binary differs from the initial system-header build."
+    ],
+    "limits": [
+      "Selected functional GLES 3.1 acceptance, not complete Vulkan/GLES conformance or a speed claim.",
+      "Geometry/tessellation execution remains disabled.",
+      "Existing single-sample rendering/texture creation and missing full multisample/resolve paths remain.",
+      "Compressed/uncompressed reinterpret copies, ASTC HDR and ASTC 3D are not added.",
+      "Physical iPad GPU acceptance and a new IPA are not performed."
+    ],
+    "local_artifact_root": "/Users/main/dev/trames/target/gles31-20261030"
   }
 }

@@ -928,3 +928,61 @@ guest Mesa/loader validation are reused. All raw samples, failures, source/binar
 identities and diagnostic limits are under resident_metadata_disk_sync_follow_up
 in [the GPU record](mac-firefox-gpu.json). The normal Firefox profile is restored
 unchanged after the isolated test processes exit.
+
+## Native GLES 3.1 features and compressed textures (2026-10-30)
+
+The physical Apple M6/MoltenVK path now naturally reports **OpenGL ES 3.1 Mesa
+25.1.9**. Feature discovery and native device creation share one selected-field
+definition. New image formats/unformatted access, storage/atomics, supported
+resource-array indexing, indirect drawing and compression flags come from the
+actual driver; legacy wire bits 0–6 are unchanged. Geometry and tessellation
+execution remain disabled. The existing guest/native memory model is unchanged.
+
+The guest ICD adds DrawIndirect, DrawIndexedIndirect and DispatchIndirect at
+operations 203–205. Commands retain their original argument-buffer/memory owners
+in the existing command graph and send the buffer directly to native Vulkan.
+There is no CPU argument readback, expansion into direct calls, descriptor rescan,
+new wait/service thread or extra GPU publication barrier. Existing application
+synchronization still applies. Mesa's aggregate shader-stage masks now omit only
+the profile's absent geometry/tessellation stages while preserving every active
+producer/consumer. Individual unsupported stage requests remain rejected.
+
+Native ETC2/EAC, ASTC-LDR and BC image paths use compressed block dimensions and
+bytes, covering row padding, array slices, mip levels and partial final blocks at
+logical image edges. Matching compressed image copies and compatible views use
+the same block layout. Host format queries continue to decide actual support.
+
+| Functional oracle | Result |
+| --- | --- |
+| Actual context, without version override | GLES 3.1, Apple M6 through MoltenVK |
+| GPU-produced indirect chain | Compute writes argument records; indirect dispatch, draw and indexed draw are recorded before any CPU result readback |
+| Images, SSBOs and atomics | Compute values, four atomic-counter increments, fragment image reads/atomic writes and exact output pixels pass |
+| Argument resource lifetime | Source buffer deleted before final readback; recorded commands retain native resources |
+| Native ASTC | 8×6 blocks in a 9×7 texture, edge-block subimage update, image copy and 63 exact decoded pixels pass |
+| One/twelve CPUs | Both cases pass and release native GPU memory to zero |
+| Unchanged integer PBO regression | 128 exact signed/unsigned components and two required type errors pass |
+| Normal Firefox | Original profile/preferences retained, probe reports GLES 3.1 and Wikipedia presents normally |
+
+The C oracle is maintained in
+[trames-ipad](https://github.com/kb5000/trames-ipad/blob/main/tests/fixtures/zink-es31.c).
+Build it in ARM64-musl using the pinned Mesa source headers and paired
+libGLESv2.so.2, libEGL.so.1 and libgallium-25.1.9.so; link those three libraries
+explicitly. The final guest ICD uses repository-pinned Vulkan 1.3.281 headers.
+The self-contained [Mac harness](../../tests/integration/mac-gles31.py) accepts
+those artifacts and a disposable installed-Mesa store with their distro
+libraries. It imports unique temporary inputs, checks GPU outputs on one/twelve
+CPUs and cleans them up. Never use the active Firefox store for this harness.
+
+Local affected validation passes 48 Vulkan unit tests per macOS/ARM64 Linux,
+strict Vulkan and Mac product lints, the signed Mac release build and the ARM64
+iPad FFI compile. The unchanged CPU, kernel, memory/VFS and native-driver archive
+checks are reused; the archives and guest Mesa sources are unchanged. The final
+C-oracle-only change repeats only its focused GPU acceptance. Full raw results,
+source/binary hashes, additive wire revision 9, initial diagnostic failures and
+scope are under gles31_native_follow_up in [the GPU record](mac-firefox-gpu.json).
+
+This is selected functional acceptance, not complete GLES/Vulkan conformance.
+Single-sample rendering/texture creation, missing full multisample/resolve paths,
+geometry/tessellation, compressed/uncompressed reinterpret copies and full GLES
+CTS remain further work. ASTC HDR/3D are not added. Physical iPad GPU testing and
+a new IPA are not performed. This batch makes no overall browser-speed claim.
