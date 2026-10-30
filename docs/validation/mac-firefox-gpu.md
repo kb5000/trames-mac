@@ -986,3 +986,37 @@ Single-sample rendering/texture creation, missing full multisample/resolve paths
 geometry/tessellation, compressed/uncompressed reinterpret copies and full GLES
 CTS remain further work. ASTC HDR/3D are not added. Physical iPad GPU testing and
 a new IPA are not performed. This batch makes no overall browser-speed claim.
+
+## Driver-backed neural compute (2026-10-30)
+
+The paired runtime now exposes selected Vulkan 1.1 compute/query paths and 17
+original-driver compute extensions. Low-bit storage/arithmetic, FP16 subgroups,
+FP32 buffer atomics, integer dot products, Vulkan memory model and buffer device
+addresses execute on the original Metal GPU. Full feature/property/creation scope
+and exact evidence are maintained in the shared
+[compute implementation record](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-compute.md#driver-backed-neural-compute-implementation-2026-10-30).
+
+The new [headless harness](../../tests/integration/mac-vulkan-neural.py) accepts
+`--runner`, `--store`, `--inputs`, `--loader` and a fresh `--output`. Its disposable
+store must have no concurrent runner. The input directory contains the paired
+`libtrames_vulkan_icd.so`, `vulkan-neural`, `vulkan-neural.spv` and
+`vulkan-neural-dot.spv`; the focused guest build script lives in trames-ipad.
+
+| Acceptance on the final runner/ICD | Result |
+| --- | --- |
+| Original native Apple M6 reference and one/twelve guest CPUs | 64 exact FP16 GEMM results, INT8/INT16, half subgroup reduction/shuffle/ballot, FP32 buffer atomic add, memory model and pointer-only coherent GPU reads/writes pass |
+| Packed INT8 dot products | 64 exact outputs pass, preserving native unaccelerated properties |
+| Negotiation | Individual/aggregate query/create, bind-memory2, queue2 and GPU address paths pass; unsupported replay and requested subgroup size reject |
+| CPU/GPU transfers | Three shared allocations; zero upload/download and scanned synchronization bytes |
+| Existing GLES 3.1/indirect/image/ASTC and integer PBO paths | Final artifact passes one/twelve CPU GLES and all 128 PBO component/type-error checks |
+| Local shared-runtime validation | 51 tests per macOS/ARM64 Linux, strict lints, signed Mac release and ARM64 iPad FFI compilation pass |
+
+An independent native-driver failure prevents exposing shared FP32 atomics on the
+pinned Apple MoltenVK: it advertises the fields, but native Metal rejects the
+threadgroup add/exchange shaders. Only those fields are masked on this driver;
+FP32 buffer atomics work. Normal and forced-shadow mapping acceptance also passes
+through the ARM64 Linux interpreter/Lavapipe with the same shader outputs. This
+adds no coordinator/service thread, CPU tensor implementation or per-access
+publication barrier. There is no full CTS, model benchmark or physical iPad GPU
+claim. The active Firefox session is left running; new launches use the updated
+paired guest artifact.
