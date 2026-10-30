@@ -1054,3 +1054,45 @@ complete graphics coverage, model inference/performance and physical iPad GPU
 acceptance remain unmeasured. The active Firefox session stays running; new
 launches use the paired ICD. Hashes/results are under `core12_follow_up` in
 [the GPU record](mac-firefox-gpu.json).
+
+
+## Native color MSAA and resolve (2026-10-30)
+
+The paired common runtime now carries original-driver sample counts, native
+multisample images/pipelines, both sample-mask words, sample shading and
+alpha-to-coverage. Color resolves work in a subpass and through
+`vkCmdResolveImage`. Legacy/renderpass2 and real/imageless framebuffers preserve
+application attachment indices, including eight colors + eight resolves + depth.
+Immutable metadata belongs only to render passes; ordinary GPU objects keep one
+pointer. The common implementation and remaining scope are maintained in
+[trames-ipad](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-compute.md#native-color-msaa-and-resolve-2026-10-30).
+
+| Final Apple M6/MoltenVK functional acceptance | Result |
+| --- | --- |
+| Original native reference and one/twelve guest CPUs | 2/4/8 samples, 19 cases and 9,408 RGBA pixels per run within one UNORM unit; masks, per-sample shading, alpha coverage and depth rejection pass |
+| Attachment/resolve coverage | Arbitrary indices, both renderpass APIs, real/imageless framebuffer and the 17-attachment stress case pass |
+| Actual original Zink/GLES 3.1 | Four-sample color/depth renderbuffers, full/partial/zero masks, alpha-to-coverage and framebuffer-blit resolve; all 256 pixels per run pass on one/twelve CPUs |
+| CPU/GPU transfers | Vulkan and GLES oracles retain zero CPU upload/download and zero scanned synchronization bytes |
+| Same final runner/ICD regressions | Selected Vulkan 1.2/68 MiB mapping, neural FP16/INT8/subgroups/atomics/BDA, GLES indirect/image/ASTC and 128-component PBO paths pass |
+| Affected local checks | 54 Vulkan tests per macOS/ARM64 Linux, strict lints, signed Mac release, Linux CLI release, both product boundaries and ARM64 iPad FFI compile pass |
+
+The new [Vulkan harness](../../tests/integration/mac-vulkan-msaa.py) accepts an
+input directory with the paired ICD, `vulkan-msaa`, `vulkan-msaa.vert.spv` and
+`vulkan-msaa.frag.spv`. The [Zink harness](../../tests/integration/mac-zink-msaa.py)
+uses the existing GLES fixture/library options with `zink-msaa`. Both use a
+headless disposable store; the focused fixture build script lives in trames-ipad.
+
+Metal teardown allocation is recorded separately from functional acceptance.
+The original native driver and Trames both report 1 MiB after this workload.
+Three independent native rounds remain at 1,196,032 bytes after autorelease
+cleanup, without growth; the exact native/Metal retention cause is unproven.
+This is not a zero-allocation teardown claim. No native driver archive is changed.
+
+ARM64 Linux/Lavapipe passes the same Vulkan oracle on one/four CPUs through shared
+and forced-shadow mappings. Depth/stencil resolve, multiview, multisample arrays
+on Apple, multiple subpasses/input attachments, secondary commands/events,
+separate depth/stencil layouts and descriptor indexing remain further work.
+Full CTS, physical iPad GPU acceptance, a new IPA and overall browser-performance
+improvements are not claimed. Firefox stays running with its current profile;
+new launches use the paired ICD. The full evidence is under
+`color_msaa_follow_up` in [the GPU record](mac-firefox-gpu.json).

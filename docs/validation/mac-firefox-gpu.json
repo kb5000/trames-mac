@@ -4100,5 +4100,203 @@
       }
     },
     "active_firefox": "left running; no profile/preference changes"
+  },
+  "color_msaa_follow_up": {
+    "date": "2026-10-30",
+    "runtime_revision": "f3234818d56221c2cb5ca24080af1c65fa92b016",
+    "wire_revision": 12,
+    "scope": "Native color MSAA and color resolve for the selected single-subpass/single-layer framebuffer profile; not complete Vulkan/GLES conformance",
+    "mac_msaa": {
+      "passed": true,
+      "scope": "native MSAA masks/sample shading/depth, alpha coverage, subpass and explicit resolve; not complete CTS",
+      "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+      "inputs": {
+        "libtrames_vulkan_icd.so": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "vulkan-msaa": "9e5d8f2e50542241158c867b0e380b7f9afbf968b9a66ab3ff72384b112931a4",
+        "vulkan-msaa.vert.spv": "368ba9ddfa272fc42aa4b056a0130868424fa9b881eca7447a9011fcadde5629",
+        "vulkan-msaa.frag.spv": "4b96a29b109340c4f93b32056f28e0155c1f204f9eaa7402f23b4a74470ed3ff",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "icd.json": "345462c2e00093a654ca6160195d13af1a3b1f2a9e34481a75bcef446d458578"
+      },
+      "teardown_metric_scope": "Metal currentAllocatedSize before MTLDevice release; includes native driver/autoreleased resources, not a Vulkan live-object count",
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "mac_zink_msaa": {
+      "passed": true,
+      "scope": "GLES multisample renderbuffers, masks, alpha coverage and resolve; not full CTS",
+      "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+      "inputs": {
+        "libEGL.so.1": "0fa0e1bbd4494aefa9f4739c65722c78db1d17c33588fccbdcd91aecd265eb8d",
+        "libgallium-25.1.9.so": "bed7fd21427414dce5ceae41ae7ab2dbc31e3885071dafe8bd93b982adc98912",
+        "libGLESv2.so.2": "1be4cbcf9ccb483a0135f5af76644f6fd7aa894ca4b39dac09857176b1d4dce7",
+        "libtrames_vulkan_icd.so": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "zink-msaa": "7f23fb67a43b470c57e6f0d324c6968254bc5be6c2cda612f0ffc6bfc5b425a0",
+        "icd.json": "dab969df302f71c2f5dd286e17d3d526b63ac11d228ccfb72e38aa92dcc35ba6"
+      },
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "pixel_oracle": {
+      "vulkan_cases_per_run": 19,
+      "native_multisample_counts": [
+        2,
+        4,
+        8
+      ],
+      "rgba_pixels_per_mac_run": 9408,
+      "zink_multisample_count": 4,
+      "zink_cases_per_run": 4,
+      "zink_rgba_pixels_per_run": 256,
+      "unorm_tolerance": 1,
+      "modes": [
+        "all samples",
+        "alternating sample mask",
+        "sample-ID shading",
+        "alpha-to-coverage with zero alpha",
+        "depth rejection",
+        "zero sample mask without inline resolve"
+      ],
+      "stress": "eight MSAA colors + eight native resolves + depth, 17 attachments, reversed order, renderpass2 and imageless framebuffer"
+    },
+    "mac_shared_mapping_metrics": {
+      "maps": 19,
+      "mapped_bytes": 39936,
+      "upload_bytes": 0,
+      "download_bytes": 0,
+      "upload_scanned_bytes": 0,
+      "download_scanned_bytes": 0
+    },
+    "mac_zink_shared_mapping_metrics": {
+      "maps": 2,
+      "mapped_bytes": 4194304,
+      "upload_bytes": 0,
+      "download_bytes": 0,
+      "upload_scanned_bytes": 0,
+      "download_scanned_bytes": 0
+    },
+    "teardown_observation": {
+      "metal_statistic": "MTLDevice.currentAllocatedSize sampled before releasing MTLDevice; not Vulkan live-object accounting",
+      "native_and_guest_reported_mib": 1,
+      "independent_native_repeat_probe": {
+        "baseline_bytes": 65536,
+        "post_autorelease_drain_bytes": [
+          1196032,
+          1196032,
+          1196032
+        ],
+        "cases_per_round": 19
+      },
+      "interpretation": "Same nonzero residue occurs through original native Vulkan without Trames and stays constant across three repeated rounds; no incremental drift observed. Exact native/Metal retention cause remains unproven; zero teardown allocation is not claimed."
+    },
+    "checks": {
+      "macos_vulkan_unit": 54,
+      "arm64_linux_vulkan_unit": 54,
+      "macos_linux_vulkan_strict_clippy": "pass",
+      "mac_product_strict_clippy": "pass",
+      "signed_mac_release_build": "pass",
+      "linux_cli_release_build": "pass",
+      "arm64_ipad_ffi_compile": "pass",
+      "paired_schema_exports": "pass",
+      "both_product_boundaries": "pass"
+    },
+    "regressions": {
+      "core12": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+        "icd_sha256": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "cleanup_exit": 0
+      },
+      "neural": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+        "icd_sha256": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "cleanup_exit": 0
+      },
+      "gles": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          },
+          {
+            "cpus": 12,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+        "icd_sha256": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "cleanup_exit": 0
+      },
+      "pbo": {
+        "passed": true,
+        "cases": [
+          {
+            "cpus": 1,
+            "exit_code": 0,
+            "passed": true
+          }
+        ],
+        "runner_sha256": "b09bda4ee785a62b2358d64b2d40d982d36e5d0fd336f41fa082b203c528c5b0",
+        "icd_sha256": "085627bc2cad68c4674edf32bf67dfe782ad09e07d3786cad580e78133a56f2b",
+        "cleanup_exit": 0
+      }
+    },
+    "shared_record": "https://github.com/kb5000/trames-ipad/blob/main/docs/validation/vulkan-compute-data.json",
+    "active_firefox": "Left running; no profile or preference changes. New launches use the paired ICD."
   }
 }
