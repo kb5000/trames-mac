@@ -861,3 +861,70 @@ skips). Strict affected/Mac lints, the ARM64 iPad FFI compile with the matching
 native archive and the signed Mac release build pass. Unchanged CPU execution,
 GPU-memory ownership and guest Mesa/loader validation are reused. The normal
 non-automation Firefox profile is restored after timing.
+
+## Resident file metadata and disk sync scheduling (2026-10-30)
+
+Resident, stable file data mappings now retain a metadata domain independent of
+ordinary byte versions. Byte updates already reach canonical shared storage;
+only EOF/source/layout changes require another mapping preparation. Executable
+aliases retain their original content versions and changed-range history under
+a distinct identity. Deferred, volatile and unknown providers keep their original
+conservative path. No extra ordinary-access permission check, barrier or byte lock
+is added. In 8/256/1024-page alias tests a resident data write needs zero page
+checks; the same executable case visits the three touched aliases. Truncate,
+regrowth, external SharedFile size changes, COW and code/monitor behavior remain.
+
+Eligible in-epoch ordinary disk-file fsync/fdatasync now parks its caller on the
+existing two-worker disk pool and returns the CPU execution slot. Owned host
+backing/filesystem resources cross to disk work; the original OFD stays with the
+coordinator. Data sync and durable manifest commit preserve their original errors
+and completion semantics. A per-store manifest transaction mutex covers snapshot
+construction through commit; no global file-byte lock or wait thread is added.
+RAM files stay inline. Mapped/overlay/directory sync and namespace mutations still
+use joined paths; submitted disk work drains before structural mutation.
+
+### Public-page observations
+
+The unchanged controller records click-command start to the existing site-specific
+DOM content marker, with the same graphics/ICD/driver, 12 CPUs, host-managed memory,
+fresh profile per process, visible focused 1920×792 CSS viewport and DPR 1. Each
+complete phase retains one excluded first visit plus three formal rounds per site.
+No build, CI or sampler overlaps retained timing. The initial old-binary phase
+aborts after a content process exits with SIGSEGV; its five successful visits and
+launcher failure remain in the JSON record and are not a complete comparison.
+The old-binary recheck also aborts on a content-process SIGSEGV after ten
+successful target visits, including first visits. Its last Bilibili formal trial
+never starts. The table retains partial sample counts; neither old phase is a
+complete three-site three-round comparison. The optimized phase completes all
+12 target visits, including the three excluded first visits.
+
+| Median, seconds | Old fresh recheck | Optimized |
+| --- | ---: | ---: |
+| Wikipedia | 3.912 (3 visits) | 7.017 (3 visits) |
+| GitHub | 8.449 (3 visits) | 6.433 (3 visits) |
+| Bilibili | 8.784 (2 visits) | 14.699 (3 visits) |
+
+Public-page results remain mixed and network/content state is uncontrolled; these
+small ordered observations do not establish a general browser speedup. Content
+markers are not full loading, presentation, interactivity or video-playback timing.
+The baseline crash is retained as an unresolved observation, not a claimed fix.
+
+Separate five-second optimized navigation samples confirm DiskSyncJob executing
+on existing trames-disk workers, including manifest checkpoints. Coordinator
+checkpoint samples remain: 256/1759 for Wikipedia and 348/1746 for GitHub, from
+joined sync and namespace operations. View preparation remains 214/1759 and
+207/1746. These are inclusive wall-stack observations, not process CPU percentages
+or matched-work speed ratios. The failed baseline diagnostic is not comparable.
+The next durable-I/O boundary is joined mapped/directory sync and namespace
+transactions, rather than adding more per-byte or per-page checks.
+
+Local validation passes 155 memory unit tests (one existing skip) and six memory
+integration cases per OS, 333 macOS/334 ARM64 Linux VFS tests (one skip each), and
+225 common-kernel tests per OS (three skips each). The final scalar read-counter
+change repeats only the 15 affected service tests and lint. Strict affected and
+Mac-product lints, the ARM64 iPad FFI compile with the matching static archive,
+and signed Mac release build pass. Unchanged CPU/GPU-memory, native archives and
+guest Mesa/loader validation are reused. All raw samples, failures, source/binary
+identities and diagnostic limits are under resident_metadata_disk_sync_follow_up
+in [the GPU record](mac-firefox-gpu.json). The normal Firefox profile is restored
+unchanged after the isolated test processes exit.

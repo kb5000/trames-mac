@@ -3135,5 +3135,607 @@
       "The in-app browser was not remeasured."
     ],
     "runtime_revision": "e4b58fb73797258f7bc62094f866b93f0ee2c578"
+  },
+  "resident_metadata_disk_sync_follow_up": {
+    "date": "2026-10-30",
+    "base_runtime_revision": "e4b58fb73797258f7bc62094f866b93f0ee2c578",
+    "runtime_revision": "802a7c2c0062f771a6e2cd9063e7b58d2fe7f99c",
+    "baseline_mac_source_revision": "c5b4b23e2fd60ddd97bfb0c02012c2b1ba4b2f70",
+    "runtime_source_sha256": {
+      "crates/trames-memory/src/backing.rs": "a4989b26ea5bbc38b52529976131598fddbad9752d67ab9febdf95d8f710c8b2",
+      "crates/trames-memory/src/parallel/snapshot.rs": "dd6f64892291816196315c518663721e4b0f22f52cc6b41dbc0b8e13321de2ac",
+      "crates/trames-session/src/process.rs": "0f0c615095327d0ea057c58839da12eca88b73af8bd13fc74977b539aa57d711",
+      "crates/trames-session/src/process_service.rs": "65a7896d587405bc696568b6b15a80d02d716408adb7856a3d47c13edebcfa7d",
+      "crates/trames-session/src/workers.rs": "026fc7308a425ec1cc62cba36b9491f63f5dfa6ceaceda0875bd8e6f120c2c50",
+      "crates/trames-vfs/src/disk_io.rs": "5b51a264e908eef106bcb0bf3d959ce8d3c21136fa34afb618da806de1e0335d",
+      "crates/trames-vfs/src/lib.rs": "d94e9420231181384b6d50df103a08418313efa52d3914d53ab3b9917ef9a061",
+      "crates/trames-vfs/src/mapped.rs": "8ed0d1176de0085f32f5f10aa35558382eb994b8821826bbbd2599cfa679c235",
+      "crates/trames-vfs/src/storage.rs": "a8e086433a78821cbb47faa3fbd4f309a4e6ac79f55322e1a5ba8fd077bb8d41",
+      "crates/trames-vfs/src/storage_tests.rs": "caafffdda5bfcdf21564f4d205174a61ef5fc7d0d0bb59254ed7411e2a233a69"
+    },
+    "runner_sha256": {
+      "baseline": "8c569ab69e090556ca330e740dae43274198a6ee24ab5c9e3e64d23cdd21de88",
+      "optimized": "423d4f900cff2a07a89e535c5a25d81fe88c679883ff87d6a157c6607b37c700"
+    },
+    "controller_sha256": "e086d25b0e396fe11dfd75bf327e1c384b22bc82b30d297dbab9797a46ff4193",
+    "native_driver_sha256": {
+      "macos-arm64-7d93983f18ed9ded45ab": "8df0c873b11d921091b0ddafb572c7c368852f6bcccd8f098ed5ea7bcae8bb5d",
+      "ios-arm64-3d0303018930f923aa0c": "ca028482256e3419438422f61df9cdff86e7b63688b6c8999adb53ee44ca8841"
+    },
+    "guest_icd_sha256": "4a6fb1d0d7f05b27ee243d1abff89988580f72fc7f6cec14bb44918571b1e9cd",
+    "conditions": {
+      "cpus": 12,
+      "memory": "host-managed auto",
+      "fresh_profile_per_process": true,
+      "viewport_css": [
+        1920,
+        792
+      ],
+      "dpr": 1,
+      "window_visible_and_focused": true,
+      "warmups_per_site": 1,
+      "formal_rounds": 3,
+      "site_order": [
+        "wiki",
+        "github",
+        "bilibili"
+      ],
+      "timeout_seconds": 30,
+      "retained_timing_excludes_build_ci_sampler": true,
+      "graphics_security_cache_process_preferences": "unchanged",
+      "metric": "click-command start to site-specific DOM content marker; not complete loading, presentation, or video playback"
+    },
+    "mechanisms": [
+      "Separate stable resident file data metadata domains from executable content domains. Real size/layout/source changes still invalidate aliases; ordinary byte visibility uses retained canonical SharedPage storage.",
+      "Use the selected domain for range hints. Resident data writes need zero per-page checks and hardware-frame refreshes; executable aliases keep their changed-offset history.",
+      "Park eligible ordinary PlainFile fsync/fdatasync callers on the existing bounded disk I/O worker pool, retaining owned resources and synchronous durability/error semantics. No new service/wait thread or polling bus.",
+      "Serialize concurrent manifest construction/commit per actual disk store; no global byte-I/O lock. Joined structural work still drains submitted disk jobs."
+    ],
+    "runs": {
+      "control": {
+        "process": {
+          "pid": 45651,
+          "port": 57517,
+          "profile": "/root/firefox-latency-67703aecd7",
+          "tag": "67703aecd7",
+          "start_unix": 1793359091.497349
+        },
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793359139.7024262,
+            "click_command_ms": 635.7745839999995,
+            "content_ms": 4600.365084,
+            "observed_elapsed_ms": 4600.366833999999,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793359148.628012,
+            "click_command_ms": 4128.047500000001,
+            "content_ms": 8851.816541000002,
+            "observed_elapsed_ms": 8851.817916000002,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793359182.781703,
+            "click_command_ms": 1395.3058749999982,
+            "content_ms": 20983.900959000002,
+            "observed_elapsed_ms": 20983.902542000003,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793359221.575993,
+            "click_command_ms": 510.18679199999895,
+            "content_ms": 10800.515333000007,
+            "observed_elapsed_ms": 10800.516708000003,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793359244.300294,
+            "click_command_ms": 1951.1769579999907,
+            "content_ms": 10177.576374999986,
+            "observed_elapsed_ms": 10177.577707999986,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "automation_error": "{'error': 'no such element', 'message': 'Unable to locate element: #launcher-0b7f4d965d5345afb7302ef8093de32f', 'stacktrace': 'RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5\\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\\n'}"
+          }
+        ],
+        "summary": {
+          "wiki": {
+            "formal_successes": 1,
+            "seconds": [
+              10.800515333000007
+            ],
+            "median_seconds": 10.800515333000007
+          },
+          "github": {
+            "formal_successes": 1,
+            "seconds": [
+              10.177576374999987
+            ],
+            "median_seconds": 10.177576374999987
+          },
+          "bilibili": {
+            "formal_successes": 0,
+            "seconds": [],
+            "median_seconds": null
+          }
+        },
+        "raw_results_sha256": "4ecc0b1eee46ba0e40ffa8a14a8cc08d0ae7edb7ca4c6a70dfc48ecabf8ef6cb",
+        "whole_process_metrics": {
+          "syscalls": 4202291,
+          "context_switches": 1754738,
+          "hardware_mapped_bytes": 8585216,
+          "guest_resident_bytes": 427163648,
+          "vm_checkpoint_groups": 217531,
+          "vm_checkpoint_spaces": 217532,
+          "backing_domain_checks": 62787846,
+          "backing_page_checks": 481831562,
+          "parallel_memory_us": 69890355,
+          "instruction_count": null
+        },
+        "whole_process_metrics_limit": "Different visit counts, background work and diagnostic activity; do not compare totals as a fixed-work speed ratio.",
+        "signal_11_log_entries": [
+          "[Parent 1, IPC I/O Parent] WARNING: process 765 exited on signal 11: file /home/buildozer/aports/community/firefox/src/firefox-142.0/ipc/chromium/src/chrome/common/process_watcher_posix_sigchld.cc:134"
+        ]
+      },
+      "after": {
+        "process": {
+          "pid": 46255,
+          "port": 57875,
+          "profile": "/root/firefox-latency-232a4737c0",
+          "tag": "232a4737c0",
+          "start_unix": 1793359467.7755818
+        },
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793359510.0728772,
+            "click_command_ms": 541.5130409999999,
+            "content_ms": 3762.884958,
+            "observed_elapsed_ms": 3762.8861249999995,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793359518.45798,
+            "click_command_ms": 2028.0699590000015,
+            "content_ms": 4906.248542,
+            "observed_elapsed_ms": 4906.2497920000005,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793359541.33683,
+            "click_command_ms": 2554.5610409999995,
+            "content_ms": 11640.967666000002,
+            "observed_elapsed_ms": 11640.968791000007,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793359557.105427,
+            "click_command_ms": 518.7318329999969,
+            "content_ms": 16514.39291599999,
+            "observed_elapsed_ms": 16514.394207999998,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793359575.55168,
+            "click_command_ms": 1707.7720840000125,
+            "content_ms": 6432.846667000007,
+            "observed_elapsed_ms": 6432.848250000006,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793359593.077309,
+            "click_command_ms": 1851.5440420000004,
+            "content_ms": 14698.53204200001,
+            "observed_elapsed_ms": 14698.533459000004,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793359611.986922,
+            "click_command_ms": 674.8279579999945,
+            "content_ms": 4263.715042000002,
+            "observed_elapsed_ms": 4263.716375000002,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793359622.090504,
+            "click_command_ms": 1594.7219589999975,
+            "content_ms": 12301.307791999989,
+            "observed_elapsed_ms": 12301.309416999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793359642.8304791,
+            "click_command_ms": 3156.6863749999925,
+            "content_ms": 18084.095166999985,
+            "observed_elapsed_ms": 18084.096249999988,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793359672.560202,
+            "click_command_ms": 2506.852959000014,
+            "content_ms": 7016.868709000022,
+            "observed_elapsed_ms": 7016.86970900002,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793359681.515293,
+            "click_command_ms": 1248.3764579999956,
+            "content_ms": 5690.662583000005,
+            "observed_elapsed_ms": 5690.663916000005,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "click_start_unix": 1793359701.29376,
+            "click_command_ms": 1966.5861659999848,
+            "content_ms": 12560.863791000003,
+            "observed_elapsed_ms": 12560.865374999992,
+            "warmup": false
+          }
+        ],
+        "summary": {
+          "wiki": {
+            "formal_successes": 3,
+            "seconds": [
+              16.51439291599999,
+              4.263715042000002,
+              7.016868709000022
+            ],
+            "median_seconds": 7.016868709000022
+          },
+          "github": {
+            "formal_successes": 3,
+            "seconds": [
+              6.432846667000007,
+              12.301307791999989,
+              5.690662583000004
+            ],
+            "median_seconds": 6.432846667000007
+          },
+          "bilibili": {
+            "formal_successes": 3,
+            "seconds": [
+              14.698532042000009,
+              18.084095166999983,
+              12.560863791000003
+            ],
+            "median_seconds": 14.698532042000009
+          }
+        },
+        "raw_results_sha256": "dd5da6a90aa980565d300378b708b46bc697dd6b62b7a7875c2f4f7775992f25",
+        "viewport": {
+          "width": 1920,
+          "height": 792,
+          "dpr": 1,
+          "visible": "visible",
+          "focused": true,
+          "uri": "https://www.bilibili.com/"
+        },
+        "whole_process_metrics": {
+          "syscalls": 6995145,
+          "context_switches": 2946845,
+          "hardware_mapped_bytes": 8765440,
+          "guest_resident_bytes": 415977472,
+          "vm_checkpoint_groups": 305911,
+          "vm_checkpoint_spaces": 305912,
+          "backing_domain_checks": 178439436,
+          "backing_page_checks": 27969446,
+          "parallel_memory_us": 90622861,
+          "instruction_count": null
+        },
+        "whole_process_metrics_limit": "Different visit counts, background work and diagnostic activity; do not compare totals as a fixed-work speed ratio.",
+        "signal_11_log_entries": []
+      },
+      "control-recheck": {
+        "process": {
+          "pid": 46996,
+          "port": 58329,
+          "profile": "/root/firefox-latency-141c5b4b89",
+          "tag": "141c5b4b89",
+          "start_unix": 1793359950.682462
+        },
+        "samples": [
+          {
+            "case": "wiki",
+            "trial": 0,
+            "click_start_unix": 1793359995.399353,
+            "click_command_ms": 1803.4995000000001,
+            "content_ms": 5013.806458,
+            "observed_elapsed_ms": 5013.808125,
+            "warmup": true
+          },
+          {
+            "case": "github",
+            "trial": 0,
+            "click_start_unix": 1793360004.669133,
+            "click_command_ms": 1372.5381250000003,
+            "content_ms": 9274.520583000001,
+            "observed_elapsed_ms": 9274.522083000002,
+            "warmup": true
+          },
+          {
+            "case": "bilibili",
+            "trial": 0,
+            "click_start_unix": 1793360037.602415,
+            "click_command_ms": 1255.9825840000017,
+            "content_ms": 7466.532499999999,
+            "observed_elapsed_ms": 7466.533833999996,
+            "warmup": true
+          },
+          {
+            "case": "wiki",
+            "trial": 1,
+            "click_start_unix": 1793360058.7413828,
+            "click_command_ms": 863.3261250000004,
+            "content_ms": 3912.138209000005,
+            "observed_elapsed_ms": 3912.1392500000097,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 1,
+            "click_start_unix": 1793360069.057879,
+            "click_command_ms": 1182.3845840000047,
+            "content_ms": 7749.024875000004,
+            "observed_elapsed_ms": 7749.026499999999,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 1,
+            "click_start_unix": 1793360089.5872698,
+            "click_command_ms": 816.6812089999951,
+            "content_ms": 9766.899624999993,
+            "observed_elapsed_ms": 9766.90099999999,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 2,
+            "click_start_unix": 1793360118.294708,
+            "click_command_ms": 810.1700830000027,
+            "content_ms": 4528.235458000012,
+            "observed_elapsed_ms": 4528.237250000018,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 2,
+            "click_start_unix": 1793360128.585769,
+            "click_command_ms": 1727.8314579999972,
+            "content_ms": 12004.224249999992,
+            "observed_elapsed_ms": 12004.226125000003,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 2,
+            "click_start_unix": 1793360156.056756,
+            "click_command_ms": 868.8323330000003,
+            "content_ms": 7801.002415999988,
+            "observed_elapsed_ms": 7801.003790999999,
+            "warmup": false
+          },
+          {
+            "case": "wiki",
+            "trial": 3,
+            "click_start_unix": 1793360176.3343098,
+            "click_command_ms": 1059.8983330000067,
+            "content_ms": 3584.154917000006,
+            "observed_elapsed_ms": 3584.156417000003,
+            "warmup": false
+          },
+          {
+            "case": "github",
+            "trial": 3,
+            "click_start_unix": 1793360181.0634072,
+            "click_command_ms": 1134.7225829999843,
+            "content_ms": 8448.639374999999,
+            "observed_elapsed_ms": 8448.640582999986,
+            "warmup": false
+          },
+          {
+            "case": "bilibili",
+            "trial": 3,
+            "automation_error": "{'error': 'no such element', 'message': 'Unable to locate element: #launcher-d11b92b12cba4924bba47d8dd0ad712f', 'stacktrace': 'RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8\\nWebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:199:5\\nNoSuchElementError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:552:5\\ndom.find/</<@chrome://remote/content/shared/DOM.sys.mjs:136:16\\n'}"
+          }
+        ],
+        "summary": {
+          "wiki": {
+            "formal_successes": 3,
+            "seconds": [
+              3.912138209000005,
+              4.528235458000012,
+              3.584154917000006
+            ],
+            "median_seconds": 3.912138209000005
+          },
+          "github": {
+            "formal_successes": 3,
+            "seconds": [
+              7.7490248750000035,
+              12.004224249999991,
+              8.448639374999999
+            ],
+            "median_seconds": 8.448639374999999
+          },
+          "bilibili": {
+            "formal_successes": 2,
+            "seconds": [
+              9.766899624999994,
+              7.801002415999989
+            ],
+            "median_seconds": 8.783951020499991
+          }
+        },
+        "raw_results_sha256": "83c0d3f989390c7d85dd4daadb3ebc3237c68aa7ee5cfc4cf16f721bc146f9e5",
+        "whole_process_metrics": {
+          "syscalls": 4766896,
+          "context_switches": 2018263,
+          "hardware_mapped_bytes": 61652992,
+          "guest_resident_bytes": 397492224,
+          "vm_checkpoint_groups": 241020,
+          "vm_checkpoint_spaces": 241020,
+          "backing_domain_checks": 76191402,
+          "backing_page_checks": 280191873,
+          "parallel_memory_us": 64421195,
+          "instruction_count": null
+        },
+        "whole_process_metrics_limit": "Different visit counts, background work and diagnostic activity; do not compare totals as a fixed-work speed ratio.",
+        "signal_11_log_entries": [
+          "[Parent 1, IPC I/O Parent] WARNING: process 1449 exited on signal 11: file /home/buildozer/aports/community/firefox/src/firefox-142.0/ipc/chromium/src/chrome/common/process_watcher_posix_sigchld.cc:134"
+        ]
+      }
+    },
+    "diagnostics": {
+      "control-failure.sample": {
+        "Thread_10345010: trames-linux": {
+          "total": 2551,
+          "checkpoint": 1647,
+          "prepare_parallel_views": 182,
+          "update_parallel_snapshot": 168,
+          "proc": 9,
+          "wayland_auth": 0,
+          "disk_sync_job": 0
+        },
+        "Thread_10345054: trames-disk": {
+          "total": 2551,
+          "checkpoint": 0,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 0
+        },
+        "Thread_10345073: trames-disk": {
+          "total": 2551,
+          "checkpoint": 0,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 0
+        }
+      },
+      "after/github.sample": {
+        "Thread_10356642: trames-linux": {
+          "total": 1746,
+          "checkpoint": 348,
+          "prepare_parallel_views": 207,
+          "update_parallel_snapshot": 136,
+          "proc": 192,
+          "wayland_auth": 2,
+          "disk_sync_job": 0
+        },
+        "Thread_10356692: trames-disk": {
+          "total": 1746,
+          "checkpoint": 12,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 17
+        },
+        "Thread_10356693: trames-disk": {
+          "total": 1746,
+          "checkpoint": 0,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 0
+        }
+      },
+      "after/wiki.sample": {
+        "Thread_10356642: trames-linux": {
+          "total": 1759,
+          "checkpoint": 256,
+          "prepare_parallel_views": 214,
+          "update_parallel_snapshot": 147,
+          "proc": 196,
+          "wayland_auth": 2,
+          "disk_sync_job": 0
+        },
+        "Thread_10356692: trames-disk": {
+          "total": 1759,
+          "checkpoint": 34,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 46
+        },
+        "Thread_10356693: trames-disk": {
+          "total": 1759,
+          "checkpoint": 35,
+          "prepare_parallel_views": 0,
+          "update_parallel_snapshot": 0,
+          "proc": 0,
+          "wayland_auth": 0,
+          "disk_sync_job": 44
+        }
+      }
+    },
+    "diagnostic_limits": "Five-second all-thread wall-stack samples are inclusive, not CPU percentages. The baseline sample follows a content-process crash and is not matched navigation work. Optimized wiki/GitHub samples are separate excluded diagnostic visits after timing. Their coordinator still checkpoints mapped/directory sync and namespace mutations.",
+    "validation": {
+      "memory_unit_passed_per_os": 155,
+      "memory_existing_skips_per_os": 1,
+      "memory_integration_passed_per_os": 6,
+      "macos_vfs_passed": 333,
+      "linux_vfs_passed": 334,
+      "vfs_existing_skips_per_os": 1,
+      "common_kernel_passed_per_os": 225,
+      "kernel_existing_skips_per_os": 3,
+      "final_service_tests_passed_per_os": 15,
+      "strict_memory_vfs_and_kernel_clippy": true,
+      "mac_all_targets_strict_clippy": true,
+      "ipad_arm64_ffi_matching_archive": true,
+      "signed_mac_release": true,
+      "scope_reuse": "Unchanged CPU execution, native GPU memory ownership, native SDK archives and guest Mesa/loader tests reused. Only service tests/lint repeated after replacing the read metric scan with a scalar counter.",
+      "extra_nonproduct_lint_attempt": "Direct standalone session --all-targets also hits an unchanged trames-kernel manual_range_contains lint in another feature configuration; actual Mac product and common kernel conformance configurations pass."
+    },
+    "limits": [
+      "Initial baseline aborted when a Firefox content process exited with signal 11 while returning to the launcher; all successful and failed rows are retained. This does not establish a crash fix.",
+      "The second old-binary recheck also aborts on a content-process SIGSEGV after ten successful target visits; its two formal Bilibili observations are incomplete. Neither old phase provides a complete three-site three-round set.",
+      "Public DNS/TLS/CDN/content and cache state are uncontrolled. Small ordered samples do not establish a general speedup or near-native performance.",
+      "Mapped/overlay and directory sync, namespace mutation commits and required cohort joins remain. This change does not remove every coordinator disk wait or snapshot cost."
+    ],
+    "local_artifact_root": "/Users/main/dev/trames/target/checkpoint-opt-20261030"
   }
 }
