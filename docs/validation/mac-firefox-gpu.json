@@ -216,5 +216,529 @@
     "native_gpu_presentation_completed": true,
     "window_tests_passed": 3,
     "normal_launcher_without_automation": true
+  },
+  "scoped_coherent_follow_up": {
+    "date": "2026-10-30",
+    "base_runtime_revision": "60b14caf1ef4c13d1fde10650cba07138498bbf0",
+    "control_runtime_metric_source_sha256": {
+      "crates/trames-vulkan/src/backend.rs": "01e2f19d6bf18bd8ff0a31f585379ee3ba5136f72697968099c2ae47108e970d",
+      "crates/trames-vulkan/src/backend/coherent.rs": "8a2fc01dee5d4b1b46661f419f68345dab8118310569e7de248ffd57bbde2d49",
+      "crates/trames-vulkan/src/context.rs": "dc40d9e6068d395e70ef55a59b9aaf3c35155a2c6cce6d3f6f760852ac6fdf2d",
+      "crates/trames-session/src/process.rs": "05fc5ec48ba743e9f739bec819d17ffe8a73748eb68e92f4922153b2e3f6ef4e",
+      "crates/trames-session/src/workers.rs": "105a493148ecec95e99a197d05ac30d22c8ee4ac26ea592cf7f2b9fff16f5f0c"
+    },
+    "candidate_runtime_source_sha256": {
+      "crates/trames-session/src/process.rs": "05fc5ec48ba743e9f739bec819d17ffe8a73748eb68e92f4922153b2e3f6ef4e",
+      "crates/trames-session/src/workers.rs": "105a493148ecec95e99a197d05ac30d22c8ee4ac26ea592cf7f2b9fff16f5f0c",
+      "crates/trames-vulkan/examples/resources.rs": "09d08c570bd6d5fbbddc11ce5689bc4b7ae111fa89a3efe4b6a33f82e0f40230",
+      "crates/trames-vulkan/src/backend.rs": "0e5298d64da08ff1593fc3e56e9004f956063de92c4295b8ef00d56bf1902f97",
+      "crates/trames-vulkan/src/backend/coherent.rs": "946e5c8db2611e0eb9b6a777999306a4612088b40dc8ea8e63c379220a8c9457",
+      "crates/trames-vulkan/src/backend/graphics.rs": "9cd0ea7543787a297cc2e0d442c651889d0ebcf7fc0f469738b0e1d7ebf6a42a",
+      "crates/trames-vulkan/src/backend/wayland.rs": "d91d3cdefbe85044590c18b6d412e8ab5f1f6b8982ccc9531af3145157ef2263",
+      "crates/trames-vulkan/src/backend/wsi.rs": "9cd0df89eaefd59a4f844aa365bd95c54a6e42a7f005cddf76405ae0600f8ab2",
+      "crates/trames-vulkan/src/backend/zink.rs": "9ddd20c159376cf9acf1e0e72bd38f2b22a1fad3a913413f0ebf073194f320e4",
+      "crates/trames-vulkan/src/context.rs": "6aef5f9fb87cea5ff9711845bff5ea8bdad4ee3cfca6ff7296427ee8f6376f8f"
+    },
+    "mac_metrics_source_sha256": "c531c7b58fa5f0adba3384d303e11aa76430d5fa8f05358abe28ef0181496b59",
+    "runner_sha256": {
+      "control": "58982f0994b71394a9ea82e05ab69de82b91e9e82e895a5b5a2e2b216e8684ba",
+      "candidate": "ff1015f62eedfe913f9b80d8407a88b86dff836422172db0a1a9512408678b67"
+    },
+    "unchanged_guest_artifact_sha256": {
+      "libEGL.so.1": "0fa0e1bbd4494aefa9f4739c65722c78db1d17c33588fccbdcd91aecd265eb8d",
+      "libgallium-25.1.9.so": "bed7fd21427414dce5ceae41ae7ab2dbc31e3885071dafe8bd93b982adc98912",
+      "libtrames_vulkan_icd.so": "1bb5010d2982495b609ac7663be778d6508d965394f4e341eef19e39b3f230b7",
+      "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752"
+    },
+    "benchmark_script": "scripts/benchmark-firefox-vulkan.py",
+    "fixture_sha256": "c12c29db89f00e336a26bc4dd6251cf5e0a9d1c62380e87cb7bdd7e74a8752f4",
+    "conditions": {
+      "ordered_runs": [
+        "control",
+        "scoped",
+        "control-recheck",
+        "scoped-recheck"
+      ],
+      "firefox": "142.0-r0 Alpine ARM64",
+      "host_gpu": "Apple M6",
+      "cpus": 12,
+      "memory": "host-managed",
+      "fresh_profile_per_process": true,
+      "visible_window": true,
+      "graphics_preferences_changed": false,
+      "security_preferences_changed": false,
+      "cache_preferences_changed": false,
+      "process_preferences_changed": false,
+      "one_excluded_warmup_per_process": true,
+      "measured_trials_per_process": 3,
+      "build_or_sampler_during_retained_trials": false,
+      "control_recheck_warmup_sampler_seconds": 2,
+      "gpu_work_ms_definition": "JavaScript wall time in draw/update/finish sections, not GPU hardware time",
+      "host_ms_definition": "click command start to completed result observation; includes automation transport",
+      "elapsed_ms_definition": "fixture JavaScript trial wall time including inter-batch timers and final readback",
+      "renderer_string": "Firefox privacy masks this as Generic Renderer; not GPU identity evidence"
+    },
+    "webgl_runs": {
+      "control": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 6627,
+            "gpu_work_ms": 5850,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 7582.899708
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 5889,
+            "gpu_work_ms": 4803,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 6452.988124999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 6303,
+            "gpu_work_ms": 5505,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 6531.726625000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 4286,
+            "gpu_work_ms": 3556,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 4342.032291999999
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 5889,
+          "gpu_work_ms": 4803,
+          "host_ms": 6452.988124999999
+        },
+        "whole_session_scan_counters_unmatched_duration": {
+          "boundaries": 6929,
+          "ranges": 88071,
+          "upload_scanned_bytes": 104795448448,
+          "download_scanned_bytes": 85126594432
+        },
+        "included_public_navigation_after_webgl": true
+      },
+      "scoped": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 2759,
+            "gpu_work_ms": 2230,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 2952.277334000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1282,
+            "gpu_work_ms": 790,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 1332.0243330000005
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1261,
+            "gpu_work_ms": 734,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 1293.6795840000004
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1303,
+            "gpu_work_ms": 764,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 1344.6949999999997
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 1282,
+          "gpu_work_ms": 764,
+          "host_ms": 1332.0243330000005
+        },
+        "whole_session_scan_counters_unmatched_duration": {
+          "boundaries": 5152,
+          "ranges": 47187,
+          "upload_scanned_bytes": 3966669371,
+          "download_scanned_bytes": 3775154947
+        },
+        "included_public_navigation_after_webgl": true
+      },
+      "control-recheck": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 12729,
+            "gpu_work_ms": 10807,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 15998.220417
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 8464,
+            "gpu_work_ms": 7446,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 10533.513458000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 6699,
+            "gpu_work_ms": 5578,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 7046.701499999997
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 7446,
+            "gpu_work_ms": 6588,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 7876.515749999996
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 7446,
+          "gpu_work_ms": 6588,
+          "host_ms": 7876.515749999996
+        },
+        "whole_session_scan_counters_unmatched_duration": {
+          "boundaries": 1498,
+          "ranges": 12114,
+          "upload_scanned_bytes": 13415481344,
+          "download_scanned_bytes": 11989417984
+        },
+        "included_public_navigation_after_webgl": false
+      },
+      "scoped-recheck": {
+        "samples": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3956,
+            "gpu_work_ms": 2835,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 0,
+            "warmup": true,
+            "host_ms": 4473.372
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 4437,
+            "gpu_work_ms": 3572,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 6502.0992080000005
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3667,
+            "gpu_work_ms": 2707,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 3842.516749999998
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 3190,
+            "gpu_work_ms": 2389,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 3498.7786659999997
+          }
+        ],
+        "formal_median_ms": {
+          "elapsed_ms": 3667,
+          "gpu_work_ms": 2707,
+          "host_ms": 3842.516749999998
+        },
+        "whole_session_scan_counters_unmatched_duration": {
+          "boundaries": 1343,
+          "ranges": 6906,
+          "upload_scanned_bytes": 828601780,
+          "download_scanned_bytes": 839225816
+        },
+        "included_public_navigation_after_webgl": false
+      }
+    },
+    "navigation_observations": {
+      "control": [
+        {
+          "case": "wiki",
+          "trial": 0,
+          "click_command_ms": 344.420375,
+          "content_ms": 2929.661,
+          "observed_elapsed_ms": 2929.663583,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 0,
+          "click_command_ms": 2306.837292,
+          "content_ms": 8670.132792,
+          "observed_elapsed_ms": 8670.134042000002,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 0,
+          "click_command_ms": 1976.3899169999988,
+          "content_ms": 10989.038166999997,
+          "observed_elapsed_ms": 10989.039458999998,
+          "warmup": false
+        }
+      ],
+      "scoped": [
+        {
+          "case": "wiki",
+          "trial": 0,
+          "click_command_ms": 284.5668749999999,
+          "content_ms": 2785.817208,
+          "observed_elapsed_ms": 2785.819333,
+          "warmup": false
+        },
+        {
+          "case": "github",
+          "trial": 0,
+          "click_command_ms": 1758.9597079999999,
+          "content_ms": 7453.906291,
+          "observed_elapsed_ms": 7453.907625,
+          "warmup": false
+        },
+        {
+          "case": "bilibili",
+          "trial": 0,
+          "click_command_ms": 556.9973750000017,
+          "content_ms": 5587.634084000001,
+          "observed_elapsed_ms": 5587.635167000002,
+          "warmup": false
+        }
+      ]
+    },
+    "native_oracle": {
+      "control_fails_bound_upload_assertion": true,
+      "control_upload_scanned_bytes": 74240,
+      "candidate_bound_upload_scanned_bytes": 256,
+      "unrelated_protected_guest_pages_untouched": true,
+      "nonzero_binding_offset": true,
+      "partial_nonzero_map_offset": true,
+      "gpu_words_correct": 256,
+      "empty_submit_fence_observes_previous_work": true,
+      "repeat_fence_status_per_round": 16,
+      "repeat_fence_scanned_bytes": 0,
+      "recorded_descriptor_updated_before_submit": true,
+      "other_gpu_results_correct": 256,
+      "native_allocation_account_released_to_zero": true
+    },
+    "validation": {
+      "macos_vulkan_tests_passed": 45,
+      "arm64_linux_vulkan_tests_passed": 45,
+      "macos_kernel_tests_passed": 223,
+      "arm64_linux_kernel_tests_passed": 223,
+      "kernel_existing_skips_per_os": 3,
+      "macos_localhost_tests_initial_sandbox_denial_then_passed": 6,
+      "strict_affected_clippy_per_os": true,
+      "mac_all_targets_clippy": true,
+      "ipad_aarch64_ffi_check": true,
+      "signed_mac_release_build": true,
+      "unchanged_cpu_executor_and_guest_graphics_results_reused": true
+    },
+    "limits": [
+      "Four ordered process batches, not randomized paired trials; absolute timings vary across processes.",
+      "Fixed-work gains do not establish a universal browser speedup or native parity.",
+      "Whole-session counters include startup and unequal idle/background periods; their byte ratios are not controlled workload ratios.",
+      "Each navigation case has one ordered observation per build; public content and HTTP/DNS/CDN caches are uncontrolled.",
+      "DOM-marker readiness is not presentation latency or completion of all page resources.",
+      "Active resource spans still need shadow comparisons/copies; direct guest-page GPU import is not implemented.",
+      "Previously documented unsupported graphics features and third-party resource warnings remain."
+    ],
+    "candidate_runtime_revision": "b97ab40e89e63e34ffbb37790e108cc8ee85496b"
   }
 }

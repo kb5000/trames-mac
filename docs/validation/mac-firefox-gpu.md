@@ -565,3 +565,92 @@ network/memory/VFS/Vulkan and CPU-executor results from the preceding source-bou
 runs are reused. English contracts and the complete filtered observations are
 in [region memory](../../runtime/docs/architecture/region-memory.md#filtered-memory-calls)
 and [navigation data](mac-firefox-navigation.json).
+
+## Scoped coherent synchronization
+
+The next measured Vulkan cost was coherent shadow synchronization, which used
+to inspect every mapped allocation at each submit or successful host wait. The
+shared backend now uses each submission's existing retained resource graph to
+bound those comparisons to actual buffer/image binding spans. An unpublished
+result ledger retires completed spans after successful readback and keeps
+intersections with still-pending producers. Previously published fence results
+therefore cause no repeated memory scan. This is common Mac/iPad code; the Mac
+product only exposes the new scan counters in `--metrics`.
+
+The [shared contract](../../runtime/docs/architecture/region-memory.md#vulkan-coherent-resource-intervals-2026-10-30)
+describes map-after-submit, partial maps, aliases, failure retry and resource
+lifetime coverage. Active resource spans still use byte comparisons and copies;
+this does not yet map guest CPU pages directly into Metal. No extra guest-wide
+lock, new service thread, graphics preference or sandbox relaxation is added.
+
+### Fixed-work Firefox comparison
+
+`benchmark-firefox-vulkan.py` serves a local WebGL1 fixture with 16 retained 1 MiB
+unrelated GL buffers and one small dynamic triangle buffer. Each trial performs
+64 batches of 8 draws, with buffer update and `gl.finish()` in every batch, then
+reads one pixel. It uses the unchanged Firefox → Zink → Vulkan → MoltenVK path,
+12 CPU slots, host-managed memory and a visible native window. Each process has
+a separate fresh automation profile and one excluded warmup; three formal trials
+follow. No builds or samplers overlap retained trials. A two-second sampler only
+overlaps the excluded warmup in the second control run. Its stacks include the
+old global coherent scanner, but no whole-process CPU percentage is inferred.
+The source-controlled fixture is byte-identical to the measured fixture; its
+SHA-256 and all 16 warmup/formal records are in the filtered JSON.
+
+The order is old control A1, candidate B1, old control A2, candidate B2. Both
+controls use runtime `60b14caf1ef4` plus only the same scan-metric instrumentation;
+the exact control source hashes are retained. Guest drivers, graphics settings
+and host native driver stay identical. The old signed application is preserved
+for the recheck rather than rebuilt between observations.
+
+| Median of 3 formal trials | Control A1 | Scoped B1 | Control A2 | Scoped B2 |
+| --- | ---: | ---: | ---: | ---: |
+| Fixture elapsed | 5.889 s | 1.282 s | 7.446 s | 3.667 s |
+| Draw/update/finish sections | 4.803 s | 0.764 s | 6.588 s | 2.707 s |
+| Click command to result observation | 6.453 s | 1.332 s | 7.877 s | 3.843 s |
+
+All 16 pixel checks return `[64,128,191,255]`, GL error 0 and no context loss.
+The `gpu_work_ms` JSON field is JavaScript wall time inside the batch sections,
+**not GPU hardware execution time**. A1/B1 fixture elapsed improves 4.59× and
+A2/B2 improves 2.03×. Absolute timings vary substantially across processes; the
+recheck supports a real reduction in this fixed workload but not one universal
+browser acceleration factor. Whole-session scan totals include startup and
+unequal idle/background periods, so their byte ratios are not controlled speed
+measurements. The page's privacy-masked `Generic Renderer` string is not used as
+proof of a particular GPU; the independent native-driver oracle identifies it.
+
+One ordered public-page observation after A1/B1 completes all three DOM markers:
+Wikipedia 2.930 → 2.786 s, GitHub 8.670 → 7.454 s and Bilibili 10.989 → 5.588 s.
+These single samples depend on evolving HTTP/DNS/CDN caches and page contents;
+they are not stable page-load speedups or measurements of fully rendered content.
+Existing third-party resource and unsupported-feature warnings remain. Full
+browser responsiveness, native performance and general GL/Vulkan completeness
+are not established by this change.
+
+### Reproduce and validation
+
+Use a disposable localhost Marionette profile as described by the existing
+navigation benchmark. The normal launcher keeps automation disabled. With that
+process running and its native window visible:
+
+```sh
+python3 scripts/benchmark-firefox-vulkan.py --port LOCAL_PORT --output fresh-results.jsonl
+```
+
+The controller changes no graphics, security, cache or process preference and
+refuses to overwrite an existing result file. Repeat A/B with fresh processes,
+the same driver artifacts and no concurrent builds. Retain the excluded warmup
+and all formal trials. The existing real-driver `resources` example supplies the
+independent synchronization oracle; its old global-scanning negative control
+fails with 74,240 compared bytes instead of the required 256-byte bound span.
+The candidate passes nonzero/partial maps, inaccessible unrelated pages, empty
+submit and repeat fence observations, plus both 256-result GPU checks and the
+post-recording descriptor update. Native allocation accounting releases to zero.
+
+Local validation passes 45 Vulkan unit tests and 223 common-kernel tests per OS
+(macOS and native ARM64 Linux, with 3 existing skips), strict affected Clippy,
+the ARM64 iPad FFI compile and the signed Mac release build. Six macOS localhost
+socket tests initially hit sandbox permission denial; only those six are rerun
+outside the sandbox and pass. Unchanged CPU-executor and guest graphics artifact
+results are reused. Complete filtered samples, source identities and validation
+scope are appended to [the GPU record](mac-firefox-gpu.json).

@@ -465,6 +465,13 @@ pub fn run(
             runtime.metrics.gpu_transfers.buffered_bytes
         );
         eprintln!(
+            "trames mac coherent: boundaries={} ranges={} upload_scanned_bytes={} download_scanned_bytes={}",
+            runtime.metrics.gpu_transfers.coherent_syncs,
+            runtime.metrics.gpu_transfers.coherent_ranges,
+            runtime.metrics.gpu_transfers.coherent_upload_scanned_bytes,
+            runtime.metrics.gpu_transfers.coherent_download_scanned_bytes
+        );
+        eprintln!(
             "trames mac metrics: {{\"syscalls\":{},\"context_switches\":{},\"hardware_mapped_bytes\":{},\"guest_resident_bytes\":{},\"vm_checkpoint_groups\":{},\"vm_checkpoint_spaces\":{},\"backing_domain_checks\":{},\"backing_page_checks\":{},\"parallel_memory_us\":{},\"instruction_count\":null}}",
             runtime.metrics.syscalls,
             runtime.metrics.context_switches,
