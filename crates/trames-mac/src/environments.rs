@@ -31,6 +31,8 @@ pub struct Config {
     #[serde(default)]
     pub init: super::systemd::Init,
     pub source_sha256: String,
+    #[serde(default = "shell_command")]
+    pub command: Vec<String>,
     pub cpus: usize,
     pub memory_mib: String,
     pub network: String,
@@ -39,13 +41,19 @@ pub struct Config {
     pub video: bool,
     pub mounts: Vec<Mount>,
 }
+fn shell_command() -> Vec<String> {
+    vec!["/bin/sh".into(), "-l".into()]
+}
 impl Config {
     fn new(distribution: &str) -> Self {
         Self {
             schema: 1,
             distribution: distribution.into(),
             init: super::systemd::Init::Shell,
-            source_sha256: catalog(distribution).unwrap().1.into(),
+            source_sha256: catalog(distribution)
+                .map_or("custom-rootfs", |c| c.1)
+                .into(),
+            command: shell_command(),
             cpus: std::thread::available_parallelism()
                 .map_or(1, usize::from)
                 .min(trames_hvf::max_parallel_cpus()),
@@ -64,10 +72,21 @@ impl Config {
                     .into(),
             );
         }
-        catalog(&self.distribution)?;
-        if self.init == super::systemd::Init::Systemd && self.distribution != "debian" {
+        if !["alpine", "debian", "custom"].contains(&self.distribution.as_str()) {
+            return Err("unknown distribution".into());
+        }
+        if self.command.is_empty()
+            || !self.command[0].starts_with('/')
+            || self.command.iter().any(|a| a.contains('\0'))
+        {
             return Err(
-                "systemd init is available for Debian environments; Alpine uses shell".into(),
+                "command must be a nonempty argument array beginning with an absolute Linux path"
+                    .into(),
+            );
+        }
+        if self.init == super::systemd::Init::Systemd && self.distribution == "alpine" {
+            return Err(
+                "systemd requires Debian or a custom rootfs with systemd installed; Alpine uses shell".into(),
             );
         }
         if self.cpus == 0 || self.cpus > trames_hvf::max_parallel_cpus() {
@@ -96,6 +115,99 @@ impl Config {
         }
         Ok(())
     }
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CliConfig {
+    schema: u32,
+    default_environment: String,
+    defaults: Config,
+}
+impl Default for CliConfig {
+    fn default() -> Self {
+        Self {
+            schema: 1,
+            default_environment: "default".into(),
+            defaults: Config::new("alpine"),
+        }
+    }
+}
+fn load_cli(r: &Path) -> Result<CliConfig> {
+    let file = match File::open(r.join("cli.json")) {
+        Ok(f) => f,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(CliConfig::default()),
+        Err(e) => return Err(e.into()),
+    };
+    let c: CliConfig = serde_json::from_reader(file.take(65537))?;
+    validate_cli(&c)?;
+    Ok(c)
+}
+fn validate_cli(c: &CliConfig) -> Result<()> {
+    if c.schema != 1 {
+        return Err("unsupported CLI configuration version".into());
+    }
+    name(&c.default_environment)?;
+    catalog(&c.defaults.distribution)?;
+    c.defaults.validate()
+}
+pub fn cli_config(args: &[String]) -> Result<u8> {
+    let r = root()?;
+    match args.first().map(String::as_str).unwrap_or("show") {
+        "path" => println!("{}", r.join("cli.json").display()),
+        "show" => println!("{}", serde_json::to_string_pretty(&load_cli(&r)?)?),
+        "set" | "reset" => {
+            let guard = OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+                .open(r.join("locks/.cli-config"))?;
+            guard
+                .try_lock()
+                .map_err(|_| "CLI settings are being changed; retry")?;
+            let mut c = if args[0] == "reset" {
+                CliConfig::default()
+            } else {
+                load_cli(&r)?
+            };
+            if args[0] == "set" {
+                if args.len() < 3 || args.len() % 2 != 1 {
+                    return Err("usage: trames config set KEY VALUE [KEY VALUE...]".into());
+                }
+                for pair in args[1..].chunks_exact(2) {
+                    match pair[0].trim_start_matches("--") {
+                        "default-environment" => c.default_environment=pair[1].clone(),
+                        "distro" => { catalog(&pair[1])?; c.defaults.distribution=pair[1].clone(); c.defaults.source_sha256=catalog(&pair[1])?.1.into(); }
+                        "command" => c.defaults.command=serde_json::from_str(&pair[1])?,
+                        key @ ("cpus"|"memory-mib"|"network"|"init"|"windows"|"vulkan"|"video") => {
+                            // Apply all values together below, allowing a distro
+                            // and init change in either argument order.
+                            match key {
+                                "cpus" => c.defaults.cpus=pair[1].parse()?,
+                                "memory-mib" => c.defaults.memory_mib=pair[1].clone(),
+                                "network" => c.defaults.network=pair[1].clone(),
+                                "init" => c.defaults.init=super::systemd::Init::parse(&pair[1])?,
+                                _ => {
+                                    let value=match pair[1].as_str() {"on"=>true,"off"=>false,_=>return Err("expected on or off".into())};
+                                    match key {"windows"=>c.defaults.windows=value,"vulkan"=>c.defaults.vulkan=value,_=>c.defaults.video=value}
+                                }
+                            }
+                        }
+                        _ => return Err("unknown CLI setting; use default-environment, distro, command, cpus, memory-mib, network, init, windows, vulkan or video".into()),
+                    }
+                }
+            }
+            validate_cli(&c)?;
+            atomic_write(&r.join("cli.json"), &serde_json::to_vec_pretty(&c)?)?;
+            println!("{}", serde_json::to_string_pretty(&c)?);
+        }
+        _ => {
+            return Err("usage: trames config show|path|set KEY VALUE [KEY VALUE...]|reset".into())
+        }
+    }
+    Ok(0)
 }
 fn catalog(d: &str) -> Result<(&'static str, &'static str)> {
     match d {
@@ -300,51 +412,90 @@ fn publish(stage: &Path, dir: &Path) -> Result<()> {
 fn create(
     r: &Path,
     n: &str,
-    d: &str,
+    mut c: Config,
     archive: Option<&str>,
-    init: super::systemd::Init,
+    custom: Option<&str>,
+    expected: Option<&str>,
 ) -> Result<()> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
     if dir.try_exists()? {
         return Err("environment already exists".into());
     }
-    catalog(d)?;
-    let mut c = Config::new(d);
-    c.init = init;
+    if custom.is_some() && archive.is_some() {
+        return Err("choose --rootfs or --archive".into());
+    }
+    if expected.is_some() && custom.is_none() {
+        return Err("--sha256 requires --rootfs".into());
+    }
+    if custom.is_some() {
+        c.distribution = "custom".into();
+    }
     c.validate()?;
-    let source = source(r, d, archive)?;
+    let source = if custom.is_none() {
+        Some(source(r, &c.distribution, archive)?)
+    } else {
+        None
+    };
     let stage = staging(r, n)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
-    let mut input = File::open(source)?;
-    vfs.populate_staged(|vfs| match d {
-        "alpine" => trames_distro::install_alpine(&mut input, vfs),
-        "debian" => trames_distro::install_debian(&mut input, vfs),
-        _ => unreachable!(),
+    c.source_sha256 = vfs.populate_staged(|vfs| -> Result<String> {
+        if let Some(custom) = custom {
+            return super::rootfs::install(Path::new(custom), vfs, expected);
+        }
+        let mut input = File::open(source.as_ref().unwrap())?;
+        match c.distribution.as_str() {
+            "alpine" => {
+                trames_distro::install_alpine(&mut input, vfs)?;
+            }
+            "debian" => {
+                trames_distro::install_debian(&mut input, vfs)?;
+            }
+            _ => unreachable!(),
+        }
+        Ok(catalog(&c.distribution)?.1.into())
     })?;
-    // The downloaded image's resolver belongs to its build container. Replace
-    // it only during creation; future launches preserve all user DNS settings.
-    if vfs
-        .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
-        .is_ok()
+    // Built-in images carry their builder's resolver. Custom images preserve
+    // supplied DNS; a missing file receives the existing managed endpoint.
+    if custom.is_none()
+        && vfs
+            .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
+            .is_ok()
     {
         vfs.import_reader_replace(b"/etc/resolv.conf", &mut &b"nameserver 169.254.0.53\n"[..])?;
-    } else {
+    } else if vfs
+        .stat_at_flags(trames_vfs::AT_FDCWD, b"/etc/resolv.conf", true)
+        .is_err_and(|e| e.0 == 2)
+    {
         vfs.import_reader(
             b"/etc/resolv.conf",
             &mut &b"nameserver 169.254.0.53\n"[..],
             false,
         )?;
     }
+    if custom.is_some() {
+        super::rootfs::validate_command(&mut vfs, &c.command)?;
+    }
     vfs.sync()?;
     drop(vfs);
-    if c.init == super::systemd::Init::Systemd {
-        super::systemd::install(&stage.0.join("store"), c.cpus, &c.network)?;
-    }
+    provision_init(&stage.0.join("store"), &c)?;
     save(&stage.0, &c)?;
     publish(&stage.0, &dir)?;
-    println!("Created {n} ({d})");
+    println!("Created {n} ({})", c.distribution);
     Ok(())
+}
+fn provision_init(store: &Path, c: &Config) -> Result<()> {
+    if c.init != super::systemd::Init::Systemd {
+        return Ok(());
+    }
+    if c.distribution == "custom" {
+        let vfs = Vfs::open_disk(store, DiskOptions::default())?;
+        vfs.executable(b"/usr/lib/systemd/systemd")
+            .map_err(|_| "custom systemd rootfs must already contain /usr/lib/systemd/systemd")?;
+        Ok(())
+    } else {
+        super::systemd::install(store, c.cpus, &c.network)
+    }
 }
 fn socket(r: &Path, n: &str) -> Result<PathBuf> {
     let tmp = PathBuf::from(format!("/private/tmp/trames-{}", unsafe {
@@ -407,7 +558,7 @@ fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     ]);
     let extra = extra.strip_prefix(&["--".into()]).unwrap_or(extra);
     args.extend_from_slice(extra);
-    Ok(super::execute(args)?)
+    Ok(super::execute_with_default(args, &c.command)?)
 }
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
@@ -520,7 +671,7 @@ fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
     {
         "alpine"
     } else {
-        return Err("existing store is neither Alpine nor Debian".into());
+        "custom"
     };
     let stage = staging(r, n)?;
     private_dir(&stage.0.join("store/objects"))?;
@@ -556,8 +707,23 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
     let dir = directory(r, n)?;
     let mut c = load(&dir)?;
     let old_init = c.init;
-    let mut args = args.iter();
+    apply_settings(&mut c, args)?;
+    if c.command != load(&dir)?.command {
+        let mut vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
+        super::rootfs::validate_command(&mut vfs, &c.command)?;
+    }
+    if c.init == super::systemd::Init::Systemd && old_init != c.init {
+        provision_init(&dir.join("store"), &c)?;
+    }
+    save(&dir, &c)
+}
+fn apply_settings(c: &mut Config, settings: &[String]) -> Result<()> {
+    let mut args = settings.iter();
     while let Some(k) = args.next() {
+        if k == "--" {
+            c.command = args.cloned().collect();
+            break;
+        }
         if k == "--clear-mounts" {
             c.mounts.clear();
             continue;
@@ -569,6 +735,7 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
             _ => Err("expected on or off"),
         };
         match k.as_str() {
+            "--command" => c.command = serde_json::from_str(v)?,
             "--init" => c.init = super::systemd::Init::parse(v)?,
             "--cpus" => c.cpus = v.parse()?,
             "--memory-mib" => c.memory_mib = v.clone(),
@@ -592,10 +759,7 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
         }
     }
     c.validate()?;
-    if c.init == super::systemd::Init::Systemd && old_init != c.init {
-        super::systemd::install(&dir.join("store"), c.cpus, &c.network)?;
-    }
-    save(&dir, &c)
+    Ok(())
 }
 fn backup(r: &Path, n: &str, destination: &Path) -> Result<()> {
     let _lock = lock(r, n)?;
@@ -734,13 +898,14 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     let r = root()?;
     let op = args.first().map(String::as_str).unwrap_or("list");
     if op == "default" {
-        if !directory(&r, "default")?.try_exists()? {
-            create(&r, "default", "alpine", None, super::systemd::Init::Shell)?;
+        let cli = load_cli(&r)?;
+        if !directory(&r, &cli.default_environment)?.try_exists()? {
+            create(&r, &cli.default_environment, cli.defaults, None, None, None)?;
         }
-        return start(&r, "default", &[]);
+        return start(&r, &cli.default_environment, &[]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian] [--init shell|systemd] [--archive VERIFIED_ROOTFS]\nenv list\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
+        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [SETTINGS] [-- COMMAND ARGS...]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
         return Ok(0);
     }
     if op == "list" {
@@ -758,21 +923,43 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     name(n)?;
     match op {
         "create" => {
-            let mut init = super::systemd::Init::Shell;
-            let mut d = "alpine";
+            let mut c = load_cli(&r)?.defaults;
             let mut archive = None;
+            let mut custom = None;
+            let mut expected = None;
+            let mut settings = vec![];
             let mut it = args[2..].iter();
             while let Some(k) = it.next() {
+                if k == "--" {
+                    settings.push(k.clone());
+                    settings.extend(it.cloned());
+                    break;
+                }
                 let v = it.next().ok_or("missing create option value")?;
                 match k.as_str() {
-                    "--init" => init = super::systemd::Init::parse(v)?,
-                    "--distro" => d = v,
+                    "--distro" => {
+                        catalog(v)?;
+                        c.distribution = v.clone();
+                        c.source_sha256 = catalog(v)?.1.into();
+                    }
                     "--archive" => archive = Some(v.as_str()),
-                    _ => return Err("unknown create option".into()),
+                    "--rootfs" => custom = Some(v.as_str()),
+                    "--sha256" => expected = Some(v.as_str()),
+                    _ => {
+                        settings.extend([k.clone(), v.clone()]);
+                    }
                 }
             }
-            create(&r, n, d, archive, init)?;
+            if custom.is_some() {
+                c.distribution = "custom".into();
+            }
+            apply_settings(&mut c, &settings)?;
+            create(&r, n, c, archive, custom, expected)?;
         }
+        "config" | "show" => println!(
+            "{}",
+            serde_json::to_string_pretty(&load(&directory(&r, n)?)?)?
+        ),
         "start" | "run" => return start(&r, n, &args[2..]),
         "import" => import(
             &r,
@@ -838,7 +1025,7 @@ mod tests {
         assert!(backup_path(Path::new("store/objects/0123456789abcdef.dat")));
     }
     #[test]
-    fn init_opt_in_is_debian_only_and_old_configs_keep_shell() {
+    fn init_requires_compatible_image_and_old_configs_keep_shell() {
         let mut old = serde_json::to_value(Config::new("debian")).unwrap();
         old.as_object_mut().unwrap().remove("init");
         let mut c: Config = serde_json::from_value(old).unwrap();

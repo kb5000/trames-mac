@@ -11,8 +11,12 @@ required.
 
 Unpack the distribution and run `install.command`. It verifies the application
 signature, installs to `~/Applications/Trames.app`, and creates
-`~/.local/bin/trames`. Add `~/.local/bin` to PATH if your shell does not already
-include it. An existing unrelated `trames` executable is preserved. Upgrades
+`~/.local/bin/trames`. For zsh and bash the installer also persists that directory
+in login and interactive shell configuration. Open a new terminal after installing;
+the installer prints a source command for updating an already-open terminal.
+Repeated installs do not duplicate PATH entries or profile source lines. Existing
+profile settings are preserved. `TRAMES_MODIFY_PATH=0` opts out of profile edits.
+Zsh's `ZDOTDIR` and the managed helper's `XDG_CONFIG_HOME` are respected. An existing unrelated `trames` executable is preserved. Upgrades
 replace the application, not Linux environments. The installer also accepts an
 explicit application path; `TRAMES_APPLICATIONS_DIR` and `TRAMES_BIN_DIR` select
 alternate per-user destinations.
@@ -56,6 +60,87 @@ layout. Debian supports normal userspace programs and an optional systemd servic
 environment. Linux kernel modules and complete Linux ABI compatibility are
 not provided.
 
+## CLI configuration and default commands
+
+```sh
+trames config show
+trames config path
+trames config set default-environment work
+trames config set cpus 4 memory-mib auto windows off
+trames config set distro debian init systemd
+trames config reset
+trames env config work
+trames env configure work -- /bin/bash -l
+trames env start work                         # Saved command
+trames env start work -- /bin/sh -ec 'uname -a' # One-session override
+```
+
+Global settings are saved atomically to `TRAMES_HOME/cli.json` (the usual registry
+under Application Support when `TRAMES_HOME` is unset). `default-environment`
+selects the environment used by no-argument terminal launches. If missing, it is
+created with the configured defaults. The `defaults` object affects **new**
+environments; it does not rewrite existing environment settings. Creation flags
+override those defaults, and explicit start arguments override saved session
+settings. `env config NAME` prints the saved per-environment JSON.
+
+Global `config set` accepts `default-environment`, `distro` (`alpine`/`debian`),
+`cpus`, `memory-mib`, `network`, `init`, `windows`, `vulkan`, `video`, and `command`.
+The last is a JSON argument array, for example
+`trames config set command '["/bin/bash","-l"]'`. Per-environment commands can
+instead use the simpler `env configure NAME -- COMMAND ARGS...` syntax. Arguments
+are stored literally and never evaluated by a host shell. Existing environment
+configs without `command` continue to use `/bin/sh -l`. `config reset` resets only
+global defaults. Systemd boot retains its original PID 1 command independently of
+the saved shell command; an explicit `--init shell` enables maintenance sessions.
+
+## Custom ARM64 Linux rootfs
+
+```sh
+trames env create custom --rootfs /path/to/rootfs.tar.gz
+trames env create custom --rootfs /path/to/rootfs.tar --sha256 EXPECTED_SHA256
+trames env create custom --rootfs /path/to/unpacked-rootfs -- /bin/bash -l
+trames config set default-environment custom
+trames env start custom
+```
+
+`--rootfs` explicitly selects a user-supplied rootfs directory, ordinary tar or
+gzip tar, independently of the built-in image catalog. The manager's Create
+dialog also offers a custom-rootfs picker. The image must contain ARM64 Linux
+userspace and the chosen command/interpreter (default `/bin/sh`). The entrypoint
+is checked before publication; x86 and macOS Mach-O programs are rejected. Other
+binaries, drivers, system calls and services retain the shared runtime's actual
+compatibility limits. A successful import is not complete distribution support.
+
+Custom imports snapshot the source, hash it and stream file contents into the
+private VFS. Compressed data and expanded tar data use temporary files, without
+whole-rootfs RAM buffering. File permissions, ownership, modification times,
+symlinks (including merged-/usr layouts), hard links, FIFOs and Linux device-node
+metadata are restored. Directory symlinks are copied as guest links, never
+followed into host paths. No host device or mount operation is performed. Host
+source directories must be an inactive rootfs, with transient kernel filesystems
+unmounted. Extended attributes/ACLs and sparse-tar formats are not imported yet.
+The existing store byte/inode capacities still apply.
+
+`--sha256` verifies the supplied archive bytes; the actual source digest is
+recorded in the environment config. For directory inputs it records the generated
+tar snapshot's digest; `--sha256` is archive-only. Built-in `--archive FILE` remains
+a separate, strictly pinned offline-download path. Custom images preserve an
+existing resolver configuration; a missing resolver uses the managed endpoint.
+Image archives made by `docker save`/OCI layouts and disk images are not flattened
+rootfs archives; use an unpacked rootfs or a `docker export` tar instead. URLs,
+layer composition, xz and zstd are not accepted by this first custom-import path.
+
+`--init systemd` on a custom rootfs requires systemd already installed in that
+image; Trames does not assume its package manager or install Debian packages into
+it. Only the original Debian service environment has current boot acceptance.
+Import/restore keep custom environments and their commands portable. A failed
+import never publishes an environment or replaces an existing one.
+
+The low-level runner also accepts `--rootfs TAR_OR_DIRECTORY --storage NEW_DIR`;
+it only initializes a fresh store and never overlays an existing one. Without
+`--storage`, it retains the smaller in-memory VFS capacity. Normal product use
+should create a named environment.
+
 ## Optional systemd service environment
 
 Shell is the default and has no init-manager startup or resident service cost.
@@ -73,7 +158,8 @@ Opt-in installs Debian's original `systemd` and `dbus` packages using apt, with
 no recommended desktop packages. Network access and Debian repository trust are
 required for this first setup. It is idempotent and is not repeated at each boot.
 A failed setup does not publish the new init setting. Old configurations without
-an `init` field continue to use shell; Alpine currently accepts shell only.
+an `init` field continue to use shell; Alpine currently accepts shell only. Custom images may opt into systemd if
+their original systemd is already installed; no package setup is assumed for them.
 
 Systemd runs as guest PID 1 and boots `multi-user.target`. The foreground terminal
 is a local root shell managed by `console-getty.service`, without a separate Linux

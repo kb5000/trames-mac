@@ -6,7 +6,8 @@ ARM64 user instructions execute through Hypervisor.framework and a small EL1
 exception adapter; no complete Linux kernel is booted.
 
 Download a packaged build, run its `install.command`, then open Trames.app for
-native environment management or run `trames` in a terminal. The terminal path
+native environment management or run `trames` in a terminal. Installation adds the
+CLI to zsh/bash startup configuration; reopen the terminal once after installing. The terminal path
 automatically creates a verified Alpine environment on first use; Debian 13 slim
 is available through `trames env create NAME --distro debian`. Add
 `--init systemd` for an optional Debian service environment, or choose it in the
@@ -15,6 +16,8 @@ manager. Shell remains the default; see the guide for its service/login limits.
 ```sh
 trames env create work
 trames env start work
+trames config show
+trames env create custom --rootfs /path/to/arm64-rootfs.tar.gz
 trames --manager
 ```
 

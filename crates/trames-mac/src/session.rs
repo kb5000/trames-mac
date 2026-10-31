@@ -222,9 +222,17 @@ pub struct Command {
     argv: Vec<String>,
 }
 impl Command {
+    #[cfg(test)]
     pub fn parse(
         arguments: impl Iterator<Item = String>,
         pty: bool,
+    ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
+        Self::parse_with_default(arguments, pty, &["/bin/sh".into(), "-l".into()])
+    }
+    pub fn parse_with_default(
+        arguments: impl Iterator<Item = String>,
+        pty: bool,
+        default_command: &[String],
     ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
         let mut arguments = arguments.peekable();
         let mut init = super::systemd::Init::Shell;
@@ -317,7 +325,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--init shell|systemd] [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -340,7 +348,7 @@ impl Command {
             ];
         }
         if argv.is_empty() && !filesystem && (rootfs.is_some() || storage.is_some()) {
-            argv = vec!["/bin/sh".into(), "-l".into()];
+            argv = default_command.to_vec();
         }
         Ok(Some(Self {
             init,
@@ -410,11 +418,14 @@ pub fn run(
         vfs.configure_network(network)?;
     }
     if let Some(archive) = &rootfs {
-        if vfs
-            .stat_at(trames_vfs::AT_FDCWD, b"/etc/alpine-release")
-            .is_err()
-        {
-            trames_distro::install_alpine(&mut std::fs::File::open(archive)?, &mut vfs)?;
+        if vfs.capacity().nodes_used <= 3 {
+            if storage.is_some() {
+                vfs.populate_staged(|vfs| {
+                    super::rootfs::install(std::path::Path::new(archive), vfs, None)
+                })?;
+            } else {
+                super::rootfs::install(std::path::Path::new(archive), &mut vfs, None)?;
+            }
         }
     }
     // Use the runtime's existing host-resolver endpoint, as the iPad and CLI

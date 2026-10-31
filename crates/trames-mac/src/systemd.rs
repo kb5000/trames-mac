@@ -86,11 +86,9 @@ fn bind(vfs: &mut Vfs, source: &[u8], destination: &[u8]) -> Result<()> {
 /// Match systemd's container interface using only guest VFS objects. /run and
 /// /dev are per boot; no host mount, device or shutdown operation is involved.
 pub fn prepare(vfs: &mut Vfs) -> Result<Monitor> {
-    if vfs.stat_at(AT_FDCWD, b"/etc/debian_version").is_err()
-        || vfs.executable(b"/usr/lib/systemd/systemd").is_err()
-    {
+    if vfs.executable(b"/usr/lib/systemd/systemd").is_err() {
         return Err(
-            "systemd requires a prepared Debian environment; use env configure NAME --init systemd"
+            "systemd executable is missing; prepare the image or use env configure NAME --init systemd"
                 .into(),
         );
     }
