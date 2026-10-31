@@ -98,6 +98,40 @@ same-access handle does not lose earlier open descriptions. Executable and map
 capabilities keep the original native inode across host atomic replacement.
 See the [workspace validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs-workspace.json).
 
+## Native file events and advisory locks
+
+External host changes now wake guest inotify readers, poll and epoll. File
+content/attribute changes and immediate directory create/delete/rename are
+supported. Watches are allocated on demand and drained by an existing executor;
+there is no background watcher thread or periodic directory scan. A namespace
+watch retains only the watched directory descriptor. Monitoring child content
+or attributes also retains descriptors for its current immediate children.
+Removing watches or closing the inotify instance releases those interests.
+
+macOS vnode events coalesce: rapid external create/delete sequences may disappear
+before a snapshot, and moves across separate directories may be delete/create.
+External open/access/close history is unavailable. Guest-created notifications
+retain their existing behavior; host echoes are suppressed. This supports many
+reload/build workflows, but is not complete Linux inotify history conformance.
+
+Whole-file `flock` now coordinates with independent native processes. Shared and
+exclusive modes, nonblocking conflicts, blocking host unlock wakeups, dup/fork
+and final-close lifetime are supported. Private mappings also retain the OFD
+lock until unmapped. Byte-range `fcntl` locks remain guest-local; do not use them
+to coordinate a database concurrently opened by native tools. SQLite's default
+journal smoke test covers guest-only use, not cross-boundary database locking.
+
+`MAP_SHARED` still returns ENODEV, including SQLite WAL's shared-memory file.
+Supporting it requires coherent file-backed aliases plus recovery that confines
+external-truncate SIGBUS to the guest. Neither copied pages nor delayed writeback
+provide that contract. MAP_PRIVATE and ordinary native reads remain available.
+
+The [interop fixture](https://github.com/kb5000/trames-ipad/blob/main/tests/integration/hostfs-interop.py)
+checks independent host/guest processes with 1 CPU and 4 CPUs plus a running guest
+peer. Native create wakes blocking read, poll and epoll; host lock release wakes
+guest flock, and a guest lock remains visible natively after dup/close. Existing
+GCC, Git, Python, shared-library and SQLite default-journal workflows also pass.
+
 ## Scope and limits
 
 Shared directories can hold Linux ARM64 scripts, executables, dynamic loaders
@@ -106,8 +140,8 @@ filesystem conformance claim. MAP_PRIVATE supports demand-read executable/librar
 pages and private COW data. Host MAP_SHARED returns ENODEV; applications that
 require coherent shared mappings (including SQLite WAL use) remain outside the
 supported shared-directory scope. Extended attributes and special host
-files/devices/sockets are unsupported. Guest inotify does not monitor external
-host edits, and advisory locks do not coordinate with independent native writers.
+files/devices/sockets are unsupported. External inotify notifications and native
+flock have the scope described above; byte-range locks remain guest-local.
 Normal native read/write, positioned I/O, append, sparse size, fsync, chmod,
 ownership attempts, timestamps, hard links and rename use the real host objects.
 Native I/O and volume errors remain applicable.
@@ -190,3 +224,32 @@ same Linux executable in the VM and Trames. The Python runner accepts `--runner`
 `--output` and optional `--linux-results`; its `--help` describes the isolation
 requirements. The machine-readable record preserves native Linux observations,
 compiler flags, operation counts, binary hashes and separate fsync times.
+
+### Native interop follow-up (2026-10-31)
+
+The [interop validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs-interop.json)
+preserves the shuffled controls, final three-run medians and all raw observations.
+The native Linux executable is identical to the one run in Trames. Final guest
+acceptance includes 12 process cases, covering close/FD reuse during a blocked
+read as well as the 1-CPU and concurrent 4-CPU paths.
+
+| Cached fixed work | Shared before | Shared now | Content watch | Held flock | Mac native | Linux VM native |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 KiB reads, MiB/s | 7,803 | 7,976 | 7,833 | 7,920 | 39,244 | 38,431 |
+| 64 KiB writes, MiB/s | 7,240 | 7,251 | 7,190 | 7,222 | 26,285 | 45,558 |
+| 4 KiB reads, MiB/s | 1,381 | 1,417 | 1,390 | 1,409 | 11,154 | 13,912 |
+| Path stat, operations/s | 21,949 | 21,824 | 21,829 | 21,979 | 902,894 | 3,937,550 |
+
+A content watch costs about 0.8–1.9% in these data cases. Held-lock throughput
+changes by 0.4–0.7%; ordinary byte I/O does not query lock state. No new global
+filesystem service, thread or per-read native notification check is introduced.
+Only actual pending native resources enter the joined executor's wait set, so
+an unread notification on an unrelated descriptor cannot cause idle spin.
+
+Short private read64k medians varied between sweeps. A longer check uses five
+randomized pairs and 8 GiB per run: 8,653 MiB/s before and 8,744 after (+1.05%).
+This does not show a sustained private-read regression; the record retains all
+observations rather than treating short-run differences as a speedup. Current
+private write64k and read4k medians are 7,913 and 1,772 MiB/s. Native cached I/O
+still has substantially lower overhead. Repeated shared path-stat resolution
+remains the largest measured metadata gap and is not fixed by event/lock support.
