@@ -59,16 +59,66 @@ a VM, Linux process, window or server. An active store returns EBUSY. For live
 exchange, copy the desired guest files into a shared directory from the running
 Linux session. Do not edit the private store's object files or manifest directly.
 
+## Running programs and development tools
+
+Use Linux ARM64 programs in the shared tree. For example, with a compiler
+installed in the selected Linux environment:
+
+```sh
+target/release/trames-mac-run --storage ./linux-store \
+  --mount "/work=$HOME/TramesShared" /bin/sh -lc \
+  'cd /work; cc main.c -o app; ./app'
+```
+
+Direct script launch also handles `#!`, its single optional interpreter argument
+and bounded recursive interpreters. Execute permission and `noexec` mounts apply.
+A read-only mount permits execution and private writable COW mappings, while
+native file writes remain denied. A macOS Mach-O binary is not a Linux executable.
+
+The [workspace fixture](https://github.com/kb5000/trames-ipad/blob/main/tests/fixtures/hostfs-workspace.c)
+and [acceptance runner](https://github.com/kb5000/trames-ipad/blob/main/tests/integration/hostfs-workspace.py)
+exercise a native shared development tree. GCC, its support programs and the
+Linux system libraries also run from read-only shared `/usr` and `/lib` trees;
+this is not the Mac host's `/usr` or `/lib`.
+
+| Shared-directory workflow | Local result |
+| --- | --- |
+| Compile a static ELF, dynamic ELF and plugin `.so` with guest GCC | Passed |
+| Run ELF with its loader and dlopen library also in the shared tree | Passed |
+| Direct shebang script, guest exec, arguments and executable symlink | Passed |
+| Read-only mount execution and MAP_PRIVATE COW without file changes | Passed |
+| Private mapping fork isolation, partial EOF zero fill and past-EOF SIGBUS | Passed |
+| Git init/add/commit/gc/status | Passed |
+| Python module import, ctypes library load and SQLite default journal mode | Passed |
+| Execute-bit denial and guest noexec remount | Passed |
+
+Native create/open retains its original descriptor, so a creator can finish
+writing a newly created read-only object file as Git requires. Closing the latest
+same-access handle does not lose earlier open descriptions. Executable and map
+capabilities keep the original native inode across host atomic replacement.
+See the [workspace validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs-workspace.json).
+
 ## Scope and limits
 
-This is a file-exchange backend, not a complete POSIX filesystem conformance
-claim. Host-file mmap returns ENODEV; keep mapped dependencies and mutable
-databases in the private Linux store. Extended attributes and special host
+Shared directories can hold Linux ARM64 scripts, executables, dynamic loaders
+and libraries, as well as sources and outputs. This is not a complete POSIX
+filesystem conformance claim. MAP_PRIVATE supports demand-read executable/library
+pages and private COW data. Host MAP_SHARED returns ENODEV; applications that
+require coherent shared mappings (including SQLite WAL use) remain outside the
+supported shared-directory scope. Extended attributes and special host
 files/devices/sockets are unsupported. Guest inotify does not monitor external
 host edits, and advisory locks do not coordinate with independent native writers.
 Normal native read/write, positioned I/O, append, sparse size, fsync, chmod,
 ownership attempts, timestamps, hard links and rename use the real host objects.
 Native I/O and volume errors remain applicable.
+
+Private mapped pages load from the retained inode only when reached. Writes use
+the shared guest COW model and never write a private page back to the host file.
+They do not replace the ordinary inode's live native read path. Guest-known size
+changes update EOF metadata without polling on every CPU load. Already resident
+private pages do not monitor external host edits/truncation; unmap/remap to obtain
+a new view when coordinating such changes. This is not a coherent host mapping
+or an external-mutation fault protocol.
 
 There is no polling tree scan, startup import of the tree, global filesystem
 service thread or per-frame synchronization. Unused mounts add no native file I/O
