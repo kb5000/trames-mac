@@ -1165,3 +1165,30 @@ drops 122, displaying 17.74 FPS. Further end-to-end playback profiling is needed
 The shared adapter currently implements progressive H.264 8-bit 4:2:0, POC0/2;
 HEVC/AV1, encoding, audio output/A-V sync and physical iPad video are not tested.
 See the [shared implementation and exact acceptance scope](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md).
+
+## Headless FFmpeg performance (2026-10-31)
+
+The shared scheduler now recognizes retained native eventfd producers and
+preserves a joined-owner wake token for asynchronous VideoToolbox callbacks.
+This prevents a false deadlock while hardware decode is still outstanding,
+without adding a polling bus, service thread or global decode lock. The normal
+signed Mac bundle includes the fix; the iPad ARM64 FFI compile also passes.
+
+Three complete sequential runs of stock FFmpeg 6.1.1 APIs, with the build VM
+stopped and no rendering, produce median native-frame export throughput of
+4,420 / 2,262 / 671 FPS at 720p / 1080p / 4K. Explicit CPU download reaches
+552 / 276 / 52 FPS; the paired native macOS FFmpeg download path reaches
+744 / 374 / 171 FPS. Native FFmpeg waits after each decode, whereas the VA path
+pipelines submissions, so this is an application-path comparison rather than an
+isolated adapter-overhead measurement. CPU readback remains expensive and the
+current implementation does not sustain 4K60 download on this input.
+
+One, four and twelve execution slots all finish the 720p fixture, with similar
+single-codec-thread throughput. The ordinary FFmpeg CLI also exports all three
+continuous streams successfully. The first 30 frames per resolution match
+Linux software NV12 hashes. The shared event/liveness regressions, interpreter
+scheduler checks and affected macOS/Linux lints pass. Firefox is not launched
+in this pass, and these figures do not diagnose browser frame drops.
+
+[Full methods, limitations, reproducible fixture and machine-readable results](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#headless-ffmpeg-throughput-2026-10-31)
+are maintained with the shared guest validation tools.
