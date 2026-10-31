@@ -8,14 +8,15 @@ cargo build -p trames-mac --release --locked
 # A minimal agent bundle supplies AppKit identity without a startup window.
 # The CLI re-execs this binary in place; stdin/stdout and the PID are retained.
 bundle=target/release/Trames.app
-mkdir -p "$bundle/Contents/MacOS"
+mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
+cp apps/macos/Resources/Trames.icns "$bundle/Contents/Resources/Trames.icns"
 cp target/release/trames-mac-run target/release/trames-mac-package.tmp
 rm -f "$bundle/Contents/MacOS/trames-mac-run"
 mv target/release/trames-mac-package.tmp "$bundle/Contents/MacOS/trames-mac-run"
 python3 - <<'PLIST'
 import pathlib,plistlib,re
 path=pathlib.Path('target/release/Trames.app/Contents/Info.plist')
-path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac',CFBundleName='Trames',CFBundleDisplayName='Trames',CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True)))
+path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac',CFBundleName='Trames',CFBundleDisplayName='Trames',CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True)))
 PLIST
 identity="${TRAMES_SIGN_IDENTITY:--}"
 if [[ "$identity" == "-" ]]; then
