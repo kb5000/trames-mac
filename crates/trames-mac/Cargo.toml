@@ -21,6 +21,11 @@ trames-memory = { workspace = true }
 trames-elf = { workspace = true }
 trames-vfs = { workspace = true, features = ["hostfs"] }
 trames-distro = { workspace = true }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+sha2 = "=0.10.9"
+tar = { version = "=0.4.46", default-features = false }
+flate2 = { version = "=1.1.10", default-features = false, features = ["rust_backend"] }
 
 [build-dependencies]
 cc = "=1.8.0"

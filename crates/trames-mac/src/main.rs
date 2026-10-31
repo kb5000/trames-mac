@@ -2,9 +2,13 @@
 //! Terminal-first Mac composition of the shared Linux process kernel.
 //! The Hypervisor adapter owns instruction execution and MMU transport.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod environments;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod files;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod host_memory;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod lifecycle;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod session;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -33,23 +37,56 @@ fn main() {
         }
     }
     use std::io::IsTerminal;
-    let result = session::Command::parse(std::env::args().skip(1), std::io::stdin().is_terminal())
-        .map_err(|e| e.to_string())
-        .and_then(|command| match command {
-            None => Ok(0),
-            Some(command) if !command.windows => {
-                // No presenter/run-loop source or separate session thread for servers.
-                session::run(None, command).map_err(|e| e.to_string())
-            }
-            Some(command) => windows::run(command),
-        });
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let result = if args.first().is_some_and(|a| a == "env") {
+        environments::dispatch(&args[1..]).map_err(|e| e.to_string())
+    } else if args.first().is_some_and(|a| a == "--version") {
+        println!(
+            "Trames {} runtime {}",
+            env!("CARGO_PKG_VERSION"),
+            include_str!("../../../runtime-version.json")
+        );
+        Ok(0)
+    } else if args.first().is_some_and(|a| a == "--manager")
+        || (args.is_empty() && !std::io::stdin().is_terminal())
+    {
+        unsafe extern "C" {
+            fn trames_manager_run();
+        }
+        unsafe {
+            trames_manager_run();
+        }
+        Ok(0)
+    } else if args.is_empty() {
+        environments::dispatch(&["default".into()]).map_err(|e| e.to_string())
+    } else {
+        execute(args)
+    };
     match result {
         Ok(code) => std::process::exit(code as i32),
         Err(error) => {
             eprintln!("trames-mac: {error}");
+            if error.contains("virtual filesystem errno 28") {
+                eprintln!("Storage is full: check host free space and the private store's logical capacity. Existing environments were not reset.");
+            }
+            if error.contains("virtual filesystem errno 16") {
+                eprintln!("The private store is open in another Trames session. Close that session before managing the store.");
+            }
+            eprintln!("Use `trames-mac-run env doctor` for version and environment information.");
             std::process::exit(1);
         }
     }
+}
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn execute(args: Vec<String>) -> Result<u8, String> {
+    use std::io::IsTerminal;
+    session::Command::parse(args.into_iter(), std::io::stdin().is_terminal())
+        .map_err(|e| e.to_string())
+        .and_then(|c| match c {
+            None => Ok(0),
+            Some(c) if !c.windows => session::run(None, c).map_err(|e| e.to_string()),
+            Some(c) => windows::run(c),
+        })
 }
 #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
 fn main() {

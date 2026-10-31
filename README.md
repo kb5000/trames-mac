@@ -5,11 +5,25 @@ Apple Silicon hardware execution product for the shared
 ARM64 user instructions execute through Hypervisor.framework and a small EL1
 exception adapter; no complete Linux kernel is booted.
 
+Download a packaged build, run its `install.command`, then open Trames.app for
+native environment management or run `trames` in a terminal. The terminal path
+automatically creates a verified Alpine environment on first use; Debian 13 slim
+is available through `trames env create NAME --distro debian`.
+
+```sh
+trames env create work
+trames env start work
+trames --manager
+```
+
+See [environments, installation, backup and release workflow](docs/guides/environments.md).
+For source builds:
+
 ```sh
 git clone --recurse-submodules https://github.com/kb5000/trames-mac.git
 cd trames-mac
 bash scripts/build-mac.sh
-target/release/trames-mac-run --rootfs /path/to/verified-Alpine.tar.gz --storage "$HOME/Library/Application Support/Trames/Linux"
+target/release/trames-mac-run --manager
 ```
 
 `runtime/` pins an exact common-runtime commit. Run `git submodule update --init`
@@ -73,7 +87,8 @@ The host supplies `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`. Shared-memory pixels
 are presented through Metal, with no remote desktop server or complete Linux VM.
 Physical keyboard, pointer, scroll, native close/zoom/minimize, and client-side
 move/resize requests use the common Wayland seat and shell. Host clipboard and
-IME integration, and the HVF external GPU buffer bridge, remain follow-up work.
+IME integration remain follow-up work. Native GPU texture presentation is implemented;
+see [hardware Firefox rendering](docs/validation/mac-firefox-gpu.md).
 See [native window ownership and validation](docs/validation/mac-windows.md).
 
 For Firefox browsing, use a network-enabled guest session. `--network off`
@@ -100,8 +115,8 @@ server. The guest needs the shared Trames ICD and normal Vulkan loader; the host
 needs a compatible native Vulkan library (`TRAMES_VULKAN_LIBRARY` can select a
 Mac MoltenVK dylib). These binaries are not automatically installed or bundled
 by this checkpoint. The shared runtime still owns authorization, resources and
-waits. General zero-copy device-buffer mapping, NPU/Core ML and on-screen Vulkan
-acceptance remain follow-up work. See the
+waits. Native on-screen Vulkan and Firefox WebRender have focused acceptance.
+General device-buffer mapping and NPU/Core ML remain follow-up work. See the
 [native-device checkpoint](docs/validation/mac-windows.md#native-device-transport-checkpoint-2026-10-27).
 
 Hardware acceptance on a real Apple Silicon host:

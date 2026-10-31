@@ -1,0 +1,488 @@
+{
+  "date": "2026-10-31",
+  "platform": "Apple Silicon macOS 27.0.1; thin HVF execution, shared Linux userspace kernel",
+  "runtime_base": "5ee9bfc4d1f1f0ba2f7acbba8450bc6636deda2f",
+  "runner_sha256": "7ba8c1c6f92a53f034285df7d3e8b34fb68f00d2a82d9c86c9646592f4f062c6",
+  "source_sha256": {
+    "crates/trames-mac/src/main.rs": "6d16b1fa9ea60526faaba15817b8f5205a840518e345bd5ec55a85f35aed6d4e",
+    "crates/trames-mac/src/session.rs": "15d3bd6def23543380d8d1292d36591c059ce6d8782a7eb38f774b122d74ed76",
+    "crates/trames-mac/src/environments.rs": "e0b73a2b8e1e6e9e8d26a65b837b0956571d180cdaea664accddb889bc17ece0",
+    "crates/trames-mac/src/lifecycle.rs": "467790a2edfaa12a4cf91ced485cd1f913a9896d8952a934190b760cb688a45f",
+    "crates/trames-mac/src/manager.m": "16e110e49ac1d14fcc765e6f7024c15883885f38c9a54a714a1cc65396e17b79",
+    "scripts/build-mac.sh": "c9ed922e598529ef3bb5363c6e5678b9c4d9c02e509ef9c362e5620dcaa28373",
+    "scripts/install-mac.sh": "cc0dcf19278ba49a6e38a1a7963ae9ea6905fe22fc1bfa684a4100574da5c926",
+    "scripts/package-mac.py": "169a24c8e656f0d879f7f47a81f0598d17f2804cf5fbb86e9a4e500a8c0f1fd0",
+    "tests/integration/mac-environments.py": "f499b55ef7bac7734ab42586dd6ae2e0696e1d89bf836beb399de1eb0ec07816"
+  },
+  "rootfs": {
+    "alpine": "3.22.6, 821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+    "debian": "13.7 ARM64 slim, glibc 2.41, 2b70e040f7d132c8d366ee0223462552686510fb372ea5a83822973c30f19e36"
+  },
+  "operations": [
+    {
+      "arguments": [
+        "env",
+        "create",
+        "alpine",
+        "--distro",
+        "alpine",
+        "--archive",
+        "<temporary-path>"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.446709959
+    },
+    {
+      "arguments": [
+        "env",
+        "configure",
+        "alpine",
+        "--cpus",
+        "2",
+        "--windows",
+        "off"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.03050212499999999
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "echo persistent > /root/check; sync; uname -m; cat /etc/resolv.conf; cat /etc/os-release"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.09510175000000004
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.04720429100000001
+    },
+    {
+      "arguments": [
+        "env",
+        "create",
+        "debian",
+        "--distro",
+        "debian",
+        "--archive",
+        "<temporary-path>"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 11.664491833
+    },
+    {
+      "arguments": [
+        "env",
+        "configure",
+        "debian",
+        "--cpus",
+        "2",
+        "--windows",
+        "off"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.016391249999999857
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "debian",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "echo persistent > /root/check; sync; uname -m; cat /etc/resolv.conf; cat /etc/os-release"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.16582837500000025
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "debian",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.11191050000000047
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "debian",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "getconf GNU_LIBC_VERSION"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.07807016599999983
+    },
+    {
+      "arguments": [
+        "env",
+        "create",
+        "alpine",
+        "--archive",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.007789041999998858
+    },
+    {
+      "arguments": [
+        "env",
+        "create",
+        "failed",
+        "--archive",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.00682354199999935
+    },
+    {
+      "arguments": [
+        "env",
+        "import",
+        "imported",
+        "<temporary-path>"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.38323420900000116
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "imported",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.06035041600000035
+    },
+    {
+      "arguments": [
+        "env",
+        "configure",
+        "alpine",
+        "--mount",
+        "/work=/var/folders/z9/pm_9zfxs6wj4ngjn4jn2myyw0000gp/T/trames-env-iok_zy5h/shared"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.02244062499999977
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "echo shared > /work/hello"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.05981412500000083
+    },
+    {
+      "arguments": [
+        "env",
+        "backup",
+        "alpine",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.013810499999999948
+    },
+    {
+      "arguments": [
+        "env",
+        "delete",
+        "alpine",
+        "--yes"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.010156166999999883
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "/bin/true"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.008744500000000599
+    },
+    {
+      "arguments": [
+        "env",
+        "stop",
+        "alpine"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.1090223340000005
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/stop-check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.03956341600000002
+    },
+    {
+      "arguments": [
+        "env",
+        "backup",
+        "alpine",
+        "<temporary-path>"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.08267870799999955
+    },
+    {
+      "arguments": [
+        "env",
+        "backup",
+        "alpine",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.017636209000000846
+    },
+    {
+      "arguments": [
+        "env",
+        "restore",
+        "restored",
+        "<temporary-path>"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.4083169170000005
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "restored",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.05973616599999865
+    },
+    {
+      "arguments": [
+        "env",
+        "restore",
+        "corrupt",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.43410504200000055
+    },
+    {
+      "arguments": [
+        "env",
+        "restore",
+        "traversal",
+        "<temporary-path>"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.02320670800000002
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/crash-check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.043947792000000874
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/crash-check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.039929208000000216
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/crash-check"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.03940170900000162
+    },
+    {
+      "arguments": [
+        "env",
+        "check",
+        "alpine"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.0210134170000007
+    },
+    {
+      "arguments": [
+        "env",
+        "delete",
+        "restored",
+        "--yes"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.02382199999999912
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "debian",
+        "--no-windows",
+        "/bin/true"
+      ],
+      "expected_result": "rejected",
+      "exit_code": 1,
+      "seconds": 0.007368083999999442
+    },
+    {
+      "arguments": [
+        "env",
+        "list"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.007025916999999993
+    },
+    {
+      "arguments": [
+        "env",
+        "start",
+        "alpine",
+        "--no-windows",
+        "--no-pty",
+        "/bin/sh",
+        "-ec",
+        "cat /root/soak"
+      ],
+      "expected_result": "success",
+      "exit_code": 0,
+      "seconds": 0.22536612499999364
+    }
+  ],
+  "additional_acceptance": [
+    "SIGTERM and SIGHUP sync then release the store",
+    "SIGKILL after explicit guest sync retains data on reopen",
+    "SIGTERM restores host PTY flags and exits 143; Darwin PENDIN queue flag excluded",
+    "180-second sequential guest read/write/sleep soak completes and data reopens",
+    "Original Alpine apk installs and executes nano",
+    "Original Debian apt verifies repository metadata, installs hello and executes Hello, world!; dpkg --audit succeeds",
+    "Native manager creation performs a real verified Alpine download and lists the resulting environment",
+    "Installer first install and upgrade pass in a disposable destination",
+    "Development package ZIP integrity and checksums pass"
+  ],
+  "checks": {
+    "mac_product_unit_tests": "14 pass, 48 hardware/pressure tests remain explicitly ignored; unchanged hardware results reused",
+    "mac_runtime": "distro 8 pass; VFS 338 pass + five sandbox-denied socket cases rerun via 13 passing network cases; one existing skip",
+    "linux_runtime": "distro 8 pass; VFS 344 pass, one existing skip; affected all-feature Clippy pass",
+    "ipad": "ARM64 FFI cargo check pass"
+  },
+  "limits": [
+    "This record is scoped product acceptance, not a stable-release or complete Linux compatibility claim",
+    "Alpine and Debian creation times exclude download",
+    "180 seconds does not establish multi-hour workload stability",
+    "Real sleep/wake, power-loss recovery and fresh-machine Gatekeeper installation not tested",
+    "Developer ID signing/notarization requires external credentials; current package is ad-hoc development only",
+    "Guest graphics/video components still use their separately validated installation paths; Debian GUI/GPU compatibility is not established",
+    "Detailed stdout, traces and user paths stay in ignored local output"
+  ]
+}

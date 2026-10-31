@@ -9,12 +9,19 @@ type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
     host_memory_total: Option<usize>,
-    deadline: Instant,
+    deadline: Option<Instant>,
     window: Option<(u16, u16)>,
     pressure_target: Option<u64>,
+    next_admin_check: Instant,
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
 impl Output {
+    fn poll_admin(&mut self) {
+        if Instant::now() >= self.next_admin_check {
+            super::lifecycle::poll_stop();
+            self.next_admin_check = Instant::now() + Duration::from_millis(100);
+        }
+    }
     fn observe_pressure(&mut self) -> io::Result<()> {
         match trames_hvf::take_memory_pressure().map_err(io::Error::other)? {
             1 => self.pressure_target = None,
@@ -49,12 +56,18 @@ impl GuestOutput for Output {
     }
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
-        Ok(self.bridge.as_ref().is_some_and(|b| b.stopped())
-            || Instant::now() >= self.deadline
+        self.poll_admin();
+        Ok(super::lifecycle::stopping()
+            || self.bridge.as_ref().is_some_and(|b| b.stopped())
+            || self.deadline.is_some_and(|d| Instant::now() >= d)
             || self.pressure_target.is_some())
     }
     fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
-        if self.bridge.as_ref().is_some_and(|b| b.stopped()) || Instant::now() >= self.deadline {
+        self.poll_admin();
+        if super::lifecycle::stopping()
+            || self.bridge.as_ref().is_some_and(|b| b.stopped())
+            || self.deadline.is_some_and(|d| Instant::now() >= d)
+        {
             return Ok(false);
         }
         self.observe_pressure()?;
@@ -204,7 +217,7 @@ impl Command {
         let mut network = trames_vfs::NetworkMode::Full;
         let mut trace = false;
         let mut metrics = false;
-        let mut timeout = 86400;
+        let mut timeout = 0;
         let mut limit = MemoryLimits::host_managed().total;
         let mut cpus = std::thread::available_parallelism()
             .map_or(1, usize::from)
@@ -441,6 +454,7 @@ pub fn run(
     if pty {
         runtime.enable_terminal(Terminal::default())?;
     }
+    let _signals = super::lifecycle::Signals::install()?;
     let _terminal = RawTerminal::enter(pty)?;
     let mut output = Output {
         host_memory_total: options
@@ -448,11 +462,13 @@ pub fn run(
             .is_host_managed()
             .then(super::host_memory::physical_bytes)
             .transpose()?,
-        deadline: Instant::now() + Duration::from_secs(timeout),
+        deadline: (timeout != 0).then(|| Instant::now() + Duration::from_secs(timeout)),
         pressure_target: None,
+        next_admin_check: Instant::now(),
         bridge,
         window: None,
     };
+    super::lifecycle::ready();
     let result = runtime.run(&mut output, u64::MAX);
     if metrics {
         eprintln!(
@@ -534,12 +550,26 @@ pub fn run(
         );
     }
     runtime.linux.vfs.sync()?;
+    if super::lifecycle::stopping() || output.bridge.as_ref().is_some_and(|b| b.stopped()) {
+        return Ok(super::lifecycle::exit_code());
+    }
     result.map(|exit| exit.code).map_err(Into::into)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sessions_are_unlimited_unless_timeout_is_requested() {
+        let parse = |args: &[&str]| {
+            Command::parse(args.iter().map(|a| (*a).into()), false)
+                .unwrap()
+                .unwrap()
+        };
+        assert_eq!(parse(&["/bin/sh"]).timeout, 0);
+        assert_eq!(parse(&["--timeout", "17", "/bin/sh"]).timeout, 17);
+        assert_eq!(parse(&["--timeout", "0", "/bin/sh"]).timeout, 0);
+    }
     #[test]
     fn headless_selection_uses_parsed_host_options_only() {
         let parse = |args: &[&str]| {
@@ -602,9 +632,10 @@ mod tests {
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
             host_memory_total: None,
-            deadline: Instant::now() + Duration::from_secs(5),
+            deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,
             pressure_target: None,
+            next_admin_check: Instant::now(),
             bridge: None,
         };
         let mut vfs = trames_vfs::Vfs::default();
