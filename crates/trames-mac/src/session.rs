@@ -455,7 +455,6 @@ pub fn run(
         runtime.enable_terminal(Terminal::default())?;
     }
     let _signals = super::lifecycle::Signals::install()?;
-    let _terminal = RawTerminal::enter(pty)?;
     let mut output = Output {
         host_memory_total: options
             .memory_limits
@@ -468,8 +467,12 @@ pub fn run(
         bridge,
         window: None,
     };
+    // Host diagnostics use the original terminal's newline processing. Guest
+    // output keeps its own termios rules while the host transport is raw.
     super::lifecycle::ready();
+    let terminal = RawTerminal::enter(pty)?;
     let result = runtime.run(&mut output, u64::MAX);
+    drop(terminal);
     if metrics {
         eprintln!(
             "trames mac parallel: peak={} chunks={} cpu_time_us={}",
