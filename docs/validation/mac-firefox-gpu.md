@@ -1192,3 +1192,32 @@ in this pass, and these figures do not diagnose browser frame drops.
 
 [Full methods, limitations, reproducible fixture and machine-readable results](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#headless-ffmpeg-throughput-2026-10-31)
 are maintained with the shared guest validation tools.
+
+## Firefox video frame clock (2026-11-01)
+
+The shared runtime now keeps requested Wayland frame callbacks at the advertised
+60 Hz even when the requesting surface's own pixels are unchanged. The previous
+100 ms callback-only interval throttled browser synchronization surfaces.
+Producer-dependent extra cooldown is removed as well; unchanged scenes are
+still not repainted and unpresented commits remain unacknowledged. Filtered
+shared dup/close operations also remain on CPU workers, retaining the original
+seccomp decision when an owner-resource fallback is required.
+
+An unprofiled, source-paced 720p H.264 interval improves from 18.16 FPS
+(235/599 dropped) to 29.61 FPS (4/597 dropped). A separate native Firefox profile
+delivers 29.83 FPS with no drops. These are sequential single samples, with
+Firefox 142 in the guest and 159 natively; they establish this playback case,
+not equal general browser performance or maximum decoding throughput.
+
+Cold autoplay of the original short AAC fixture still triggers a 15-second
+browser buffering state. A timed window spanning that pause is recorded
+separately, rather than being hidden by the steady-playback result. WebDriver
+click and typing succeed during playback. Audio output/A-V sync, higher
+resolutions and physical iPad presentation remain outside this acceptance.
+
+`scripts/benchmark-firefox-video.py --port PORT --output result.json --seconds
+20 --check-input` measures an already loaded video in a separate visible
+Marionette profile. It does not force decoder/graphics preferences; input checks
+run after the FPS window. [Full method, source/fixture hashes and raw sample
+counters](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#end-to-end-firefox-playback-2026-11-01)
+are maintained with the shared video evidence.
