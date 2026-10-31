@@ -23,6 +23,12 @@ kernel as the iPad product. Host terminal input uses direct fd polling and POSIX
 raw mode with automatic restoration. Ctrl-C/Ctrl-Z, `fg`, and window size changes
 are forwarded through the shared guest terminal model.
 
+Use `--mount GUEST=HOST` or `--mount-ro GUEST=HOST` for a session-local native
+shared directory. Host tools and the running Linux session read/write the same
+files. For an inactive private store, `--fs ls/cat/get/put` offers explicit
+streaming access without starting a VM or presenter. See
+[file sharing, limits and native performance comparisons](docs/guides/file-sharing.md).
+
 `--storage DIR` selects the existing transactional disk VFS. `--rootfs` installs
 Alpine only if that store is not initialized; subsequent launches can use just
 `--storage DIR`. Omitting storage keeps the in-memory filesystem. `--network`

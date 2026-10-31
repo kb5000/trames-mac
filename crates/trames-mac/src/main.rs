@@ -2,6 +2,8 @@
 //! Terminal-first Mac composition of the shared Linux process kernel.
 //! The Hypervisor adapter owns instruction execution and MMU transport.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod files;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod host_memory;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod session;

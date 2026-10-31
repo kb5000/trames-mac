@@ -19,7 +19,7 @@ trames-hvf = { path = "../trames-hvf" }
 trames-linux = { workspace = true }
 trames-memory = { workspace = true }
 trames-elf = { workspace = true }
-trames-vfs = { workspace = true }
+trames-vfs = { workspace = true, features = ["hostfs"] }
 trames-distro = { workspace = true }
 
 [build-dependencies]

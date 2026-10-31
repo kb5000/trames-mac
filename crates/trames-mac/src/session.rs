@@ -175,6 +175,8 @@ pub struct Command {
     rootfs: Option<String>,
     storage: Option<String>,
     imports: Vec<String>,
+    mounts: Vec<(String, bool)>,
+    filesystem: bool,
     network: trames_vfs::NetworkMode,
     trace: bool,
     metrics: bool,
@@ -197,6 +199,8 @@ impl Command {
         let mut rootfs = None;
         let mut storage = None;
         let mut imports = Vec::new();
+        let mut mounts = Vec::new();
+        let mut filesystem = false;
         let mut network = trames_vfs::NetworkMode::Full;
         let mut trace = false;
         let mut metrics = false;
@@ -216,6 +220,16 @@ impl Command {
                 "--rootfs" => rootfs = Some(arguments.next().ok_or("missing --rootfs archive")?),
                 "--storage" => storage = Some(arguments.next().ok_or("missing storage directory")?),
                 "--exec-file" => imports.push(arguments.next().ok_or("missing GUEST=HOST import")?),
+                "--mount" => {
+                    mounts.push((arguments.next().ok_or("missing GUEST=HOST mount")?, false))
+                }
+                "--mount-ro" => {
+                    mounts.push((arguments.next().ok_or("missing GUEST=HOST mount")?, true))
+                }
+                "--fs" => {
+                    filesystem = true;
+                    windows = false;
+                }
                 "--network" => {
                     network = match arguments.next().as_deref() {
                         Some("off") => trames_vfs::NetworkMode::Off,
@@ -267,7 +281,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -275,13 +289,15 @@ impl Command {
             }
         }
         let mut argv: Vec<String> = arguments.collect();
-        if argv.is_empty() && (rootfs.is_some() || storage.is_some()) {
+        if argv.is_empty() && !filesystem && (rootfs.is_some() || storage.is_some()) {
             argv = vec!["/bin/sh".into(), "-l".into()];
         }
         Ok(Some(Self {
             rootfs,
             storage,
             imports,
+            mounts,
+            filesystem,
             network,
             trace,
             metrics,
@@ -305,6 +321,8 @@ pub fn run(
         rootfs,
         storage,
         imports,
+        mounts,
+        filesystem,
         network,
         trace,
         metrics,
@@ -336,7 +354,9 @@ pub fn run(
     } else {
         trames_vfs::Vfs::default()
     };
-    vfs.configure_network(network)?;
+    if !filesystem {
+        vfs.configure_network(network)?;
+    }
     if let Some(archive) = &rootfs {
         if vfs
             .stat_at(trames_vfs::AT_FDCWD, b"/etc/alpine-release")
@@ -347,9 +367,10 @@ pub fn run(
     }
     // Use the runtime's existing host-resolver endpoint, as the iPad and CLI
     // products do. Never replace a resolver file configured by the guest user.
-    if vfs
-        .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
-        .is_err_and(|e| e.0 == 2)
+    if !filesystem
+        && vfs
+            .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
+            .is_err_and(|e| e.0 == 2)
     {
         if vfs
             .stat_at(trames_vfs::AT_FDCWD, b"/etc")
@@ -366,6 +387,20 @@ pub fn run(
     for import in imports {
         let (guest, host) = import.split_once('=').ok_or("import must be GUEST=HOST")?;
         vfs.import_reader(guest.as_bytes(), &mut std::fs::File::open(host)?, true)?;
+    }
+    for (specification, readonly) in mounts {
+        let (guest, host) = specification
+            .split_once('=')
+            .ok_or("mount must be GUEST=HOST")?;
+        if !guest.starts_with('/') {
+            return Err("mount target must be an absolute guest path".into());
+        }
+        super::files::mkdirs(&mut vfs, guest.as_bytes())?;
+        vfs.mount_host(guest.as_bytes(), host, readonly)?;
+    }
+    if filesystem {
+        super::files::run(&mut vfs, &argv)?;
+        return Ok(0);
     }
     let bytes = if rootfs.is_some() || storage.is_some() {
         vfs.executable(path.as_bytes())?
