@@ -243,7 +243,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     if(NSApp)return YES;
     [NSApplication sharedApplication];NSApp.delegate=self;[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *actions=[NSMenu new];
-    NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:@"Quit Trames" action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
+    NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:[@"Quit " stringByAppendingString:([NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames")] action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
     NSMenuItem *windowMenu=[NSMenuItem new];[menu addItem:windowMenu];NSMenu *windowActions=[[NSMenu alloc]initWithTitle:@"Window"];
     NSMenuItem *close=[[NSMenuItem alloc]initWithTitle:@"Close Window" action:@selector(closeFocused:) keyEquivalent:@"w"];close.target=self;[windowActions addItem:close];
     NSMenuItem *minimize=[[NSMenuItem alloc]initWithTitle:@"Minimize" action:@selector(minimizeFocused:) keyEquivalent:@"m"];minimize.target=self;[windowActions addItem:minimize];windowMenu.submenu=windowActions;

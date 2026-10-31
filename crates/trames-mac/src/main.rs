@@ -10,6 +10,8 @@ mod host_memory;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod lifecycle;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod product;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod rootfs;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod session;
@@ -28,7 +30,9 @@ fn main() {
                 .parent()
                 .filter(|p| p.file_name().is_some_and(|n| n != "MacOS"))
             {
-                let bundled = directory.join("Trames.app/Contents/MacOS/trames-mac-run");
+                let bundled = directory
+                    .join(product::bundle())
+                    .join("Contents/MacOS/trames-mac-run");
                 if bundled.is_file() {
                     let error = std::process::Command::new(bundled)
                         .args(std::env::args_os().skip(1))
@@ -51,8 +55,10 @@ fn main() {
         environments::dispatch(&["help".into()]).map_err(|e| e.to_string())
     } else if args.first().is_some_and(|a| a == "--version") {
         println!(
-            "Trames {} runtime {}",
+            "{} {} ({}) runtime {}",
+            product::name(),
             env!("CARGO_PKG_VERSION"),
+            product::CHANNEL,
             include_str!("../../../runtime-version.json")
         );
         Ok(0)

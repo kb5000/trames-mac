@@ -4,10 +4,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+export TRAMES_BUILD_CHANNEL="${TRAMES_BUILD_CHANNEL:-dev}"
+case "$TRAMES_BUILD_CHANNEL" in
+  stable) bundle_name="Trames.app" ;;
+  dev) bundle_name="Trames Dev.app" ;;
+  *) echo 'TRAMES_BUILD_CHANNEL must be stable or dev' >&2; exit 1 ;;
+esac
 cargo build -p trames-mac --release --locked
 # A minimal agent bundle supplies AppKit identity without a startup window.
 # The CLI re-execs this binary in place; stdin/stdout and the PID are retained.
-bundle=target/release/Trames.app
+bundle="target/release/$bundle_name"
 mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
 cp apps/macos/Resources/Trames.icns "$bundle/Contents/Resources/Trames.icns"
 cp target/release/trames-mac-run target/release/trames-mac-package.tmp
@@ -15,8 +21,11 @@ rm -f "$bundle/Contents/MacOS/trames-mac-run"
 mv target/release/trames-mac-package.tmp "$bundle/Contents/MacOS/trames-mac-run"
 python3 - <<'PLIST'
 import pathlib,plistlib,re
-path=pathlib.Path('target/release/Trames.app/Contents/Info.plist')
-path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac',CFBundleName='Trames',CFBundleDisplayName='Trames',CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True)))
+import os
+channel=os.environ['TRAMES_BUILD_CHANNEL']
+name='Trames' if channel=='stable' else 'Trames Dev'
+path=pathlib.Path('target/release')/(name+'.app')/'Contents/Info.plist'
+path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac'+('' if channel=='stable' else '.dev'),CFBundleName=name,CFBundleDisplayName=name,TramesChannel=channel,CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True)))
 PLIST
 identity="${TRAMES_SIGN_IDENTITY:--}"
 if [[ "$identity" == "-" ]]; then

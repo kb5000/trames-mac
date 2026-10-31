@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 fn main() {
+    println!("cargo:rerun-if-env-changed=TRAMES_BUILD_CHANNEL");
+    let channel = std::env::var("TRAMES_BUILD_CHANNEL").unwrap_or_else(|_| "dev".into());
+    assert!(
+        matches!(channel.as_str(), "stable" | "dev"),
+        "TRAMES_BUILD_CHANNEL must be stable or dev"
+    );
+    println!("cargo:rustc-env=TRAMES_BUILD_CHANNEL={channel}");
     println!("cargo:rerun-if-changed=src/window.m");
     println!("cargo:rerun-if-changed=src/manager.m");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos")

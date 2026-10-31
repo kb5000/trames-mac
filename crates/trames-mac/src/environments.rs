@@ -220,8 +220,9 @@ pub fn root() -> Result<PathBuf> {
     let p = if let Some(p) = std::env::var_os("TRAMES_HOME") {
         PathBuf::from(p)
     } else {
-        PathBuf::from(std::env::var_os("HOME").ok_or("HOME is not set")?)
-            .join("Library/Application Support/Trames")
+        super::product::registry(Path::new(
+            &std::env::var_os("HOME").ok_or("HOME is not set")?,
+        ))
     };
     if !p.is_absolute() {
         return Err("TRAMES_HOME must be absolute".into());
@@ -915,7 +916,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     if op == "doctor" {
         println!(
             "{}",
-            serde_json::json!({"version":env!("CARGO_PKG_VERSION"),"runtime":include_str!("../../../runtime-version.json"),"home":r,"architecture":std::env::consts::ARCH,"cpus":trames_hvf::max_parallel_cpus(),"rootfs":[{"name":"alpine","version":trames_distro::ALPINE_VERSION,"sha256":trames_distro::ALPINE_SHA256},{"name":"debian","version":trames_distro::DEBIAN_VERSION,"sha256":trames_distro::DEBIAN_SHA256}]})
+            serde_json::json!({"version":env!("CARGO_PKG_VERSION"),"runtime":include_str!("../../../runtime-version.json"),"home":r,"channel":super::product::CHANNEL,"architecture":std::env::consts::ARCH,"cpus":trames_hvf::max_parallel_cpus(),"rootfs":[{"name":"alpine","version":trames_distro::ALPINE_VERSION,"sha256":trames_distro::ALPINE_SHA256},{"name":"debian","version":trames_distro::DEBIAN_VERSION,"sha256":trames_distro::DEBIAN_SHA256}]})
         );
         return Ok(0);
     }

@@ -166,16 +166,20 @@ def main():
                            XDG_CONFIG_HOME=str(base / 'config'), TRAMES_APPLICATIONS_DIR=str(base / 'Applications'),
                            TRAMES_BIN_DIR=str(installed_bin))
         app = runner.parents[2] if runner.parent.name == 'MacOS' else runner.parent / 'Trames.app'
+        import plistlib
+        info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
+        cli_name = 'trames-dev' if info['CFBundleIdentifier'].endswith('.dev') else 'trames'
+        product_name = 'Trames Dev' if cli_name == 'trames-dev' else 'Trames'
         for _ in range(2):
             subprocess.run(['/bin/bash', str(a.installer.resolve()), str(app)], env=install_env,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30)
         for profile in ['.zprofile', '.zshrc']:
             text = (profiles / profile).read_text()
-            assert text.count('# Trames CLI') == 1, text
+            assert text.count('# ' + product_name + ' CLI') == 1, text
         assert '# user settings' in (profiles / '.zshrc').read_text()
-        query = subprocess.run(['/bin/zsh', '-lic', 'command -v trames; printf "%s\\n" "$USER_SETTINGS_PRESERVED"; trames --version'],
+        query = subprocess.run(['/bin/zsh', '-lic', f'command -v {cli_name}; printf "%s\\n" "$USER_SETTINGS_PRESERVED"; {cli_name} --version'],
                                env=install_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
-        assert query.returncode == 0 and str(installed_bin / 'trames') in query.stdout and 'yes' in query.stdout and 'Trames 1.3' in query.stdout, query
+        assert query.returncode == 0 and str(installed_bin / cli_name) in query.stdout and 'yes' in query.stdout and '1.3.' in query.stdout, query
         # An interactive non-login shell gets PATH too, with no duplication.
         query = subprocess.run(['/bin/zsh', '-ic', 'print -r -- $PATH'], env=install_env,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)

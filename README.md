@@ -28,12 +28,14 @@ For source builds:
 git clone --recurse-submodules https://github.com/kb5000/trames-mac.git
 cd trames-mac
 bash scripts/build-mac.sh
-target/release/trames-mac-run --manager
+target/release/trames-mac-run --manager       # Trames Dev by default
 ```
 
 `runtime/` pins an exact common-runtime commit. Run `git submodule update --init`
-after switching revisions. The build script uses a local ad-hoc Hypervisor
-signature; it does not require the iPad development certificate or a JIT entitlement.
+after switching revisions. The build script defaults to the isolated Trames Dev product and uses a local
+ad-hoc Hypervisor signature. Its app, CLI and data are separate from stable Trames.
+Use `TRAMES_BUILD_CHANNEL=stable` only when building the stable product. Neither
+local channel requires the iPad certificate or a JIT entitlement.
 
 The default interface is a terminal. With a rootfs or `--storage` and no command,
 the product starts `/bin/sh -l`. Normal external commands, fork/exec, threads,

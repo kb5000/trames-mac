@@ -60,6 +60,53 @@ layout. Debian supports normal userspace programs and an optional systemd servic
 environment. Linux kernel modules and complete Linux ABI compatibility are
 not provided.
 
+## Stable and development installations
+
+The two product channels install and run side by side:
+
+| Channel | App / bundle identity | CLI | Default registry |
+| --- | --- | --- | --- |
+| Stable | `Trames.app` / `org.trames.Trames.mac` | `trames` | `~/Library/Application Support/Trames` |
+| Development | `Trames Dev.app` / `org.trames.Trames.mac.dev` | `trames-dev` | `~/Library/Application Support/Trames Dev` |
+
+Each registry has its own environments, global defaults, locks and launchers.
+Existing installations are the stable channel and keep their current data path.
+Updating/reinstalling dev neither replaces the stable app nor opens its stores;
+same-named Linux environments can run simultaneously in both channels. Manager
+windows and version output identify the selected channel. Both use the committed
+application icon. `TRAMES_HOME` remains an explicit registry override, independent
+of channel; use separate paths when overriding it for parallel testing.
+
+Source builds default to **dev**, including the source runner's paired bundle.
+Explicit `TRAMES_BUILD_CHANNEL=stable` builds the stable product; the channel is
+compiled into the executable, not selected by its runtime environment. A normal
+dev rebuild does not modify the stable bundle. Install the desired built app:
+
+```sh
+bash scripts/build-mac.sh
+bash scripts/install-mac.sh 'target/release/Trames Dev.app'
+# An explicit stable build/install:
+TRAMES_BUILD_CHANNEL=stable bash scripts/build-mac.sh
+bash scripts/install-mac.sh target/release/Trames.app
+```
+
+Both installers can add their command to the same `~/.local/bin`. Their managed
+PATH helpers are independent (`path.sh` / `path-dev.sh` under the Trames config
+directory), so custom install directories also remain usable together. Existing
+shell settings and the other channel's CLI link are preserved.
+
+To test a copy of stable guest data, make an offline backup and restore it in dev:
+
+```sh
+trames env stop work
+trames env backup work /tmp/work.trames.tar.gz
+trames-dev env restore work /tmp/work.trames.tar.gz
+trames-dev env start work
+```
+
+Restoring creates a separate store and machine identity; shared host folders need
+explicit re-selection. It does not turn a live stable store into a dev store.
+
 ## CLI configuration and default commands
 
 ```sh
@@ -305,21 +352,30 @@ contents or process memory; this is offline file recovery, not live snapshots.
 ## Build and distribute
 
 ```sh
-bash scripts/build-mac.sh                       # Ad-hoc local development build
-TRAMES_SIGN_IDENTITY='Developer ID Application: …' bash scripts/build-mac.sh
-python3 scripts/package-mac.py --development   # Explicitly labelled local ZIP
-python3 scripts/package-mac.py \
+bash scripts/build-mac.sh                     # Dev channel, ad-hoc local build
+python3 scripts/package-mac.py --unnotarized  # Dev ZIP, no notarization
+# Stable channel, local unnotarized ZIP:
+TRAMES_BUILD_CHANNEL=stable bash scripts/build-mac.sh
+python3 scripts/package-mac.py --app target/release/Trames.app --unnotarized
+# Developer ID / notarized stable distribution:
+TRAMES_BUILD_CHANNEL=stable TRAMES_SIGN_IDENTITY='Developer ID Application: …' bash scripts/build-mac.sh
+python3 scripts/package-mac.py --app target/release/Trames.app \
   --notarize-profile YOUR_EXISTING_PROFILE \
   --corresponding-source /path/to/native-driver-and-dependency-sources.tar.gz
 ```
 
+Product channel and distribution signing are independent. A stable-channel local
+package can be unnotarized; it still uses the stable app/CLI/data paths. Such ZIPs
+have an explicit `-unnotarized` suffix and do not claim Gatekeeper acceptance.
+Dev packages use a `Trames-Dev-` prefix. The old `--development` packaging flag
+remains an alias for `--unnotarized`; it does not change a bundle's channel.
+
 The build uses the workspace version for bundle metadata. Production packaging
-requires a clean source tree, exact runtime pin, hardened Developer ID signature,
-corresponding native dependency sources, successful notarization, stapling and
-Gatekeeper assessment. ZIPs include installer, license, guide, paired project/
-runtime source exports, build identities and file checksums. Development archives
-are labelled and do not claim Gatekeeper acceptance or stable-release validation.
-The script does not publish GitHub releases or obtain account credentials.
+requires a clean source tree, exact runtime pin, stable channel, hardened Developer
+ID signature, corresponding native dependency sources, successful notarization,
+stapling and Gatekeeper assessment. ZIPs include installer, license, guide, paired
+project/runtime source exports, channel/build identities and file checksums. The
+script does not publish GitHub releases or obtain account credentials.
 
 Run `trames --version` or `trames env doctor` to collect product/runtime revisions,
 rootfs versions/hashes and host capability limits. The source acceptance harness

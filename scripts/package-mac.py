@@ -24,23 +24,32 @@ def run(*args, **kwargs):
 def main():
     root = Path(__file__).resolve().parents[1]
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--app', type=Path, default=root / 'target/release/Trames.app')
+    p.add_argument('--app', type=Path, help='Application bundle; defaults to the matching stable/dev build')
     p.add_argument('--output', type=Path, default=root / 'target/dist')
-    p.add_argument('--development', action='store_true')
+    p.add_argument('--unnotarized', '--development', dest='development', action='store_true', help='Local ad-hoc package; independent of stable/dev product channel')
     p.add_argument('--notarize-profile')
     p.add_argument('--corresponding-source', type=Path, action='append', default=[], help='Required for a release: original static-driver sources, patches and build recipes')
     args = p.parse_args()
-    app = args.app.resolve()
+    default = root / 'target/release' / ('Trames Dev.app' if args.development and (root / 'target/release/Trames Dev.app').is_dir() else 'Trames.app')
+    app = (args.app or default).resolve()
     run('/usr/bin/codesign', '--verify', '--strict', str(app))
     signature = subprocess.check_output(['/usr/bin/codesign', '-dv', '--verbose=4', str(app)], stderr=subprocess.STDOUT, text=True)
     if not args.development and ('Authority=Developer ID Application:' not in signature or 'runtime' not in signature):
-        p.error('Release requires a hardened Developer ID Application signature; use --development for a local test package')
+        p.error('Release requires a hardened Developer ID Application signature; use --unnotarized for a local test package')
     if not args.development and (not args.notarize_profile or not args.corresponding_source):
         p.error('Release requires --notarize-profile and --corresponding-source for the native driver/dependencies')
     if args.development and args.notarize_profile:
         p.error('Development archives are not submitted for notarization')
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     version = info['CFBundleShortVersionString']
+    channel = info.get('TramesChannel', 'stable')
+    if channel not in ('stable', 'dev'):
+        p.error('Unknown application channel')
+    product_name = 'Trames' if channel == 'stable' else 'Trames Dev'
+    if info['CFBundleIdentifier'] != 'org.trames.Trames.mac' + ('' if channel == 'stable' else '.dev'):
+        p.error('Bundle identity does not match the product channel')
+    if not args.development and channel != 'stable':
+        p.error('A production release requires the stable product channel')
     revision = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
     runtime = subprocess.check_output(['git', '-C', str(root / 'runtime'), 'rev-parse', 'HEAD'], text=True).strip()
     pin = json.loads((root / 'runtime-version.json').read_text())
@@ -50,14 +59,14 @@ def main():
         if not args.development and subprocess.check_output(['git', '-C', str(repo), 'status', '--porcelain']).strip():
             p.error(f'Release source is dirty: {repo}')
     args.output.mkdir(parents=True, exist_ok=True)
-    basename = f'Trames-{version}-mac-arm64' + ('-development' if args.development else '')
+    basename = f"{'Trames' if channel == 'stable' else 'Trames-Dev'}-{version}-mac-arm64" + ('-unnotarized' if args.development else '')
     output = args.output / f'{basename}.zip'
     if output.exists():
         p.error('Output already exists; choose a new output directory')
     with tempfile.TemporaryDirectory(prefix='trames-package-') as tmp:
         stage = Path(tmp) / basename
         stage.mkdir()
-        run('/usr/bin/ditto', str(app), str(stage / 'Trames.app'))
+        run('/usr/bin/ditto', str(app), str(stage / (product_name + '.app')))
         shutil.copy2(root / 'scripts/install-mac.sh', stage / 'install.command')
         shutil.copy2(root / 'LICENSE', stage / 'LICENSE')
         shutil.copy2(root / 'docs/guides/environments.md', stage / 'README.md')
@@ -69,14 +78,14 @@ def main():
             if not source.is_file():
                 p.error(f'Missing source archive: {source}')
             shutil.copy2(source, sources / source.name)
-        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'development': args.development, 'architecture': 'arm64'}, indent=2) + '\n')
+        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'development': args.development, 'channel': channel, 'notarized': not args.development, 'architecture': 'arm64'}, indent=2) + '\n')
         if args.notarize_profile:
             submission = Path(tmp) / 'notarize.zip'
-            run('/usr/bin/ditto', '-c', '-k', '--keepParent', str(stage / 'Trames.app'), str(submission))
+            run('/usr/bin/ditto', '-c', '-k', '--keepParent', str(stage / (product_name + '.app')), str(submission))
             run('xcrun', 'notarytool', 'submit', str(submission), '--keychain-profile', args.notarize_profile, '--wait')
-            run('xcrun', 'stapler', 'staple', str(stage / 'Trames.app'))
-            run('xcrun', 'stapler', 'validate', str(stage / 'Trames.app'))
-            run('/usr/sbin/spctl', '--assess', '--type', 'execute', str(stage / 'Trames.app'))
+            run('xcrun', 'stapler', 'staple', str(stage / (product_name + '.app')))
+            run('xcrun', 'stapler', 'validate', str(stage / (product_name + '.app')))
+            run('/usr/sbin/spctl', '--assess', '--type', 'execute', str(stage / (product_name + '.app')))
         inventory = {}
         for path in sorted(stage.rglob('*')):
             if path.is_file():

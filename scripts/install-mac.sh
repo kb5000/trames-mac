@@ -4,6 +4,13 @@
 set -euo pipefail
 source_dir="$(cd "$(dirname "$0")" && pwd)"
 source_app="${1:-$source_dir/Trames.app}"
+if [[ $# -eq 0 && ! -d "$source_app" && -d "$source_dir/Trames Dev.app" ]]; then source_app="$source_dir/Trames Dev.app"; fi
+identifier=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$source_app/Contents/Info.plist")
+case "$identifier" in
+  org.trames.Trames.mac) product_name="Trames"; cli_name="trames"; path_name="path.sh" ;;
+  org.trames.Trames.mac.dev) product_name="Trames Dev"; cli_name="trames-dev"; path_name="path-dev.sh" ;;
+  *) echo 'Source is not a recognized Trames application.' >&2; exit 1 ;;
+esac
 app_dir="${TRAMES_APPLICATIONS_DIR:-$HOME/Applications}"
 bin_dir="${TRAMES_BIN_DIR:-$HOME/.local/bin}"
 # Persist the CLI path for new login and interactive shells. A guarded source
@@ -11,7 +18,7 @@ bin_dir="${TRAMES_BIN_DIR:-$HOME/.local/bin}"
 install_path() {
   [[ "${TRAMES_MODIFY_PATH:-1}" != "0" ]] || return 0
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/trames"
-  local path_file="$config_dir/path.sh"
+  local path_file="$config_dir/$path_name"
   local quoted_bin quoted_file profile source_line
   local profiles=()
   local shell_name="${SHELL:-/bin/zsh}"
@@ -42,7 +49,7 @@ EOF
     for profile in "${profiles[@]}"; do
       mkdir -p "$(dirname "$profile")"
       if [[ ! -f "$profile" ]] || ! /usr/bin/grep -Fxq "$source_line" "$profile"; then
-        printf '\n# Trames CLI\n%s\n' "$source_line" >> "$profile"
+        printf '\n# %s CLI\n%s\n' "$product_name" "$source_line" >> "$profile"
       fi
     done
   )
@@ -50,29 +57,29 @@ EOF
 }
 /usr/bin/codesign --verify --strict "$source_app"
 mkdir -p "$app_dir" "$bin_dir"
-stage="$app_dir/.Trames-install-$$.app"
-dest="$app_dir/Trames.app"
-previous="$app_dir/.Trames-previous-$$.app"
+stage="$app_dir/.$cli_name-install-$$.app"
+dest="$app_dir/$product_name.app"
+previous="$app_dir/.$cli_name-previous-$$.app"
 rollback() {
   rm -rf "$stage"
   if [[ -d "$previous" && ! -e "$dest" ]]; then mv "$previous" "$dest"; fi
 }
 trap rollback EXIT
 # Refuse CLI conflicts before replacing any installed application.
-if [[ -e "$bin_dir/trames" || -L "$bin_dir/trames" ]]; then
-  [[ -L "$bin_dir/trames" && "$(readlink "$bin_dir/trames")" == "$dest/Contents/MacOS/trames-mac-run" ]] || { echo "CLI path already exists: $bin_dir/trames. Choose a different TRAMES_BIN_DIR." >&2; exit 1; }
+if [[ -e "$bin_dir/$cli_name" || -L "$bin_dir/$cli_name" ]]; then
+  [[ -L "$bin_dir/$cli_name" && "$(readlink "$bin_dir/$cli_name")" == "$dest/Contents/MacOS/trames-mac-run" ]] || { echo "CLI path already exists: $bin_dir/$cli_name. Choose a different TRAMES_BIN_DIR." >&2; exit 1; }
 fi
 /usr/bin/ditto "$source_app" "$stage"
 /usr/bin/codesign --verify --strict "$stage"
 if [[ -e "$dest" ]]; then
-  identifier=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$dest/Contents/Info.plist")
-  [[ "$identifier" == "org.trames.Trames.mac" ]] || { echo 'Destination is not a Trames installation.' >&2; exit 1; }
+  existing_identifier=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$dest/Contents/Info.plist")
+  [[ "$existing_identifier" == "$identifier" ]] || { echo 'Destination is not a Trames installation.' >&2; exit 1; }
   mv "$dest" "$previous"
 fi
 mv "$stage" "$dest"
-if [[ ! -L "$bin_dir/trames" ]]; then
-  ln -s "$dest/Contents/MacOS/trames-mac-run" "$bin_dir/trames"
+if [[ ! -L "$bin_dir/$cli_name" ]]; then
+  ln -s "$dest/Contents/MacOS/trames-mac-run" "$bin_dir/$cli_name"
 fi
 rm -rf "$previous"
 install_path
-printf 'Installed %s\nCLI: %s/trames\nOpen Trames.app for environment management.\n' "$dest" "$bin_dir"
+printf 'Installed %s\nCLI: %s/%s\nOpen %s.app for environment management.\n' "$dest" "$bin_dir" "$cli_name" "$product_name"

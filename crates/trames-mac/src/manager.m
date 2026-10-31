@@ -11,6 +11,7 @@
 @property NSTask *task;
 @property BOOL refreshing;
 @end
+static NSString *productName(void){return [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames";}
 static NSString *executable(void){return NSBundle.mainBundle.executablePath ?: NSProcessInfo.processInfo.arguments.firstObject;}
 static NSTextField *label(NSString *s){NSTextField *v=[NSTextField labelWithString:s];v.lineBreakMode=NSLineBreakByWordWrapping;return v;}
 static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton buttonWithTitle:s target:target action:action];b.bezelStyle=NSBezelStyleRounded;return b;}
@@ -20,9 +21,9 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     (void)notification;self.rows=@[];self.actions=[NSMutableArray array];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-    NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *sub=[NSMenu new];[sub addItemWithTitle:@"Quit Trames" action:@selector(terminate:) keyEquivalent:@"q"];app.submenu=sub;NSApp.mainMenu=menu;
+    NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *sub=[NSMenu new];[sub addItemWithTitle:[@"Quit " stringByAppendingString:productName()] action:@selector(terminate:) keyEquivalent:@"q"];app.submenu=sub;NSApp.mainMenu=menu;
     self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,900,650) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];
-    self.window.title=@"Trames — Linux Environments";self.window.minSize=NSMakeSize(800,600);[self.window center];
+    self.window.title=[productName() stringByAppendingString:@" — Linux Environments"];self.window.minSize=NSMakeSize(800,600);[self.window center];
     NSStackView *root=[NSStackView stackViewWithViews:@[]];root.orientation=NSUserInterfaceLayoutOrientationVertical;root.alignment=NSLayoutAttributeLeading;root.spacing=14;root.edgeInsets=NSEdgeInsetsMake(22,22,22,22);root.translatesAutoresizingMaskIntoConstraints=NO;[self.window.contentView addSubview:root];
     [NSLayoutConstraint activateConstraints:@[[root.leadingAnchor constraintEqualToAnchor:self.window.contentView.leadingAnchor],[root.trailingAnchor constraintEqualToAnchor:self.window.contentView.trailingAnchor],[root.topAnchor constraintEqualToAnchor:self.window.contentView.topAnchor],[root.bottomAnchor constraintEqualToAnchor:self.window.contentView.bottomAnchor]]];
     NSTextField *title=label(@"Your Linux environments");title.font=[NSFont systemFontOfSize:24 weight:NSFontWeightSemibold];[root addArrangedSubview:title];
