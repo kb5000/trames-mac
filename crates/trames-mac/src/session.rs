@@ -8,6 +8,9 @@ use trames_session::{MemoryLimits, RuntimeOptions, Terminal};
 type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
+    init: Option<super::systemd::Monitor>,
+    root_signal: Option<u32>,
+    admin_pending: bool,
     host_memory_total: Option<usize>,
     deadline: Option<Instant>,
     window: Option<(u16, u16)>,
@@ -19,6 +22,10 @@ impl Output {
     fn poll_admin(&mut self) {
         if Instant::now() >= self.next_admin_check {
             super::lifecycle::poll_stop();
+            self.admin_pending = self
+                .init
+                .as_ref()
+                .is_some_and(|i| i.pending(super::lifecycle::stopping()));
             self.next_admin_check = Instant::now() + Duration::from_millis(100);
         }
     }
@@ -57,14 +64,21 @@ impl GuestOutput for Output {
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         self.poll_admin();
-        Ok(super::lifecycle::stopping()
+        Ok(self.admin_pending
+            || (super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
             || self.deadline.is_some_and(|d| Instant::now() >= d)
             || self.pressure_target.is_some())
     }
     fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
         self.poll_admin();
-        if super::lifecycle::stopping()
+        self.admin_pending = false;
+        if let Some(init) = &mut self.init {
+            self.root_signal = init
+                .control(super::lifecycle::stopping())
+                .map_err(|e| io::Error::other(e.to_string()))?;
+        }
+        if (super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
             || self.deadline.is_some_and(|d| Instant::now() >= d)
         {
@@ -83,6 +97,9 @@ impl GuestOutput for Output {
             }
         }
         Ok(true)
+    }
+    fn root_signal(&mut self) -> Option<u32> {
+        self.root_signal.take()
     }
     fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
         match fd {
@@ -201,6 +218,7 @@ pub struct Command {
     vulkan: bool,
     video: bool,
     pty: bool,
+    init: super::systemd::Init,
     argv: Vec<String>,
 }
 impl Command {
@@ -209,6 +227,7 @@ impl Command {
         pty: bool,
     ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
         let mut arguments = arguments.peekable();
+        let mut init = super::systemd::Init::Shell;
         let mut rootfs = None;
         let mut storage = None;
         let mut imports = Vec::new();
@@ -230,6 +249,10 @@ impl Command {
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
+                "--init" => {
+                    init =
+                        super::systemd::Init::parse(&arguments.next().ok_or("missing init mode")?)?
+                }
                 "--rootfs" => rootfs = Some(arguments.next().ok_or("missing --rootfs archive")?),
                 "--storage" => storage = Some(arguments.next().ok_or("missing storage directory")?),
                 "--exec-file" => imports.push(arguments.next().ok_or("missing GUEST=HOST import")?),
@@ -294,7 +317,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs Alpine.tar.gz] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -302,10 +325,25 @@ impl Command {
             }
         }
         let mut argv: Vec<String> = arguments.collect();
+        if init == super::systemd::Init::Systemd {
+            if filesystem || !argv.is_empty() {
+                return Err(
+                    "systemd boot takes no Linux command; use --init shell for offline maintenance"
+                        .into(),
+                );
+            }
+            pty = true;
+            argv = vec![
+                "/usr/lib/systemd/systemd".into(),
+                "--system".into(),
+                "--unit=multi-user.target".into(),
+            ];
+        }
         if argv.is_empty() && !filesystem && (rootfs.is_some() || storage.is_some()) {
             argv = vec!["/bin/sh".into(), "-l".into()];
         }
         Ok(Some(Self {
+            init,
             rootfs,
             storage,
             imports,
@@ -331,6 +369,7 @@ pub fn run(
     command: Command,
 ) -> Result<u8, Box<dyn std::error::Error>> {
     let Command {
+        init,
         rootfs,
         storage,
         imports,
@@ -415,6 +454,11 @@ pub fn run(
         super::files::run(&mut vfs, &argv)?;
         return Ok(0);
     }
+    let init = if init == super::systemd::Init::Systemd {
+        Some(super::systemd::prepare(&mut vfs)?)
+    } else {
+        None
+    };
     let bytes = if rootfs.is_some() || storage.is_some() {
         vfs.executable(path.as_bytes())?
     } else {
@@ -443,6 +487,15 @@ pub fn run(
             "GDK_BACKEND=wayland".into(),
         ]);
     }
+    if init.is_some() {
+        envp.extend([
+            "container=trames".into(),
+            "NOTIFY_SOCKET=/run/host/notify".into(),
+        ]);
+        if server.is_some() {
+            super::systemd::file(&mut vfs, b"/run/systemd/system/console-getty.service.d/60-wayland.conf", b"[Service]\nEnvironment=XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-0 GDK_BACKEND=wayland\n")?;
+        }
+    }
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
     // A browser's guest threads are scheduler jobs, not host threads. Keep
@@ -456,6 +509,9 @@ pub fn run(
     }
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
+        init,
+        root_signal: None,
+        admin_pending: false,
         host_memory_total: options
             .memory_limits
             .is_host_managed()
@@ -574,6 +630,17 @@ mod tests {
         assert_eq!(parse(&["--timeout", "0", "/bin/sh"]).timeout, 0);
     }
     #[test]
+    fn systemd_requires_explicit_shell_override_for_maintenance_commands() {
+        let parse = |args: &[&str]| Command::parse(args.iter().map(|a| (*a).into()), false);
+        let boot = parse(&["--storage", "/store", "--init", "systemd"])
+            .unwrap()
+            .unwrap();
+        assert!(boot.pty && boot.init == super::super::systemd::Init::Systemd);
+        assert_eq!(boot.argv[0], "/usr/lib/systemd/systemd");
+        assert!(parse(&["--init", "systemd", "/bin/true"]).is_err());
+        assert!(parse(&["--init", "systemd", "--init", "shell", "/bin/true"]).is_ok());
+    }
+    #[test]
     fn headless_selection_uses_parsed_host_options_only() {
         let parse = |args: &[&str]| {
             Command::parse(args.iter().map(|s| (*s).to_owned()), false)
@@ -634,6 +701,9 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            init: None,
+            root_signal: None,
+            admin_pending: false,
             host_memory_total: None,
             deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,

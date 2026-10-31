@@ -28,6 +28,8 @@ pub struct Mount {
 pub struct Config {
     pub schema: u32,
     pub distribution: String,
+    #[serde(default)]
+    pub init: super::systemd::Init,
     pub source_sha256: String,
     pub cpus: usize,
     pub memory_mib: String,
@@ -42,6 +44,7 @@ impl Config {
         Self {
             schema: 1,
             distribution: distribution.into(),
+            init: super::systemd::Init::Shell,
             source_sha256: catalog(distribution).unwrap().1.into(),
             cpus: std::thread::available_parallelism()
                 .map_or(1, usize::from)
@@ -62,6 +65,11 @@ impl Config {
             );
         }
         catalog(&self.distribution)?;
+        if self.init == super::systemd::Init::Systemd && self.distribution != "debian" {
+            return Err(
+                "systemd init is available for Debian environments; Alpine uses shell".into(),
+            );
+        }
         if self.cpus == 0 || self.cpus > trames_hvf::max_parallel_cpus() {
             return Err("invalid CPU count".into());
         }
@@ -289,12 +297,22 @@ fn publish(stage: &Path, dir: &Path) -> Result<()> {
     File::open(dir.parent().unwrap())?.sync_all()?;
     Ok(())
 }
-fn create(r: &Path, n: &str, d: &str, archive: Option<&str>) -> Result<()> {
+fn create(
+    r: &Path,
+    n: &str,
+    d: &str,
+    archive: Option<&str>,
+    init: super::systemd::Init,
+) -> Result<()> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
     if dir.try_exists()? {
         return Err("environment already exists".into());
     }
+    catalog(d)?;
+    let mut c = Config::new(d);
+    c.init = init;
+    c.validate()?;
     let source = source(r, d, archive)?;
     let stage = staging(r, n)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
@@ -320,7 +338,10 @@ fn create(r: &Path, n: &str, d: &str, archive: Option<&str>) -> Result<()> {
     }
     vfs.sync()?;
     drop(vfs);
-    save(&stage.0, &Config::new(d))?;
+    if c.init == super::systemd::Init::Systemd {
+        super::systemd::install(&stage.0.join("store"), c.cpus, &c.network)?;
+    }
+    save(&stage.0, &c)?;
     publish(&stage.0, &dir)?;
     println!("Created {n} ({d})");
     Ok(())
@@ -374,6 +395,16 @@ fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
             format!("{}={}", m.guest, m.host),
         ]);
     }
+    // An explicit command is a maintenance session; require an explicit shell
+    // override rather than silently bypassing this environment's init setting.
+    args.extend([
+        "--init".into(),
+        match c.init {
+            super::systemd::Init::Shell => "shell",
+            super::systemd::Init::Systemd => "systemd",
+        }
+        .into(),
+    ]);
     let extra = extra.strip_prefix(&["--".into()]).unwrap_or(extra);
     args.extend_from_slice(extra);
     Ok(super::execute(args)?)
@@ -512,10 +543,9 @@ fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
     let mut c = Config::new(d);
     c.source_sha256 = "imported-existing-store".into();
     save(&stage.0, &c)?;
-    drop(Vfs::open_disk(
-        stage.0.join("store"),
-        DiskOptions::default(),
-    )?);
+    let mut copy = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
+    super::systemd::renew_identity(&mut copy)?;
+    drop(copy);
     publish(&stage.0, &dir)?;
     drop(vfs);
     println!("Imported {n}; original store is unchanged");
@@ -525,6 +555,7 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
     let mut c = load(&dir)?;
+    let old_init = c.init;
     let mut args = args.iter();
     while let Some(k) = args.next() {
         if k == "--clear-mounts" {
@@ -538,6 +569,7 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
             _ => Err("expected on or off"),
         };
         match k.as_str() {
+            "--init" => c.init = super::systemd::Init::parse(v)?,
             "--cpus" => c.cpus = v.parse()?,
             "--memory-mib" => c.memory_mib = v.clone(),
             "--network" => c.network = v.clone(),
@@ -558,6 +590,10 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
             }
             _ => return Err("unknown configuration setting".into()),
         }
+    }
+    c.validate()?;
+    if c.init == super::systemd::Init::Systemd && old_init != c.init {
+        super::systemd::install(&dir.join("store"), c.cpus, &c.network)?;
     }
     save(&dir, &c)
 }
@@ -687,7 +723,8 @@ fn restore(r: &Path, n: &str, archive: &Path) -> Result<()> {
     // A portable backup never grants new native paths to its recipient.
     c.mounts.clear();
     save(&stage.0, &c)?;
-    let vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
+    let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
+    super::systemd::renew_identity(&mut vfs)?;
     drop(vfs);
     publish(&stage.0, &dir)?;
     println!("Restored {n}; shared directories must be selected again");
@@ -698,12 +735,12 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     let op = args.first().map(String::as_str).unwrap_or("list");
     if op == "default" {
         if !directory(&r, "default")?.try_exists()? {
-            create(&r, "default", "alpine", None)?;
+            create(&r, "default", "alpine", None, super::systemd::Init::Shell)?;
         }
         return start(&r, "default", &[]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian] [--archive VERIFIED_ROOTFS]\nenv list\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
+        println!("env create NAME [--distro alpine|debian] [--init shell|systemd] [--archive VERIFIED_ROOTFS]\nenv list\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
         return Ok(0);
     }
     if op == "list" {
@@ -721,18 +758,20 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     name(n)?;
     match op {
         "create" => {
+            let mut init = super::systemd::Init::Shell;
             let mut d = "alpine";
             let mut archive = None;
             let mut it = args[2..].iter();
             while let Some(k) = it.next() {
                 let v = it.next().ok_or("missing create option value")?;
                 match k.as_str() {
+                    "--init" => init = super::systemd::Init::parse(v)?,
                     "--distro" => d = v,
                     "--archive" => archive = Some(v.as_str()),
                     _ => return Err("unknown create option".into()),
                 }
             }
-            create(&r, n, d, archive)?;
+            create(&r, n, d, archive, init)?;
         }
         "start" | "run" => return start(&r, n, &args[2..]),
         "import" => import(
@@ -797,6 +836,17 @@ mod tests {
             assert!(!backup_path(Path::new(p)));
         }
         assert!(backup_path(Path::new("store/objects/0123456789abcdef.dat")));
+    }
+    #[test]
+    fn init_opt_in_is_debian_only_and_old_configs_keep_shell() {
+        let mut old = serde_json::to_value(Config::new("debian")).unwrap();
+        old.as_object_mut().unwrap().remove("init");
+        let mut c: Config = serde_json::from_value(old).unwrap();
+        assert!(c.init == super::super::systemd::Init::Shell);
+        c.init = super::super::systemd::Init::Systemd;
+        assert!(c.validate().is_ok());
+        c.distribution = "alpine".into();
+        assert!(c.validate().is_err());
     }
     #[test]
     fn future_config_and_invalid_limits_are_rejected() {

@@ -52,8 +52,81 @@ same verified bytes, not arbitrary unverified tar extraction.
 New environments replace the image builder's resolver configuration with the
 existing host-managed DNS endpoint. Subsequent launches preserve user changes.
 Alpine uses musl/apk; Debian uses its original glibc/apt/dpkg and merged-/usr
-layout. Debian support means a shell and normal userspace programs, not booting
-systemd, loading Linux kernel modules, or complete Linux ABI compatibility.
+layout. Debian supports normal userspace programs and an optional systemd service
+environment. Linux kernel modules and complete Linux ABI compatibility are
+not provided.
+
+## Optional systemd service environment
+
+Shell is the default and has no init-manager startup or resident service cost.
+Select the boot mode per environment in the manager's Create/Settings dialogs,
+or when deploying from the command line:
+
+```sh
+trames env create services --distro debian --init systemd
+# Or opt in on an existing, stopped Debian environment:
+trames env configure debian-work --init systemd
+trames env start services
+```
+
+Opt-in installs Debian's original `systemd` and `dbus` packages using apt, with
+no recommended desktop packages. Network access and Debian repository trust are
+required for this first setup. It is idempotent and is not repeated at each boot.
+A failed setup does not publish the new init setting. Old configurations without
+an `init` field continue to use shell; Alpine currently accepts shell only.
+
+Systemd runs as guest PID 1 and boots `multi-user.target`. The foreground terminal
+is a local root shell managed by `console-getty.service`, without a separate Linux
+password, matching shell mode's access. Enable normal services with
+`systemctl enable --now NAME`; enabled multi-user services start on subsequent
+boots. `journalctl`, D-Bus, oneshot and notify services use the original binaries.
+`trames: session ready` means the execution session exists; `trames: systemd ready`
+comes from PID 1's actual READY notification. Wait for the shell prompt before
+entering commands. One foreground session owns an environment; a second terminal
+cannot attach to a live init yet. Exiting the root shell respawns its console.
+
+`env stop NAME` waits for PID 1's signal-handler notification and requests a clean
+Linux halt. Services stop and filesystems sync/unmount before the private store
+is released. It never shuts down macOS. `systemctl halt` inside Linux also works;
+guest restart/kexec/suspend remain unsupported. Keep the terminal open until
+shutdown completes. Explicit `--timeout` still cancels a test session at its bound.
+
+For stopped-environment maintenance, override the selected mode explicitly:
+
+```sh
+trames env start services --init shell -- /bin/sh -l
+trames env configure services --init shell     # Keep packages and guest files
+```
+
+Systemd boot takes no separate Linux command. Mode changes require a stopped
+environment and never reset the store. Backup/restore preserve the init choice. Import and restore create a new
+machine identity, so a clone can run alongside its source; the source stays
+unchanged. Normal restarts preserve machine identity.
+Fresh per-boot `/run`, device and shared-memory mounts grow on demand without
+a fixed tmpfs byte/inode quota or preallocation. They remain guest VFS objects;
+no host mount or privileged daemon is created. Windows/compute remain opt-in
+product services and do not depend on systemd. A window-enabled root console
+receives the usual Wayland environment.
+
+This option provides **service management**, not a full Linux seat/login stack.
+Trames owns the local terminal and macOS owns physical devices. A per-boot,
+explicit `ConditionVirtualization=!container` drop-in skips `systemd-logind`:
+its shared-mount propagation dependency is not implemented by the common VFS.
+No other service's sandbox or syscall restrictions are disabled. Units requiring
+unsupported Linux facilities still fail with their real errors. The startup
+policy follows systemd's [container interface](https://systemd.io/CONTAINER_INTERFACE/).
+
+Run the focused, network-enabled acceptance on Apple Silicon against a disposable
+registry (it never changes existing environments):
+
+```sh
+python3 tests/integration/mac-systemd.py --runner target/release/trames-mac-run \
+  --debian /path/to/verified-debian-rootfs.tar.gz --output target/systemd-acceptance
+```
+
+It checks original package provisioning, 1/4 CPU boots, zero failed units in the
+scoped service environment, persistent enabled services, journal/notify behavior,
+console input, graceful stop, terminal restoration, mode switching and backups.
 
 ## Settings and directory sharing
 
@@ -81,9 +154,10 @@ Removing an environment never removes its shared host directories.
 ## Lifetimes, interruption and storage
 
 Sessions have **no default time limit**. `--timeout SECONDS` is an opt-in bound;
-zero disables it. SIGTERM, SIGHUP and host SIGINT request cancellation at the
-existing scheduler control hook, followed by storage sync and terminal
-restoration. Keyboard Ctrl-C/Ctrl-Z in a raw interactive terminal still reach
+zero disables it. In shell mode, SIGTERM, SIGHUP and host SIGINT request
+cancellation at the existing scheduler control hook, followed by storage sync
+and terminal restoration. In systemd mode these request PID 1 shutdown; an
+unavailable terminal/output transport may still interrupt that shutdown. Keyboard Ctrl-C/Ctrl-Z in a raw interactive terminal still reach
 the Linux terminal/job-control model. SIGKILL cannot sync or restore a terminal;
 use `stty sane` if an externally killed interactive process leaves raw settings.
 Guest data explicitly synced before SIGKILL must remain readable after restart.

@@ -12,6 +12,8 @@ mod lifecycle;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod session;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod systemd;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod windows;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn main() {
