@@ -91,9 +91,11 @@ and Trames. The [runner](https://github.com/kb5000/trames-ipad/blob/main/tests/i
 compares the old private backend, current private files, an idle host mount and
 actual host-backed files. All files have a cached 8 MiB working set. Initial
 population/fsync, startup and final fsync are outside the main interval. Data and
-operation counts are checked. Results are three-run medians; raw ranges and the
-longer five-pair idle-mount check are retained in the
-[machine-readable record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs.json).
+operation counts are checked. Results are three-run medians. Initial sharing results remain in the
+[hostfs record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs.json).
+The retained-handle/private-byte-accounting follow-up is recorded in the
+[private I/O record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/private-io.json),
+including raw observations, run ranges and the longer five-pair idle-mount check.
 
 The Linux native baseline uses an ext4 disk in a 6-vCPU/8-GiB ARM64 VZ VM. Mac
 native and Trames use APFS on Apple M6/macOS 27.0.1, 24 GiB host RAM. The Linux VM
@@ -102,25 +104,33 @@ This compares complete I/O paths, including different kernels, libraries,
 filesystem layouts and pathname traversal. Cached GiB/s is not SSD throughput,
 and these measurements do not establish cold-I/O or physical power-loss durability.
 
-| Fixed work | Private store | Host mount | macOS native | Linux VM native |
-| --- | ---: | ---: | ---: | ---: |
-| 64 KiB reads, MiB/s | 3,819 | 8,118 | 41,656 | 36,862 |
-| 64 KiB writes, MiB/s | 2,225 | 7,095 | 26,901 | 44,959 |
-| 4 KiB reads, MiB/s | 360 | 1,480 | 11,722 | 13,831 |
-| Path stat, operations/s | 155,947 | 27,809 | 1,846,483 | 3,872,454 |
+| Fixed work | Private before | Private after | Host mount | macOS native | Linux VM native |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 64 KiB reads, MiB/s | 3,798 | 8,564 | 8,095 | 40,793 | 34,757 |
+| 64 KiB writes, MiB/s | 2,220 | 7,918 | 6,860 | 26,740 | 44,797 |
+| 4 KiB reads, MiB/s | 355 | 1,786 | 1,434 | 11,696 | 13,798 |
+| Path stat, operations/s | 152,805 | 168,627 | 27,290 | 1,824,551 | 3,800,210 |
 
-Compared with the pre-change private backend, ordinary reads/writes are within
-1% in all three data cases; private path stat improves about 7%. Host mounts
-improve data throughput roughly 2–4 times over the private store, but repeated
-host path metadata resolution remains substantially slower. Native cached I/O
-also has much lower overhead; file exchange does not imply native I/O parity.
+Private open descriptions now retain native file leases. Repeated reads/writes
+reuse the selected inode handle; closed cached inodes retain no native FD.
+Private logical-byte accounting updates a store-local atomic total only on size
+changes and final backing release. Byte admission no longer enumerates every
+inode or counts nodes. Existing quotas, guest permission checks and explicit
+fsync/manifest durability remain in force. Memory filesystems keep their existing
+accounting; there is no new service thread or global I/O lock.
 
-The three-repeat test with an idle mount measured a 3.0% lower 4 KiB read median
-(349 versus 360 MiB/s). A longer shuffled check on the final binary, five runs
-per variant and 300,000 reads per run, measured 356.855 MiB/s without a mount and
-360.949 MiB/s with one (+1.15%). This does not establish a consistent ordinary
-read regression. Both observations and all run ranges remain in the record;
-these short local trials do not prove literally zero dispatch cost.
+This improves private data throughput 2.25x/3.57x/5.03x for the three data cases,
+respectively, and all three now exceed the shared-directory path. Repeated host
+path metadata resolution remains substantially slower. Native cached I/O also
+has much lower overhead, so these results do not imply native I/O parity.
+Private final fsync still takes about 15–17 ms in these runs because it preserves
+namespace checkpoints; the record retains those times outside the main interval.
+
+With an idle shared mount, private 4 KiB reads measure 1,783 versus 1,786 MiB/s
+without one in the three-repeat run. A longer shuffled check on the final binary,
+five runs per variant and 300,000 reads per run, measures 1,797.588 MiB/s without
+and 1,816.583 MiB/s with one (+1.06%). No ordinary-read regression is observed in
+this local check; run ranges are preserved, and this is not a zero-cost proof.
 
 Build the fixture with assertions enabled (`clang -O2` on macOS, `gcc -O2 -static`
 on ARM64 Linux). Run each mode (`read64k`, `write64k`, `read4k`, `stat`) on an
