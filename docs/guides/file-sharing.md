@@ -253,3 +253,49 @@ observations rather than treating short-run differences as a speedup. Current
 private write64k and read4k medians are 7,913 and 1,772 MiB/s. Native cached I/O
 still has substantially lower overhead. Repeated shared path-stat resolution
 remains the largest measured metadata gap and is not fixed by event/lock support.
+
+### Cached I/O and metadata follow-up
+
+Runtime `5ee9bfc` improves both storage paths through shared mechanisms. AArch64
+raw transfers copy exact 64-byte SIMD blocks with scalar tails; short scalar CPU
+accesses and their existing memory/region contract are unchanged. Joined
+positioned writes reuse the existing bounded service buffer. Newfstatat observes
+proc demand while preparing the actual result, avoiding a discovery-only walk
+for ordinary files; proc queries are repeated after the existing refresh.
+Apple native metadata no longer opens/stats/closes a parent for each lookup.
+It uses fstatat relative to the grant with the [native no-symlink flag](https://developer.apple.com/documentation/system/stat/flags-swift.struct/symlinknofollowany).
+Linux and older Darwin kernels rejecting the flag retain the capability walk.
+There is no cross-syscall path/permission cache, new thread or additional lock.
+
+Three shuffled runs on the same machine and cached 8 MiB working set:
+
+| Fixed work | Private before → after | Shared before → after | Mac native | Linux VM native |
+| --- | ---: | ---: | ---: | ---: |
+| 64 KiB reads, MiB/s | 8,335 → 10,448 | 8,006 → 9,150 | 40,638 | 38,431 |
+| 64 KiB writes, MiB/s | 7,922 → 9,850 | 7,270 → 9,042 | 26,036 | 45,558 |
+| 4 KiB reads, MiB/s | 1,730 → 1,806 | 1,399 → 1,453 | 11,419 | 13,912 |
+| Path stat, operations/s | 168,621 → 211,343 | 21,578 → 60,877 | 893,631 | 3,937,550 |
+
+The [validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/hostfs-fastpaths.json)
+contains 108 final observations, ranges, native references, separate fsync times,
+intermediate raw-copy measurements and before/after sampled stacks. Unchanged
+native Linux measurements are reused; the VM is stopped and builds/samplers
+are idle during Mac performance runs. These compare complete cached paths,
+including different kernels/libraries/pathname layouts, and are not SSD results.
+
+Shared path stat improves 2.82x; private stat and large private reads/writes
+improve about 25%. Shared large reads/writes improve 14%/24%, and small reads about
+4%. Native cached I/O remains much faster. Remaining work includes native
+read/write calls, guest buffering/copies, per-page translation/materialization
+and physical-slot lifecycle, plus HVF execution/exit boundaries. The post-change
+stack samples no longer report parent open as a stat hotspot; file I/O and page
+handling are now more prominent. Profiles are sampled wall stacks, not exact
+CPU-time accounting; sleeping Hypervisor clock threads are excluded from that
+interpretation.
+
+Mac and Linux runtime checks, 227 interpreter kernel checks, both iPad FFI build
+configurations, 12 independent-process interop cases and 11 development-workspace
+cases pass. The proc regression covers an initially unpublished process reached
+through a symlink and preserves guest output on a failed query. Raw-copy tests
+cover unaligned ranges and block/tail boundaries. Unchanged full CPU, network
+and graphics acceptance is reused.
