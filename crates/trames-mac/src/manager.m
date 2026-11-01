@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import <AppKit/AppKit.h>
+#import "task-stream.h"
 
 @interface TramesManager : NSObject <NSApplicationDelegate,NSTableViewDataSource,NSTableViewDelegate>
 @property NSWindow *window;
@@ -9,6 +10,7 @@
 @property NSArray<NSDictionary *> *rows;
 @property NSMutableArray<NSButton *> *actions;
 @property NSTask *task;
+@property(strong) TramesTaskStream *taskStream;
 @property BOOL refreshing;
 @end
 static NSString *productName(void){return [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames";}
@@ -36,8 +38,8 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
     for(NSString *key in @[@"name",@"distribution",@"state"]){NSTableColumn *col=[[NSTableColumn alloc]initWithIdentifier:key];col.editable=NO;col.title=[@{@"name":@"Environment",@"distribution":@"Linux",@"state":@"Status"} objectForKey:key];col.width=[key isEqual:@"name"]?330:200;[self.table addTableColumn:col];}
     NSScrollView *scroll=[NSScrollView new];scroll.documentView=self.table;scroll.hasVerticalScroller=YES;scroll.borderType=NSBezelBorder;[root addArrangedSubview:scroll];[scroll.widthAnchor constraintEqualToAnchor:root.widthAnchor constant:-44].active=YES;[scroll.heightAnchor constraintGreaterThanOrEqualToConstant:180].active=YES;
     NSStackView *tools=[NSStackView stackViewWithViews:@[]];tools.spacing=8;
-    NSArray *more=@[@"Settings…",@"Share Folder…",@"Backup…",@"Restore…",@"Delete…",@"Diagnostics"];
-    SEL moreSel[]={@selector(settings:),@selector(share:),@selector(backup:),@selector(restore:),@selector(remove:),@selector(doctor:)};
+    NSArray *more=@[@"Settings…",@"Share Folder…",@"Install Tools…",@"Backup…",@"Restore…",@"Delete…",@"Diagnostics"];
+    SEL moreSel[]={@selector(settings:),@selector(share:),@selector(tools:),@selector(backup:),@selector(restore:),@selector(remove:),@selector(doctor:)};
     for(NSUInteger i=0;i<more.count;i++){NSButton *b=button(more[i],self,moreSel[i]);[tools addArrangedSubview:b];[self.actions addObject:b];}[root addArrangedSubview:tools];
     self.status=label(@"Loading environments…");[root addArrangedSubview:self.status];
     self.log=[NSTextView new];self.log.editable=NO;self.log.font=[NSFont monospacedSystemFontOfSize:11 weight:NSFontWeightRegular];
@@ -50,18 +52,63 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 - (void)busy:(BOOL)busy {for(NSButton *b in self.actions)b.enabled=!busy;}
 - (void)run:(NSArray<NSString *> *)args title:(NSString *)title completion:(void(^)(NSString *,int))done {
     if(self.task)return;[self busy:YES];self.status.stringValue=title;
-    NSString *path=[NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"trames-manager-%@.log",NSUUID.UUID.UUIDString]];
-    [[NSFileManager defaultManager]createFileAtPath:path contents:nil attributes:@{NSFilePosixPermissions:@0600}];NSFileHandle *file=[NSFileHandle fileHandleForWritingAtPath:path];
-    NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:executable()];task.arguments=args;task.standardOutput=file;task.standardError=file;task.standardInput=[NSFileHandle fileHandleWithNullDevice];
-    self.task=task;
-    task.terminationHandler=^(NSTask *finished){[file closeFile];NSString *output=[[NSString alloc]initWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil]?:@"";[[NSFileManager defaultManager]removeItemAtPath:path error:nil];int status=finished.terminationStatus;dispatch_async(dispatch_get_main_queue(),^{self.task=nil;[self busy:NO];if(![args isEqual:@[@"env",@"list"]] || status!=0)self.log.string=output;self.status.stringValue=status==0?@"Done.":@"Operation failed. Your existing environments were preserved; see details below.";if(done)done(output,status);});};
-    NSError *error=nil;if(![task launchAndReturnError:&error]){self.task=nil;[file closeFile];[[NSFileManager defaultManager]removeItemAtPath:path error:nil];[self busy:NO];self.status.stringValue=error.localizedDescription;}
+    BOOL visible=![args isEqual:@[@"env",@"list"]];if(visible)self.log.string=@"";
+    NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:executable()];task.arguments=args;task.standardInput=[NSFileHandle fileHandleWithNullDevice];
+    self.task=task;__weak TramesManager *weakSelf=self;
+    self.taskStream=[[TramesTaskStream alloc]initWithTask:task onText:^(NSString *text){
+        TramesManager *owner=weakSelf;
+        if(visible && owner){[owner.log.textStorage appendAttributedString:[[NSAttributedString alloc]initWithString:text attributes:@{NSFontAttributeName:owner.log.font}]];[owner.log scrollRangeToVisible:NSMakeRange(owner.log.string.length,0)];}
+    } completion:^(NSString *output,int status){
+        TramesManager *owner=weakSelf;owner.task=nil;owner.taskStream=nil;[owner busy:NO];
+        if(!visible && status!=0)owner.log.string=output;
+        owner.status.stringValue=status==0?@"Done.":@"Operation failed. Your existing environments were preserved; see details below.";
+        if(done)done(output,status);
+    }];
+    NSError *error=nil;if(![self.taskStream launchAndReturnError:&error]){self.task=nil;self.taskStream=nil;[self busy:NO];self.status.stringValue=error.localizedDescription;}
 }
-- (void)refresh:(id)sender{(void)sender;NSString *selected=[self.table.selectedRow>=0?self.rows[self.table.selectedRow]:@{} objectForKey:@"name"];[self run:@[@"env",@"list"] title:@"Refreshing…" completion:^(NSString *out,int code){if(code)return;NSData *data=[out dataUsingEncoding:NSUTF8StringEncoding];id rows=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];if(![rows isKindOfClass:NSArray.class]){self.status.stringValue=@"Could not read environment list.";return;}self.rows=rows;[self.table reloadData];for(NSUInteger i=0;i<self.rows.count;i++)if([self.rows[i][@"name"] isEqual:selected])[self.table selectRowIndexes:[NSIndexSet indexSetWithIndex:i] byExtendingSelection:NO];self.status.stringValue=self.rows.count?@"Ready. Settings apply on the next start.":@"Create your first environment. Alpine is the default; Debian is also available.";}];}
-- (void)operation:(NSArray *)args title:(NSString *)title{[self run:args title:title completion:^(NSString *out,int code){(void)out;if(!code)[self refresh:nil];}];}
+- (void)refresh:(id)sender {
+    (void)sender;NSString *selected=[self.table.selectedRow>=0?self.rows[self.table.selectedRow]:@{} objectForKey:@"name"];
+    __weak TramesManager *weakSelf=self;
+    [self run:@[@"env",@"list"] title:@"Refreshing…" completion:^(NSString *out,int code){
+        TramesManager *owner=weakSelf;if(code || !owner)return;
+        NSData *data=[out dataUsingEncoding:NSUTF8StringEncoding];id rows=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        if(![rows isKindOfClass:NSArray.class]){owner.status.stringValue=@"Could not read environment list.";return;}
+        owner.rows=rows;[owner.table reloadData];for(NSUInteger i=0;i<owner.rows.count;i++)if([owner.rows[i][@"name"] isEqual:selected])[owner.table selectRowIndexes:[NSIndexSet indexSetWithIndex:i] byExtendingSelection:NO];
+        owner.status.stringValue=owner.rows.count?@"Ready. Settings apply on the next start.":@"Create your first environment. Alpine is the default; Debian is also available.";
+    }];
+}
+- (void)operation:(NSArray *)args title:(NSString *)title {
+    __weak TramesManager *weakSelf=self;
+    [self run:args title:title completion:^(NSString *out,int code){(void)out;if(!code)[weakSelf refresh:nil];}];
+}
 - (NSAlert *)dialog:(NSString *)title message:(NSString *)message {NSAlert *a=[NSAlert new];a.messageText=title;a.informativeText=message;[a addButtonWithTitle:@"Continue"];[a addButtonWithTitle:@"Cancel"];return a;}
 - (NSString *)askName:(NSString *)title {NSAlert *a=[self dialog:title message:@"Use letters, numbers, '-' or '_'. Existing environments are never replaced."];NSTextField *input=[[NSTextField alloc]initWithFrame:NSMakeRect(0,0,330,26)];input.placeholderString=@"my-linux";a.accessoryView=input;[a.window setInitialFirstResponder:input];return [a runModal]==NSAlertFirstButtonReturn?input.stringValue:nil;}
-- (void)create:(id)sender{(void)sender;NSAlert *a=[self dialog:@"New Linux Environment" message:@"Downloads and verifies official ARM64 Linux. systemd installs Debian packages and starts managed services; shell starts a terminal directly."];NSView *v=[[NSView alloc]initWithFrame:NSMakeRect(0,0,350,90)];NSTextField *input=[[NSTextField alloc]initWithFrame:NSMakeRect(0,55,350,26)];input.placeholderString=@"Environment name";NSPopUpButton *d=[[NSPopUpButton alloc]initWithFrame:NSMakeRect(0,10,350,30)];[d addItemsWithTitles:@[@"Alpine — shell (default)",@"Debian 13 — shell",@"Debian 13 — systemd",@"Custom ARM64 rootfs…"]];[v addSubview:input];[v addSubview:d];a.accessoryView=v;[a.window setInitialFirstResponder:input];if([a runModal]!=NSAlertFirstButtonReturn)return;if(d.indexOfSelectedItem==3){NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=YES;p.canChooseDirectories=YES;p.message=@"Choose an unpacked ARM64 Linux rootfs directory or a tar/tar.gz archive.";if([p runModal]==NSModalResponseOK)[self operation:@[@"env",@"create",input.stringValue,@"--rootfs",p.URL.path,@"--init",@"shell"] title:@"Importing custom rootfs…"];return;}[self operation:@[@"env",@"create",input.stringValue,@"--distro",d.indexOfSelectedItem==0?@"alpine":@"debian",@"--init",d.indexOfSelectedItem==2?@"systemd":@"shell"] title:@"Creating environment and preparing packages…"];}
+- (void)distributionChanged:(NSPopUpButton *)sender {
+    for(NSView *view in sender.superview.subviews)if([view.identifier isEqual:@"debian-packages"])((NSPopUpButton *)view).enabled=sender.indexOfSelectedItem==1||sender.indexOfSelectedItem==2;
+}
+- (void)create:(id)sender {
+    (void)sender;
+    NSAlert *a=[self dialog:@"New Linux Environment" message:@"Debian includes daily tools. Add C/C++ and Python development tools if needed. systemd is optional for managed services."];
+    NSView *v=[[NSView alloc]initWithFrame:NSMakeRect(0,0,370,145)];
+    NSTextField *input=[[NSTextField alloc]initWithFrame:NSMakeRect(0,110,370,26)];input.placeholderString=@"Environment name";
+    NSPopUpButton *d=[[NSPopUpButton alloc]initWithFrame:NSMakeRect(0,65,370,30)];[d addItemsWithTitles:@[@"Alpine — shell (default)",@"Debian 13 — shell",@"Debian 13 — systemd",@"Custom ARM64 rootfs…"]];d.target=self;d.action=@selector(distributionChanged:);
+    NSTextField *l=label(@"Debian tools");l.frame=NSMakeRect(0,15,105,24);
+    NSPopUpButton *packages=[[NSPopUpButton alloc]initWithFrame:NSMakeRect(110,10,260,30)];packages.identifier=@"debian-packages";[packages addItemsWithTitles:@[@"Minimal base only",@"Daily tools (default)",@"Daily + development tools"]];[packages selectItemAtIndex:1];packages.enabled=NO;
+    [v addSubview:input];[v addSubview:d];[v addSubview:l];[v addSubview:packages];a.accessoryView=v;[a.window setInitialFirstResponder:input];
+    if([a runModal]!=NSAlertFirstButtonReturn)return;
+    if(d.indexOfSelectedItem==3){NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=YES;p.canChooseDirectories=YES;p.message=@"Choose an unpacked ARM64 Linux rootfs directory or a tar/tar.gz archive.";if([p runModal]==NSModalResponseOK)[self operation:@[@"env",@"create",input.stringValue,@"--rootfs",p.URL.path,@"--init",@"shell"] title:@"Importing custom rootfs…"];return;}
+    NSMutableArray *args=[NSMutableArray arrayWithArray:@[@"env",@"create",input.stringValue,@"--distro",d.indexOfSelectedItem==0?@"alpine":@"debian",@"--init",d.indexOfSelectedItem==2?@"systemd":@"shell"]];
+    if(d.indexOfSelectedItem!=0)[args addObjectsFromArray:@[@"--packages",@[@"minimal",@"standard",@"development"][packages.indexOfSelectedItem]]];
+    [self operation:args title:@"Creating environment and preparing tools…"];
+}
+- (void)tools:(id)sender {
+    (void)sender;NSString *n=[self selected];if(!n)return;
+    NSDictionary *c=self.rows[self.table.selectedRow][@"config"];
+    if(![c isKindOfClass:NSDictionary.class] || ![c[@"distribution"] isEqual:@"debian"]){self.status.stringValue=@"Tool presets are available for built-in Debian environments.";return;}
+    NSAlert *a=[self dialog:@"Install Debian Tools" message:@"Stop the environment first. Install daily tools or add C/C++ and Python development tools. Existing files and settings are preserved."];
+    NSPopUpButton *p=[[NSPopUpButton alloc]initWithFrame:NSMakeRect(0,0,350,30)];[p addItemsWithTitles:@[@"Daily tools",@"Daily + development tools"]];a.accessoryView=p;
+    if([a runModal]==NSAlertFirstButtonReturn)[self operation:@[@"env",@"packages",n,p.indexOfSelectedItem==0?@"standard":@"development"] title:@"Installing Debian tools…"];
+}
 - (void)start:(id)sender{(void)sender;NSString *n=[self selected];if(n)[self operation:@[@"env",@"terminal",n] title:@"Opening Terminal…"];}
 - (void)stop:(id)sender{(void)sender;NSString *n=[self selected];if(n)[self operation:@[@"env",@"stop",n] title:@"Stopping and saving…"];}
 - (void)importStore:(id)sender{(void)sender;NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=NO;p.canChooseDirectories=YES;p.message=@"Select an existing, stopped Trames private store (containing manifest and objects). A separate copy will be created.";if([p runModal]!=NSModalResponseOK)return;NSString *n=[self askName:@"Import Existing Store"];if(n)[self operation:@[@"env",@"import",n,p.URL.path] title:@"Importing existing environment…"];}

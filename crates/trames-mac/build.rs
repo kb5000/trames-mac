@@ -9,6 +9,8 @@ fn main() {
     println!("cargo:rustc-env=TRAMES_BUILD_CHANNEL={channel}");
     println!("cargo:rerun-if-changed=src/window.m");
     println!("cargo:rerun-if-changed=src/manager.m");
+    println!("cargo:rerun-if-changed=src/task-stream.m");
+    println!("cargo:rerun-if-changed=src/task-stream.h");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos")
         || std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("aarch64")
     {
@@ -17,6 +19,7 @@ fn main() {
     cc::Build::new()
         .file("src/window.m")
         .file("src/manager.m")
+        .file("src/task-stream.m")
         .flag("-fobjc-arc")
         .flag("-fblocks")
         .warnings(true)

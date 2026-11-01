@@ -484,5 +484,53 @@
     "Developer ID signing/notarization requires external credentials; current package is ad-hoc development only",
     "Guest graphics/video components still use their separately validated installation paths; Debian GUI/GPU compatibility is not established",
     "Detailed stdout, traces and user paths stay in ignored local output"
-  ]
+  ],
+  "release_1_4_0": {
+    "date": "2026-11-01",
+    "runtime_revision": "1309faf688cd20780f4fa36d93e4f9d9ace8385f",
+    "scope": "Mac product only: Debian daily/development package presets and live initialization output. Common runtime and iPad code unchanged.",
+    "packages": {
+      "default": "Built-in Debian installs daily tools before publishing a new environment. minimal skips setup; development adds C/C++, make, pkgconf, Python venv/pip, CMake and Ninja.",
+      "upgrade": "env packages NAME [standard|development] operates on an existing stopped built-in Debian environment without replacing its files. No automatic package work on normal boot or application upgrade.",
+      "failure": "Fresh network-off setup failed and discarded its unpublished staging store; minimal offline base succeeded. Package names use real dpkg entries (bind9-dnsutils/pkgconf), avoiding virtual-name false misses.",
+      "daily": "Daily tools installed and executed, CA trust verified with real HTTPS curl. Offline repeat passed in 0.51 seconds. First setup took 425.90 seconds in the focused run; an earlier equivalent daily install took 516.03 seconds. Ordered functional observations, not a performance benchmark.",
+      "development": "Passed real C/C++ compile and execution, Python 3.13 venv with SSL/sqlite3 and pip, CMake + Ninja configure/build/run, pkg-config. Development setup took 806.17 seconds; workflow verification 31.49 seconds; offline repeat 0.95 seconds. Functional observations, not a throughput benchmark."
+    },
+    "gui_output": {
+      "implementation": "Merged stdout/stderr pipe readiness events, incremental UTF-8 conversion and main-queue text updates. Completion waits for both process exit and pipe EOF; no polling timer or per-guest-I/O hook.",
+      "native_tests": "Passed: output before exit, split Chinese/emoji, incomplete UTF-8 at EOF, final non-newline text, merged stderr, large output, error status and launch failure.",
+      "actual_manager_test": "Passed against the real manager class/text view: Chinese progress appeared while the child was still running; final text retained; actions restored; quiet list refresh preserved the log. Invalid/null configuration rows also return an error instead of crashing the Install Tools action."
+    },
+    "verification": {
+      "local_product_steps_1_through_10": "passed; includes formatting, boundaries, clippy, unit tests, Python/shell checks, native manager regressions and both channel builds",
+      "environment_management": "33 operations passed",
+      "cli_installation": "passed: generic rootfs, configuration, rollback, installer and idempotent shell PATH; version assertion now follows the tested runner instead of hardcoding 1.3",
+      "stable_dev_isolation": "passed: distinct bundle/config/CLI identities, simultaneous guests, independent stop, dev reinstall preserves stable",
+      "package_acceptance": "14 operations passed, including expected invalid-option/network-off failures, staged cleanup, default daily installation, real HTTPS, offline idempotence and development workflows."
+    },
+    "signing": "Stable product channel; local ad-hoc/unnotarized distribution as previously selected. This machine has no Developer ID Application identity. No notarization or Gatekeeper acceptance is claimed.",
+    "stable_binary_sha256": "ec74a40ef7cef8a85279cdda2070c25d92fcb1538219f04d0f13008c360381ad",
+    "dev_binary_sha256": "c32536ec2dbafa50dedfb47442cc36b827cadd2bcc48ad50deb6f9f5c754bcf9",
+    "logo_sha256": "0c756a6656a6d16f2b1d83a0ba71fa45ec646a2f74525d6d5e6163589c7c8686",
+    "driver_source_archive": "Exact linked MoltenVK SHA-256 538c5a1f3f73dbcf1bdb91d80353ea9b6997d4724769227eb373569af6eec77d matches the bundled build record. All 34 original archives/recipes/patch/native files match; two additional archive entries are generated build documentation/record.",
+    "limitations": [
+      "First package installation is still slow due to ordinary private-store namespace checkpoints/synchronization; this release does not change persistence policy. Existing environments are never silently reset or upgraded."
+    ],
+    "source_sha256": {
+      "Cargo.toml": "1ed6cb2dc730cfd08f168ea7e2a791ab10b800f159f77342a832b06adc13f52b",
+      "Cargo.lock": "a71f2f811d8d4e868cfefc5fbd97e4c95df876410a56dc18141dc0249b91c846",
+      ".github/workflows/macos.yml": "af86bb63cdc06c502b288be7c3e00ddf82b8bf2362dac0398cfcd233f18da7b8",
+      "crates/trames-mac/build.rs": "34a6b7473175754b0682b8bfad9ae5366a758aca055b6bce0508ba4d55b37a43",
+      "crates/trames-mac/src/environments.rs": "8774b7ec0c1ac4686d5f5d4eb1e496a7cd5c63417c3632641433542e9934df73",
+      "crates/trames-mac/src/packages.rs": "dc2fa091ec13a5f3582c018d0902c300dce93eb3740e773cb6d560dc78974eb5",
+      "crates/trames-mac/src/manager.m": "ab48c0b8fcd68210d9973d7c0cd2cabe974cd1f1c51755bd064e48f223b0a6ec",
+      "crates/trames-mac/src/task-stream.m": "edeb6279f73042971c85a739d7ab9056be64508950a67e15786f9c144f40ce8e",
+      "crates/trames-mac/src/task-stream.h": "2e41c964dde39fd117c5d09890de74db8b864a4f611324dd839124a96cf769b1",
+      "crates/trames-mac/src/main.rs": "784517f0ad13d843e7d136c742416ba901513b4416b0d649ed963330f263e409",
+      "tests/integration/mac-packages.py": "65b890236f687799fdbaa155f073b9fd02b345bec54578a01aee20e22da0c990",
+      "tests/native/task-stream.m": "fae6b152e685ca4614560bfdc393ecb2052b7bd947abf787f43c9685c6a30aaa",
+      "tests/native/task-stream.sh": "7123ff2268183c18e38eb238517f3f2f969dfa248c239a7ce2324ed2ed77267c",
+      "tests/native/manager-progress.m": "91b09b60eaa9e5f4d3ea630fe367d66376f088654d2e715fe72814d214228884"
+    }
+  }
 }

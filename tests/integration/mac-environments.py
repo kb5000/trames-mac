@@ -56,7 +56,7 @@ def main():
             return child
 
         for distro, archive in [('alpine', a.alpine), ('debian', a.debian)]:
-            run('env', 'create', distro, '--distro', distro, '--archive', str(archive.resolve()))
+            run('env', 'create', distro, '--distro', distro, '--archive', str(archive.resolve()), '--packages', 'minimal')
             run('env', 'configure', distro, '--cpus', '2', '--windows', 'off')
             start(distro, 'echo persistent > /root/check; sync; uname -m; cat /etc/resolv.conf; cat /etc/os-release')
             assert '169.254.0.53' in rows[-1]['stdout']

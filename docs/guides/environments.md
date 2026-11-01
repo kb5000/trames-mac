@@ -25,7 +25,9 @@ Open Trames.app in Finder, or run `trames --manager`, for the native environment
 manager. It provides creation, existing-store import, terminal launch, stop,
 settings, shared-folder selection, backup, restore, deletion and diagnostics.
 Operations run in child processes; downloads and disk operations do not block
-the application event loop. Settings changes require a stopped environment.
+the application event loop. Download and package installation output appears live
+in the log panel; completed output remains visible after refreshing the list.
+Settings changes require a stopped environment.
 
 Running `trames` without arguments in a terminal creates a default Alpine
 environment if necessary, then starts its login shell. Creation downloads the
@@ -36,7 +38,7 @@ opens the manager; use an explicit `env start` for scripts.
 
 ```sh
 trames env create work                         # Alpine by default
-trames env create debian-work --distro debian  # Debian 13 slim
+trames env create debian-work --distro debian  # Debian 13 with daily tools
 trames env list                               # JSON, including settings/state
 trames env start work
 trames env start debian-work -- /bin/bash -lc 'uname -a'
@@ -44,6 +46,41 @@ trames env terminal work                      # Open macOS Terminal
 trames env stop work                          # Stop, sync and release store
 trames env help
 ```
+
+### Debian tools
+
+New built-in Debian environments install a daily tool set by default: CA
+certificates, curl/wget, Git, SSH client, nano/vi/less, process and network tools,
+DNS lookup, rsync, archive tools, file identification, shell completion and
+timezone data. The official slim rootfs remains the verified base; apt installs
+Debian's original signed packages during creation. This first setup needs
+network access. Alpine and custom rootfs imports keep their existing setup.
+
+```sh
+trames env create daily --distro debian
+trames env configure daily -- /bin/bash -l  # Optional Bash login and completion
+trames env create dev --distro debian --packages development
+trames env create base --distro debian --packages minimal  # No package download
+# Add tools to an existing, stopped built-in Debian environment:
+trames env packages debian-work               # Daily tools
+trames env packages debian-work development   # Daily + development tools
+```
+
+The optional development set adds C/C++ compilers, make, pkg-config, Python 3,
+venv/pip, CMake and Ninja. The manager provides the same selection when creating
+Debian, and an **Install Tools** action for existing environments. Stop a running
+environment first. Packages are checked in the guest's actual dpkg database;
+repeating a completed setup needs no network download. This is an explicit setup
+operation and never runs on ordinary environment startup. `minimal` only skips
+installation; it does not remove previously installed tools. It also preserves
+the pinned-archive offline creation path, including `--archive FILE`.
+
+A new environment is published only after package setup succeeds. Failure
+removes its unpublished staging store without changing existing environments.
+Adding packages to an existing environment follows normal apt semantics rather
+than rolling back its files: retry setup after repairing network/package errors.
+No signature checks or package scripts are bypassed. Existing Debian environments
+are not automatically changed when upgrading Trames.
 
 Alpine currently pins 3.22.6 aarch64. Debian pins the official debuerreotype
 Debian 13/trixie slim ARM64 OCI rootfs at revision

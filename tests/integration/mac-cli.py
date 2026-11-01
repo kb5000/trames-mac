@@ -36,6 +36,7 @@ def main():
             assert (r.returncode == 0) == ok, records[-1]
             return r
 
+        expected_version = run('--version').stdout.splitlines()[0]
         assert json.loads(run('config', 'show').stdout)['defaults']['distribution'] == 'alpine'
         run('config', 'set', 'cpus', '2', 'windows', 'off', 'network', 'off', 'default-environment', 'mine')
         # Invalid changes leave the last valid global file byte-for-byte intact.
@@ -179,7 +180,7 @@ def main():
         assert '# user settings' in (profiles / '.zshrc').read_text()
         query = subprocess.run(['/bin/zsh', '-lic', f'command -v {cli_name}; printf "%s\\n" "$USER_SETTINGS_PRESERVED"; {cli_name} --version'],
                                env=install_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
-        assert query.returncode == 0 and str(installed_bin / cli_name) in query.stdout and 'yes' in query.stdout and '1.3.' in query.stdout, query
+        assert query.returncode == 0 and str(installed_bin / cli_name) in query.stdout and 'yes' in query.stdout and expected_version in query.stdout, query
         # An interactive non-login shell gets PATH too, with no duplication.
         query = subprocess.run(['/bin/zsh', '-ic', 'print -r -- $PATH'], env=install_env,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)

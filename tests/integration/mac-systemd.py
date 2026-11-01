@@ -40,7 +40,7 @@ def main():
         # default to shell; installation is only triggered by explicit opt-in.
         run('env', 'create', 'invalid', '--init', 'systemd', ok=False)
         assert not (home / 'environments/invalid').exists()
-        run('env', 'create', 'debian', '--distro', 'debian', '--init', 'systemd',
+        run('env', 'create', 'debian', '--distro', 'debian', '--packages', 'minimal', '--init', 'systemd',
             '--archive', str(args.debian.resolve()))
         assert json.loads((home / 'environments/debian/config.json').read_text())['init'] == 'systemd'
         run('env', 'start', 'debian', '--no-windows', '/bin/true', ok=False)

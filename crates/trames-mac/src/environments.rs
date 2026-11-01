@@ -423,6 +423,7 @@ fn create(
     archive: Option<&str>,
     custom: Option<&str>,
     expected: Option<&str>,
+    packages: Option<super::packages::Profile>,
 ) -> Result<()> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
@@ -439,11 +440,21 @@ fn create(
         c.distribution = "custom".into();
     }
     c.validate()?;
+    use super::packages::Profile;
+    let packages = packages.unwrap_or(if c.distribution == "debian" {
+        Profile::Standard
+    } else {
+        Profile::Minimal
+    });
+    if c.distribution != "debian" && packages != Profile::Minimal {
+        return Err("package presets require the built-in Debian image; custom rootfs and Alpine preserve their own package setup".into());
+    }
     let source = if custom.is_none() {
         Some(source(r, &c.distribution, archive)?)
     } else {
         None
     };
+    eprintln!("Importing {} rootfs…", c.distribution);
     let stage = staging(r, n)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
     c.source_sha256 = vfs.populate_staged(|vfs| -> Result<String> {
@@ -485,6 +496,7 @@ fn create(
     }
     vfs.sync()?;
     drop(vfs);
+    super::packages::install(&stage.0.join("store"), c.cpus, &c.network, packages)?;
     provision_init(&stage.0.join("store"), &c)?;
     save(&stage.0, &c)?;
     publish(&stage.0, &dir)?;
@@ -915,12 +927,20 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     if op == "default" {
         let cli = load_cli(&r)?;
         if !directory(&r, &cli.default_environment)?.try_exists()? {
-            create(&r, &cli.default_environment, cli.defaults, None, None, None)?;
+            create(
+                &r,
+                &cli.default_environment,
+                cli.defaults,
+                None,
+                None,
+                None,
+                None,
+            )?;
         }
         return start(&r, &cli.default_environment, &[]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [SETTINGS] [-- COMMAND ARGS...]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
+        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [--packages minimal|standard|development] [SETTINGS] [-- COMMAND ARGS...]\nenv packages NAME [standard|development]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
         return Ok(0);
     }
     if op == "list" {
@@ -942,6 +962,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
             let mut archive = None;
             let mut custom = None;
             let mut expected = None;
+            let mut packages = None;
             let mut settings = vec![];
             let mut it = args[2..].iter();
             while let Some(k) = it.next() {
@@ -960,6 +981,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
                     "--archive" => archive = Some(v.as_str()),
                     "--rootfs" => custom = Some(v.as_str()),
                     "--sha256" => expected = Some(v.as_str()),
+                    "--packages" => packages = Some(super::packages::Profile::parse(v)?),
                     _ => {
                         settings.extend([k.clone(), v.clone()]);
                     }
@@ -969,7 +991,16 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
                 c.distribution = "custom".into();
             }
             apply_settings(&mut c, &settings)?;
-            create(&r, n, c, archive, custom, expected)?;
+            create(&r, n, c, archive, custom, expected, packages)?;
+        }
+        "packages" => {
+            if args.len() > 3 { return Err("usage: env packages NAME [standard|development]".into()); }
+            let profile = super::packages::Profile::parse(args.get(2).map(String::as_str).unwrap_or("standard"))?;
+            let _lock = lock(&r, n)?;
+            let dir = directory(&r, n)?;
+            let c = load(&dir)?;
+            if c.distribution != "debian" { return Err("package presets require the built-in Debian image".into()); }
+            super::packages::install(&dir.join("store"), c.cpus, &c.network, profile)?;
         }
         "config" | "show" => println!(
             "{}",
@@ -1013,7 +1044,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         }
         _ => {
             return Err(
-                "usage: env list|create|start|stop|configure|backup|restore|delete|check|doctor"
+                "usage: env list|create|packages|start|stop|configure|backup|restore|delete|check|doctor"
                     .into(),
             )
         }
