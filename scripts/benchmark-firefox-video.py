@@ -32,8 +32,12 @@ def measure(client, selector, seconds, warmup, check_input):
     else:
         raise RuntimeError(f'video readiness timeout: {state}')
     client.script(f'''const v=document.querySelector({selector});
-      globalThis.tramesVideoBenchmark={{video:v,callbacks:0,ticket:null}};
+      globalThis.tramesVideoBenchmark={{video:v,callbacks:0,ticket:null,events:[],listeners:[]}};
       const s=globalThis.tramesVideoBenchmark;
+      for(const event of ['playing','waiting','stalled','seeking','seeked','ended']){{
+        const listener=()=>s.events.push({{event,wall:performance.now(),time:v.currentTime,ready:v.readyState}});
+        v.addEventListener(event,listener);s.listeners.push([event,listener]);
+      }}
       function frame(){{s.callbacks++;s.ticket=v.requestVideoFrameCallback(frame);}}
       s.ticket=v.requestVideoFrameCallback(frame);
       return v.paused?v.play().then(()=>true):true;''')
@@ -45,7 +49,9 @@ def measure(client, selector, seconds, warmup, check_input):
               q=v.getVideoPlaybackQuality();return {wall:performance.now(),time:v.currentTime,
               size:[v.videoWidth,v.videoHeight],rate:v.playbackRate,ready:v.readyState,
               total:q.totalVideoFrames,dropped:q.droppedVideoFrames,callbacks:s.callbacks,
-              paused:v.paused,error:v.error?.code??null,visibility:document.visibilityState};''')
+              paused:v.paused,error:v.error?.code??null,visibility:document.visibilityState,
+              focus:document.hasFocus(),duration:v.duration,events:s.events,
+              buffered:Array.from({length:v.buffered.length},(_,i)=>[v.buffered.start(i),v.buffered.end(i)])};''')
 
         before = snapshot()
         start = time.monotonic()
@@ -60,7 +66,8 @@ def measure(client, selector, seconds, warmup, check_input):
                       elapsed_host=time.monotonic()-start,before=before,after=after,
                       accepted_fps=(frames-dropped)/elapsed,
                       callback_fps=(after['callbacks']-before['callbacks'])/elapsed,
-                      dropped_frames=dropped,total_frames=frames)
+                      dropped_frames=dropped,total_frames=frames,
+                      playback_events=[event for event in after['events'] if event['wall'] >= before['wall']])
         if check_input:
             client.script('''const d=document.createElement('div');d.id='trames-video-input-check';
               d.style='position:fixed;top:4px;left:4px;z-index:2147483647;background:white;color:black';
@@ -83,7 +90,9 @@ def measure(client, selector, seconds, warmup, check_input):
         return result
     finally:
         client.script('''const s=globalThis.tramesVideoBenchmark;
-          s.video.cancelVideoFrameCallback(s.ticket);delete globalThis.tramesVideoBenchmark;return true;''')
+          s.video.cancelVideoFrameCallback(s.ticket);
+          for(const [event,listener] of s.listeners)s.video.removeEventListener(event,listener);
+          delete globalThis.tramesVideoBenchmark;return true;''')
 
 
 def main():
@@ -91,6 +100,7 @@ def main():
     parser.add_argument('--port',type=int,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--selector',default='video')
+    parser.add_argument('--url',help='Navigate the isolated test profile to this video page before measuring')
     parser.add_argument('--seconds',type=float,default=20)
     parser.add_argument('--warmup',type=float,default=5)
     parser.add_argument('--check-input',action='store_true')
@@ -101,6 +111,8 @@ def main():
     try:
         client.call('WebDriver:NewSession',{'pageLoadStrategy':'none'})
         client.call('WebDriver:SetTimeouts',{'script':30000,'pageLoad':60000,'implicit':10000})
+        if args.url:
+            client.call('WebDriver:Navigate',{'url':args.url})
         result = measure(client,args.selector,args.seconds,args.warmup,args.check_input)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(result,indent=2)+'\n')

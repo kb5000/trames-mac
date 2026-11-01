@@ -171,7 +171,8 @@ to the produced libraries for corresponding-source distribution.
 Use an existing Alpine store containing original Firefox, GTK/Mesa dependencies
 and fonts. The normal launcher imports graphics files into a versioned guest
 directory, checks real GLES 3/MoltenVK first and creates a separate default
-profile. It leaves existing Firefox profiles and preferences alone:
+profile. Existing explicit preferences win. With a video driver, it seeds native-video
+defaults described below; use `--video-policy browser` to keep browser defaults:
 
 ```sh
 python3 scripts/run-firefox-gpu.py \
@@ -1212,8 +1213,8 @@ not equal general browser performance or maximum decoding throughput.
 Cold autoplay of the original short AAC fixture still triggers a 15-second
 browser buffering state. A timed window spanning that pause is recorded
 separately, rather than being hidden by the steady-playback result. WebDriver
-click and typing succeed during playback. Audio output/A-V sync, higher
-resolutions and physical iPad presentation remain outside this acceptance.
+click and typing succeed during playback. Audio output/A-V sync, 4K browser playback
+and physical iPad presentation remain outside this acceptance.
 
 `scripts/benchmark-firefox-video.py --port PORT --output result.json --seconds
 20 --check-input` measures an already loaded video in a separate visible
@@ -1221,3 +1222,55 @@ Marionette profile. It does not force decoder/graphics preferences; input checks
 run after the FPS window. [Full method, source/fixture hashes and raw sample
 counters](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#end-to-end-firefox-playback-2026-11-01)
 are maintained with the shared video evidence.
+
+## 1080p60 playback and worker sleep deadlines (2026-11-01)
+
+The shared runtime now parks short nanosleep/clock_nanosleep calls on the existing
+worker deadline queue. Profiling had found 21,396 whole-cohort returns for short
+sleeps in the graphics workload. Only the caller now yields its execution slot;
+relative/absolute deadlines, seccomp entry decisions, checkpoint transfer and
+owner-side signal interruption retain their semantics. Wayland frame callbacks
+also keep a fixed clock phase rather than accumulating dispatch jitter.
+
+A continuous 45-second H.264 High/AAC 1920×1080/60 fixture improves from 54.82 FPS
+(127/1465 dropped) to 58.89 FPS (27/1467 dropped). Native Firefox delivers 59.97 FPS
+(0/1456 dropped). These are individual foreground intervals after a common warmup,
+with Firefox 142 in the guest and 159 on macOS. The final guest keeps hardware
+decoding with no decoder drops or buffering during the measured interval.
+Accepted-frame counters are not physical-scanout measurements; audio output/A-V
+sync and the final five seconds/looping of this clip are outside this interval.
+The phase-only change did not improve FPS on its own. The original Firefox 142
+short AAC cold-autoplay buffer stall remains separate and is not declared fixed.
+
+The video benchmark now records playback events and buffered ranges, and accepts
+`--url` to navigate a separate test profile explicitly before measurement. It
+removes its callbacks/listeners afterwards and preserves the browser's graphics,
+decoder and sandbox settings. [Paired sample counters, methods and limitations](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#1080p60-and-worker-sleep-deadlines-2026-11-01)
+are maintained with the shared validation record.
+
+### Firefox 151/native-video profile follow-up
+
+An isolated copy of the test environment now uses official Alpine v3.23 signed
+Firefox 151.0.3 packages. It reports the original short clip duration as 12.000 s,
+matching its buffered range and avoiding Firefox 142's false 15-second buffer wait.
+The original store and the installed stable application were preserved.
+
+Mesa patch 0005 removes an unused physical-memory query/field which rejected
+otherwise working Vulkan devices inside the RDD sandbox. Resource/cache budgets
+continue using Vulkan heaps. A new EGL pixel regression denies sysinfo and makes
+sysconf's physical-memory query unavailable: the old library fails initialization;
+the patched library matches all hardware-frame Y/UV pixels.
+
+For `--video-driver`, the launcher seeds `media.ffmpeg.vaapi.enabled=true` and
+`media.ffmpeg.disable-software-fallback=true` only if no explicit profile
+preference exists. The latter disables Gecko's slow-frame heuristic switch after
+cold graphics/scheduling stalls; actual VA decode/import errors still use normal
+error recovery. `--video-policy browser` leaves all preferences unchanged. No
+sandbox, quality setting or frame-drop counter is disabled.
+
+With the native policy, a fresh cold short-clip test retains hardware decoding,
+crosses two loops and reports zero buffering time. Initial startup still drops
+frames. A separate 55.018-second 1080p60 hardware run, including the clip end and
+looping, accepts 56.05 FPS (218/3302 dropped), has zero buffering time and passes
+click/typing after timing. That longer/newer-client scope differs from the paired
+58.89 FPS steady interval; neither is a sustained zero-drop 60 FPS result.

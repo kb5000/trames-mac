@@ -3,13 +3,15 @@
 """Run installed Linux Firefox on native Vulkan/Zink with a separate profile.
 
 Requires a signed native-driver Mac runner, an existing Firefox store, and
-verified Linux graphics artifacts. No browser preferences or sandbox settings
-are forced. See docs/validation/mac-firefox-gpu.md for build and validation.
+verified Linux graphics artifacts. With --video-driver, seed native-video
+profile defaults unless already configured; --video-policy browser preserves
+all preferences. Sandbox settings are preserved. See docs/validation/mac-firefox-gpu.md for build and validation.
 """
 import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import subprocess
@@ -26,6 +28,7 @@ def main():
     parser.add_argument('--icd', type=Path, required=True, help='Linux libtrames_vulkan_icd.so')
     parser.add_argument('--loader', type=Path, required=True, help='Original Linux libvulkan.so.1')
     parser.add_argument('--video-driver', type=Path, help='Enable the paired VideoToolbox VA-API driver (H.264)')
+    parser.add_argument('--video-policy',choices=['native','browser'],default='native',help='native seeds VA-API and keeps the verified hardware path during slow startup; existing preferences win')
     parser.add_argument('--profile', default='/root/firefox-native-gpu')
     parser.add_argument('--cpus', type=int, default=os.cpu_count() or 1)
     parser.add_argument('--timeout', type=int, default=86400)
@@ -71,6 +74,19 @@ def main():
         if args.video_driver:
             setup.append('export LIBVA_DRIVER_NAME=trames LIBVA_DRIVERS_PATH=' + quote(guest) +
                          ' MOZ_DRM_DEVICE=/dev/dri/renderD128')
+            if args.video_policy == 'native':
+                # The driver is verified fast; compositor/initialization delays
+                # must not trigger Gecko's slow-decode heuristic. Real VA decode
+                # and image-import errors still use normal error recovery.
+                for name in ('media.ffmpeg.vaapi.enabled',
+                             'media.ffmpeg.disable-software-fallback'):
+                    pattern = quote('["\']' + re.escape(name) + '["\']')
+                    paths = [quote(args.profile + '/' + file) for file in ('user.js','prefs.js')]
+                    line = quote('user_pref(' + json.dumps(name) + ', true);\n')
+                    setup.append('if ! grep -Eq ' + pattern + ' ' + paths[0] +
+                                 ' 2>/dev/null && ! grep -Eq ' + pattern + ' ' + paths[1] +
+                                 ' 2>/dev/null; then printf %s ' + line + ' >>' + paths[0] + '; fi')
+
         setup += ['rmdir ' + quote(transfer),
                   'export LD_LIBRARY_PATH=' + quote(guest),
                   'export VK_DRIVER_FILES=' + quote(guest + '/trames.json'),
