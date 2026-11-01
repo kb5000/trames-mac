@@ -448,3 +448,18 @@ The guest profile path is selected by `--profile`. Without `--host-profile`, the
 launcher keeps using private guest storage. This option does not migrate or
 replace an existing private profile. See the audio/playback validation notes
 for the measured difference during background database saves.
+
+## Application language
+
+The native manager, dialogs, window menus and microphone permission explanation
+support English and Simplified Chinese. They follow macOS's per-application
+language preference; other languages fall back to English. Environment names,
+guest window titles, guest output and CLI/package diagnostics retain their source
+text. App language does not change Linux LANG or LC_*; the existing C.UTF-8
+default needs no additional locale installation.
+
+The current shared-kernel coordinator dependencies and measured migration
+priorities are documented in the
+[coordinator audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md).
+Use `--metrics` with the executor for the existing `execution paths` JSON counters;
+profiling is disabled during normal use.

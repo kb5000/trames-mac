@@ -11,6 +11,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/manager.m");
     println!("cargo:rerun-if-changed=src/task-stream.m");
     println!("cargo:rerun-if-changed=src/task-stream.h");
+    println!("cargo:rerun-if-changed=src/localization.h");
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos")
         || std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("aarch64")
     {

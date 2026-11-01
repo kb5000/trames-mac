@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import <AppKit/AppKit.h>
+#import "localization.h"
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 #import <QuartzCore/CATransaction.h>
@@ -243,10 +244,10 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     if(NSApp)return YES;
     [NSApplication sharedApplication];NSApp.delegate=self;[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *actions=[NSMenu new];
-    NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:[@"Quit " stringByAppendingString:([NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames")] action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
-    NSMenuItem *windowMenu=[NSMenuItem new];[menu addItem:windowMenu];NSMenu *windowActions=[[NSMenu alloc]initWithTitle:@"Window"];
-    NSMenuItem *close=[[NSMenuItem alloc]initWithTitle:@"Close Window" action:@selector(closeFocused:) keyEquivalent:@"w"];close.target=self;[windowActions addItem:close];
-    NSMenuItem *minimize=[[NSMenuItem alloc]initWithTitle:@"Minimize" action:@selector(minimizeFocused:) keyEquivalent:@"m"];minimize.target=self;[windowActions addItem:minimize];windowMenu.submenu=windowActions;
+    NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:[NSString stringWithFormat:T(@"Quit %@"),([NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames")] action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
+    NSMenuItem *windowMenu=[NSMenuItem new];[menu addItem:windowMenu];NSMenu *windowActions=[[NSMenu alloc]initWithTitle:T(@"Window")];
+    NSMenuItem *close=[[NSMenuItem alloc]initWithTitle:T(@"Close Window") action:@selector(closeFocused:) keyEquivalent:@"w"];close.target=self;[windowActions addItem:close];
+    NSMenuItem *minimize=[[NSMenuItem alloc]initWithTitle:T(@"Minimize") action:@selector(minimizeFocused:) keyEquivalent:@"m"];minimize.target=self;[windowActions addItem:minimize];windowMenu.submenu=windowActions;
     NSApp.mainMenu=menu;NSApp.windowsMenu=windowActions;[NSApp finishLaunching];
     // Switch the initially headless CF loop to the AppKit event pump.
     if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac windows: AppKit ready\n");
@@ -329,7 +330,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];[family.window makeKeyAndOrderFront:nil];[family.window makeFirstResponder:family.canvas];[NSApp activate];
         }
         family.seen=YES;family.updating=YES;
-        NSString *title=[NSString stringWithUTF8String:info->title]?:@"Linux";
+        NSString *title=[NSString stringWithUTF8String:info->title]?:T(@"Linux");
         if(![family.window.title isEqualToString:title]){family.window.title=title;if(getenv("TRAMES_MAC_INPUT_TRACE"))fprintf(stderr,"trames mac title: time=%.9f id=%llu title=%s\n",NSProcessInfo.processInfo.systemUptime,info->id,info->title);}
         NSSize minimum=NSMakeSize(MAX(1,MIN(info->min_width,4096)),MAX(1,MIN(info->min_height,4096)));
         NSSize maximum=NSMakeSize(MAX(minimum.width,info->max_width?MIN(info->max_width,4096):4096),MAX(minimum.height,info->max_height?MIN(info->max_height,4096):4096));
