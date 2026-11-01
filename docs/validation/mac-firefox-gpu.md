@@ -1318,3 +1318,14 @@ seconds, and repeated main-thread delays over 100 ms. The corresponding host
 profile runs had 102/147 ms steady maximum gaps and no main-thread heartbeat gap
 over 100 ms. Storage runs were ordered and short; no randomized speedup or
 full-store optimization is claimed.
+
+The regular launcher subsequently exposed a separate 256-FD ceiling failure:
+Firefox received only two of three SCM_RIGHTS handles despite ample control
+buffer space, rejected the message, and restarted its video bridge. The paired
+runtime now uses sparse descriptor membership up to Linux's default `nr_open`,
+shared masks sized to actual FD numbers and a free-interval index under the
+existing table lock. Allocation no longer rescans all occupied numbers. A
+300-FD regression covers complete rights transfer, immutable masks and proc
+limits. This removes a confirmed restart cause; it does not establish physical
+60 Hz presentation or complete hover acceptance. An asynchronous-presentation
+experiment had no stable benefit and was reverted.
