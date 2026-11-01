@@ -39,6 +39,10 @@ pub struct Config {
     pub windows: bool,
     pub vulkan: bool,
     pub video: bool,
+    #[serde(default)]
+    pub audio: bool,
+    #[serde(default)]
+    pub audio_input: bool,
     pub mounts: Vec<Mount>,
 }
 fn shell_command() -> Vec<String> {
@@ -62,6 +66,8 @@ impl Config {
             windows: true,
             vulkan: false,
             video: false,
+            audio: false,
+            audio_input: false,
             mounts: vec![],
         }
     }
@@ -181,7 +187,7 @@ pub fn cli_config(args: &[String]) -> Result<u8> {
                         "default-environment" => c.default_environment=pair[1].clone(),
                         "distro" => { catalog(&pair[1])?; c.defaults.distribution=pair[1].clone(); c.defaults.source_sha256=catalog(&pair[1])?.1.into(); }
                         "command" => c.defaults.command=serde_json::from_str(&pair[1])?,
-                        key @ ("cpus"|"memory-mib"|"network"|"init"|"windows"|"vulkan"|"video") => {
+                        key @ ("cpus"|"memory-mib"|"network"|"init"|"windows"|"vulkan"|"video"|"audio"|"audio-input") => {
                             // Apply all values together below, allowing a distro
                             // and init change in either argument order.
                             match key {
@@ -191,11 +197,11 @@ pub fn cli_config(args: &[String]) -> Result<u8> {
                                 "init" => c.defaults.init=super::systemd::Init::parse(&pair[1])?,
                                 _ => {
                                     let value=match pair[1].as_str() {"on"=>true,"off"=>false,_=>return Err("expected on or off".into())};
-                                    match key {"windows"=>c.defaults.windows=value,"vulkan"=>c.defaults.vulkan=value,_=>c.defaults.video=value}
+                                    match key {"windows"=>c.defaults.windows=value,"vulkan"=>c.defaults.vulkan=value,"video"=>c.defaults.video=value,"audio"=>c.defaults.audio=value,_=>c.defaults.audio_input=value}
                                 }
                             }
                         }
-                        _ => return Err("unknown CLI setting; use default-environment, distro, command, cpus, memory-mib, network, init, windows, vulkan or video".into()),
+                        _ => return Err("unknown CLI setting; use default-environment, distro, command, cpus, memory-mib, network, init, windows, vulkan, video, audio or audio-input".into()),
                     }
                 }
             }
@@ -538,6 +544,12 @@ fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     if c.vulkan {
         args.push("--vulkan".into());
     }
+    if c.audio {
+        args.push("--audio".into());
+    }
+    if c.audio_input {
+        args.push("--audio-input".into());
+    }
     if c.video {
         args.push("--video".into());
     }
@@ -744,6 +756,8 @@ fn apply_settings(c: &mut Config, settings: &[String]) -> Result<()> {
             "--windows" => c.windows = on()?,
             "--vulkan" => c.vulkan = on()?,
             "--video" => c.video = on()?,
+            "--audio" => c.audio = on()?,
+            "--audio-input" => c.audio_input = on()?,
             "--mount" | "--mount-ro" => {
                 let (g, h) = v.split_once('=').ok_or("mount must be GUEST=HOST")?;
                 let host = fs::canonicalize(h)?;
@@ -906,7 +920,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         return start(&r, &cli.default_environment, &[]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [SETTINGS] [-- COMMAND ARGS...]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
+        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [SETTINGS] [-- COMMAND ARGS...]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
         return Ok(0);
     }
     if op == "list" {

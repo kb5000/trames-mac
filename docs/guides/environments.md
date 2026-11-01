@@ -385,3 +385,29 @@ import, signals and crash/reopen. `--soak-seconds N` adds a longer repeated
 read/write/reopen interval; it is opt-in and not a claim of elapsed soak coverage.
 Real sleep/wake, power loss, a new Mac's first installation and multi-hour
 application workloads need their own release acceptance evidence.
+
+## Native audio
+
+Playback and capture are independent host opt-ins. `--audio` enables playback;
+`--audio-input` also enables capture and requires the normal macOS microphone
+permission. Persist these for an environment with:
+
+```sh
+trames-dev env configure work --audio on --audio-input on
+```
+
+Install the paired native ALSA plugin in that Linux environment and configure
+ALSA's default PCM to use it. Build it with the integration repository's
+`scripts/build-audio-guest.sh` on ARM64 Linux. The standard ALSA `plug` layer
+provides format conversion; no PulseAudio/PipeWire server is required.
+For the graphics test launcher, `--audio-plugin PATH` imports the plugin and
+an isolated ALSA configuration; add `--audio-input` to enable the microphone.
+The launcher preserves explicit existing cubeb preferences.
+
+`scripts/run-firefox-gpu.py --host-profile /path/to/dedicated-linux-profile`
+uses the existing shared-directory backend for a persistent Linux Firefox
+profile. Use a dedicated directory, separate from native macOS Firefox profiles.
+The guest profile path is selected by `--profile`. Without `--host-profile`, the
+launcher keeps using private guest storage. This option does not migrate or
+replace an existing private profile. See the audio/playback validation notes
+for the measured difference during background database saves.

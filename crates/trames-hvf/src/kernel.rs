@@ -13,6 +13,7 @@ pub struct Cpu {
     pub state: Aarch64State,
     vulkan_calls: bool,
     video_calls: bool,
+    audio_calls: bool,
     sme_config: SmeConfig,
     sme: Option<Box<SmeState>>,
     #[cfg(feature = "diagnostics")]
@@ -82,7 +83,8 @@ impl Cpu {
             },
             Err(error) => {
                 if (self.vulkan_calls && self.state.x(16) == trames_accel::native::VULKAN_PROFILE
-                    || self.video_calls && self.state.x(16) == trames_accel::native::VIDEO_PROFILE)
+                    || self.video_calls && self.state.x(16) == trames_accel::native::VIDEO_PROFILE
+                    || self.audio_calls && self.state.x(16) == trames_accel::native::AUDIO_PROFILE)
                     && matches!(&error, Error::Fault { pc, syndrome, .. }
                         if *pc == self.state.pc && syndrome >> 26 == 0)
                 {
@@ -201,6 +203,7 @@ impl trames_engine::Cpu for Cpu {
             },
             vulkan_calls: false,
             video_calls: false,
+            audio_calls: false,
             sme_config: SmeConfig::default(),
             sme: None,
             #[cfg(feature = "diagnostics")]
@@ -253,6 +256,7 @@ impl trames_engine::Cpu for Cpu {
                 sme_config: self.sme_config,
                 vulkan_calls: self.vulkan_calls,
                 video_calls: self.video_calls,
+                audio_calls: self.audio_calls,
                 #[cfg(feature = "diagnostics")]
                 execution_thread: None,
             }
@@ -275,6 +279,9 @@ impl trames_engine::Cpu for Cpu {
     }
     fn set_vulkan_calls(&mut self, enabled: bool) {
         self.vulkan_calls = enabled;
+    }
+    fn set_audio_calls(&mut self, enabled: bool) {
+        self.audio_calls = enabled;
     }
     fn set_video_calls(&mut self, enabled: bool) {
         self.video_calls = enabled;

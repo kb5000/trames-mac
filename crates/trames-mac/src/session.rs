@@ -217,6 +217,8 @@ pub struct Command {
     pub windows: bool,
     vulkan: bool,
     video: bool,
+    audio: bool,
+    audio_input: bool,
     pty: bool,
     init: super::systemd::Init,
     argv: Vec<String>,
@@ -254,6 +256,8 @@ impl Command {
         let mut windows = true;
         let mut vulkan = false;
         let mut video = false;
+        let mut audio = false;
+        let mut audio_input = false;
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
@@ -318,6 +322,11 @@ impl Command {
                 "--no-windows" => windows = false,
                 "--vulkan" => vulkan = true,
                 "--video" => video = true,
+                "--audio" => audio = true,
+                "--audio-input" => {
+                    audio = true;
+                    audio_input = true;
+                }
                 "--trace" => trace = true,
                 "--metrics" => metrics = true,
                 "--pty" => pty = true,
@@ -325,7 +334,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -367,6 +376,8 @@ impl Command {
             windows,
             vulkan,
             video,
+            audio,
+            audio_input,
             pty,
             argv,
         }))
@@ -393,6 +404,8 @@ pub fn run(
         windows,
         vulkan,
         video,
+        audio,
+        audio_input,
         pty,
         argv,
     } = command;
@@ -402,6 +415,8 @@ pub fn run(
     let options = RuntimeOptions {
         vulkan_accelerator: vulkan,
         video_accelerator: video,
+        audio_output: audio,
+        audio_input,
         memory_limits: MemoryLimits {
             per_process: limit,
             total: limit,

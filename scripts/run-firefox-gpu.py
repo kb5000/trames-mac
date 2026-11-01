@@ -29,7 +29,10 @@ def main():
     parser.add_argument('--loader', type=Path, required=True, help='Original Linux libvulkan.so.1')
     parser.add_argument('--video-driver', type=Path, help='Enable the paired VideoToolbox VA-API driver (H.264)')
     parser.add_argument('--video-policy',choices=['native','browser'],default='native',help='native seeds VA-API and keeps the verified hardware path during slow startup; existing preferences win')
+    parser.add_argument('--audio-plugin', type=Path, help='Native ALSA PCM plugin; enables audio output')
+    parser.add_argument('--audio-input', action='store_true', help='Also allow microphone capture through the audio plugin')
     parser.add_argument('--profile', default='/root/firefox-native-gpu')
+    parser.add_argument('--host-profile', type=Path, help='Dedicated Linux Firefox profile directory on the host; mounted at --profile')
     parser.add_argument('--cpus', type=int, default=os.cpu_count() or 1)
     parser.add_argument('--timeout', type=int, default=86400)
     parser.add_argument('--network', choices=['off', 'loopback', 'outbound', 'full'], default='outbound')
@@ -37,6 +40,8 @@ def main():
     args = parser.parse_args()
     if args.cpus < 1 or args.timeout < 1 or not args.profile.startswith('/'):
         parser.error('positive CPU count/timeout and absolute guest profile path required')
+    if args.audio_input and not args.audio_plugin:
+        parser.error('--audio-input requires --audio-plugin')
     if not args.storage.is_dir():
         parser.error('--storage must be an existing Firefox store')
     files = {'libEGL.so.1': args.graphics_dir / 'libEGL.so.1',
@@ -44,6 +49,8 @@ def main():
              'libtrames_vulkan_icd.so': args.icd, 'libvulkan.so.1': args.loader}
     if args.video_driver:
         files['trames_drv_video.so'] = args.video_driver
+    if args.audio_plugin:
+        files['libasound_module_pcm_trames.so'] = args.audio_plugin
     digest = hashlib.sha256()
     for name, path in sorted(files.items()):
         if not path.is_file():
@@ -60,9 +67,20 @@ def main():
         manifest.write_text(json.dumps({'file_format_version': '1.0.0', 'ICD': {
             'api_version': '1.1.0', 'library_path': guest + '/libtrames_vulkan_icd.so'}}) + '\n')
         files['trames.json'] = manifest
+        if args.audio_plugin:
+            audio_config=Path(temporary)/'asound.conf'
+            audio_config.write_text('pcm.trames { type trames hint { show on description \"Trames host audio\" } }\npcm.!default { type plug slave.pcm trames }\n')
+            files['asound.conf']=audio_config
         command = [str(args.runner.resolve()), '--storage', str(args.storage.resolve()),
                    '--vulkan', '--no-pty', '--cpus', str(args.cpus), '--memory-mib', 'auto',
                    '--network', args.network, '--timeout', str(args.timeout)]
+        if args.host_profile:
+            args.host_profile.mkdir(parents=True, exist_ok=True)
+            command += ['--mount', args.profile + '=' + str(args.host_profile.resolve())]
+        if args.audio_plugin:
+            command += ['--audio']
+            if args.audio_input:
+                command += ['--audio-input']
         if args.video_driver:
             command += ['--video']
         setup = ['mkdir -p ' + quote(guest) + ' ' + quote(args.profile)]
@@ -71,6 +89,12 @@ def main():
             command += ['--exec-file', incoming + '=' + str(path.resolve())]
             setup.append('cp ' + quote(incoming) + ' ' + quote(guest + '/' + name))
             setup.append('rm ' + quote(incoming))
+        if args.audio_plugin:
+            setup.append('export ALSA_PLUGIN_DIR=' + quote(guest) + ' ALSA_CONFIG_PATH=' + quote(guest+'/asound.conf'))
+            pattern=quote('[\"\']media\\.cubeb\\.backend[\"\']')
+            paths=[quote(args.profile+'/'+file) for file in ('user.js','prefs.js')]
+            line=quote('user_pref(\"media.cubeb.backend\", \"alsa\");\n')
+            setup.append('if ! grep -Eq '+pattern+' '+paths[0]+' 2>/dev/null && ! grep -Eq '+pattern+' '+paths[1]+' 2>/dev/null; then printf %s '+line+' >>'+paths[0]+'; fi')
         if args.video_driver:
             setup.append('export LIBVA_DRIVER_NAME=trames LIBVA_DRIVERS_PATH=' + quote(guest) +
                          ' MOZ_DRM_DEVICE=/dev/dri/renderD128')

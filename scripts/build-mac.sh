@@ -25,7 +25,7 @@ import os
 channel=os.environ['TRAMES_BUILD_CHANNEL']
 name='Trames' if channel=='stable' else 'Trames Dev'
 path=pathlib.Path('target/release')/(name+'.app')/'Contents/Info.plist'
-path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac'+('' if channel=='stable' else '.dev'),CFBundleName=name,CFBundleDisplayName=name,TramesChannel=channel,CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True)))
+path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac'+('' if channel=='stable' else '.dev'),CFBundleName=name,CFBundleDisplayName=name,TramesChannel=channel,CFBundleExecutable='trames-mac-run',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1],CFBundleVersion='1',LSUIElement=True,NSHighResolutionCapable=True,NSMicrophoneUsageDescription='Allow Linux applications in Trames to use your microphone when you enable audio input.')))
 PLIST
 identity="${TRAMES_SIGN_IDENTITY:--}"
 if [[ "$identity" == "-" ]]; then

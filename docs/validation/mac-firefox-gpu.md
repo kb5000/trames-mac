@@ -1274,3 +1274,47 @@ frames. A separate 55.018-second 1080p60 hardware run, including the clip end an
 looping, accepts 56.05 FPS (218/3302 dropped), has zero buffering time and passes
 click/typing after timing. That longer/newer-client scope differs from the paired
 58.89 FPS steady interval; neither is a sustained zero-drop 60 FPS result.
+
+
+## Native PCM audio and elapsed playback stalls (2026-11-01)
+
+The paired runtime adds an ALSA terminal plugin backed by AVAudioEngine device
+pull for output and AudioQueue for input. `--audio` enables output;
+`--audio-input` also permits capture. `scripts/run-firefox-gpu.py --audio-plugin
+PATH` imports the paired plugin and an isolated ALSA configuration. Explicit
+existing cubeb preferences win. See [native audio architecture](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/audio.md)
+for the transport, eventfd waits, device selection and microphone permissions.
+
+Real ALSA output, drain and continuous device-position checks pass. Simultaneous
+capture/output passes using the existing Steam virtual microphone (silence,
+aggregate levels only). Physical C920 acceptance was intentionally stopped at
+the owner's request. The owner confirmed that continuous crackle was removed
+with the pull-based output backend. Physical A/V offset and long-term drift
+remain unmeasured.
+
+The later severe video stall follows elapsed playback time, not a fixed sample
+at 22 seconds. Temporary slow-operation records aligned it with repeated Glean
+local database file replacements. Private namespace mutation commits the whole
+store manifest; on this accumulated test store, observed slow creates took
+30–40 ms each. Broader namespace service experiments and both host/Firefox
+sampling experiments were discarded: the former did not establish a stable
+benefit, and sampling itself strongly perturbed playback.
+
+`--host-profile /path/to/dedicated-linux-profile` places a persistent Linux
+Firefox profile on the existing host-directory backend at `--profile`, without
+migrating the existing private profile or disabling Glean/profile saves. Two
+isolated 35-second 1080p60 H.264/AAC runs using this option accepted 57.45 and
+58.08 FPS. Their maximum frame-callback gaps were 433 and 405 ms, mostly during
+startup; neither reproduced the multi-second later pause. These are short
+ordered observations, not physical scanout or a general performance guarantee.
+Early playback retains a shorter cold-start gap. Private storage still needs
+its own persistence optimization; audio does not silently relocate arbitrary
+application data. Detailed counters and limitations are maintained in the
+[integration validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/native-audio.json).
+
+A final private-profile control used exactly the same binary without metrics or
+sampling: 52.36 accepted FPS, a 1276 ms maximum callback gap after the first three
+seconds, and repeated main-thread delays over 100 ms. The corresponding host
+profile runs had 102/147 ms steady maximum gaps and no main-thread heartbeat gap
+over 100 ms. Storage runs were ordered and short; no randomized speedup or
+full-store optimization is claimed.
