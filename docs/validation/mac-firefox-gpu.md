@@ -1329,3 +1329,36 @@ existing table lock. Allocation no longer rescans all occupied numbers. A
 limits. This removes a confirmed restart cause; it does not establish physical
 60 Hz presentation or complete hover acceptance. An asynchronous-presentation
 experiment had no stable benefit and was reverted.
+
+## Private page-in preparation and stream IPC (2026-11-01)
+
+The paired runtime groups host MAP_PRIVATE page-in metadata by mapping instead
+of assigning a change domain to each page. Physical identities/COW remain per
+page. Successful first reads record offset ranges under a mapping-local metadata
+lock; ordinary reads/writes acquire no new lock. EOF changes and expired range
+history retain full refresh. See [the shared architecture](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/region-memory.md#host-private-page-in-domains-2026-11-01).
+
+Identical cloned test stores/profiles, Firefox 151.0.3, 12 CPUs and the same
+1080p60 H.264/AAC file were compared. In one instrumented before/after pair,
+backing-domain checks fell from 243.0M to 37.4M and aggregate memory preparation
+from 11.36 to 5.91 seconds. Video dimensions became available after 23.70 versus
+20.07 seconds. An uninstrumented reverse-order pair observed 24.22 versus 20.59
+seconds. These short observations establish reduced preparation work and a
+roughly 3.6-second startup improvement in this fixture, not a universal speedup.
+Initial frame gaps remained above two seconds; early-playback accepted FPS was
+mixed across pairs and is not claimed as a stable improvement.
+
+A later exit on the local video page logged `pipe error: Message too large` and
+channel-error shutdown. AF_UNIX sendmsg incorrectly treated its 1 MiB staging
+size as a maximum stream message. Owner/worker paths now short-write a prefix;
+datagram/SEQPACKET atomic-message behavior is preserved. A regression checks
+every byte of a >2 MiB transfer plus exactly-once SCM_RIGHTS delivery. This
+fixes a deterministic transport error consistent with the browser log. A large
+document-title experiment did not reproduce the original exit, so it is not
+claimed as a browser-level negative control or proof that every crash is fixed.
+
+The same integration also includes the previously pending Unix ABI batching:
+msghdr and iovec records are imported once, and adjacent receive-output fields
+are written together. Cross-page/fault-before-effect tests cover the batching.
+It adds no new runtime checks or locks; the measurements above precede this
+small follow-up and are not attributed to it.
