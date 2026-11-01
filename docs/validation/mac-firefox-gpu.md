@@ -1362,3 +1362,47 @@ msghdr and iovec records are imported once, and adjacent receive-output fields
 are written together. Cross-page/fault-before-effect tests cover the batching.
 It adds no new runtime checks or locks; the measurements above precede this
 small follow-up and are not attributed to it.
+
+
+## Fatal Wayland pool mapping exit (2026-11-01)
+
+A later original Firefox 151.0.3 run exited with status 139 after navigating
+from local video to Bilibili. The log contains `wl_shm_pool#60: error 1: shared
+memory mapping failed`. Matching official Alpine debug symbols resolve the
+parent's null access to `mozilla::widget::WlLogHandler`: Firefox intentionally
+crashes after receiving this fatal Wayland error. It is not evidence of an
+unrelated arbitrary null dereference in the guest memory implementation.
+
+The paired runtime removes the root memfd budget's independent 128 MiB ceiling
+for host-managed sessions. Existing FD/native-mapping owners keep the same budget
+identity; sparse files and host mappings remain demand-backed. Explicit bounded
+sessions and common/iPad defaults retain their original policy. No per-frame
+check, byte-visibility barrier, global lock or service thread is added. Mapping
+failures now record the underlying I/O error and pool dimensions on the error
+path.
+
+A real Wayland wire/SCM_RIGHTS regression creates nine 16 MiB pools. The bounded
+control returns StorageFull and the same fatal protocol error at pool nine;
+host-managed mode accepts all 144 MiB and a sync round-trip. Both release every
+charge when the compositor is dropped. Full local Mac/Linux runtime checks,
+Mac product CI, iPad clippy and iPad device compilation pass. The original
+browser log discarded the map errno, so the quota is a matching deterministic
+failure mechanism rather than a proven explanation for every intermittent exit.
+Detailed evidence is in the [integration validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/native-audio.json).
+
+A browser-level control also reproduced the fatal error: after five animated
+Canvas windows, the old installed Dev exited 139 while opening the next window,
+with the same `WlLogHandler` PC and pool mapping error. Installed fixed Dev
+completed 20 animated windows, held all 21 including the initial blank window,
+closed the test windows and quit normally. Profiles/preferences and original
+Firefox were isolated; initial effective window sizes differed before settling
+to 1996x843 content, so this is functional stress evidence rather than a size-
+matched performance measurement. The installed stable application was unchanged.
+
+A final same-binary control restored the old shared budget with explicit
+`--memory-mib 8192`: resizing the sixth animated window failed at about 77 seconds.
+The new error log directly reports `StorageFull` for an 8,028,160-byte pool
+mapping, followed by the same fatal Wayland error. Automatic host-memory mode
+on that executable passed the 20-window test. This establishes the independent
+quota failure path; the original Bilibili log still lacked an errno, and other
+intermittent exits are not ruled out.
