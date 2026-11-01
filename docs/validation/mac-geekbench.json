@@ -18714,5 +18714,500 @@
         "tests/integration/mac-memory-paths.py": "c2168bec4431d9ab88fdf8b7e744fbe534e6b5d60fc4c9c2734123f6c710ebde"
       }
     }
+  },
+  "release_1_4_0_retest_2026_11_01": {
+    "date": "2026-11-01",
+    "code_mac": "dcba0098fce638ea2e646bd57ab03ff83ce1344d",
+    "runtime_revision": "1309faf688cd20780f4fa36d93e4f9d9ace8385f",
+    "installed_stable_runner_sha256": "ec74a40ef7cef8a85279cdda2070c25d92fcb1538219f04d0f13008c360381ad",
+    "benchmark": {
+      "version": "6.7.1",
+      "guest": "Original Linux AArch64 Preview with the previously verified glibc fixture on the isolated Alpine store; not a new Debian preset.",
+      "native": "Original macOS AArch64 build, official bundle signature verified.",
+      "binary_and_workload_data_unmodified": true,
+      "read_method": "Public result DOM in the in-app browser; direct HTTP and web-reader requests were rejected by Cloudflare. Browsing started only after both measured runs completed."
+    },
+    "method": {
+      "order": [
+        "trames",
+        "native"
+      ],
+      "repeats_per_platform": 1,
+      "cpus": 12,
+      "memory": "Host-managed auto; both report 24 GiB.",
+      "metrics": true,
+      "hvf_diagnostics": false,
+      "syscall_trace": false,
+      "sampler": false,
+      "concurrent_builds_ci_or_window_capture": false,
+      "normal_desktop_background_apps_remained": true,
+      "cooldown_seconds": 30,
+      "idle_sleep_prevented": true,
+      "power": "AC; thermal state 0 and low power off before and after both runs.",
+      "guest_network": "outbound; real glibc getent resolution passed without a browser.geekbench.com hosts entry.",
+      "upload_authorized": true,
+      "browsing_started_after_measured_runs": true
+    },
+    "runs": [
+      {
+        "variant": "trames",
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793531535.475743,
+        "exit": 0,
+        "seconds": 239.69113750000002,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19419637"
+        ],
+        "source": "https://browser.geekbench.com/v6/cpu/19419637",
+        "single": 4310,
+        "multi": 13828
+      },
+      {
+        "variant": "native",
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "start_unix": 1793531805.1978838,
+        "exit": 0,
+        "seconds": 231.87460770899997,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19419653"
+        ],
+        "source": "https://browser.geekbench.com/v6/cpu/19419653",
+        "single": 4427,
+        "multi": 20236
+      }
+    ],
+    "previous_retained_baseline": {
+      "section": "translation_pause_followup_2026_10_29.geekbench.baseline",
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19406562",
+        "https://browser.geekbench.com/v6/cpu/19406643"
+      ],
+      "samples": 2,
+      "scores_mean": {
+        "single": 4146.5,
+        "multi": 13099.5
+      }
+    },
+    "comparison": {
+      "previous_trames_mean": {
+        "single": 4146.5,
+        "multi": 13099.5
+      },
+      "trames_over_native": {
+        "single": 0.9735712672238537,
+        "multi": 0.6833366277920537
+      },
+      "trames_change_from_previous": {
+        "single": 0.03943084529120955,
+        "multi": 0.055612809649223216
+      },
+      "native_change_from_previous": {
+        "single": 0.032656869605784955,
+        "multi": 0.08702191663085523
+      },
+      "workloads": [
+        {
+          "name": "File Compression",
+          "previous_trames": {
+            "single": 3319.0,
+            "multi": 9173.0
+          },
+          "trames": {
+            "single": 3511,
+            "multi": 9400
+          },
+          "native": {
+            "single": 3710,
+            "multi": 14294
+          },
+          "trames_over_native": {
+            "single": 0.9463611859838275,
+            "multi": 0.6576185812228907
+          },
+          "trames_change": {
+            "single": 0.0578487496233806,
+            "multi": 0.02474653875504207
+          }
+        },
+        {
+          "name": "Navigation",
+          "previous_trames": {
+            "single": 3270.0,
+            "multi": 14272.0
+          },
+          "trames": {
+            "single": 3480,
+            "multi": 15768
+          },
+          "native": {
+            "single": 3805,
+            "multi": 20531
+          },
+          "trames_over_native": {
+            "single": 0.9145860709592641,
+            "multi": 0.7680093517120452
+          },
+          "trames_change": {
+            "single": 0.06422018348623859,
+            "multi": 0.10482062780269064
+          }
+        },
+        {
+          "name": "HTML5 Browser",
+          "previous_trames": {
+            "single": 4458.0,
+            "multi": 11072.5
+          },
+          "trames": {
+            "single": 4661,
+            "multi": 11029
+          },
+          "native": {
+            "single": 4682,
+            "multi": 23302
+          },
+          "trames_over_native": {
+            "single": 0.9955147372917557,
+            "multi": 0.4733070122736246
+          },
+          "trames_change": {
+            "single": 0.04553611484970843,
+            "multi": -0.0039286520659290725
+          }
+        },
+        {
+          "name": "PDF Renderer",
+          "previous_trames": {
+            "single": 4228.0,
+            "multi": 11707.0
+          },
+          "trames": {
+            "single": 4248,
+            "multi": 12998
+          },
+          "native": {
+            "single": 4048,
+            "multi": 21043
+          },
+          "trames_over_native": {
+            "single": 1.0494071146245059,
+            "multi": 0.6176875920733735
+          },
+          "trames_change": {
+            "single": 0.004730368968779652,
+            "multi": 0.11027590330571457
+          }
+        },
+        {
+          "name": "Photo Library",
+          "previous_trames": {
+            "single": 3794.0,
+            "multi": 10163.5
+          },
+          "trames": {
+            "single": 3918,
+            "multi": 10168
+          },
+          "native": {
+            "single": 3858,
+            "multi": 23917
+          },
+          "trames_over_native": {
+            "single": 1.015552099533437,
+            "multi": 0.425136931889451
+          },
+          "trames_change": {
+            "single": 0.03268318397469683,
+            "multi": 0.0004427608599399946
+          }
+        },
+        {
+          "name": "Clang",
+          "previous_trames": {
+            "single": 4960.0,
+            "multi": 24765.0
+          },
+          "trames": {
+            "single": 5242,
+            "multi": 26926
+          },
+          "native": {
+            "single": 4956,
+            "multi": 33441
+          },
+          "trames_over_native": {
+            "single": 1.0577078288942696,
+            "multi": 0.8051792709548159
+          },
+          "trames_change": {
+            "single": 0.05685483870967745,
+            "multi": 0.08726024631536444
+          }
+        },
+        {
+          "name": "Text Processing",
+          "previous_trames": {
+            "single": 3714.5,
+            "multi": 3693.0
+          },
+          "trames": {
+            "single": 3917,
+            "multi": 3817
+          },
+          "native": {
+            "single": 4238,
+            "multi": 5670
+          },
+          "trames_over_native": {
+            "single": 0.9242567248702218,
+            "multi": 0.6731922398589065
+          },
+          "trames_change": {
+            "single": 0.05451608561044563,
+            "multi": 0.033577037638776064
+          }
+        },
+        {
+          "name": "Asset Compression",
+          "previous_trames": {
+            "single": 3615.5,
+            "multi": 18005.5
+          },
+          "trames": {
+            "single": 3732,
+            "multi": 17758
+          },
+          "native": {
+            "single": 3797,
+            "multi": 26775
+          },
+          "trames_over_native": {
+            "single": 0.9828812220173822,
+            "multi": 0.6632306255835667
+          },
+          "trames_change": {
+            "single": 0.03222237588162069,
+            "multi": -0.013745799894476662
+          }
+        },
+        {
+          "name": "Object Detection",
+          "previous_trames": {
+            "single": 6525.0,
+            "multi": 13084.5
+          },
+          "trames": {
+            "single": 6688,
+            "multi": 12957
+          },
+          "native": {
+            "single": 6390,
+            "multi": 18361
+          },
+          "trames_over_native": {
+            "single": 1.0466353677621283,
+            "multi": 0.7056805184902784
+          },
+          "trames_change": {
+            "single": 0.02498084291187741,
+            "multi": -0.00974435400664908
+          }
+        },
+        {
+          "name": "Background Blur",
+          "previous_trames": {
+            "single": 4297.0,
+            "multi": 13144.5
+          },
+          "trames": {
+            "single": 4396,
+            "multi": 14077
+          },
+          "native": {
+            "single": 4488,
+            "multi": 20940
+          },
+          "trames_over_native": {
+            "single": 0.9795008912655971,
+            "multi": 0.6722540592168099
+          },
+          "trames_change": {
+            "single": 0.023039329764952265,
+            "multi": 0.07094221917912424
+          }
+        },
+        {
+          "name": "Horizon Detection",
+          "previous_trames": {
+            "single": 3974.0,
+            "multi": 20749.5
+          },
+          "trames": {
+            "single": 4123,
+            "multi": 22472
+          },
+          "native": {
+            "single": 4759,
+            "multi": 27735
+          },
+          "trames_over_native": {
+            "single": 0.8663584786719899,
+            "multi": 0.8102397692446367
+          },
+          "trames_change": {
+            "single": 0.037493709109209794,
+            "multi": 0.08301404853129002
+          }
+        },
+        {
+          "name": "Object Remover",
+          "previous_trames": {
+            "single": 5057.5,
+            "multi": 15450.0
+          },
+          "trames": {
+            "single": 5407,
+            "multi": 16763
+          },
+          "native": {
+            "single": 5596,
+            "multi": 22540
+          },
+          "trames_over_native": {
+            "single": 0.9662258756254467,
+            "multi": 0.7437000887311447
+          },
+          "trames_change": {
+            "single": 0.06910528917449343,
+            "multi": 0.08498381877022654
+          }
+        },
+        {
+          "name": "HDR",
+          "previous_trames": {
+            "single": 4329.0,
+            "multi": 18707.5
+          },
+          "trames": {
+            "single": 4466,
+            "multi": 19474
+          },
+          "native": {
+            "single": 4990,
+            "multi": 23133
+          },
+          "trames_over_native": {
+            "single": 0.8949899799599198,
+            "multi": 0.8418276920416721
+          },
+          "trames_change": {
+            "single": 0.03164703164703164,
+            "multi": 0.040972871842843706
+          }
+        },
+        {
+          "name": "Photo Filter",
+          "previous_trames": {
+            "single": 4591.0,
+            "multi": 12140.5
+          },
+          "trames": {
+            "single": 4658,
+            "multi": 14659
+          },
+          "native": {
+            "single": 4965,
+            "multi": 17405
+          },
+          "trames_over_native": {
+            "single": 0.9381671701913393,
+            "multi": 0.8422292444699799
+          },
+          "trames_change": {
+            "single": 0.014593770420387786,
+            "multi": 0.20744615131172517
+          }
+        },
+        {
+          "name": "Ray Tracer",
+          "previous_trames": {
+            "single": 3498.0,
+            "multi": 22147.0
+          },
+          "trames": {
+            "single": 3745,
+            "multi": 22932
+          },
+          "native": {
+            "single": 3864,
+            "multi": 27614
+          },
+          "trames_over_native": {
+            "single": 0.9692028985507246,
+            "multi": 0.8304483233142609
+          },
+          "trames_change": {
+            "single": 0.07061177815894792,
+            "multi": 0.035444981261570474
+          }
+        },
+        {
+          "name": "Structure from Motion",
+          "previous_trames": {
+            "single": 3898.5,
+            "multi": 15741.5
+          },
+          "trames": {
+            "single": 3912,
+            "multi": 17850
+          },
+          "native": {
+            "single": 3978,
+            "multi": 21829
+          },
+          "trames_over_native": {
+            "single": 0.9834087481146304,
+            "multi": 0.8177195473910852
+          },
+          "trames_change": {
+            "single": 0.003462870334744128,
+            "multi": 0.1339453038147571
+          }
+        }
+      ]
+    },
+    "session_metrics": {
+      "syscalls": 2529202,
+      "context_switches": 2206395,
+      "hardware_mapped_bytes": 2818048,
+      "guest_resident_bytes": 3579904,
+      "vm_checkpoint_groups": 7154,
+      "vm_checkpoint_spaces": 7154,
+      "backing_domain_checks": 823,
+      "backing_page_checks": 451,
+      "parallel_memory_us": 192895,
+      "instruction_count": null
+    },
+    "interpretation": [
+      "Current score ratios are 97.4% single-core and 68.3% multi-core of the fresh native control.",
+      "Trames raw scores rose 3.9%/5.6% versus the two retained October 29 controls; native scores also rose 3.3%/8.7% versus the earlier native reference. This is not an isolated or statistically established runtime speedup.",
+      "The largest multi-core relative gaps are Photo Library (42.5% of native), HTML5 Browser (47.3%) and PDF Renderer (61.8%). Scores alone do not establish their causal bottlenecks.",
+      "One fresh sample per platform, sequential order. Different OS binaries, libraries, ISA dispatch and scheduling are included; these ratios are not pure HVF overhead or Firefox UI performance."
+    ],
+    "validation_scope": "Measurement and English documentation only. Production sources are unchanged; reuse the 1.4.0 12-step local CI and existing runtime/iPad validation."
   }
 }

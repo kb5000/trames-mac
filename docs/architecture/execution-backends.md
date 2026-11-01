@@ -1721,3 +1721,60 @@ resident-file snapshot and GPU checkpoint fixes are shared with iPad; Mac SDK
 linking and on-demand presentation remain product-specific. See the
 [acceptance and reproducible launcher](../validation/mac-firefox-gpu.md) for
 exact scope, pixel checks and remaining video/driver limitations.
+
+
+## Stable 1.4.0 Geekbench 6 retest (2026-11-01)
+
+Installed stable 1.4.0 at product `dcba0098fce638ea2e646bd57ab03ff83ce1344d`,
+paired runtime `1309faf688cd20780f4fa36d93e4f9d9ace8385f`, was retested with
+original Geekbench 6.7.1 Linux AArch64 Preview and native macOS AArch64 builds.
+Executables and workload archives match the previously verified originals.
+The existing isolated Linux/glibc fixture is reused; this does not measure a
+new Debian tool preset. Both platforms use 12 CPUs and report 24 GiB; Trames
+uses host-managed `auto`, no windows/PTY, and the same enabled aggregate metrics
+as the historical controls. No profiler, HVF diagnostics, syscall trace, build,
+CI VM or browser capture ran during measurement. Normal desktop apps remained.
+Trames ran first, followed by a 30-second pause and native. Both runs completed
+and uploaded; thermal state was 0 and low-power mode off before and after each.
+
+| Platform | Single-core | Multi-core |
+| --- | ---: | ---: |
+| Retained October 29 Trames controls, mean of two | 4,146.5 | 13,099.5 |
+| [Trames 1.4.0](https://browser.geekbench.com/v6/cpu/19419637) | 4,310 | 13,828 |
+| [Fresh native macOS](https://browser.geekbench.com/v6/cpu/19419653) | 4,427 | 20,236 |
+
+Current Trames/native score ratios are **97.4% single-core and 68.3%
+multi-core**. Trames raw scores rose 3.9%/5.6% against the retained controls.
+The fresh native control also rose 3.3%/8.7% against the older native reference;
+do not attribute the Trames raw-score increase solely to runtime changes.
+This is one fresh sample per platform, not a confidence interval or isolated
+HVF cost. Platform binaries, libraries, ISA dispatch and scheduling differ.
+
+Each score pair below is single-core / multi-core. Previous Trames values
+are the mean of the two retained controls, not the rejected prototypes.
+
+| Workload | Previous Trames | Trames 1.4.0 | Native | Trames/native multi |
+| --- | ---: | ---: | ---: | ---: |
+| File Compression | 3,319 / 9,173 | 3,511 / 9,400 | 3,710 / 14,294 | 65.8% |
+| Navigation | 3,270 / 14,272 | 3,480 / 15,768 | 3,805 / 20,531 | 76.8% |
+| HTML5 Browser | 4,458 / 11,072.5 | 4,661 / 11,029 | 4,682 / 23,302 | 47.3% |
+| PDF Renderer | 4,228 / 11,707 | 4,248 / 12,998 | 4,048 / 21,043 | 61.8% |
+| Photo Library | 3,794 / 10,163.5 | 3,918 / 10,168 | 3,858 / 23,917 | 42.5% |
+| Clang | 4,960 / 24,765 | 5,242 / 26,926 | 4,956 / 33,441 | 80.5% |
+| Text Processing | 3,714.5 / 3,693 | 3,917 / 3,817 | 4,238 / 5,670 | 67.3% |
+| Asset Compression | 3,615.5 / 18,005.5 | 3,732 / 17,758 | 3,797 / 26,775 | 66.3% |
+| Object Detection | 6,525 / 13,084.5 | 6,688 / 12,957 | 6,390 / 18,361 | 70.6% |
+| Background Blur | 4,297 / 13,144.5 | 4,396 / 14,077 | 4,488 / 20,940 | 67.2% |
+| Horizon Detection | 3,974 / 20,749.5 | 4,123 / 22,472 | 4,759 / 27,735 | 81.0% |
+| Object Remover | 5,057.5 / 15,450 | 5,407 / 16,763 | 5,596 / 22,540 | 74.4% |
+| HDR | 4,329 / 18,707.5 | 4,466 / 19,474 | 4,990 / 23,133 | 84.2% |
+| Photo Filter | 4,591 / 12,140.5 | 4,658 / 14,659 | 4,965 / 17,405 | 84.2% |
+| Ray Tracer | 3,498 / 22,147 | 3,745 / 22,932 | 3,864 / 27,614 | 83.0% |
+| Structure from Motion | 3,898.5 / 15,741.5 | 3,912 / 17,850 | 3,978 / 21,829 | 81.8% |
+
+Photo Library and the headless HTML5 Browser workload retain the largest
+multi-core gaps. These scores identify comparison targets, not their causal
+bottlenecks, and are not Firefox GPU/presentation measurements. Full provenance,
+raw scores, power state, durations and metrics are in the
+[validation record](../validation/mac-geekbench.json). Production sources are
+unchanged; the existing 1.4.0 local CI/runtime/iPad checks are reused.
