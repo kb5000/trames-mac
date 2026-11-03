@@ -1,6 +1,6 @@
 {
   "date": "2026-11-04",
-  "runtime_revision": "7d90df1c952bf720c2cc2a63ec5a78ac4b817bd4",
+  "runtime_revision": "083cde29ab63364a4a72e7e79b11ce7c8f891bbb",
   "passed": true,
   "local_ci": true,
   "source_sha256": {
@@ -81,5 +81,14 @@
     "Mac sleep and pre-login service availability are not provided",
     "Docker cgroup CPU/memory/I/O limits are not supported",
     "FASYNC native TCP and O_DIRECT AIO are not claimed"
-  ]
+  ],
+  "acceptance_base_runtime_revision": "7d90df1c952bf720c2cc2a63ec5a78ac4b817bd4",
+  "unaffected_acceptance_reused": true,
+  "aio_staging_validation": {
+    "tests_passed": 3,
+    "accepted_payload_bound": 1048576,
+    "max_request_records": 64,
+    "short_submission_and_remainder_verified": true,
+    "coordinator_added": false
+  }
 }
