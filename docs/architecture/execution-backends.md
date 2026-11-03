@@ -1876,3 +1876,33 @@ Directory/namespace mutation, owner-only task/proc/mount controls, cross-resourc
 file/pipe/socket transfers and structural VM/lifecycle remain separate boundaries.
 See the [subsystem audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-third-migration-implemented--regular-file-subsystem--2026-11-03)
 and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-file-subsystem-20261103.json).
+
+
+## Namespace subsystem and coordination inventory (2026-11-03)
+
+Runtime `af0aa49e60127236b2bf7858f95757306238ddee` shares ordinary directory,
+metadata and canonical fs_struct operations with the iPad interpreter. Short work
+uses the caller's current island; native work reuses the bounded disk pool and
+original accepted resources. Excluded owner controls preserve a before-effects
+handoff instead of copying guest operands or looking up reused FDs again.
+
+Five-sample four-worker memory namespace lifecycle medians improve 1,195.47 →
+127.74 ms (9.36x); cohort rounds fall 31,958 → 19. Service events are zero on both
+versions, so service counts alone would miss the removed joined-owner cost.
+Private metadata still retains per-operation durable manifest checkpoints:
+single-worker latency grows 1,224.32 → 1,408.31 ms (15.0%), while two/four-worker
+results have no material speedup claim. Native filesystem references differ in
+backing and persistence guarantees. No whole-Firefox performance claim follows.
+
+Task/signal/security and mount/proc controls, mixed owner resources and waits,
+structural mm/backing publication, exceptional native mapping and embedding
+lifecycle remain explicit boundaries. Some compatible FD/network calls still
+use in-cohort owner service without pausing peers. Native libc fallback and HVF
+coarse mapping comparison are different from owner checkpoints; AppKit affinity
+is separate from kernel syscall coordination.
+
+The [shared architecture-wide inventory](../../runtime/docs/architecture/coordination-boundaries.md)
+is the current source audit. See the [batch validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-namespace-subsystem-20261103.json)
+for concentrated Apple/Linux, actual HVF, interpreter and iPad native-link evidence.
+Physical iPad testing remains skipped per owner. This closes the current round;
+no further coordinator migration is started.
