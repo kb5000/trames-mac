@@ -1778,3 +1778,28 @@ bottlenecks, and are not Firefox GPU/presentation measurements. Full provenance,
 raw scores, power state, durations and metrics are in the
 [validation record](../validation/mac-geekbench.json). Production sources are
 unchanged; the existing 1.4.0 local CI/runtime/iPad checks are reused.
+
+
+### Unix IPC subsystem batch — 2026-11-03
+
+Runtime `6ab059a7f0b57be7cab7e867c315ed8ed06ecd05` moves owning Unix SCM_RIGHTS graph admission,
+cycle reclamation and shared native Wayland/XWM/clipboard adapters off ordinary
+coordinator paths, shared with iPad. Guest notifications advance their connection
+on the calling worker; native socket/pipe readiness uses the existing idle
+executor, with no new service thread or cohort-control transport pump. Registry
+locks cover membership only; independent connections retain independent progress.
+True owner-only task/mount/proc projections remain their own resource boundary.
+
+Four-process owning-rights loops improve **180.61 → 12.67 ms** (stream),
+**185.59 → 16.03 ms** (raw discard/final EOF) and **221.71 → 49.30 ms**
+(addressed datagram), with 1,000 checked iterations per process. Longer nine-sample
+ordinary controls remain close; this is not a Firefox/GUI speedup measurement.
+Three native Wayland cohort regressions complete with one cohort/zero services.
+Original windows, SHM, Chinese editor input and native Vulkan rendering pass;
+retained SHM/GPU frames survive session shutdown and release cleanly. The complete
+native-linked development runner is installed separately from the stable product.
+Mac/iPad builds, local Apple/Linux affected suites, strict checks and all thirteen
+production FFI environment checks pass. Physical iPad validation remains skipped.
+
+See the [full English audit and native comparisons](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirtieth-migration-implemented--unix-ipc-subsystem--2026-11-03)
+and [source-bound validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-unix-ipc-20261103.json).
