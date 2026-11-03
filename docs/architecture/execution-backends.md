@@ -1854,3 +1854,25 @@ Owner-only task/mount/proc projections, buffer pin/VM topology mutation, job/tas
 controls and structural filesystem backing updates remain explicit checkpoints.
 See the [full audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-second-migration-implemented--io_uring-subsystem--2026-11-03)
 and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-uring-subsystem-20261103.json).
+
+## Regular-file subsystem batch (2026-11-03)
+
+Runtime `7739836e2302f8fb43f0a7b437f8038ae854ddd6` shares regular-file read/write,
+append/growth, EOF changes, sync, O_TRUNC and file-to-file copy with the iPad
+interpreter and io_uring. Short calls use the accepted original descriptor directly;
+blocking work uses the existing disk pool and direct source readiness. Session
+file RPCs, ring-only disk execution and per-cohort file metadata copyback are
+removed. Actual mapped-layout changes quiesce only affected mm views.
+
+Five-sample four-worker medians improve memory-backed independent-file growth
+18.53 → 2.06 ms (9.00x), and private-disk growth 31.50 → 13.38 ms (2.35x), with
+zero coordinator services. Contended shared-OFD private-disk append remains about
+16% slower, reflecting actual resource/native-wait contention. Contextual native
+macOS and exact-ELF Linux references are recorded without claiming equal backing
+semantics or generally native speed. All affected file, asynchronous I/O, interpreter
+and iPad link checks pass; physical iPad validation remains skipped per owner.
+
+Directory/namespace mutation, owner-only task/proc/mount controls, cross-resource
+file/pipe/socket transfers and structural VM/lifecycle remain separate boundaries.
+See the [subsystem audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-third-migration-implemented--regular-file-subsystem--2026-11-03)
+and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-file-subsystem-20261103.json).
