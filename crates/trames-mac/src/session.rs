@@ -581,6 +581,7 @@ pub fn run(
             "worker_socket_syscalls": m.worker_socket_syscalls,
             "worker_fd_syscalls": m.worker_fd_syscalls,
             "worker_poll_syscalls": m.worker_poll_syscalls,
+            "worker_uring_syscalls": m.worker_uring_syscalls,
             "worker_futex_waits": m.worker_futex_waits,
             "worker_futex_wakes": m.worker_futex_wakes,
             "worker_task_resumes": m.worker_task_resumes,

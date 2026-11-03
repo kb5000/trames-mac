@@ -1827,3 +1827,30 @@ Task/context cancellation, native guest mapping import, io_uring, job/task/proc/
 mount control and structural filesystem/VM/task transitions remain boundaries.
 See the [full audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-first-migration-implemented--native-device-controls--2026-11-03)
 and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-native-devices-20261103.json).
+
+
+## io_uring subsystem on source workers — 2026-11-03
+
+Shared runtime `f9b6aec3a9eff34b7f733c2f1058684d49fbe80f` gives io_uring setup, registration, submission,
+completion and background progress one canonical original ring state and mapped
+byte domain. Source tasks retain their own execution context while their guest
+CPU sleeps or waits elsewhere. Native fixed buffers retain the same SharedPage
+and hardware borrow gate; remap cannot retarget accepted pins. Existing disk
+workers handle plain-file fsync and notify the source without a coordinator RPC.
+No new resource/service thread or polling bus is introduced. The implementation
+is shared with the iPad interpreter, and HVF remains only the CPU/MMU backend.
+
+All 66 real HVF io_uring cases pass at 1/2/4 CPUs, including IPv4/IPv6, multishot,
+backpressure, fixed/provided buffers, cancellation, fork/exec and descriptor reuse.
+Concentrated Apple/Linux ABI, memory and scheduler checks, strict checks, production
+FFI environment checks and the native-linked iPad device target pass. Physical
+iPad validation is skipped per owner. The four-worker fixed-registration workflow
+improves 260.47 → 3.45 ms (75.56x); statx improves 102.92 → 30.94 ms (3.33x).
+Single-core loop overhead regresses about 8–18%, with close process-wall medians;
+filesystem metadata contention remains at four workers. The identical ARM64 ELF
+on native Linux is a separate contextual reference, not a native macOS API score.
+
+Owner-only task/mount/proc projections, buffer pin/VM topology mutation, job/task
+controls and structural filesystem backing updates remain explicit checkpoints.
+See the [full audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-second-migration-implemented--io_uring-subsystem--2026-11-03)
+and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-uring-subsystem-20261103.json).
