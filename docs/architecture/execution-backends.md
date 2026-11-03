@@ -1803,3 +1803,27 @@ production FFI environment checks pass. Physical iPad validation remains skipped
 
 See the [full English audit and native comparisons](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirtieth-migration-implemented--unix-ipc-subsystem--2026-11-03)
 and [source-bound validation record](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-unix-ipc-20261103.json).
+
+
+## Native device control subsystem — 2026-11-03
+
+Shared runtime `ee0102c867930bb6b47cd6bc101ab471eed36a46` moves audio OPEN, video surface creation, live WSI
+FD authority and explicit GPU device/instance destruction to execution workers.
+Callbacks retain original event counters and the joined executor wake token,
+including producers admitted after a task parks and after FD close/reuse. GPU
+compilation/submission waits park existing jobs; final native driver destruction
+retains its original algorithm. Frozen FD grants and their invalidation scans are
+removed. No new coordinator/service thread or production unsafe is introduced.
+
+Concentrated Apple/Linux suites, strict checks, native-linked Mac/iPad builds,
+13 production FFI checks, five real Wayland stages, virtual duplex audio and
+VideoToolbox/FFmpeg cross-process GPU import pass. The scoped video/GPU control
+loops improve 184.09x/3.32x; 20 GPU cycles take 13.41 ms versus the same native
+MoltenVK reference's 12.51 ms. Ordinary eventfd/pipe controls remain close. These
+are API control benchmarks, not Firefox or physical-iPad FPS claims. Physical
+iPad validation is skipped per owner. Stable/development installation stays separate.
+
+Task/context cancellation, native guest mapping import, io_uring, job/task/proc/
+mount control and structural filesystem/VM/task transitions remain boundaries.
+See the [full audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md#thirty-first-migration-implemented--native-device-controls--2026-11-03)
+and [source-bound validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-native-devices-20261103.json).
