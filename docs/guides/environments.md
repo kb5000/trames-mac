@@ -3,8 +3,7 @@
 Trames runs ARM64 Linux userspace on Apple Silicon using its shared userspace
 kernel. The terminal is the normal execution interface; the optional native
 manager creates environments and opens their terminals. Linux GUI applications
-open Mac windows when needed. Closing the manager does not stop an independent
-terminal session. No privileged daemon, Linux kernel image or host Docker is
+open Mac windows when needed. Closing the manager or the last terminal leaves a managed environment running. No privileged daemon, Linux kernel image or host Docker is
 required.
 
 ## Install and start
@@ -30,7 +29,7 @@ in the log panel; completed output remains visible after refreshing the list.
 Settings changes require a stopped environment.
 
 Running `trames` without arguments in a terminal creates a default Alpine
-environment if necessary, then starts its login shell. Creation downloads the
+environment if necessary, then starts the environment in the background and opens an independent login shell. Creation downloads the
 pinned ARM64 minirootfs over HTTPS and verifies its SHA-256 before importing.
 Network/download failures preserve existing environments and can be retried.
 Verified archives are cached. Noninteractive no-argument application launch
@@ -46,6 +45,44 @@ trames env terminal work                      # Open macOS Terminal
 trames env stop work                          # Stop, sync and release store
 trames env help
 ```
+
+### Background environments and independent terminals
+
+```sh
+trames env start work --detach          # Start without attaching a terminal
+trames env start work                   # Start if needed, then open a new PTY
+trames env attach work                  # Another independent terminal
+trames env status work                  # Running state, console and log paths
+trames env autostart work on            # Start at this Mac user's next login
+trames env autostart work off           # Leave current runtime running
+trames env stop work                    # Graceful shutdown of the whole guest
+```
+
+Normal named starts use a per-environment launchd user agent. Closing the manager,
+closing all terminal windows, and detaching a client leave Linux services running.
+An unsuccessful host-process exit restarts the environment; a normal Linux halt
+keeps it stopped. Login autostart is optional and applies after this macOS user
+logs in, not before login. Mac sleep still suspends execution and network service.
+The agent only owns process lifetime; guest syscalls and terminal data do not pass
+through a new resource-service thread.
+
+Use **Ctrl-]** to detach while retaining that shell. The CLI prints its terminal
+ID; reconnect with `trames env attach work --terminal ID`. One client owns a PTY
+at a time. Normal terminal-window close hangs up that PTY only. Terminal IDs and
+shells last for one environment boot. Boot output and each terminal's recent output
+have bounded replay buffers; a slow client applies backpressure to its own PTY.
+
+Explicit extra host options or commands retain the foreground maintenance path,
+for example `trames env start work --no-windows -- /bin/sh -lc 'uname -a'`.
+Stop a managed environment before entering maintenance. Use `env configure` to
+save normal environment settings, including its shell argv; do not use extra
+start arguments when opening another managed terminal.
+
+The registry's `services/`, `logs/` and private local sockets are per environment
+and channel. Startup serializes only concurrent management requests for the same
+environment. The original private-store lock still excludes a second guest owner.
+Logs rotate at startup above 8 MiB, keeping one previous file. Guest services
+should configure their own journal/container log retention.
 
 ### Debian tools
 
@@ -96,6 +133,58 @@ Alpine uses musl/apk; Debian uses its original glibc/apt/dpkg and merged-/usr
 layout. Debian supports normal userspace programs and an optional systemd service
 environment. Linux kernel modules and complete Linux ABI compatibility are
 not provided.
+
+## Persistent Docker services
+
+Create a Debian systemd environment with networking enabled. A headless service
+needs no presenter or audio device:
+
+```sh
+trames env create docker --distro debian --init systemd --cpus 4 --network full \
+  --windows off --vulkan off --video off --audio off
+trames env start docker
+```
+
+Inside Linux, install Debian's original packages and enable the daemon:
+
+```sh
+apt-get update
+apt-get install -y docker.io procps
+systemctl enable --now docker
+
+docker volume create web-data
+docker run -d --name web --restart unless-stopped \
+  --log-opt max-size=1m --log-opt max-file=3 \
+  -p 127.0.0.1:8080:80 -v web-data:/usr/share/nginx/html nginx:alpine
+docker exec web sh -c 'printf "Trames Docker is running\n" > /usr/share/nginx/html/index.html'
+```
+
+On the Mac, `curl http://127.0.0.1:8080/` accesses the container. Close or detach
+all terminals and the service remains running. `trames env attach docker` opens
+another independent shell. Use `trames env autostart docker on` for this macOS
+user's next login, and `trames env stop docker` for a graceful systemd shutdown.
+Stopping the environment first also permits `trames env backup docker ARCHIVE`.
+Named Docker volumes, images, packages and enabled services live in its private
+store and survive a clean environment restart.
+
+Acceptance uses Docker 26.1.5, containerd 1.7.24, runc 1.1.15 and nginx 1.31.8
+with the default master plus four worker processes. The actual driver reports
+`overlay2`, `systemd` and cgroup v2. Tests cover an official image pull, host HTTP,
+volume writes, Docker-daemon restart, whole-environment stop/start, unsuccessful
+host-process restart and launch-agent bootstrap. No host Docker, privileged host
+helper, full Linux-kernel VM, daemon security override or single-process nginx
+configuration is used. Login-agent bootstrap is tested without logging out the
+macOS user; services are unavailable while the Mac sleeps or before user login.
+
+This remains a userspace Linux kernel, with explicit compatibility limits.
+Kernel modules and privileged physical-device operations are unavailable. The
+current cgroup controllers do not provide Docker CPU/memory/I/O resource limits;
+a successful daemon start does not claim support for those limits. FASYNC is
+currently implemented for pipes, Unix sockets and PTYs. Legacy AIO supports
+buffered file operations using the existing disk pool, not O_DIRECT DMA.
+Other images may require additional Linux interfaces. Use native host directory
+mounts only when explicitly configured; private Docker volumes are the tested
+persistent-service path.
 
 ## Stable and development installations
 
@@ -245,21 +334,23 @@ A failed setup does not publish the new init setting. Old configurations without
 an `init` field continue to use shell; Alpine currently accepts shell only. Custom images may opt into systemd if
 their original systemd is already installed; no package setup is assumed for them.
 
-Systemd runs as guest PID 1 and boots `multi-user.target`. The foreground terminal
-is a local root shell managed by `console-getty.service`, without a separate Linux
+Systemd runs as guest PID 1 and boots `multi-user.target`. Attached terminals
+are local root shells managed by `console-getty.service`, without a separate Linux
 password, matching shell mode's access. Enable normal services with
 `systemctl enable --now NAME`; enabled multi-user services start on subsequent
 boots. `journalctl`, D-Bus, oneshot and notify services use the original binaries.
 `trames: session ready` means the execution session exists; `trames: systemd ready`
 comes from PID 1's actual READY notification. Wait for the shell prompt before
-entering commands. One foreground session owns an environment; a second terminal
-cannot attach to a live init yet. Exiting the root shell respawns its console.
+entering commands. Each terminal opens its own guest PTY and root shell using the shared iPad/Mac
+terminal implementation. Multiple terminals share files and services, while
+input, output, terminal size, shell variables and Ctrl-C remain independent.
+Exiting a shell or closing its host terminal does not halt PID 1.
 
 `env stop NAME` waits for PID 1's signal-handler notification and requests a clean
 Linux halt. Services stop and filesystems sync/unmount before the private store
 is released. It never shuts down macOS. `systemctl halt` inside Linux also works;
-guest restart/kexec/suspend remain unsupported. Keep the terminal open until
-shutdown completes. Explicit `--timeout` still cancels a test session at its bound.
+guest restart/kexec/suspend remain unsupported. `env stop` waits for shutdown
+completion independently of attached terminals. Explicit `--timeout` still cancels a test session at its bound.
 
 For stopped-environment maintenance, override the selected mode explicitly:
 
@@ -333,9 +424,9 @@ use `stty sane` if an externally killed interactive process leaves raw settings.
 Guest data explicitly synced before SIGKILL must remain readable after restart.
 
 A managed session holds a per-environment lock through teardown. The underlying
-store also retains its existing exclusive lock. A second start, backup, import
-of a live store, deletion or settings change is refused while the environment
-is busy. Stop connects to an environment-specific local control socket; it does
+store also retains its existing exclusive lock. Additional managed starts attach independent terminals to the same guest. A
+second foreground owner, backup/import of a live store, deletion and settings
+changes are refused while the environment is busy. Stop connects to an environment-specific local control socket; it does
 not kill a PID read from a stale file. The existing control hook checks pending
 admin connections at most ten times per second; no resource service thread or
 busy wait is introduced. Signal cancellation itself is one relaxed atomic flag.

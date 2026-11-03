@@ -23,13 +23,15 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app{(void)app;return YES;}
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     (void)notification;self.rows=@[];self.actions=[NSMutableArray array];
+    NSImage *icon=[[NSImage alloc]initWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"Trames" withExtension:@"icns"]];
+    if(icon)NSApp.applicationIconImage=icon;
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *sub=[NSMenu new];[sub addItemWithTitle:[NSString stringWithFormat:T(@"Quit %@"),productName()] action:@selector(terminate:) keyEquivalent:@"q"];app.submenu=sub;NSApp.mainMenu=menu;
     self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,900,650) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];
     self.window.title=[NSString stringWithFormat:T(@"%@ — Linux Environments"),productName()];self.window.minSize=NSMakeSize(800,600);[self.window center];
     NSStackView *root=[NSStackView stackViewWithViews:@[]];root.orientation=NSUserInterfaceLayoutOrientationVertical;root.alignment=NSLayoutAttributeLeading;root.spacing=14;root.edgeInsets=NSEdgeInsetsMake(22,22,22,22);root.translatesAutoresizingMaskIntoConstraints=NO;[self.window.contentView addSubview:root];
     [NSLayoutConstraint activateConstraints:@[[root.leadingAnchor constraintEqualToAnchor:self.window.contentView.leadingAnchor],[root.trailingAnchor constraintEqualToAnchor:self.window.contentView.trailingAnchor],[root.topAnchor constraintEqualToAnchor:self.window.contentView.topAnchor],[root.bottomAnchor constraintEqualToAnchor:self.window.contentView.bottomAnchor]]];
-    NSTextField *title=label(T(@"Your Linux environments"));title.font=[NSFont systemFontOfSize:24 weight:NSFontWeightSemibold];[root addArrangedSubview:title];
+    NSTextField *title=label(T(@"Your Linux environments"));title.font=[NSFont systemFontOfSize:24 weight:NSFontWeightSemibold];NSStackView *heading=[NSStackView stackViewWithViews:@[]];heading.alignment=NSLayoutAttributeCenterY;heading.spacing=10;if(icon){NSImageView *brand=[NSImageView imageViewWithImage:icon];brand.imageScaling=NSImageScaleProportionallyUpOrDown;[NSLayoutConstraint activateConstraints:@[[brand.widthAnchor constraintEqualToConstant:32],[brand.heightAnchor constraintEqualToConstant:32]]];[heading addArrangedSubview:brand];}[heading addArrangedSubview:title];[root addArrangedSubview:heading];
     [root addArrangedSubview:label(T(@"Start a terminal, share a folder, or manage a backup. Linux apps open their own windows when needed."))];
     NSStackView *toolbar=[NSStackView stackViewWithViews:@[]];toolbar.spacing=8;
     NSArray *titles=@[T(@"New Environment…"),T(@"Open Terminal"),T(@"Stop"),T(@"Import Store…"),T(@"Refresh")];

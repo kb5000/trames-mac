@@ -9,6 +9,8 @@ type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
     init: Option<super::systemd::Monitor>,
+    console: Option<super::console::Console>,
+    terminals: Option<trames_distro::terminals::NativeTerminals>,
     root_signal: Option<u32>,
     admin_pending: bool,
     host_memory_total: Option<usize>,
@@ -45,7 +47,7 @@ impl Output {
         Ok(())
     }
 }
-fn window_size() -> Option<(u16, u16)> {
+pub(crate) fn window_size() -> Option<(u16, u16)> {
     let mut size = libc::winsize {
         ws_row: 0,
         ws_col: 0,
@@ -64,6 +66,14 @@ impl GuestOutput for Output {
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         self.poll_admin();
+        if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
+            console.poll()?;
+            if !terminals.can_pump_live(&console.channels) {
+                return Ok(true);
+            }
+            terminals.pump(&mut console.channels);
+            console.flush();
+        }
         Ok(self.admin_pending
             || (super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
@@ -73,6 +83,13 @@ impl GuestOutput for Output {
     fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
         self.poll_admin();
         self.admin_pending = false;
+        if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
+            // The solo/cooperative driver calls this hook directly, without
+            // the persistent workers' preceding poll_control opportunity.
+            console.poll()?;
+            terminals.pump(&mut console.channels);
+            console.flush();
+        }
         if let Some(init) = &mut self.init {
             self.root_signal = init
                 .control(super::lifecycle::stopping())
@@ -102,6 +119,9 @@ impl GuestOutput for Output {
         self.root_signal.take()
     }
     fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
+        if let Some(console) = &mut self.console {
+            return Ok(console.write(bytes));
+        }
         match fd {
             OutputFd::Stdout => {
                 let mut out = io::stdout().lock();
@@ -118,6 +138,9 @@ impl GuestOutput for Output {
         }
     }
     fn stdin_ready(&mut self) -> io::Result<bool> {
+        if self.console.is_some() {
+            return Ok(false);
+        }
         let mut fd = libc::pollfd {
             fd: libc::STDIN_FILENO,
             events: libc::POLLIN,
@@ -135,6 +158,9 @@ impl GuestOutput for Output {
         self.poll_stdin(bytes)
     }
     fn poll_stdin(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        if self.console.is_some() {
+            return Err(io::ErrorKind::WouldBlock.into());
+        }
         if bytes.is_empty() {
             return Ok(0);
         }
@@ -152,6 +178,9 @@ impl GuestOutput for Output {
         }
     }
     fn terminal_event(&mut self) -> Option<TerminalEvent> {
+        if self.console.is_some() {
+            return None;
+        }
         let size = window_size()?;
         if self.window == Some(size) {
             return None;
@@ -165,9 +194,9 @@ impl GuestOutput for Output {
 }
 
 /// Keep host terminal setup local; no subprocess or guest state is involved.
-struct RawTerminal(Option<libc::termios>);
+pub(crate) struct RawTerminal(Option<libc::termios>);
 impl RawTerminal {
-    fn enter(enabled: bool) -> io::Result<Self> {
+    pub(crate) fn enter(enabled: bool) -> io::Result<Self> {
         if !enabled || !io::stdin().is_terminal() {
             return Ok(Self(None));
         }
@@ -221,6 +250,8 @@ pub struct Command {
     audio_input: bool,
     pty: bool,
     init: super::systemd::Init,
+    console: Option<std::path::PathBuf>,
+    terminal_command: Vec<String>,
     argv: Vec<String>,
 }
 impl Command {
@@ -238,6 +269,7 @@ impl Command {
     ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
         let mut arguments = arguments.peekable();
         let mut init = super::systemd::Init::Shell;
+        let mut console = None;
         let mut rootfs = None;
         let mut storage = None;
         let mut imports = Vec::new();
@@ -261,6 +293,11 @@ impl Command {
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
+                "--console-socket" => {
+                    console = Some(std::path::PathBuf::from(
+                        arguments.next().ok_or("missing console socket")?,
+                    ))
+                }
                 "--init" => {
                     init =
                         super::systemd::Init::parse(&arguments.next().ok_or("missing init mode")?)?
@@ -359,7 +396,12 @@ impl Command {
         if argv.is_empty() && !filesystem && (rootfs.is_some() || storage.is_some()) {
             argv = default_command.to_vec();
         }
+        if console.is_some() {
+            pty = true;
+        }
         Ok(Some(Self {
+            terminal_command: default_command.to_vec(),
+            console,
             init,
             rootfs,
             storage,
@@ -388,6 +430,8 @@ pub fn run(
     command: Command,
 ) -> Result<u8, Box<dyn std::error::Error>> {
     let Command {
+        terminal_command,
+        console,
         init,
         rootfs,
         storage,
@@ -407,8 +451,12 @@ pub fn run(
         audio,
         audio_input,
         pty,
-        argv,
+        mut argv,
     } = command;
+    let launcher = trames_distro::terminals::launcher(&terminal_command);
+    if console.is_some() && init == super::systemd::Init::Shell {
+        argv = vec!["/bin/sh".into(), "-c".into(), launcher.clone()];
+    }
     let path = argv
         .first()
         .ok_or("an ELF program or --rootfs is required; use --help")?;
@@ -492,6 +540,18 @@ pub fn run(
         vfs.import_executable(b"/program", bytes.clone())?;
         bytes
     };
+    let terminals = if console.is_some() {
+        Some(
+            if init.is_some() {
+                trames_distro::terminals::NativeTerminals::for_systemd_launcher(&mut vfs, &launcher)
+            } else {
+                trames_distro::terminals::NativeTerminals::new(&mut vfs)
+            }
+            .map_err(io::Error::other)?,
+        )
+    } else {
+        None
+    };
     let server = if windows {
         Some(vfs.enable_wayland(b"/run/user/0")?)
     } else {
@@ -535,6 +595,11 @@ pub fn run(
     }
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
+        terminals,
+        console: console
+            .as_deref()
+            .map(super::console::Console::bind)
+            .transpose()?,
         init,
         root_signal: None,
         admin_pending: false,
@@ -753,6 +818,8 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            console: None,
+            terminals: None,
             init: None,
             root_signal: None,
             admin_pending: false,

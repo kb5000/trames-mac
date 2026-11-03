@@ -18,7 +18,9 @@ import time
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runner', type=Path, required=True)
-    parser.add_argument('--debian', type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--debian', type=Path)
+    source.add_argument('--prepared-store', type=Path, help='reuse an existing stopped systemd store')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -40,8 +42,12 @@ def main():
         # default to shell; installation is only triggered by explicit opt-in.
         run('env', 'create', 'invalid', '--init', 'systemd', ok=False)
         assert not (home / 'environments/invalid').exists()
-        run('env', 'create', 'debian', '--distro', 'debian', '--packages', 'minimal', '--init', 'systemd',
-            '--archive', str(args.debian.resolve()))
+        if args.prepared_store:
+            run('env', 'import', 'debian', str(args.prepared_store.resolve()))
+            run('env', 'configure', 'debian', '--init', 'systemd')
+        else:
+            run('env', 'create', 'debian', '--distro', 'debian', '--packages', 'minimal', '--init', 'systemd',
+                '--archive', str(args.debian.resolve()))
         assert json.loads((home / 'environments/debian/config.json').read_text())['init'] == 'systemd'
         run('env', 'start', 'debian', '--no-windows', '/bin/true', ok=False)
         assert 'MAINTENANCE' in run('env', 'start', 'debian', '--init', 'shell', '--no-windows',
@@ -89,7 +95,7 @@ TimeoutStopSec=3s
                     assert child.poll() is None and time.monotonic() < deadline, log
 
             try:
-                until(b'trames: systemd ready')
+                until(b'Attached terminal ')
                 boot_seconds = time.monotonic() - began
                 until(b'\n# ')
                 install = (f"printf %s '{encoded_service}' | base64 -d > /etc/systemd/system/trames-deploy-check.service; "
@@ -118,7 +124,8 @@ TimeoutStopSec=3s
                 child.wait(timeout=5)
                 stop_output = stop.communicate(timeout=5)
                 assert child.returncode == 0 and stop.returncode == 0, (log, stop_output)
-                assert b'Halting system.' in output and b'Stopped debian' in stop_output[0], log
+                assert b'Stopped debian' in stop_output[0], log
+                assert 'trames: systemd ready' in (home / 'logs/debian.log').read_text()
                 actual = termios.tcgetattr(slave)
                 # Darwin records transient input retyping in PENDIN when
                 # restoring canonical mode; it is not a user termios setting.
@@ -137,6 +144,8 @@ TimeoutStopSec=3s
                     child.wait()
                 os.close(master)
                 os.close(slave)
+                subprocess.run([runner, 'env', 'stop', 'debian'], env=env,
+                               capture_output=True, timeout=90, check=True)
         # Mode changes preserve the guest disk; backups retain the selected init.
         run('env', 'backup', 'debian', str(home / 'systemd.tar.gz'))
         run('env', 'restore', 'restored', str(home / 'systemd.tar.gz'))

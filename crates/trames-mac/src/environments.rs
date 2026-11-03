@@ -238,7 +238,7 @@ pub fn root() -> Result<PathBuf> {
     private_dir(&p.join("locks"))?;
     Ok(fs::canonicalize(p)?)
 }
-fn private_dir(p: &Path) -> Result<()> {
+pub(super) fn private_dir(p: &Path) -> Result<()> {
     match fs::symlink_metadata(p) {
         Ok(m) if !m.file_type().is_dir() => {
             return Err("management path must be a real directory".into())
@@ -265,7 +265,7 @@ fn name(n: &str) -> Result<()> {
     }
     Ok(())
 }
-fn directory(r: &Path, n: &str) -> Result<PathBuf> {
+pub(super) fn directory(r: &Path, n: &str) -> Result<PathBuf> {
     name(n)?;
     Ok(r.join("environments").join(n))
 }
@@ -283,7 +283,7 @@ fn lock(r: &Path, n: &str) -> Result<File> {
         .map_err(|_| "environment is running or another management operation is in progress")?;
     Ok(file)
 }
-fn load(dir: &Path) -> Result<Config> {
+pub(super) fn load(dir: &Path) -> Result<Config> {
     if !fs::symlink_metadata(dir)?.is_dir() {
         return Err("environment must be a real directory".into());
     }
@@ -291,7 +291,7 @@ fn load(dir: &Path) -> Result<Config> {
     c.validate()?;
     Ok(c)
 }
-fn atomic_write(p: &Path, data: &[u8]) -> Result<()> {
+pub(super) fn atomic_write(p: &Path, data: &[u8]) -> Result<()> {
     let temp = p.with_extension(format!("tmp-{}", std::process::id()));
     let mut file = OpenOptions::new()
         .write(true)
@@ -516,7 +516,7 @@ fn provision_init(store: &Path, c: &Config) -> Result<()> {
         super::systemd::install(store, c.cpus, &c.network)
     }
 }
-fn socket(r: &Path, n: &str) -> Result<PathBuf> {
+pub(super) fn socket(r: &Path, n: &str) -> Result<PathBuf> {
     let tmp = PathBuf::from(format!("/private/tmp/trames-{}", unsafe {
         libc::geteuid()
     }));
@@ -532,10 +532,13 @@ fn socket(r: &Path, n: &str) -> Result<PathBuf> {
     );
     Ok(tmp.join(format!("{}.sock", &hash[..32])))
 }
-fn running(r: &Path, n: &str) -> bool {
+pub(super) fn console_socket(r: &Path, n: &str) -> Result<PathBuf> {
+    Ok(socket(r, n)?.with_extension("console"))
+}
+pub(super) fn running(r: &Path, n: &str) -> bool {
     lock(r, n).is_err()
 }
-fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
+pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
     let c = load(&dir)?;
@@ -614,6 +617,9 @@ fn terminal(r: &Path, n: &str) -> Result<()> {
 }
 fn stop(r: &Path, n: &str) -> Result<()> {
     load(&directory(r, n)?)?;
+    if super::background::registered(r, n) {
+        super::background::unload(r, n)?;
+    }
     if !running(r, n) {
         println!("{n} is stopped");
         return Ok(());
@@ -937,10 +943,11 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
                 None,
             )?;
         }
-        return start(&r, &cli.default_environment, &[]);
+        super::background::start(&r, &cli.default_environment)?;
+        return super::background::attach(&r, &cli.default_environment, &[]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [--packages minimal|standard|development] [SETTINGS] [-- COMMAND ARGS...]\nenv packages NAME [standard|development]\nenv list\nenv config NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
+        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [--packages minimal|standard|development] [SETTINGS] [-- COMMAND ARGS...]\nenv packages NAME [standard|development]\nenv list\nenv config NAME\nenv start NAME [--detach|-d]\nenv attach NAME [--terminal ID]\nenv autostart NAME on|off\nenv status NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
         return Ok(0);
     }
     if op == "list" {
@@ -1006,7 +1013,19 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
             "{}",
             serde_json::to_string_pretty(&load(&directory(&r, n)?)?)?
         ),
-        "start" | "run" => return start(&r, n, &args[2..]),
+        "start" | "run" => {
+            let extra=&args[2..];
+            if extra.is_empty() || extra==["--detach"] || extra==["-d"] {
+                super::background::start(&r,n)?;
+                if !extra.is_empty(){return Ok(0);}
+                return super::background::attach(&r,n,&[]);
+            }
+            return start(&r,n,extra);
+        },
+        "_serve" => {if args.len()!=2{return Err("invalid service invocation".into());}return super::background::serve(&r,n);},
+        "attach" => return super::background::attach(&r,n,&args[2..]),
+        "autostart" => super::background::autostart(&r,n,args.get(2).ok_or("expected on or off")?)?,
+        "status" => super::background::status(&r,n)?,
         "import" => import(
             &r,
             n,
@@ -1024,6 +1043,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
             let _lock = lock(&r, n)?;
             let dir = directory(&r, n)?;
             load(&dir)?;
+            super::background::remove(&r,n)?;
             let vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
             let trash = staging(&r, n)?;
             fs::remove_dir(&trash.0)?;

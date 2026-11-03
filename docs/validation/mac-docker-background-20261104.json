@@ -1,0 +1,85 @@
+{
+  "date": "2026-11-04",
+  "runtime_revision": "7d90df1c952bf720c2cc2a63ec5a78ac4b817bd4",
+  "passed": true,
+  "local_ci": true,
+  "source_sha256": {
+    "crates/trames-mac/src/background.rs": "5a2c20bc090b3ee17ef3dbbe533f6a15b1440d5f80757ce2285075ac197f850d",
+    "crates/trames-mac/src/console.rs": "c2c57c9be3f979833a00ade3f2edf6b6641b864a7864a6d8ad8c2a99ab5eb673",
+    "crates/trames-mac/src/manager.m": "97bde123b4aa2c49e451e8502af053df2dbd81e8a564c15c74f24d9d7701e8c9",
+    "crates/trames-mac/src/environments.rs": "a3e0371765b2bd72bb61d92bda27fdda0e3f2d4b6eb701c0d01be9c592569d0b",
+    "crates/trames-mac/src/session.rs": "cbc67fb5f797898a9fdd4b53a9d37f503cc54d27d28fb81e1000a474b15d09cd",
+    "tests/integration/mac-background.py": "6d55911cb68dcf991e0dc7f85991a5df966c612960ce7e67eb324b6fd3f07677",
+    "tests/integration/mac-docker.py": "68c6bd2b5eb594904231984cc32c9a93a67c53d758885c8e32983878225c9ba0"
+  },
+  "background": {
+    "independent_ptys": true,
+    "concurrent_start": true,
+    "configured_argv": true,
+    "interrupt_isolation": true,
+    "reattach": true,
+    "last_disconnect_keeps_guest": true,
+    "cold_restart": true,
+    "host_terminal_restored": true
+  },
+  "docker": [
+    {
+      "check": "concurrent_http",
+      "requests": 64,
+      "clients": 8,
+      "seconds": 0.3364977499999995,
+      "passed": true
+    },
+    {
+      "check": "daemon_restart",
+      "passed": true
+    },
+    {
+      "check": "environment_restart",
+      "passed": true
+    },
+    {
+      "check": "unsuccessful_host_exit",
+      "passed": true
+    },
+    {
+      "check": "login_agent_bootstrap",
+      "passed": true
+    }
+  ],
+  "systemd_acceptance": "Original 1/4 CPU service, journal, notification, halt, mode switch and backup checks passed; reused for unchanged systemd implementation",
+  "environment_acceptance_operations": 33,
+  "interfaces": {
+    "native_linux": true,
+    "hvf_cpus": [
+      1,
+      4
+    ],
+    "shared_interpreter_cpus": [
+      1,
+      4
+    ],
+    "source_worker_sigio_and_sigreturn_zero_service_requests": true,
+    "aio_slot_release_and_cohort_handoff_zero_service_requests": true
+  },
+  "installed": {
+    "stable": true,
+    "development": true,
+    "cli_channels_and_runtime_pins_verified": true,
+    "manager_brand_visible": true,
+    "stable_docker": {
+      "environment": "docker",
+      "container": "web",
+      "port": 51858,
+      "loopback_only": true,
+      "user_login_autostart": true,
+      "http_verified": true
+    }
+  },
+  "limits": [
+    "Login-agent bootstrap tested without logging out the user",
+    "Mac sleep and pre-login service availability are not provided",
+    "Docker cgroup CPU/memory/I/O limits are not supported",
+    "FASYNC native TCP and O_DIRECT AIO are not claimed"
+  ]
+}
