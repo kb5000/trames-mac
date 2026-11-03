@@ -338,6 +338,7 @@ extern "C" fn event(
                 modifiers: c,
                 time,
             }),
+            11 => server.output_scale(window, a.clamp(1, 4) as i32),
             6 => server.resize(window, a.clamp(1, 4096), b.clamp(1, 4096)),
             7 => server.close(window),
             8 => server.set_mode(
@@ -415,6 +416,7 @@ mod tests {
     unsafe extern "C" {
         fn trames_ui_test_frame(lease: *mut c_void, count: u32) -> *mut c_void;
         fn trames_ui_test_frame_event(frame: *mut c_void, event: u32);
+        fn trames_ui_test_sleep_lifecycle() -> u32;
         fn trames_ui_test_frame_state(frame: *mut c_void) -> u32;
         fn trames_ui_test_frame_drop(frame: *mut c_void);
         fn trames_ui_test_supersede(a: *mut c_void, b: *mut c_void) -> u32;
@@ -442,6 +444,11 @@ mod tests {
             dropped: Some(dropped.clone()),
         }));
         (unsafe { trames_ui_test_frame(lease.cast(), 2) }, dropped)
+    }
+    #[test]
+    fn sleep_wake_invalidates_static_frames_and_releases_input_state() {
+        // Synthetic lifecycle only: never requests system sleep.
+        assert_eq!(unsafe { trames_ui_test_sleep_lifecycle() }, 15);
     }
     #[test]
     fn frame_lease_waits_for_gpu_and_every_drawable_and_finishes_once() {

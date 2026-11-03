@@ -463,3 +463,21 @@ priorities are documented in the
 [coordinator audit](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/coordinator-removal.md).
 Use `--metrics` with the executor for the existing `execution paths` JSON counters;
 profiling is disabled during normal use.
+
+## Display density and host sleep
+
+Wayland windows publish their current screen's integer density through output
+and surface-scale events. Moving a window between displays updates its density;
+guest geometry and input remain in logical units. Fractional scaling and physical
+monitor geometry are not exposed by these virtual outputs.
+
+The native presenter cancels outstanding frames and releases pressed input on
+host sleep. Wake invalidates static frames, refreshes window size/density and
+schedules the existing run loop. Guest RAM and CPUs are retained. The shared
+runtime now distinguishes awake monotonic time from sleep-inclusive boottime and
+uses native sleep-aware boottime timerfds. Validation used simulated clock jumps
+and native timers; it did not put the host to sleep. Existing realtime-based wait
+and wall-clock adjustment behavior remains outside this change.
+
+See the [shared display lifecycle design](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/display-lifecycle.md)
+and [paired platform validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/display-lifecycle-20261104.json).

@@ -73,13 +73,14 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property NSMutableDictionary<NSNumber *,NSWindow *> *overlays;
 @property NSMutableArray<TramesFrame *> *frames;
 @property uint64_t identifier,lastRevision;
-@property uint32_t clientW,clientH,hostW,hostH,resizeW,resizeH,mode;
+@property uint32_t clientW,clientH,hostW,hostH,resizeW,resizeH,mode,outputScale;
 @property BOOL seen,dirty,updating,closing,pendingResize,buttonDown;
 @property uint32_t interactionSerial,dragEdges;
 @property NSPoint dragMouse;
 @property NSRect dragFrame;
 - (void)drag;
 - (void)syncSize;
+- (void)syncScale;
 - (BOOL)isVisible;
 - (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c;
 - (void)cancel;
@@ -96,7 +97,7 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property NSMutableDictionary<NSNumber *,TramesFamily *> *windows;
 @property NSMutableIndexSet *pressed;
 @property uint64_t focus;
-@property BOOL refreshing,refreshAgain;
+@property BOOL refreshing,refreshAgain,sleeping,lifecycleObserved;
 @property id<MTLDevice> device;
 @property id<MTLCommandQueue> queue;
 @property id<MTLRenderPipelineState> shmPipeline,texturePipeline;
@@ -178,6 +179,7 @@ static const uint16_t keys[128]={
 // Publish its resulting logical content size after that update as well; those
 // delegate callbacks are deliberately suppressed while updating is true.
 - (void)syncSize {
+    [self syncScale];
     NSSize size=self.canvas.bounds.size;
     uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
     self.hostW=w;self.hostH=h;
@@ -188,7 +190,13 @@ static const uint16_t keys[128]={
     [self emit:6 x:0 y:0 a:w b:h c:0];
 }
 - (void)windowDidMove:(NSNotification *)notification{if(notification.object!=self.window)return;if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac window moved: id=%llu x=%.0f y=%.0f\n",self.identifier,self.window.frame.origin.x,self.window.frame.origin.y);}
-- (void)windowDidChangeBackingProperties:(NSNotification *)notification{(void)notification;self.dirty=YES;wake(self.ui.source);}
+- (void)syncScale {
+    uint32_t scale=(uint32_t)MAX(1,MIN(4,llround(self.window.backingScaleFactor)));
+    if(self.outputScale==scale)return;
+    self.outputScale=scale;[self emit:11 x:0 y:0 a:scale b:0 c:0];
+}
+- (void)windowDidChangeBackingProperties:(NSNotification *)notification{(void)notification;[self syncScale];self.dirty=YES;wake(self.ui.source);}
+- (void)windowDidChangeScreen:(NSNotification *)notification{(void)notification;[self syncScale];self.dirty=YES;wake(self.ui.source);}
 - (BOOL)isVisible {
     if(self.window.miniaturized)return NO;
     if(self.window.occlusionState&NSWindowOcclusionStateVisible)return YES;
@@ -241,6 +249,12 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     p.fragmentFunction=[library newFunctionWithName:@"waylandTexture"];self.texturePipeline=[self.device newRenderPipelineStateWithDescriptor:p error:&error];
     if(!self.shmPipeline||!self.texturePipeline){fprintf(stderr,"trames-mac: Metal pipeline failed: %s\n",error.description.UTF8String);return NO;}
     if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac windows: starting AppKit\n");
+    if(!self.lifecycleObserved){
+        NSNotificationCenter *center=NSWorkspace.sharedWorkspace.notificationCenter;
+        [center addObserver:self selector:@selector(systemWillSleep:) name:NSWorkspaceWillSleepNotification object:nil];
+        [center addObserver:self selector:@selector(systemDidWake:) name:NSWorkspaceDidWakeNotification object:nil];
+        self.lifecycleObserved=YES;
+    }
     if(NSApp)return YES;
     [NSApplication sharedApplication];NSApp.delegate=self;[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *actions=[NSMenu new];
@@ -254,6 +268,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     CFRunLoopStop(CFRunLoopGetMain());return YES;
 }
 - (void)tick {
+    if(self.sleeping)return;
     if(atomic_load_explicit(&finished,memory_order_relaxed)){
         CFRunLoopStop(CFRunLoopGetMain());
         if(NSApp){[NSApp stop:nil];[NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:NO];}return;
@@ -274,11 +289,30 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 - (void)applicationDidBecomeActive:(NSNotification *)notification{(void)notification;TramesFamily *family=[self focusedFamily];if(family)[family emit:1 x:0 y:0 a:0 b:0 c:0];for(TramesFamily *f in self.windows.allValues)f.dirty=YES;wake(self.source);}
 - (void)closeFocused:(id)sender{(void)sender;[[self focusedFamily] emit:7 x:0 y:0 a:0 b:0 c:0];}
 - (void)minimizeFocused:(id)sender{(void)sender;[[self focusedFamily].window miniaturize:nil];}
-- (void)applicationDidResignActive:(NSNotification *)notification{(void)notification;self.focus=0;[self.pressed removeAllIndexes];if(self.event)self.event(self.context,0,1,0,0,0,0,0);}
+- (void)systemWillSleep:(NSNotification *)notification {
+    (void)notification;self.sleeping=YES;
+    [self applicationDidResignActive:notification];
+    for(TramesFamily *family in self.windows.allValues){[family cancel];if(family.buttonDown)[family emit:3 x:0 y:0 a:0x110 b:0 c:0];family.buttonDown=NO;}
+}
+- (void)systemDidWake:(NSNotification *)notification {
+    (void)notification;self.sleeping=NO;
+    for(TramesFamily *family in self.windows.allValues){
+        family.dirty=YES;family.lastRevision=UINT64_MAX;
+        [family syncSize];
+        if(NSApp.active&&family.window.keyWindow)[family emit:1 x:0 y:0 a:0 b:0 c:0];
+    }
+    wake(self.source);
+}
+- (void)applicationDidResignActive:(NSNotification *)notification{
+    (void)notification;
+    if(self.event)for(NSUInteger key=self.pressed.firstIndex;key!=NSNotFound;key=[self.pressed indexGreaterThanIndex:key])
+        if(key<128&&keys[key])self.event(self.context,self.focus,5,0,0,keys[key],0,0);
+    self.focus=0;[self.pressed removeAllIndexes];if(self.event)self.event(self.context,0,1,0,0,0,0,0);
+}
 - (void)quit:(id)sender{(void)sender;if(self.event)self.event(self.context,0,9,0,0,0,0,0);}
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender{(void)sender;[self quit:nil];return NSTerminateCancel;}
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender{(void)sender;return NO;}
-- (void)dealloc{if(_source){CFRunLoopSourceInvalidate(_source);CFRelease(_source);}}
+- (void)dealloc{if(_lifecycleObserved)[NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self];if(_source){CFRunLoopSourceInvalidate(_source);CFRelease(_source);}}
 @end
 static TramesCanvas *canvas(TramesFamily *family,NSRect rect,NSPoint origin){
     TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
@@ -443,3 +477,16 @@ unsigned trames_ui_test_frame_state(void *pointer){TramesFrame *frame=(__bridge 
 void trames_ui_test_frame_drop(void *pointer){id frame=CFBridgingRelease(pointer);(void)frame;}
 
 unsigned trames_ui_test_supersede(void *a,void *b){NSMutableArray *frames=[NSMutableArray arrayWithObjects:(__bridge TramesFrame *)a,(__bridge TramesFrame *)b,nil];supersede_frames(frames);return (unsigned)frames.count;}
+
+unsigned trames_ui_test_sleep_lifecycle(void){
+    @autoreleasepool {
+        TramesUI *ui=[TramesUI new];CFRunLoopSourceContext context={0};context.info=(__bridge void *)ui;context.perform=source_perform;ui.source=CFRunLoopSourceCreate(NULL,0,&context);TramesFamily *family=[TramesFamily new];
+        family.ui=ui;family.identifier=1;family.lastRevision=123;family.buttonDown=YES;
+        ui.windows[@1]=family;ui.focus=1;[ui.pressed addIndex:12];
+        [ui systemWillSleep:nil];
+        unsigned result=(ui.sleeping?1:0)|(!ui.focus&&ui.pressed.count==0?2:0)|(!family.buttonDown?4:0);
+        [ui systemDidWake:nil];
+        if(!ui.sleeping&&family.dirty&&family.lastRevision==UINT64_MAX)result|=8;
+        return result;
+    }
+}

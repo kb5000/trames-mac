@@ -573,27 +573,30 @@ pub fn run(
         );
         // Existing counters only: enabling diagnostics adds no production-path work.
         let m = &runtime.metrics;
-        eprintln!("trames mac execution paths: {}", serde_json::json!({
-            "syscalls": m.syscalls,
-            "worker_syscalls": m.worker_syscalls,
-            "worker_direct_syscalls": m.worker_direct_syscalls,
-            "worker_file_syscalls": m.worker_file_syscalls,
-            "worker_socket_syscalls": m.worker_socket_syscalls,
-            "worker_fd_syscalls": m.worker_fd_syscalls,
-            "worker_poll_syscalls": m.worker_poll_syscalls,
-            "worker_uring_syscalls": m.worker_uring_syscalls,
-            "worker_futex_waits": m.worker_futex_waits,
-            "worker_futex_wakes": m.worker_futex_wakes,
-            "worker_task_resumes": m.worker_task_resumes,
-            "worker_gpu_calls": m.worker_gpu_calls,
-            "worker_gpu_waits": m.worker_gpu_waits,
-            "service_requests": m.service_requests,
-            "serviced_syscalls": m.serviced_syscalls,
-            "vm_local_syscalls": m.vm_local_syscalls,
-            "cohort_rounds": m.parallel_rounds,
-            "cohort_stop_us": m.parallel_stop_time.as_micros(),
-            "service_caller_wait_us": m.service_wait_time.as_micros(),
-        }));
+        eprintln!(
+            "trames mac execution paths: {}",
+            serde_json::json!({
+                "syscalls": m.syscalls,
+                "worker_syscalls": m.worker_syscalls,
+                "worker_direct_syscalls": m.worker_direct_syscalls,
+                "worker_file_syscalls": m.worker_file_syscalls,
+                "worker_socket_syscalls": m.worker_socket_syscalls,
+                "worker_fd_syscalls": m.worker_fd_syscalls,
+                "worker_poll_syscalls": m.worker_poll_syscalls,
+                "worker_uring_syscalls": m.worker_uring_syscalls,
+                "worker_futex_waits": m.worker_futex_waits,
+                "worker_futex_wakes": m.worker_futex_wakes,
+                "worker_task_resumes": m.worker_task_resumes,
+                "worker_gpu_calls": m.worker_gpu_calls,
+                "worker_gpu_waits": m.worker_gpu_waits,
+                "service_requests": m.service_requests,
+                "serviced_syscalls": m.serviced_syscalls,
+                "vm_local_syscalls": m.vm_local_syscalls,
+                "cohort_rounds": m.parallel_rounds,
+                "cohort_stop_us": m.parallel_stop_time.as_micros(),
+                "service_caller_wait_us": m.service_wait_time.as_micros(),
+            })
+        );
         let mut returned: Vec<_> = runtime.metrics.cohort_return_syscalls.iter().collect();
         returned.sort_unstable_by_key(|(_, count)| std::cmp::Reverse(**count));
         eprintln!("trames mac cohort-return syscalls: {returned:?}");

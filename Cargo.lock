@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "trames-hvf"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "cc",
  "libc",
@@ -763,12 +763,13 @@ dependencies = [
  "trames-execution",
  "trames-memory",
  "trames-net",
+ "trames-shared",
  "trames-vfs",
 ]
 
 [[package]]
 name = "trames-mac"
-version = "1.4.0"
+version = "1.5.0"
 dependencies = [
  "cc",
  "flate2",
