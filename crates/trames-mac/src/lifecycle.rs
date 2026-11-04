@@ -15,6 +15,11 @@ extern "C" fn cancel(signal: libc::c_int) {
 pub fn stopping() -> bool {
     STOP.load(Ordering::Relaxed)
 }
+pub fn take_signal() -> Option<i32> {
+    let signal = SIGNAL.swap(0, Ordering::Relaxed);
+    STOP.store(false, Ordering::Relaxed);
+    (signal != 0).then_some(signal)
+}
 pub fn exit_code() -> u8 {
     let signal = SIGNAL.load(Ordering::Relaxed);
     if signal == 0 {

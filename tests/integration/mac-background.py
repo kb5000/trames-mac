@@ -113,7 +113,7 @@ def main():
             for child in starters:
                 output = child.communicate(timeout=90)
                 assert child.returncode == 0, output
-            a = Terminal(runner, env, args.output, 'a', ['env', 'start', 'lab'], 31, 91)
+            a = Terminal(runner, env, args.output, 'a', ['-e', 'lab', 'shell'], 31, 91)
             clients.append(a)
             b = Terminal(runner, env, args.output, 'b', ['env', 'attach', 'lab'], 42, 122)
             clients.append(b)

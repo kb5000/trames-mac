@@ -20,69 +20,110 @@ replace the application, not Linux environments. The installer also accepts an
 explicit application path; `TRAMES_APPLICATIONS_DIR` and `TRAMES_BIN_DIR` select
 alternate per-user destinations.
 
-Open Trames.app in Finder, or run `trames --manager`, for the native environment
-manager. It provides creation, existing-store import, terminal launch, stop,
-settings, shared-folder selection, backup, restore, deletion and diagnostics.
-Operations run in child processes; downloads and disk operations do not block
-the application event loop. Download and package installation output appears live
-in the log panel; completed output remains visible after refreshing the list.
-Settings changes require a stopped environment.
+Open Trames.app in Finder, or run `trames gui` (`--manager` remains an alias),
+for the native environment manager. Finder uses an explicit GUI entry point.
+Noninteractive `trames` prints help; redirected input never launches the manager.
+The manager provides creation, existing-store import, terminals, stop, settings,
+shared folders, backup, restore, deletion and diagnostics. Download/package output
+updates live without blocking the interface.
 
-Running `trames` without arguments in a terminal creates a default Alpine
-environment if necessary, then starts the environment in the background and opens an independent login shell. Creation downloads the
-pinned ARM64 minirootfs over HTTPS and verifies its SHA-256 before importing.
-Network/download failures preserve existing environments and can be retried.
-Verified archives are cached. Noninteractive no-argument application launch
-opens the manager; use an explicit `env start` for scripts.
+Create environments explicitly; shell and exec never download or create an image:
 
 ```sh
-trames env create work                         # Alpine by default
+trames env create work                         # Verified Alpine by default
 trames env create debian-work --distro debian  # Debian 13 with daily tools
-trames env list                               # JSON, including settings/state
-trames env start work
-trames env start debian-work -- /bin/bash -lc 'uname -a'
-trames env terminal work                      # Open macOS Terminal
-trames env stop work                          # Stop, sync and release store
-trames env help
+trames env ls                                 # Stable table, even when piped
+trames env ls --json                           # Machine-readable settings/state
+trames env ls -q                               # Names only
+trames -e work shell                           # Independent interactive terminal
+trames -e debian-work exec -- uname -a
+trames env terminal work                       # Open macOS Terminal
+trames gui
 ```
 
-### Background environments and independent terminals
+New environments use all available CPU cores (up to the HVF limit), Vulkan enabled,
+windows enabled, full networking and `memory auto`. Memory grows with use rather
+than reserving a fixed pool. Existing explicit settings are preserved. Video,
+audio output and microphone input remain opt-in. `config --global` changes defaults
+for future environments.
+
+### Background lifetime, shell and exec
 
 ```sh
-trames env start work --detach          # Start without attaching a terminal
-trames env start work                   # Start if needed, then open a new PTY
-trames env attach work                  # Another independent terminal
-trames env status work                  # Running state, console and log paths
-trames env autostart work on            # Start at this Mac user's next login
-trames env autostart work off           # Leave current runtime running
-trames env stop work                    # Graceful shutdown of the whole guest
+trames env start work                   # Background start; returns immediately
+trames env start work                   # Idempotent
+trames -e work shell                    # New independent PTY each time
+trames -e work session ls               # Per-boot terminal IDs and attachment state
+trames -e work session attach 3          # Reconnect after Ctrl-]
+trames env restart work                 # Clean stop, then background start
+trames env enable work                  # Start at this Mac user's next login
+trames env enable work --now             # Also start now
+trames env disable work                 # Disable login start, leave it running
+trames env disable work --now            # Also stop now
+trames env stop work                    # Graceful shutdown, sync and release store
 ```
 
-Normal named starts use a per-environment launchd user agent. Closing the manager,
-closing all terminal windows, and detaching a client leave Linux services running.
-An unsuccessful host-process exit restarts the environment; a normal Linux halt
-keeps it stopped. Login autostart is optional and applies after this macOS user
-logs in, not before login. Mac sleep still suspends execution and network service.
-The agent only owns process lifetime; guest syscalls and terminal data do not pass
-through a new resource-service thread.
+`trames` with an interactive terminal is shorthand for `trames shell` in the
+configured default environment. Set that environment with
+`trames config --global set default-environment work`. A missing environment gives
+an actionable error. `env list`, `env attach NAME [--terminal ID]`,
+`env autostart NAME on|off` and `--manager` remain unambiguous compatibility aliases.
+**Migration:** `env start NAME` now always starts in the background and returns;
+replace interactive uses with `trames -e NAME shell`. The installer regenerates
+known Terminal launchers. `env start NAME --detach` remains an alias for background
+start; extra foreground command/host options are rejected. Deliberate stopped-store
+backend maintenance remains available under `debug env-run NAME [HOST_OPTIONS]`.
 
-Use **Ctrl-]** to detach while retaining that shell. The CLI prints its terminal
-ID; reconnect with `trames env attach work --terminal ID`. One client owns a PTY
-at a time. Normal terminal-window close hangs up that PTY only. Terminal IDs and
-shells last for one environment boot. Boot output and each terminal's recent output
-have bounded replay buffers; a slow client applies backpressure to its own PTY.
+```sh
+printf hello | trames -e work exec -- cat
+trames -e work exec --setenv MESSAGE='hello world' --cwd /tmp -- printenv MESSAGE
+trames -e work -- printf '%s\n' 'literal argument'
+trames -e work exec -- sh -c 'echo error >&2; exit 7'
+trames -e work exec -t -- top
+```
 
-Explicit extra host options or commands retain the foreground maintenance path,
-for example `trames env start work --no-windows -- /bin/sh -lc 'uname -a'`.
-Stop a managed environment before entering maintenance. Use `env configure` to
-save normal environment settings, including its shell argv; do not use extra
-start arguments when opening another managed terminal.
+Exec starts an existing stopped environment on demand, creates a process inside
+that same runtime, waits and returns its exit status. It passes literal argv;
+use an explicit `sh -c` for expansion, redirection or pipelines. Ordinary exec has
+no PTY: stdin, stdout and stderr are separate binary-clean streams. `-t` opts into
+a PTY and its terminal newline processing/merged output. Ctrl-C targets only the
+command's process group; a signal exit returns 128+signal, a missing executable
+returns 127, and an unexecutable command returns 126. EOF closes only command stdin.
+PTY shells support Ctrl-D to exit and Ctrl-] to detach; closing one terminal hangs
+up that terminal without halting the environment. Session IDs last one boot; one
+client attaches to a PTY at a time. Boot/terminal replay is bounded and never enters
+exec stdout. Detached shell IDs are available through `session ls [--json|-q]`.
 
-The registry's `services/`, `logs/` and private local sockets are per environment
-and channel. Startup serializes only concurrent management requests for the same
-environment. The original private-store lock still excludes a second guest owner.
-Logs rotate at startup above 8 MiB, keeping one previous file. Guest services
-should configure their own journal/container log retention.
+Each environment uses one per-user launchd agent and one private store owner.
+Closing all terminals or the manager leaves services running. Unsuccessful host
+exit restarts the environment; normal Linux halt leaves it stopped. Login enable
+applies after this macOS user logs in. Sleep suspends execution/network services.
+No new coordinator/resource thread handles guest I/O: exec pipe/PTY bytes retain
+shared resources and are pumped while workers run. Process creation and explicit
+process-group signals use the existing lifecycle boundary. Per-command queues are
+bounded, and backpressure does not hold a second guest/store owner.
+
+Registry `services/`, `logs/` and private local sockets are per environment/channel.
+Startup serializes only concurrent starts of the same environment. Logs rotate at
+startup above 8 MiB, keeping one previous file; configure guest/container retention
+separately. `env status NAME` reports lifetime, console, log and autostart state.
+After upgrading, restart a previously running environment once to load the new
+exec endpoint; existing interactive clients use the retained terminal protocol.
+
+### Shell completion
+
+```sh
+# zsh: after compinit
+source <(trames completion zsh)
+# bash
+source <(trames completion bash)
+# fish
+trames completion fish | source
+```
+
+The bundle includes all three completion files. Completion/help/config reads never
+start a guest. Environment-name completion reads the registry only. The dev CLI
+accepts the same syntax through `trames-dev`.
 
 ### Debian tools
 
@@ -143,6 +184,7 @@ needs no presenter or audio device:
 trames env create docker --distro debian --init systemd --cpus 4 --network full \
   --windows off --vulkan off --video off --audio off
 trames env start docker
+trames -e docker shell
 ```
 
 Inside Linux, install Debian's original packages and enable the daemon:
@@ -160,8 +202,8 @@ docker exec web sh -c 'printf "Trames Docker is running\n" > /usr/share/nginx/ht
 ```
 
 On the Mac, `curl http://127.0.0.1:8080/` accesses the container. Close or detach
-all terminals and the service remains running. `trames env attach docker` opens
-another independent shell. Use `trames env autostart docker on` for this macOS
+all terminals and the service remains running. `trames -e docker shell` opens
+another independent shell. Use `trames env enable docker` for this macOS
 user's next login, and `trames env stop docker` for a graceful systemd shutdown.
 Stopping the environment first also permits `trames env backup docker ARCHIVE`.
 Named Docker volumes, images, packages and enabled services live in its private
@@ -236,35 +278,40 @@ explicit re-selection. It does not turn a live stable store into a dev store.
 ## CLI configuration and default commands
 
 ```sh
-trames config show
-trames config path
-trames config set default-environment work
-trames config set cpus 4 memory-mib auto windows off
-trames config set distro debian init systemd
-trames config reset
-trames env config work
-trames env configure work -- /bin/bash -l
-trames env start work                         # Saved command
-trames env start work -- /bin/sh -ec 'uname -a' # One-session override
+trames -e work config list
+trames -e work config list --json
+trames -e work config get cpus
+trames -e work config set cpus all memory 4GiB vulkan true
+trames -e work config unset memory             # Restore the configured default
+trames -e work config set command '["/bin/bash","-l"]'
+trames -e work config path
+trames -e work config edit                     # VISUAL / EDITOR, otherwise vi
+trames config --global get default-environment
+trames config --global set default-environment work
+trames config --global set defaults.cpus all defaults.vulkan true
+trames config --global set defaults.distro debian defaults.init systemd
 ```
 
-Global settings are saved atomically to `TRAMES_HOME/cli.json` (the usual registry
-under Application Support when `TRAMES_HOME` is unset). `default-environment`
-selects the environment used by no-argument terminal launches. If missing, it is
-created with the configured defaults. The `defaults` object affects **new**
-environments; it does not rewrite existing environment settings. Creation flags
-override those defaults, and explicit start arguments override saved session
-settings. `env config NAME` prints the saved per-environment JSON.
+Ordinary `config` addresses the selected/default environment. `config --global`
+addresses `TRAMES_HOME/cli.json`; `default-environment` selects a pre-existing
+environment, and `defaults.KEY` affects future creations only. Local overrides and
+creation flags take precedence. Environment configuration remains in its existing
+`config.json`; no store migration is needed. Global `show`/`reset` remain available
+with `--global`. `env config NAME` retains the saved environment JSON view.
 
-Global `config set` accepts `default-environment`, `distro` (`alpine`/`debian`),
-`cpus`, `memory-mib`, `network`, `init`, `windows`, `vulkan`, `video`, and `command`.
-The last is a JSON argument array, for example
-`trames config set command '["/bin/bash","-l"]'`. Per-environment commands can
-instead use the simpler `env configure NAME -- COMMAND ARGS...` syntax. Arguments
-are stored literally and never evaluated by a host shell. Existing environment
-configs without `command` continue to use `/bin/sh -l`. `config reset` resets only
-global defaults. Systemd boot retains its original PID 1 command independently of
-the saved shell command; an explicit `--init shell` enables maintenance sessions.
+CPU values accept an integer or `all`/`auto`; memory accepts `auto`, `4GiB`,
+`4096MiB`, `MB`/`GB`, or legacy numeric MiB. Boolean settings accept `true`/`false`
+(and legacy `on`/`off`). Shell command and mounts use JSON arrays. Saved argv is
+literal. Edits are validated before atomic replacement, and invalid edits preserve
+the last valid configuration. Per-environment identity fields are read-only through
+`set`; the explicit rootfs/store import commands create identities.
+
+Settings only validate and save metadata, including while an environment runs;
+they apply on restart. They never open storage, install packages or implicitly
+start Linux. To prepare systemd on an existing stopped Debian environment, run
+`trames env setup NAME --init systemd`. Selecting an init setting alone does not
+install it. A new `env create --init systemd` remains an explicit provisioning
+operation. Existing shell commands without a saved `command` retain `/bin/sh -l`.
 
 ## Custom ARM64 Linux rootfs
 
@@ -272,8 +319,8 @@ the saved shell command; an explicit `--init shell` enables maintenance sessions
 trames env create custom --rootfs /path/to/rootfs.tar.gz
 trames env create custom --rootfs /path/to/rootfs.tar --sha256 EXPECTED_SHA256
 trames env create custom --rootfs /path/to/unpacked-rootfs -- /bin/bash -l
-trames config set default-environment custom
-trames env start custom
+trames config --global set default-environment custom
+trames -e custom shell
 ```
 
 `--rootfs` explicitly selects a user-supplied rootfs directory, ordinary tar or
@@ -323,7 +370,7 @@ or when deploying from the command line:
 ```sh
 trames env create services --distro debian --init systemd
 # Or opt in on an existing, stopped Debian environment:
-trames env configure debian-work --init systemd
+trames env setup debian-work --init systemd
 trames env start services
 ```
 
@@ -355,17 +402,18 @@ completion independently of attached terminals. Explicit `--timeout` still cance
 For stopped-environment maintenance, override the selected mode explicitly:
 
 ```sh
-trames env start services --init shell -- /bin/sh -l
+trames -e services config set init shell
+trames -e services shell
 trames env configure services --init shell     # Keep packages and guest files
 ```
 
-Systemd boot takes no separate Linux command. Mode changes require a stopped
-environment and never reset the store. Backup/restore preserve the init choice. Import and restore create a new
+Systemd boot takes no separate Linux command. Saved mode changes apply at the next start and never reset the store. Package
+preparation requires a stopped environment. Backup/restore preserve the init choice. Import and restore create a new
 machine identity, so a clone can run alongside its source; the source stays
 unchanged. Normal restarts preserve machine identity.
 Fresh per-boot `/run`, device and shared-memory mounts grow on demand without
 a fixed tmpfs byte/inode quota or preallocation. They remain guest VFS objects;
-no host mount or privileged daemon is created. Windows/compute remain opt-in
+no host mount or privileged daemon is created. Windows/Vulkan are enabled for new environments; video/audio remain opt-in
 product services and do not depend on systemd. A window-enabled root console
 receives the usual Wayland environment.
 

@@ -120,7 +120,7 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
     let until = Instant::now() + Duration::from_secs(60);
     while Instant::now() < until {
         if environments::running(root, name) && environments::console_socket(root, name)?.exists() {
-            println!("Started {name} in background; open terminals with env attach {name}");
+            eprintln!("Started {name} in background");
             return Ok(());
         }
         std::thread::sleep(Duration::from_millis(50));

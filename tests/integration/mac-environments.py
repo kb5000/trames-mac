@@ -40,12 +40,12 @@ def main():
             return r
 
         def start(name, command):
-            return run('env', 'start', name, '--no-windows', '--no-pty', '/bin/sh', '-ec', command)
+            return run('debug', 'env-run', name, '--no-windows', '--no-pty', '/bin/sh', '-ec', command)
 
         def spawn(name, command):
             out = (home / 'live.stdout').open('w')
             err = (home / 'live.stderr').open('w')
-            child = subprocess.Popen([runner, 'env', 'start', name, '--no-windows', '--no-pty', '/bin/sh', '-ec', command], env=env, stdout=out, stderr=err, text=True)
+            child = subprocess.Popen([runner, 'debug', 'env-run', name, '--no-windows', '--no-pty', '/bin/sh', '-ec', command], env=env, stdout=out, stderr=err, text=True)
             deadline = time.monotonic() + 20
             while 'READY' not in (home / 'live.stdout').read_text():
                 if child.poll() is not None or time.monotonic() > deadline:
@@ -79,7 +79,7 @@ def main():
         try:
             run('env', 'backup', 'alpine', str(home / 'busy.tar.gz'), ok=False)
             run('env', 'delete', 'alpine', '--yes', ok=False)
-            run('env', 'start', 'alpine', '--no-windows', '/bin/true', ok=False)
+            run('debug', 'env-run', 'alpine', '--no-windows', '/bin/true', ok=False)
             run('env', 'stop', 'alpine')
             child.wait(timeout=20)
         finally:
@@ -116,7 +116,7 @@ def main():
         master, slave = pty.openpty()
         original_terminal = termios.tcgetattr(slave)
         with (home / 'pty.stdout').open('w') as out, (home / 'pty.stderr').open('w') as err:
-            child = subprocess.Popen([runner, 'env', 'start', 'alpine', '--no-windows', '/bin/sh', '-ec', 'echo READY; sleep 300'], env=env, stdin=slave, stdout=out, stderr=err)
+            child = subprocess.Popen([runner, 'debug', 'env-run', 'alpine', '--no-windows', '/bin/sh', '-ec', 'echo READY; sleep 300'], env=env, stdin=slave, stdout=out, stderr=err)
             deadline = time.monotonic() + 20
             while 'READY' not in (home / 'pty.stdout').read_text():
                 assert child.poll() is None and time.monotonic() < deadline
@@ -141,8 +141,8 @@ def main():
         conf = json.loads(future.read_text())
         conf['schema'] = 999
         future.write_text(json.dumps(conf))
-        run('env', 'start', 'debian', '--no-windows', '/bin/true', ok=False)
-        assert any(x['state'] == 'needs attention' for x in json.loads(run('env', 'list').stdout))
+        run('debug', 'env-run', 'debian', '--no-windows', '/bin/true', ok=False)
+        assert any(x['state'] == 'needs attention' for x in json.loads(run('env', 'ls', '--json').stdout))
         if a.soak_seconds:
             child = spawn('alpine', f'echo READY; end=$(( $(date +%s) + {a.soak_seconds} )); while [ $(date +%s) -lt $end ]; do echo alive > /root/soak; cat /root/soak > /dev/null; sleep 1; done; sync')
             child.wait(timeout=a.soak_seconds + 60)

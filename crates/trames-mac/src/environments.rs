@@ -64,7 +64,7 @@ impl Config {
             memory_mib: "auto".into(),
             network: "full".into(),
             windows: true,
-            vulkan: false,
+            vulkan: true,
             video: false,
             audio: false,
             audio_input: false,
@@ -156,65 +156,246 @@ fn validate_cli(c: &CliConfig) -> Result<()> {
     catalog(&c.defaults.distribution)?;
     c.defaults.validate()
 }
-pub fn cli_config(args: &[String]) -> Result<u8> {
+pub fn default_environment(r: &Path) -> Result<String> {
+    Ok(load_cli(r)?.default_environment)
+}
+fn config_key(key: &str) -> &str {
+    match key {
+        "memory" | "memory-mib" => "memory_mib",
+        "audio-input" => "audio_input",
+        "distro" => "distribution",
+        _ => key,
+    }
+}
+fn memory(value: &str) -> Result<String> {
+    if value == "auto" {
+        return Ok(value.into());
+    }
+    let split = value
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(value.len());
+    let number: u64 = value[..split].parse()?;
+    let bytes = match &value[split..] {
+        "" | "MiB" | "M" => number.checked_mul(1 << 20),
+        "GiB" | "G" => number.checked_mul(1 << 30),
+        "KiB" | "K" => number.checked_mul(1 << 10),
+        "B" => Some(number),
+        "MB" => number.checked_mul(1_000_000),
+        "GB" => number.checked_mul(1_000_000_000),
+        _ => return Err("memory must be auto or a size such as 4GiB / 4096MiB".into()),
+    }
+    .ok_or("memory size overflow")?;
+    if bytes == 0 {
+        return Err("memory must be positive".into());
+    }
+    Ok(bytes.div_ceil(1 << 20).to_string())
+}
+fn set_config(c: &mut Config, key: &str, value: &str) -> Result<()> {
+    let key = config_key(key);
+    let mut json = serde_json::to_value(&*c)?;
+    let field = json.get(key).ok_or("unknown configuration key")?;
+    if ![
+        "command",
+        "cpus",
+        "memory_mib",
+        "network",
+        "init",
+        "windows",
+        "vulkan",
+        "video",
+        "audio",
+        "audio_input",
+        "mounts",
+    ]
+    .contains(&key)
+    {
+        return Err("this environment identity field is read-only".into());
+    }
+    json[key] = if key == "memory_mib" {
+        serde_json::Value::String(memory(value)?)
+    } else if key == "cpus" && matches!(value, "all" | "auto") {
+        serde_json::json!(Config::new("alpine").cpus)
+    } else if field.is_boolean() {
+        serde_json::json!(match value {
+            "true" | "on" => true,
+            "false" | "off" => false,
+            _ => return Err("expected true or false".into()),
+        })
+    } else if field.is_string() {
+        serde_json::Value::String(value.into())
+    } else {
+        serde_json::from_str(value)?
+    };
+    *c = serde_json::from_value(json)?;
+    Ok(())
+}
+fn read_value(value: &serde_json::Value) {
+    match value {
+        serde_json::Value::String(s) => println!("{s}"),
+        _ => println!("{value}"),
+    }
+}
+fn setting_value<'a>(
+    document: &'a serde_json::Value,
+    key: &str,
+    global: bool,
+) -> Result<&'a serde_json::Value> {
+    let (parent, key) = if global {
+        if key == "default-environment" || key == "default_environment" {
+            (document, "default_environment")
+        } else {
+            (
+                &document["defaults"],
+                config_key(
+                    key.strip_prefix("defaults.")
+                        .ok_or("global settings use defaults.KEY or default-environment")?,
+                ),
+            )
+        }
+    } else {
+        (document, config_key(key))
+    };
+    parent
+        .get(key)
+        .ok_or_else(|| "unknown configuration key".into())
+}
+/// Settings never open guest storage, install packages or start the environment.
+/// This metadata lock is independent of the running store owner's lifetime lock.
+pub fn settings(selected: Option<&str>, args: &[String]) -> Result<u8> {
+    let mut args = args.to_vec();
+    let global = args.iter().any(|a| a == "--global");
+    args.retain(|a| a != "--global");
+    let json = args.iter().any(|a| a == "--json");
+    args.retain(|a| a != "--json");
+    let op = args.first().map(String::as_str).unwrap_or("list");
     let r = root()?;
-    match args.first().map(String::as_str).unwrap_or("show") {
-        "path" => println!("{}", r.join("cli.json").display()),
-        "show" => println!("{}", serde_json::to_string_pretty(&load_cli(&r)?)?),
-        "set" | "reset" => {
-            let guard = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .truncate(false)
-                .mode(0o600)
-                .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-                .open(r.join("locks/.cli-config"))?;
-            guard
-                .try_lock()
-                .map_err(|_| "CLI settings are being changed; retry")?;
-            let mut c = if args[0] == "reset" {
-                CliConfig::default()
-            } else {
-                load_cli(&r)?
-            };
-            if args[0] == "set" {
-                if args.len() < 3 || args.len() % 2 != 1 {
-                    return Err("usage: trames config set KEY VALUE [KEY VALUE...]".into());
-                }
-                for pair in args[1..].chunks_exact(2) {
-                    match pair[0].trim_start_matches("--") {
-                        "default-environment" => c.default_environment=pair[1].clone(),
-                        "distro" => { catalog(&pair[1])?; c.defaults.distribution=pair[1].clone(); c.defaults.source_sha256=catalog(&pair[1])?.1.into(); }
-                        "command" => c.defaults.command=serde_json::from_str(&pair[1])?,
-                        key @ ("cpus"|"memory-mib"|"network"|"init"|"windows"|"vulkan"|"video"|"audio"|"audio-input") => {
-                            // Apply all values together below, allowing a distro
-                            // and init change in either argument order.
-                            match key {
-                                "cpus" => c.defaults.cpus=pair[1].parse()?,
-                                "memory-mib" => c.defaults.memory_mib=pair[1].clone(),
-                                "network" => c.defaults.network=pair[1].clone(),
-                                "init" => c.defaults.init=super::systemd::Init::parse(&pair[1])?,
-                                _ => {
-                                    let value=match pair[1].as_str() {"on"=>true,"off"=>false,_=>return Err("expected on or off".into())};
-                                    match key {"windows"=>c.defaults.windows=value,"vulkan"=>c.defaults.vulkan=value,"video"=>c.defaults.video=value,"audio"=>c.defaults.audio=value,_=>c.defaults.audio_input=value}
-                                }
-                            }
-                        }
-                        _ => return Err("unknown CLI setting; use default-environment, distro, command, cpus, memory-mib, network, init, windows, vulkan, video, audio or audio-input".into()),
-                    }
+    let mut cli = load_cli(&r)?;
+    let n = selected.unwrap_or(&cli.default_environment).to_owned();
+    let dir = directory(&r, &n)?;
+    let path = if global {
+        r.join("cli.json")
+    } else {
+        dir.join("config.json")
+    };
+    if op == "path" {
+        if args.len() != 1 {
+            return Err("usage: config path".into());
+        }
+        println!("{}", path.display());
+        return Ok(0);
+    }
+    let mut c = if global {
+        cli.defaults.clone()
+    } else {
+        load(&dir)?
+    };
+    let document = if global {
+        serde_json::to_value(&cli)?
+    } else {
+        serde_json::to_value(&c)?
+    };
+    match op {
+        "get" if args.len() == 2 => read_value(setting_value(&document, &args[1], global)?),
+        "list" | "show" if args.len() == 1 => {
+            if json || op == "show" { println!("{}", serde_json::to_string_pretty(&document)?); }
+            else {
+                if global { println!("default-environment\t{}", cli.default_environment); }
+                for (key,value) in serde_json::to_value(&c)?.as_object().unwrap() {
+                    if ["schema","source_sha256"].contains(&key.as_str()) { continue; }
+                    let key = match key.as_str() { "memory_mib" => "memory", "audio_input" => "audio-input", key => key };
+                    print!("{}{key}\t", if global {"defaults."} else {""}); read_value(value);
                 }
             }
-            validate_cli(&c)?;
-            atomic_write(&r.join("cli.json"), &serde_json::to_vec_pretty(&c)?)?;
-            println!("{}", serde_json::to_string_pretty(&c)?);
         }
-        _ => {
-            return Err("usage: trames config show|path|set KEY VALUE [KEY VALUE...]|reset".into())
+        "set" | "unset" | "edit" | "reset" => {
+            let guard = OpenOptions::new().read(true).write(true).create(true).truncate(false).mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC).open(r.join("locks").join(if global { ".cli-config".into() } else { format!(".config-{n}") }))?;
+            guard.try_lock().map_err(|_| "settings are being changed; retry")?;
+            // Reload after obtaining the metadata lock, without opening the store.
+            cli = load_cli(&r)?;
+            c = if global { cli.defaults.clone() } else { load(&dir)? };
+            match op {
+                "set" if args.len() >= 3 && args.len()%2 == 1 => {
+                    for pair in args[1..].chunks_exact(2) {
+                        if global && pair[0] == "default-environment" { cli.default_environment=pair[1].clone(); }
+                        else {
+                            let key = if global { pair[0].strip_prefix("defaults.").ok_or("global settings use defaults.KEY or default-environment")? } else { &pair[0] };
+                            if global && matches!(key, "distro" | "distribution") {
+                                c.distribution=pair[1].clone(); c.source_sha256=catalog(&c.distribution)?.1.into();
+                            } else { set_config(&mut c, key, &pair[1])?; }
+                        }
+                    }
+                }
+                "unset" if args.len() == 2 => {
+                    if global && args[1] == "default-environment" { cli.default_environment=CliConfig::default().default_environment; }
+                    else if global && matches!(args[1].as_str(),"defaults.distro"|"defaults.distribution") {
+                        c.distribution="alpine".into(); c.source_sha256=catalog("alpine")?.1.into();
+                    } else {
+                        let key = if global { args[1].strip_prefix("defaults.").ok_or("global settings use defaults.KEY")? } else { &args[1] };
+                        let defaults = if global { Config::new(&c.distribution) } else { cli.defaults.clone() };
+                        let value = serde_json::to_value(&defaults)?;
+                        let value = value.get(config_key(key)).ok_or("unknown configuration key")?;
+                        let text = value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string());
+                        set_config(&mut c, key, &text)?;
+                    }
+                }
+                "reset" if global && args.len() == 1 => { cli=CliConfig::default(); c=cli.defaults.clone(); }
+                "edit" if args.len() == 1 => {
+                    let temp = r.join(format!(".config-edit-{}.json",std::process::id()));
+                    let document = if global { cli.defaults=c.clone(); serde_json::to_vec_pretty(&cli)? } else { serde_json::to_vec_pretty(&c)? };
+                    atomic_write(&temp,&document)?;
+                    let result = (|| -> Result<()> {
+                        let editor=std::env::var("VISUAL").or_else(|_|std::env::var("EDITOR")).unwrap_or_else(|_|"vi".into());
+                        let status=Command::new("/bin/sh").arg("-c").arg(format!("exec {editor} \"$1\"" )).arg("trames-editor").arg(&temp).status()?;
+                        if !status.success() { return Err("editor exited unsuccessfully; configuration was preserved".into()); }
+                        let file=File::open(&temp)?.take(65537);
+                        if global { cli=serde_json::from_reader(file)?; c=cli.defaults.clone(); }
+                        else { c=serde_json::from_reader(file)?; }
+                        Ok(())
+                    })();
+                    let _=fs::remove_file(temp); result?;
+                }
+                _ => return Err("usage: config [--global] set KEY VALUE | unset KEY | edit | get KEY | list [--json] | path".into()),
+            }
+            c.validate()?;
+            if global { cli.defaults=c; validate_cli(&cli)?; atomic_write(&path,&serde_json::to_vec_pretty(&cli)?)?; eprintln!("Saved global defaults; applies to new environments."); }
+            else { save(&dir,&c)?; eprintln!("Saved {n}; changes apply after an environment restart."); }
         }
+        _ => return Err("usage: config [--global] get KEY | set KEY VALUE | unset KEY | list [--json] | edit | path".into()),
     }
     Ok(0)
 }
+pub fn listing(args: &[String]) -> Result<u8> {
+    if args.len() > 1
+        || args
+            .first()
+            .is_some_and(|a| !["--json", "-q", "--quiet"].contains(&a.as_str()))
+    {
+        return Err("usage: env ls [--json|-q]".into());
+    }
+    list(
+        &root()?,
+        args.first().map(String::as_str).unwrap_or("table"),
+    )?;
+    Ok(0)
+}
+pub fn setup(args: &[String]) -> Result<u8> {
+    if args.len() != 3 || args[1] != "--init" || args[2] != "systemd" {
+        return Err("usage: env setup NAME --init systemd".into());
+    }
+    let r = root()?;
+    let n = &args[0];
+    let _lock = lock(&r, n)?;
+    let dir = directory(&r, n)?;
+    let mut c = load(&dir)?;
+    c.init = super::systemd::Init::Systemd;
+    c.validate()?;
+    provision_init(&dir.join("store"), &c)?;
+    save(&dir, &c)?;
+    eprintln!("Prepared systemd for {n}; start or restart the environment to use it.");
+    Ok(0)
+}
+
 fn catalog(d: &str) -> Result<(&'static str, &'static str)> {
     match d {
         "alpine" => Ok((trames_distro::ALPINE_URL, trames_distro::ALPINE_SHA256)),
@@ -597,7 +778,7 @@ fn terminal(r: &Path, n: &str) -> Result<()> {
     private_dir(&launchers)?;
     let path = launchers.join(format!("{n}.command"));
     let text = format!(
-        "#!/bin/sh\nexport TRAMES_HOME={}\nexec {} env start {}\n",
+        "#!/bin/sh\nexport TRAMES_HOME={}\nexec {} -e {} shell\n",
         shell_quote(&r.to_string_lossy()),
         shell_quote(&std::env::current_exe()?.to_string_lossy()),
         shell_quote(n)
@@ -615,7 +796,7 @@ fn terminal(r: &Path, n: &str) -> Result<()> {
     }
     Ok(())
 }
-fn stop(r: &Path, n: &str) -> Result<()> {
+pub(super) fn stop(r: &Path, n: &str) -> Result<()> {
     load(&directory(r, n)?)?;
     if super::background::registered(r, n) {
         super::background::unload(r, n)?;
@@ -645,7 +826,7 @@ struct Row {
     config: Option<Config>,
     error: Option<String>,
 }
-fn list(r: &Path) -> Result<()> {
+fn list(r: &Path, format: &str) -> Result<()> {
     let mut rows = vec![];
     for entry in fs::read_dir(r.join("environments"))? {
         let e = entry?;
@@ -677,7 +858,18 @@ fn list(r: &Path) -> Result<()> {
         }
     }
     rows.sort_by(|a, b| a.name.cmp(&b.name));
-    println!("{}", serde_json::to_string_pretty(&rows)?);
+    if format == "--json" {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else if matches!(format, "-q" | "--quiet") {
+        for row in rows {
+            println!("{}", row.name);
+        }
+    } else {
+        println!("{:<24} {:<12} STATUS", "NAME", "DISTRO");
+        for row in rows {
+            println!("{:<24} {:<12} {}", row.name, row.distribution, row.state);
+        }
+    }
     Ok(())
 }
 fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
@@ -737,14 +929,10 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
     let mut c = load(&dir)?;
-    let old_init = c.init;
     apply_settings(&mut c, args)?;
     if c.command != load(&dir)?.command {
         let mut vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
         super::rootfs::validate_command(&mut vfs, &c.command)?;
-    }
-    if c.init == super::systemd::Init::Systemd && old_init != c.init {
-        provision_init(&dir.join("store"), &c)?;
     }
     save(&dir, &c)
 }
@@ -931,27 +1119,13 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
     let r = root()?;
     let op = args.first().map(String::as_str).unwrap_or("list");
     if op == "default" {
-        let cli = load_cli(&r)?;
-        if !directory(&r, &cli.default_environment)?.try_exists()? {
-            create(
-                &r,
-                &cli.default_environment,
-                cli.defaults,
-                None,
-                None,
-                None,
-                None,
-            )?;
-        }
-        super::background::start(&r, &cli.default_environment)?;
-        return super::background::attach(&r, &cli.default_environment, &[]);
+        return super::cli::dispatch(vec!["shell".into()]);
     }
     if op == "help" || op == "--help" {
-        println!("env create NAME [--distro alpine|debian | --rootfs TAR_OR_DIRECTORY [--sha256 HASH]] [--init shell|systemd] [--packages minimal|standard|development] [SETTINGS] [-- COMMAND ARGS...]\nenv packages NAME [standard|development]\nenv list\nenv config NAME\nenv start NAME [--detach|-d]\nenv attach NAME [--terminal ID]\nenv autostart NAME on|off\nenv status NAME\nenv start NAME [HOST_OPTIONS] [--] [LINUX_COMMAND ARGS...]\nenv terminal NAME\nenv stop NAME\nenv configure NAME [--init shell|systemd] [--cpus N] [--memory-mib auto|N] [--network off|loopback|outbound|full] [--windows on|off] [--vulkan on|off] [--video on|off] [--audio on|off] [--audio-input on|off] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--clear-mounts] [-- COMMAND ARGS...]\nenv backup NAME ARCHIVE\nenv restore NEW_NAME ARCHIVE\nenv import NEW_NAME EXISTING_STORE\nenv check NAME\nenv delete NAME --yes\nenv doctor\nOpen the native environment manager with --manager.");
-        return Ok(0);
+        return super::cli::dispatch(vec!["--help".into()]);
     }
     if op == "list" {
-        list(&r)?;
+        list(&r, "table")?;
         return Ok(0);
     }
     if op == "doctor" {
@@ -1013,20 +1187,12 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
             "{}",
             serde_json::to_string_pretty(&load(&directory(&r, n)?)?)?
         ),
-        "start" | "run" => {
-            let extra=&args[2..];
-            if extra.is_empty() || extra==["--detach"] || extra==["-d"] {
-                super::background::start(&r,n)?;
-                if !extra.is_empty(){return Ok(0);}
-                return super::background::attach(&r,n,&[]);
-            }
-            return start(&r,n,extra);
-        },
+        "start" | "run" => return Err("use env start NAME to start in the background, shell to open a terminal, or exec -- COMMAND to run a command".into()),
         "_serve" => {if args.len()!=2{return Err("invalid service invocation".into());}return super::background::serve(&r,n);},
         "attach" => return super::background::attach(&r,n,&args[2..]),
         "autostart" => super::background::autostart(&r,n,args.get(2).ok_or("expected on or off")?)?,
         "status" => super::background::status(&r,n)?,
-        "import" => import(
+        "import-store" | "import" => import(
             &r,
             n,
             Path::new(args.get(2).ok_or("existing store path required")?),

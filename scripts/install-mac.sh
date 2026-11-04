@@ -81,5 +81,23 @@ if [[ ! -L "$bin_dir/$cli_name" ]]; then
   ln -s "$dest/Contents/MacOS/trames-mac-run" "$bin_dir/$cli_name"
 fi
 rm -rf "$previous"
+# Existing Finder-generated Terminal launchers must use shell, because env start
+# now returns after background startup. Touch only known generated launchers.
+python3 - "$dest" "$product_name" <<'PYTHON'
+import os,pathlib,shlex,sys
+app=pathlib.Path(sys.argv[1]); product=sys.argv[2]
+if 'TRAMES_HOME' not in os.environ and app.parent != pathlib.Path.home()/'Applications':
+    sys.exit(0)  # A custom install must not rewrite another installation's launchers.
+registry=pathlib.Path(os.environ.get('TRAMES_HOME',str(pathlib.Path.home()/'Library/Application Support'/product)))
+for path in (registry/'launchers').glob('*.command'):
+    text=path.read_text()
+    if 'export TRAMES_HOME=' not in text or 'trames-mac-run' not in text:
+        continue
+    name=path.stem
+    if not name or any(not (c.isascii() and (c.isalnum() or c in '-_')) for c in name):
+        continue
+    path.write_text('#!/bin/sh\nexport TRAMES_HOME='+shlex.quote(str(registry))+'\nexec '+shlex.quote(str(app/'Contents/MacOS/trames-mac-run'))+' -e '+shlex.quote(name)+' shell\n')
+    path.chmod(0o700)
+PYTHON
 install_path
 printf 'Installed %s\nCLI: %s/%s\nOpen %s.app for environment management.\n' "$dest" "$bin_dir" "$cli_name" "$product_name"

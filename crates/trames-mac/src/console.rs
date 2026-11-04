@@ -15,6 +15,7 @@ use std::{
     time::Duration,
 };
 use trames_distro::terminals::{Channel, LIMIT, QUEUE_LIMIT};
+const LIST: &[u8; 8] = b"TRMLIST1";
 const MAGIC: &[u8; 8] = b"TRAMES02";
 struct Peer {
     stream: UnixStream,
@@ -111,7 +112,14 @@ impl Console {
                 }
             }
             if alive && peer.id.is_none() && peer.incoming.len() >= 16 {
-                if &peer.incoming[..8] != MAGIC {
+                if &peer.incoming[..8] == LIST {
+                    let rows: Vec<_> = self.channels.iter().map(|(&id,c)| serde_json::json!({"id":id,"state":c.phase,"attached":active.contains(&id)})).collect();
+                    let bytes = serde_json::to_vec(&rows)?;
+                    peer.outgoing.extend((bytes.len() as u32).to_be_bytes());
+                    peer.outgoing.extend(bytes);
+                    let _ = peer.flush();
+                    continue;
+                } else if &peer.incoming[..8] != MAGIC {
                     alive = false;
                 } else {
                     let requested = u64::from_be_bytes(peer.incoming[8..16].try_into().unwrap());
@@ -279,7 +287,7 @@ pub fn attach(path: &Path, terminal: u64) -> io::Result<()> {
     peer.set_read_timeout(None)?;
     let _signals = super::lifecycle::Signals::install()?;
     let _raw = super::session::RawTerminal::enter(true)?;
-    eprintln!("Attached terminal {id}. Ctrl+] detaches; reconnect with --terminal {id}.\r");
+    eprintln!("Attached terminal {id}. Ctrl+] detaches; reconnect with session attach {id}.\r");
     let mut size = None;
     let mut bytes = [0; 4096];
     loop {
@@ -339,6 +347,50 @@ pub fn attach(path: &Path, terminal: u64) -> io::Result<()> {
             frame(&mut peer, 0, &bytes[..n])?;
         }
     }
+}
+pub fn list(path: &Path, args: &[String]) -> io::Result<()> {
+    if args.len() > 1
+        || args
+            .first()
+            .is_some_and(|a| !["--json", "-q", "--quiet"].contains(&a.as_str()))
+    {
+        return Err(io::Error::other("usage: session ls [--json|-q]"));
+    }
+    let mut peer = UnixStream::connect(path)?;
+    peer.set_read_timeout(Some(Duration::from_secs(5)))?;
+    peer.write_all(LIST)?;
+    peer.write_all(&0u64.to_be_bytes())?;
+    let mut size = [0; 4];
+    peer.read_exact(&mut size)?;
+    let size = u32::from_be_bytes(size) as usize;
+    if size > 65536 {
+        return Err(io::Error::other(
+            "invalid session list response; restart the environment",
+        ));
+    }
+    let mut bytes = vec![0; size];
+    peer.read_exact(&mut bytes)?;
+    let rows: Vec<serde_json::Value> = serde_json::from_slice(&bytes)?;
+    match args.first().map(String::as_str).unwrap_or("table") {
+        "--json" => println!("{}", serde_json::to_string_pretty(&rows)?),
+        "-q" | "--quiet" => {
+            for row in rows {
+                println!("{}", row["id"]);
+            }
+        }
+        _ => {
+            println!("ID      STATE       ATTACHED");
+            for row in rows {
+                println!(
+                    "{:<8}{:<12}{}",
+                    row["id"],
+                    row["state"].as_str().unwrap_or("unknown"),
+                    row["attached"]
+                );
+            }
+        }
+    }
+    Ok(())
 }
 #[cfg(test)]
 mod tests {

@@ -20,7 +20,7 @@ int main(int argc,const char **argv) {@autoreleasepool {
         fputs("正在下载 😀\n",stdout);fflush(stdout);usleep(400000);
         fputs("安装完成，没有末尾换行",stderr);return 0;
     }
-    if(argc>2 && !strcmp(argv[1],"env") && !strcmp(argv[2],"list")){puts("[]");return 0;}
+    if(argc>3 && !strcmp(argv[1],"env") && !strcmp(argv[2],"ls") && !strcmp(argv[3],"--json")){puts("[]");return 0;}
     [NSApplication sharedApplication];
     TramesManager *manager=[TramesManager new];
     manager.status=[NSTextField labelWithString:@""];
@@ -40,7 +40,7 @@ int main(int argc,const char **argv) {@autoreleasepool {
     CFRunLoopRunInMode(kCFRunLoopDefaultMode,5,NO);NSCAssert(completed,@"manager did not complete");
     [NSNotificationCenter.defaultCenter removeObserver:token];
     NSString *previous=[manager.log.string copy];completed=NO;
-    [manager run:@[@"env",@"list"] title:@"Refreshing…" completion:^(NSString *out,int code){
+    [manager run:@[@"env",@"ls",@"--json"] title:@"Refreshing…" completion:^(NSString *out,int code){
         NSCAssert(code==0 && [out isEqual:@"[]\n"],@"quiet JSON response changed");
         NSCAssert([manager.log.string isEqual:previous],@"refresh erased operation log");
         completed=YES;CFRunLoopStop(CFRunLoopGetMain());

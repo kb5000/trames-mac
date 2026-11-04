@@ -7,18 +7,21 @@ exception adapter; no complete Linux kernel is booted.
 
 Download a packaged build, run its `install.command`, then open Trames.app for
 native environment management or run `trames` in a terminal. Installation adds the
-CLI to zsh/bash startup configuration; reopen the terminal once after installing. The terminal path
-automatically creates a verified Alpine environment on first use; Debian 13 slim
-is available through `trames env create NAME --distro debian`. Add
+CLI to zsh/bash startup configuration; reopen the terminal once after installing. Create an environment explicitly before opening a shell. Alpine is the default;
+Debian 13 slim is available through `trames env create NAME --distro debian`. Add
 `--init systemd` for an optional Debian service environment, or choose it in the
-manager. Shell remains the default; see the guide for its service/login limits.
+manager. Shell remains the default. New environments enable Vulkan, all available CPU
+cores, native windows, full networking and host-managed memory (`auto`). Video,
+audio and microphone input remain explicit choices. Existing environment settings
+are preserved. See the guide for service/login limits.
 
 ```sh
 trames env create work
-trames env start work
-trames config show
+trames -e work shell
+trames -e work exec -- uname -a
+trames -e work config list
 trames env create custom --rootfs /path/to/arm64-rootfs.tar.gz
-trames --manager
+trames gui
 ```
 
 See [environments, installation, backup and release workflow](docs/guides/environments.md).
@@ -64,8 +67,7 @@ The independent dense accessible-VMA descriptor limit remains 16 GiB per address
 space; host-managed RAM is not yet unlimited sparse virtual address metadata.
 
 Linux tasks now run on multiple hardware vCPUs through the common worker
-scheduler. `--cpus N` selects the limit (default: available CPUs, capped at eight
-and the HVF limit). Shared file mappings and native/VFS access use canonical
+scheduler. `--cpus N` selects the limit (default: all available CPUs up to the HVF limit). Shared file mappings and native/VFS access use canonical
 physical pages with scoped hardware exclusion.
 
 Live dirty memory can be paged out and restored. macOS pressure notifications
@@ -116,12 +118,11 @@ Real-site interaction performance is still under investigation; the offline
 input acknowledgements in the validation record are not a general browser
 performance or release-readiness result.
 
-Experimental native Vulkan compute and offscreen graphics are available with
-`--vulkan`, independently of windows. Use `--no-windows --vulkan` for a compute
-server. The guest needs the shared Trames ICD and normal Vulkan loader; the host
+Native Vulkan compute and offscreen graphics are enabled for new environments,
+independently of windows. Set `config set windows false` for a headless compute
+environment; `--no-windows --vulkan` remains available to the low-level runner. The guest needs the shared Trames ICD and normal Vulkan loader; the host
 needs a compatible native Vulkan library (`TRAMES_VULKAN_LIBRARY` can select a
-Mac MoltenVK dylib). These binaries are not automatically installed or bundled
-by this checkpoint. The shared runtime still owns authorization, resources and
+Mac MoltenVK dylib). The shared runtime still owns authorization, resources and
 waits. Native on-screen Vulkan and Firefox WebRender have focused acceptance.
 General device-buffer mapping and NPU/Core ML remain follow-up work. See the
 [native-device checkpoint](docs/validation/mac-windows.md#native-device-transport-checkpoint-2026-10-27).
@@ -152,3 +153,12 @@ comparison are documented in the
 [compatibility and performance checkpoint](docs/validation/mac-compat-coremark.md).
 The paired benchmark uses one Apple Clang with explicit shared CPU tuning and
 checks both standard inputs, CRCs, thread counts and minimum runtime.
+
+The managed CLI has focused real-HVF acceptance in `tests/integration/mac-exec.py`:
+literal argv, environment/cwd, separate binary streams, 8 MiB full-duplex transfer,
+PTY opt-in, concurrent commands, signal isolation, independent shells/session
+listing, persistent restarts and login enable/disable. `mac-cli.py` covers scoped
+settings, rootfs imports and launcher/PATH upgrades; `mac-background.py` covers
+job control and detach/reattach; `mac-channels.py` covers stable/dev isolation.
+Run these against signed bundles with an explicit verified Alpine archive. The
+native task-stream test also runs in the split Finder-entry/CLI bundle layout.

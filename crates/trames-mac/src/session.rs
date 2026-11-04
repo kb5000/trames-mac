@@ -8,6 +8,7 @@ use trames_session::{MemoryLimits, RuntimeOptions, Terminal};
 type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
+    exec: Option<super::exec::Server>,
     init: Option<super::systemd::Monitor>,
     console: Option<super::console::Console>,
     terminals: Option<trames_distro::terminals::NativeTerminals>,
@@ -66,6 +67,12 @@ impl GuestOutput for Output {
     fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         self.poll_admin();
+        if let Some(exec) = &mut self.exec {
+            exec.poll()?;
+            if exec.pending() {
+                return Ok(true);
+            }
+        }
         if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
             console.poll()?;
             if !terminals.can_pump_live(&console.channels) {
@@ -80,9 +87,13 @@ impl GuestOutput for Output {
             || self.deadline.is_some_and(|d| Instant::now() >= d)
             || self.pressure_target.is_some())
     }
-    fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
+    fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
         self.poll_admin();
         self.admin_pending = false;
+        if let Some(exec) = &mut self.exec {
+            exec.poll()?;
+            exec.control(vfs);
+        }
         if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
             // The solo/cooperative driver calls this hook directly, without
             // the persistent workers' preceding poll_control opportunity.
@@ -114,6 +125,12 @@ impl GuestOutput for Output {
             }
         }
         Ok(true)
+    }
+    fn host_spawn(&mut self) -> Option<trames_linux::HostSpawn> {
+        self.exec.as_mut()?.spawn()
+    }
+    fn host_signal(&mut self) -> Option<(u32, u32)> {
+        self.exec.as_mut()?.signal()
     }
     fn root_signal(&mut self) -> Option<u32> {
         self.root_signal.take()
@@ -595,6 +612,10 @@ pub fn run(
     }
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
+        exec: console
+            .as_deref()
+            .map(|path| super::exec::Server::bind(path, envp.clone()))
+            .transpose()?,
         terminals,
         console: console
             .as_deref()
@@ -818,6 +839,7 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            exec: None,
             console: None,
             terminals: None,
             init: None,

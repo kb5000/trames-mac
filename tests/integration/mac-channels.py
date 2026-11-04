@@ -34,7 +34,7 @@ def main():
         assert info['CFBundleIdentifier'] == 'org.trames.Trames.mac' + ('.dev' if channel == 'dev' else '')
         env = dict(os.environ, TRAMES_BUILD_CHANNEL='dev' if channel == 'stable' else 'stable')
         env.pop('TRAMES_HOME', None)
-        path = subprocess.check_output([str(app / 'Contents/MacOS/trames-mac-run'), 'config', 'path'], env=env, text=True).strip()
+        path = subprocess.check_output([str(app / 'Contents/MacOS/trames-mac-run'), 'config', '--global', 'path'], env=env, text=True).strip()
         expected = 'Trames Dev' if channel == 'dev' else 'Trames'
         assert Path(path).parts[-2:] == (expected, 'cli.json'), path
         rows.append(dict(channel=channel, bundle_id=info['CFBundleIdentifier'], default_config=path))
@@ -63,7 +63,7 @@ def main():
                 out_path = base / (channel + '.stdout')
                 out, err = out_path.open('w'), (base / (channel + '.stderr')).open('w')
                 handles.extend([out, err])
-                child = subprocess.Popen([exe, 'env', 'start', 'same-name', '--no-pty', '/bin/sh', '-ec',
+                child = subprocess.Popen([exe, 'debug', 'env-run', 'same-name', '--no-pty', '/bin/sh', '-ec',
                                           f'echo {channel} > /root/channel; sync; echo CHANNEL_READY; sleep 300'],
                                          env=scoped, stdout=out, stderr=err)
                 processes[channel] = child
@@ -83,7 +83,7 @@ def main():
                 assert processes[channel].returncode == 0
                 if channel == 'dev':
                     assert processes['stable'].poll() is None
-                value = subprocess.check_output([str(installed[channel]), 'env', 'start', 'same-name', '--no-pty',
+                value = subprocess.check_output([str(installed[channel]), 'debug', 'env-run', 'same-name', '--no-pty',
                                                  '/bin/cat', '/root/channel'], env=homes[channel], text=True)
                 assert value.strip() == channel
             query = subprocess.check_output(['/bin/zsh', '-lic', 'command -v trames; command -v trames-dev'], env=env, text=True)

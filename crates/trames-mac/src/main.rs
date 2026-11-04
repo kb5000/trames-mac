@@ -4,9 +4,13 @@
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod background;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod cli;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod console;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod environments;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod exec;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod files;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -50,39 +54,8 @@ fn main() {
             }
         }
     }
-    use std::io::IsTerminal;
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let result = if args.first().is_some_and(|a| a == "env") {
-        environments::dispatch(&args[1..]).map_err(|e| e.to_string())
-    } else if args.first().is_some_and(|a| a == "config") {
-        environments::cli_config(&args[1..]).map_err(|e| e.to_string())
-    } else if args.first().is_some_and(|a| a == "--help") {
-        println!("trames: start the configured default environment\ntrames config show|path|set KEY VALUE|reset\ntrames env: create, configure and manage Linux environments\ntrames --manager: native environment manager\n");
-        environments::dispatch(&["help".into()]).map_err(|e| e.to_string())
-    } else if args.first().is_some_and(|a| a == "--version") {
-        println!(
-            "{} {} ({}) runtime {}",
-            product::name(),
-            env!("CARGO_PKG_VERSION"),
-            product::CHANNEL,
-            include_str!("../../../runtime-version.json")
-        );
-        Ok(0)
-    } else if args.first().is_some_and(|a| a == "--manager")
-        || (args.is_empty() && !std::io::stdin().is_terminal())
-    {
-        unsafe extern "C" {
-            fn trames_manager_run();
-        }
-        unsafe {
-            trames_manager_run();
-        }
-        Ok(0)
-    } else if args.is_empty() {
-        environments::dispatch(&["default".into()]).map_err(|e| e.to_string())
-    } else {
-        execute(args)
-    };
+    let result = cli::dispatch(args).map_err(|e| e.to_string());
     match result {
         Ok(code) => std::process::exit(code as i32),
         Err(error) => {
@@ -93,8 +66,11 @@ fn main() {
             if error.contains("virtual filesystem errno 16") {
                 eprintln!("The private store is open in another Trames session. Close that session before managing the store.");
             }
-            eprintln!("Use `trames-mac-run env doctor` for version and environment information.");
-            std::process::exit(1);
+            let usage = error.starts_with("usage:")
+                || error.starts_with("unknown command")
+                || error.starts_with("unknown exec option")
+                || error.starts_with("unexpected argument");
+            std::process::exit(if usage { 2 } else { 1 });
         }
     }
 }

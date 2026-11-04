@@ -87,3 +87,5 @@
 "needs attention" = "needs attention";
 "Quit %@" = "Quit %@";
 "%@ — Linux Environments" = "%@ — Linux Environments";
+
+"Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it." = "Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it.";

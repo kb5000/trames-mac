@@ -15,7 +15,12 @@
 @property BOOL refreshing;
 @end
 static NSString *productName(void){return [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames";}
-static NSString *executable(void){return NSBundle.mainBundle.executablePath ?: NSProcessInfo.processInfo.arguments.firstObject;}
+static NSString *executable(void){
+    NSString *entry=NSBundle.mainBundle.executablePath;
+    if([entry.lastPathComponent isEqual:@"trames-manager"])
+        return [entry.stringByDeletingLastPathComponent stringByAppendingPathComponent:@"trames-mac-run"];
+    return entry ?: NSProcessInfo.processInfo.arguments.firstObject;
+}
 static NSTextField *label(NSString *s){NSTextField *v=[NSTextField labelWithString:s];v.lineBreakMode=NSLineBreakByWordWrapping;return v;}
 static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton buttonWithTitle:s target:target action:action];b.bezelStyle=NSBezelStyleRounded;return b;}
 @implementation TramesManager
@@ -55,7 +60,7 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 - (void)busy:(BOOL)busy {for(NSButton *b in self.actions)b.enabled=!busy;}
 - (void)run:(NSArray<NSString *> *)args title:(NSString *)title completion:(void(^)(NSString *,int))done {
     if(self.task)return;[self busy:YES];self.status.stringValue=title;
-    BOOL visible=![args isEqual:@[@"env",@"list"]];if(visible)self.log.string=@"";
+    BOOL visible=![args isEqual:@[@"env",@"ls",@"--json"]];if(visible)self.log.string=@"";
     NSTask *task=[NSTask new];task.executableURL=[NSURL fileURLWithPath:executable()];task.arguments=args;task.standardInput=[NSFileHandle fileHandleWithNullDevice];
     self.task=task;__weak TramesManager *weakSelf=self;
     self.taskStream=[[TramesTaskStream alloc]initWithTask:task onText:^(NSString *text){
@@ -72,7 +77,7 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 - (void)refresh:(id)sender {
     (void)sender;NSString *selected=[self.table.selectedRow>=0?self.rows[self.table.selectedRow]:@{} objectForKey:@"name"];
     __weak TramesManager *weakSelf=self;
-    [self run:@[@"env",@"list"] title:T(@"Refreshing…") completion:^(NSString *out,int code){
+    [self run:@[@"env",@"ls",@"--json"] title:T(@"Refreshing…") completion:^(NSString *out,int code){
         TramesManager *owner=weakSelf;if(code || !owner)return;
         NSData *data=[out dataUsingEncoding:NSUTF8StringEncoding];id rows=[NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
         if(![rows isKindOfClass:NSArray.class]){owner.status.stringValue=T(@"Could not read environment list.");return;}
@@ -114,9 +119,9 @@ static NSButton *button(NSString *s,id target,SEL action){NSButton *b=[NSButton 
 }
 - (void)start:(id)sender{(void)sender;NSString *n=[self selected];if(n)[self operation:@[@"env",@"terminal",n] title:T(@"Opening Terminal…")];}
 - (void)stop:(id)sender{(void)sender;NSString *n=[self selected];if(n)[self operation:@[@"env",@"stop",n] title:T(@"Stopping and saving…")];}
-- (void)importStore:(id)sender{(void)sender;NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=NO;p.canChooseDirectories=YES;p.message=T(@"Select an existing, stopped Trames private store (containing manifest and objects). A separate copy will be created.");if([p runModal]!=NSModalResponseOK)return;NSString *n=[self askName:T(@"Import Existing Store")];if(n)[self operation:@[@"env",@"import",n,p.URL.path] title:T(@"Importing existing environment…")];}
+- (void)importStore:(id)sender{(void)sender;NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=NO;p.canChooseDirectories=YES;p.message=T(@"Select an existing, stopped Trames private store (containing manifest and objects). A separate copy will be created.");if([p runModal]!=NSModalResponseOK)return;NSString *n=[self askName:T(@"Import Existing Store")];if(n)[self operation:@[@"env",@"import-store",n,p.URL.path] title:T(@"Importing existing environment…")];}
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender{(void)sender;if(self.task){self.status.stringValue=T(@"An operation is still running. Wait for it to finish before closing the manager.");return NSTerminateCancel;}return NSTerminateNow;}
-- (void)settings:(id)sender{(void)sender;NSString *n=[self selected];if(!n)return;NSDictionary *c=self.rows[self.table.selectedRow][@"config"];if(![c isKindOfClass:NSDictionary.class]){self.status.stringValue=self.rows[self.table.selectedRow][@"error"]?:T(@"Configuration needs attention.");return;}NSAlert *a=[self dialog:T(@"Environment Settings") message:T(@"Stop the environment before changing settings. Memory 'auto' grows with actual use. Selecting systemd installs Debian packages once.")];
+- (void)settings:(id)sender{(void)sender;NSString *n=[self selected];if(!n)return;NSDictionary *c=self.rows[self.table.selectedRow][@"config"];if(![c isKindOfClass:NSDictionary.class]){self.status.stringValue=self.rows[self.table.selectedRow][@"error"]?:T(@"Configuration needs attention.");return;}NSAlert *a=[self dialog:T(@"Environment Settings") message:T(@"Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it.")];
     NSView *v=[[NSView alloc]initWithFrame:NSMakeRect(0,0,360,280)];NSPopUpButton *boot=[[NSPopUpButton alloc]initWithFrame:NSMakeRect(0,240,350,30)];[boot addItemsWithTitles:@[T(@"Shell (default)"),T(@"systemd (Debian / prepared image)")]];[boot selectItemAtIndex:[c[@"init"] isEqual:@"systemd"]?1:0];boot.menu.autoenablesItems=NO;[boot itemAtIndex:1].enabled=![c[@"distribution"] isEqual:@"alpine"];[v addSubview:boot];NSMutableArray *fields=[NSMutableArray array];NSArray *names=@[T(@"CPU slots"),T(@"Memory (MiB / auto)"),T(@"Network")];NSArray *values=@[[c[@"cpus"] description],c[@"memory_mib"],c[@"network"]];for(NSUInteger i=0;i<3;i++){NSTextField *l=label(names[i]);l.frame=NSMakeRect(0,200-i*38,160,24);[v addSubview:l];NSTextField *f=[[NSTextField alloc]initWithFrame:NSMakeRect(170,200-i*38,180,26)];f.stringValue=values[i];[v addSubview:f];[fields addObject:f];}
     NSMutableArray *checks=[NSMutableArray array];NSArray *keys=@[@"windows",@"vulkan",@"video"];NSArray *titles=@[T(@"Allow app windows"),T(@"Enable Vulkan"),T(@"Enable VideoToolbox / VA-API")];
     for(NSUInteger i=0;i<3;i++){NSButton *b=[NSButton checkboxWithTitle:titles[i] target:nil action:nil];b.frame=NSMakeRect(0,100-i*26,350,24);b.state=[c[keys[i]] boolValue]?NSControlStateValueOn:NSControlStateValueOff;[checks addObject:b];[v addSubview:b];}NSButton *clear=[NSButton checkboxWithTitle:T(@"Remove all shared folders") target:nil action:nil];clear.frame=NSMakeRect(0,0,350,26);[v addSubview:clear];a.accessoryView=v;if([a runModal]!=NSAlertFirstButtonReturn)return;

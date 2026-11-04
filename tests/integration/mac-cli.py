@@ -37,23 +37,24 @@ def main():
             return r
 
         expected_version = run('--version').stdout.splitlines()[0]
-        assert json.loads(run('config', 'show').stdout)['defaults']['distribution'] == 'alpine'
-        run('config', 'set', 'cpus', '2', 'windows', 'off', 'network', 'off', 'default-environment', 'mine')
+        assert json.loads(run('config', '--global', 'show').stdout)['defaults']['distribution'] == 'alpine'
+        run('config', '--global', 'set', 'defaults.cpus', '2', 'defaults.windows', 'false', 'defaults.network', 'off', 'default-environment', 'mine')
         # Invalid changes leave the last valid global file byte-for-byte intact.
-        config_path = Path(run('config', 'path').stdout.strip())
+        config_path = Path(run('config', '--global', 'path').stdout.strip())
         before = config_path.read_bytes()
-        run('config', 'set', 'cpus', '0', ok=False)
+        run('config', '--global', 'set', 'defaults.cpus', '0', ok=False)
         assert config_path.read_bytes() == before
         run('env', 'create', 'builtin', '--archive', str(a.alpine.resolve()))
         builtin = json.loads(run('env', 'config', 'builtin').stdout)
         assert builtin['cpus'] == 2 and not builtin['windows'] and builtin['command'] == ['/bin/sh', '-l']
         run('env', 'configure', 'builtin', '--', '/bin/sh', '-ec', 'echo CONFIGURED_COMMAND')
-        assert 'CONFIGURED_COMMAND' in run('env', 'start', 'builtin', '--no-pty').stdout
-        assert 'OVERRIDE' in run('env', 'start', 'builtin', '--no-pty', '/bin/echo', 'OVERRIDE').stdout
-        run('config', 'set', 'default-environment', 'builtin')
+        assert 'CONFIGURED_COMMAND' in run('debug', 'env-run', 'builtin', '--no-pty').stdout
+        assert 'OVERRIDE' in run('debug', 'env-run', 'builtin', '--no-pty', '/bin/echo', 'OVERRIDE').stdout
+        run('config', '--global', 'set', 'default-environment', 'builtin')
         # Explicit env default reaches the same selected environment.
-        assert 'CONFIGURED_COMMAND' in run('env', 'default').stdout
-        run('config', 'set', 'cpus', '1')
+        assert run('config', '--global', 'get', 'default-environment').stdout.strip() == 'builtin'
+        assert 'Usage: trames' in run().stdout
+        run('config', '--global', 'set', 'defaults.cpus', '1')
         assert json.loads(run('env', 'config', 'builtin').stdout)['cpus'] == 2
 
         directory = base / 'my rootfs'
@@ -71,14 +72,14 @@ def main():
         (directory / 'usr/bin/check').chmod(0o755)
         os.link(directory / 'usr/bin/check', directory / 'usr/bin/check-dir-hardlink')
         run('env', 'create', 'dir', '--rootfs', str(directory), '--', '/usr/bin/check')
-        assert 'SCRIPT_ENTRYPOINT' in run('env', 'start', 'dir', '--no-pty').stdout
-        inodes = run('env', 'start', 'dir', '--no-pty', '/bin/busybox', 'stat', '-c', '%i', '/usr/bin/check', '/usr/bin/check-dir-hardlink').stdout.splitlines()
+        assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'dir', '--no-pty').stdout
+        inodes = run('debug', 'env-run', 'dir', '--no-pty', '/bin/busybox', 'stat', '-c', '%i', '/usr/bin/check', '/usr/bin/check-dir-hardlink').stdout.splitlines()
         assert len(inodes) == 2 and inodes[0] == inodes[1], inodes
-        assert 'usr/bin' in run('env', 'start', 'dir', '--no-pty', '/bin/busybox', 'readlink', '/bin').stdout
-        assert '/rootfs-host-sentinel' in run('env', 'start', 'dir', '--no-pty', '/bin/busybox', 'readlink', '/outside-link').stdout
+        assert 'usr/bin' in run('debug', 'env-run', 'dir', '--no-pty', '/bin/busybox', 'readlink', '/bin').stdout
+        assert '/rootfs-host-sentinel' in run('debug', 'env-run', 'dir', '--no-pty', '/bin/busybox', 'readlink', '/outside-link').stdout
         # A flattened Debian rootfs with merged-/usr links, not a catalog pin.
         run('env', 'create', 'custom-debian', '--rootfs', str(a.debian.resolve()), '--sha256', hashlib.sha256(a.debian.read_bytes()).hexdigest())
-        assert 'glibc' in run('env', 'start', 'custom-debian', '--no-pty', '/usr/bin/getconf', 'GNU_LIBC_VERSION').stdout
+        assert 'glibc' in run('debug', 'env-run', 'custom-debian', '--no-pty', '/usr/bin/getconf', 'GNU_LIBC_VERSION').stdout
         # Gzip archive and a >64 MiB file must work without the pinned importer's
         # old per-file limit or whole-expanded-image buffering.
         archive_path = base / 'rootfs.tar.gz'
@@ -107,10 +108,10 @@ def main():
             info.mode = 0o666
             archive.addfile(info)
         run('env', 'create', 'gz', '--rootfs', str(archive_path))
-        assert str(70 * 1024 * 1024) in run('env', 'start', 'gz', '--no-pty', '/bin/busybox', 'stat', '-c', '%s', '/opt/large-file').stdout
-        assert 'SCRIPT_ENTRYPOINT' in run('env', 'start', 'gz', '--no-pty', '/usr/bin/check-hardlink').stdout
-        assert '/bin/busybox' in run('env', 'start', 'gz', '--no-pty', '/bin/busybox', 'readlink', '/usr/bin/sh-hardlink').stdout
-        assert '666:1:3' in run('env', 'start', 'gz', '--no-pty', '/bin/busybox', 'stat', '-c', '%a:%t:%T', '/dev/null').stdout
+        assert str(70 * 1024 * 1024) in run('debug', 'env-run', 'gz', '--no-pty', '/bin/busybox', 'stat', '-c', '%s', '/opt/large-file').stdout
+        assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'gz', '--no-pty', '/usr/bin/check-hardlink').stdout
+        assert '/bin/busybox' in run('debug', 'env-run', 'gz', '--no-pty', '/bin/busybox', 'readlink', '/usr/bin/sh-hardlink').stdout
+        assert '666:1:3' in run('debug', 'env-run', 'gz', '--no-pty', '/bin/busybox', 'stat', '-c', '%a:%t:%T', '/dev/null').stdout
         plain = base / 'rootfs.tar'
         with gzip.open(archive_path, 'rb') as inp, plain.open('wb') as out:
             import shutil
@@ -152,10 +153,10 @@ def main():
         backup = base / 'custom.backup.tar.gz'
         run('env', 'backup', 'dir', str(backup))
         run('env', 'restore', 'restored', str(backup))
-        assert 'SCRIPT_ENTRYPOINT' in run('env', 'start', 'restored', '--no-pty').stdout
+        assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'restored', '--no-pty').stdout
         run('env', 'import', 'imported-custom', str(base / 'registry/environments/dir/store'))
         run('env', 'configure', 'imported-custom', '--', '/usr/bin/check')
-        assert 'SCRIPT_ENTRYPOINT' in run('env', 'start', 'imported-custom', '--no-pty').stdout
+        assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'imported-custom', '--no-pty').stdout
 
         # Exercise the actual installer in independent profile directories.
         # ZDOTDIR/XDG_CONFIG_HOME are supported shell settings; HOME is untouched.
@@ -166,6 +167,13 @@ def main():
         install_env = dict(os.environ, SHELL='/bin/zsh', ZDOTDIR=str(profiles),
                            XDG_CONFIG_HOME=str(base / 'config'), TRAMES_APPLICATIONS_DIR=str(base / 'Applications'),
                            TRAMES_BIN_DIR=str(installed_bin))
+        install_env['TRAMES_HOME'] = str(base / 'installer-registry')
+        launchers = base / 'installer-registry/launchers'
+        launchers.mkdir(parents=True)
+        legacy = launchers / 'default.command'
+        legacy.write_text('#!/bin/sh\nexport TRAMES_HOME=old\nexec trames-mac-run env start default\n')
+        unrelated = launchers / 'personal.command'
+        unrelated.write_text('#!/bin/sh\necho user launcher\n')
         app = runner.parents[2] if runner.parent.name == 'MacOS' else runner.parent / 'Trames.app'
         import plistlib
         info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
@@ -174,6 +182,8 @@ def main():
         for _ in range(2):
             subprocess.run(['/bin/bash', str(a.installer.resolve()), str(app)], env=install_env,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=30)
+        assert ' -e default shell\n' in legacy.read_text()
+        assert unrelated.read_text() == '#!/bin/sh\necho user launcher\n'
         for profile in ['.zprofile', '.zshrc']:
             text = (profiles / profile).read_text()
             assert text.count('# ' + product_name + ' CLI') == 1, text

@@ -44,13 +44,13 @@ def main():
         assert not (home / 'environments/invalid').exists()
         if args.prepared_store:
             run('env', 'import', 'debian', str(args.prepared_store.resolve()))
-            run('env', 'configure', 'debian', '--init', 'systemd')
+            run('env', 'setup', 'debian', '--init', 'systemd')
         else:
             run('env', 'create', 'debian', '--distro', 'debian', '--packages', 'minimal', '--init', 'systemd',
                 '--archive', str(args.debian.resolve()))
         assert json.loads((home / 'environments/debian/config.json').read_text())['init'] == 'systemd'
-        run('env', 'start', 'debian', '--no-windows', '/bin/true', ok=False)
-        assert 'MAINTENANCE' in run('env', 'start', 'debian', '--init', 'shell', '--no-windows',
+        run('debug', 'env-run', 'debian', '--no-windows', '/bin/true', ok=False)
+        assert 'MAINTENANCE' in run('debug', 'env-run', 'debian', '--init', 'shell', '--no-windows',
                                      '--no-pty', '/bin/echo', 'MAINTENANCE').stdout
 
         service = '''[Unit]
@@ -74,7 +74,7 @@ TimeoutStopSec=3s
             run('env', 'configure', 'debian', '--cpus', str(cpus), '--windows', 'off')
             master, slave = pty.openpty()
             original = termios.tcgetattr(slave)
-            child = subprocess.Popen([runner, 'env', 'start', 'debian'], env=env,
+            child = subprocess.Popen([runner, '-e', 'debian', 'shell'], env=env,
                                      stdin=slave, stdout=slave, stderr=slave)
             output = bytearray()
             log = args.output / f'console-{cpus}.log'
@@ -150,11 +150,11 @@ TimeoutStopSec=3s
         run('env', 'backup', 'debian', str(home / 'systemd.tar.gz'))
         run('env', 'restore', 'restored', str(home / 'systemd.tar.gz'))
         assert json.loads((home / 'environments/restored/config.json').read_text())['init'] == 'systemd'
-        identity = run('env', 'start', 'debian', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
-        clone_identity = run('env', 'start', 'restored', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
+        identity = run('debug', 'env-run', 'debian', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
+        clone_identity = run('debug', 'env-run', 'restored', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
         assert len(identity) == 32 and len(clone_identity) == 32 and identity != clone_identity
         run('env', 'configure', 'debian', '--init', 'shell')
-        assert 'persisted' in run('env', 'start', 'debian', '--no-windows', '--no-pty',
+        assert 'persisted' in run('debug', 'env-run', 'debian', '--no-windows', '--no-pty',
                                   '/bin/cat', '/root/systemd-deploy-check').stdout
     (args.output / 'result.json').write_text(json.dumps(dict(
         runner_sha256=hashlib.sha256(Path(runner).read_bytes()).hexdigest(), checks=records), indent=2) + '\n')
