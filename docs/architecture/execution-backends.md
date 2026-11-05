@@ -1963,3 +1963,56 @@ not per-component profiles or additive wall-time categories. This run adds no
 production changes; existing passing CI is reused and the stable application and
 its sessions remain untouched. This is a Mac CPU benchmark, not iPad or Firefox
 rendering acceptance.
+
+
+## Original scheduling and demand-started CPU slots (2026-11-06)
+
+Paired runtime `e6d700c3147a4fb5a2a772dfcbb28eb636ac53fc` moves the implemented Linux scheduling subsystem
+to original task resources, shared with iPad. Source calls cover affinity,
+nice/priority and scheduler metadata, including other tasks, groups/UIDs,
+permissions, original migration completion and one seccomp decision per entry.
+Normal bodies do not request an owner service or end the whole cohort. Tracing,
+real policy lifecycle effects and previously unsupported features keep their
+existing boundary/results.
+
+Live affinity can now start a required cold slot directly through the original
+shared CPU pool. The queue retains the original task/View, starts only needed
+executors, and includes them in normal cancel/return/teardown accounting. No
+resource service thread, polling bus or eager all-CPU startup is introduced.
+Actual group/credential changes publish at their write boundary; normal queries
+do not republish every owner projection.
+
+| Workload, 12 CPUs | Previous loop | Current loop | Speedup | Native ARM Linux reference |
+| --- | ---: | ---: | ---: | ---: |
+| Self queries | 194.14 ms | 2.12 ms | 91.6x | 0.152 ms |
+| Self updates | 189.99 ms | 2.14 ms | 88.8x | 0.375 ms |
+| Cross-thread queries | 195.21 ms | 2.37 ms | 82.3x | 0.165 ms |
+
+Each row is four threads × 256 loops × four calls, longest-worker median of five
+counterbalanced unprofiled pairs, with two warmups per binary/configuration.
+Including complete process startup/teardown, the corresponding twelve-CPU
+medians are 201.41 → 13.62 ms, 197.63 → 14.45 ms and 203.73 → 13.35 ms.
+Native Linux is an exact-ELF contextual reference in the six-vCPU local CI
+environment; macOS has no equivalent Linux affinity syscall ABI. Existing desktop
+and stable workloads remain active. No builds, CI instance, trace, sampler or
+window capture run during the Mac timings. Thermal state stays nominal.
+
+| Workload, 12 CPUs | Previous cohort rounds | Current cohort rounds | Scheduling calls returned to owner |
+| --- | ---: | ---: | ---: |
+| Self queries | 3,936 | 1 | 4,096 → 0 |
+| Self updates | 3,816 | 1 | 4,096 → 0 |
+| Cross-thread queries | 3,791 | 1 | 4,096 → 0 |
+
+Service requests are zero on both revisions; all 4,096 scheduling owner returns
+disappear. The remaining whole-session return is the final control ioctl. These
+measurements are scheduling controls, not a Firefox or Geekbench speedup. The
+earlier Geekbench result above still describes runtime a116d83.
+
+Apple/native ARM Linux validation passes 324 process and 65 kernel cases, strict
+checks, both iPad compile targets, 56 actual HVF/interpreter fixture cases,
+47 signed HVF cases, one pressure case, normal Mac product tests, 30 Go-GC rounds,
+eight isolated Docker rounds and native GPU/video cleanup. Unchanged memory/VFS
+and guest/native-driver artifacts are reused; physical iPad testing is skipped.
+The exact measured static-MoltenVK Dev package is installed; stable/business
+sessions are unchanged. See [the shared inventory](../../runtime/docs/architecture/coordination-boundaries.md)
+and [complete stage 52 source, measurements and limits](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-scheduling-20261106.json).
