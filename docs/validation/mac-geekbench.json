@@ -19209,5 +19209,528 @@
       "One fresh sample per platform, sequential order. Different OS binaries, libraries, ISA dispatch and scheduling are included; these ratios are not pure HVF overhead or Firefox UI performance."
     ],
     "validation_scope": "Measurement and English documentation only. Production sources are unchanged; reuse the 1.4.0 12-step local CI and existing runtime/iPad validation."
+  },
+  "dev_1_5_3_retest_2026_11_06": {
+    "date": "2026-11-06",
+    "timezone": "Asia/Hong_Kong",
+    "code_mac": "7816c123e3780bb2577afb24b6085fa3ae6bd176",
+    "runtime_revision": "a116d834318d59ea51f3de119fc7e20ed44c58d8",
+    "installed_dev_runner_version": "Trames Dev 1.5.3 (dev) runtime a116d834318d59ea51f3de119fc7e20ed44c58d8",
+    "installed_dev_runner_sha256": "169c2dda603cf5cdc0b855358ff20d2e8de26a549ff617131a71ed29de61fffa",
+    "benchmark": {
+      "version": "6.7.1",
+      "guest": "Original Linux AArch64 Preview; reused verified glibc fixture in the isolated Alpine store, not a Debian preset.",
+      "native": "Original macOS AArch64 build from the previously verified official bundle.",
+      "native_cli_sha256": "f82d24a42623019d4c1b349636278409b271e4384ffbb1293d6072dd90a1895c",
+      "read_method": "Public result DOM in the in-app browser after each measured run ended. The web reader could not access the Dev result.",
+      "asset_validation": "Reused prior verified benchmark and workload assets; native CLI hash matched the retained original."
+    },
+    "method": {
+      "order": [
+        "dev",
+        "native"
+      ],
+      "repeats_per_platform": 1,
+      "cpus": 12,
+      "memory": "Host-managed auto; both report 24 GiB.",
+      "metrics": true,
+      "hvf_diagnostics": false,
+      "syscall_trace": false,
+      "sampler": false,
+      "concurrent_builds_ci_or_agent_window_capture": false,
+      "stable_and_desktop_background_sessions_preserved": true,
+      "before_run_background_trames_cpu_percent_snapshot": [
+        42.0,
+        25.6,
+        3.4
+      ],
+      "background_snapshot_limit": "One instantaneous ps snapshot before Dev; not whole-run CPU accounting.",
+      "between_runs_seconds": 82.70017851798974,
+      "idle_sleep_prevented": true,
+      "power": "AC; thermal state 0 and low power off before and after each run.",
+      "guest_network": "outbound",
+      "upload_authorized": true
+    },
+    "runs": [
+      {
+        "start_unix": 1793896304.237522,
+        "exit": 0,
+        "seconds": 255.212677584,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19437004"
+        ],
+        "variant": "dev",
+        "source": "https://browser.geekbench.com/v6/cpu/19437004",
+        "single": 3858,
+        "multi": 11941
+      },
+      {
+        "start_unix": 1793896642.150378,
+        "exit": 0,
+        "seconds": 240.165399584,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "public_urls": [
+          "https://browser.geekbench.com/v6/cpu/19437034"
+        ],
+        "variant": "native",
+        "source": "https://browser.geekbench.com/v6/cpu/19437034",
+        "single": 4033,
+        "multi": 17660
+      }
+    ],
+    "previous_baseline": {
+      "section": "release_1_4_0_retest_2026_11_01",
+      "trames": {
+        "source": "https://browser.geekbench.com/v6/cpu/19419637",
+        "single": 4310,
+        "multi": 13828
+      },
+      "native": {
+        "source": "https://browser.geekbench.com/v6/cpu/19419653",
+        "single": 4427,
+        "multi": 20236
+      }
+    },
+    "comparison": {
+      "dev_over_native": {
+        "single": 0.95660798413092,
+        "multi": 0.6761608154020385
+      },
+      "dev_change_from_previous": {
+        "single": -0.1048723897911833,
+        "multi": -0.1364622505062193
+      },
+      "native_change_from_previous": {
+        "single": -0.08899932234018526,
+        "multi": -0.1272978849575015
+      },
+      "workloads": [
+        {
+          "name": "File Compression",
+          "previous_trames": {
+            "single": 3511,
+            "multi": 9400
+          },
+          "dev": {
+            "single": 3104,
+            "multi": 10177
+          },
+          "native": {
+            "single": 3312,
+            "multi": 12616
+          },
+          "dev_over_native": {
+            "single": 0.9371980676328503,
+            "multi": 0.8066740646797718
+          },
+          "dev_change_from_previous": {
+            "single": -0.11592138991740242,
+            "multi": 0.08265957446808514
+          }
+        },
+        {
+          "name": "Navigation",
+          "previous_trames": {
+            "single": 3480,
+            "multi": 15768
+          },
+          "dev": {
+            "single": 2865,
+            "multi": 13497
+          },
+          "native": {
+            "single": 3178,
+            "multi": 17318
+          },
+          "dev_over_native": {
+            "single": 0.9015103838892385,
+            "multi": 0.7793625129922623
+          },
+          "dev_change_from_previous": {
+            "single": -0.17672413793103448,
+            "multi": -0.14402587519025878
+          }
+        },
+        {
+          "name": "HTML5 Browser",
+          "previous_trames": {
+            "single": 4661,
+            "multi": 11029
+          },
+          "dev": {
+            "single": 4067,
+            "multi": 9917
+          },
+          "native": {
+            "single": 4275,
+            "multi": 19652
+          },
+          "dev_over_native": {
+            "single": 0.951345029239766,
+            "multi": 0.5046305719519641
+          },
+          "dev_change_from_previous": {
+            "single": -0.12744046341986703,
+            "multi": -0.10082509747030555
+          }
+        },
+        {
+          "name": "PDF Renderer",
+          "previous_trames": {
+            "single": 4248,
+            "multi": 12998
+          },
+          "dev": {
+            "single": 3764,
+            "multi": 7484
+          },
+          "native": {
+            "single": 3589,
+            "multi": 17435
+          },
+          "dev_over_native": {
+            "single": 1.0487601003064921,
+            "multi": 0.4292515055921996
+          },
+          "dev_change_from_previous": {
+            "single": -0.11393596986817323,
+            "multi": -0.424219110632405
+          }
+        },
+        {
+          "name": "Photo Library",
+          "previous_trames": {
+            "single": 3918,
+            "multi": 10168
+          },
+          "dev": {
+            "single": 3552,
+            "multi": 11715
+          },
+          "native": {
+            "single": 3628,
+            "multi": 21202
+          },
+          "dev_over_native": {
+            "single": 0.9790518191841234,
+            "multi": 0.5525422129987737
+          },
+          "dev_change_from_previous": {
+            "single": -0.09341500765696786,
+            "multi": 0.1521439811172305
+          }
+        },
+        {
+          "name": "Clang",
+          "previous_trames": {
+            "single": 5242,
+            "multi": 26926
+          },
+          "dev": {
+            "single": 4572,
+            "multi": 21523
+          },
+          "native": {
+            "single": 4647,
+            "multi": 28024
+          },
+          "dev_over_native": {
+            "single": 0.9838605551969012,
+            "multi": 0.7680202683414217
+          },
+          "dev_change_from_previous": {
+            "single": -0.12781381152231974,
+            "multi": -0.2006610710837109
+          }
+        },
+        {
+          "name": "Text Processing",
+          "previous_trames": {
+            "single": 3917,
+            "multi": 3817
+          },
+          "dev": {
+            "single": 3634,
+            "multi": 3366
+          },
+          "native": {
+            "single": 4051,
+            "multi": 5110
+          },
+          "dev_over_native": {
+            "single": 0.897062453715132,
+            "multi": 0.6587084148727984
+          },
+          "dev_change_from_previous": {
+            "single": -0.07224917028338018,
+            "multi": -0.11815561959654175
+          }
+        },
+        {
+          "name": "Asset Compression",
+          "previous_trames": {
+            "single": 3732,
+            "multi": 17758
+          },
+          "dev": {
+            "single": 3431,
+            "multi": 15592
+          },
+          "native": {
+            "single": 3605,
+            "multi": 23617
+          },
+          "dev_over_native": {
+            "single": 0.9517337031900138,
+            "multi": 0.6602023965787357
+          },
+          "dev_change_from_previous": {
+            "single": -0.08065380493033225,
+            "multi": -0.12197319517963734
+          }
+        },
+        {
+          "name": "Object Detection",
+          "previous_trames": {
+            "single": 6688,
+            "multi": 12957
+          },
+          "dev": {
+            "single": 6097,
+            "multi": 11603
+          },
+          "native": {
+            "single": 5671,
+            "multi": 17739
+          },
+          "dev_over_native": {
+            "single": 1.0751190266266972,
+            "multi": 0.6540954958002142
+          },
+          "dev_change_from_previous": {
+            "single": -0.08836722488038273,
+            "multi": -0.1044994983406653
+          }
+        },
+        {
+          "name": "Background Blur",
+          "previous_trames": {
+            "single": 4396,
+            "multi": 14077
+          },
+          "dev": {
+            "single": 4101,
+            "multi": 10974
+          },
+          "native": {
+            "single": 4294,
+            "multi": 17427
+          },
+          "dev_over_native": {
+            "single": 0.9550535631113182,
+            "multi": 0.6297125150628335
+          },
+          "dev_change_from_previous": {
+            "single": -0.06710646041856227,
+            "multi": -0.2204304894508773
+          }
+        },
+        {
+          "name": "Horizon Detection",
+          "previous_trames": {
+            "single": 4123,
+            "multi": 22472
+          },
+          "dev": {
+            "single": 3804,
+            "multi": 18893
+          },
+          "native": {
+            "single": 4380,
+            "multi": 22237
+          },
+          "dev_over_native": {
+            "single": 0.8684931506849315,
+            "multi": 0.8496200026982057
+          },
+          "dev_change_from_previous": {
+            "single": -0.07737084647101622,
+            "multi": -0.1592648629405482
+          }
+        },
+        {
+          "name": "Object Remover",
+          "previous_trames": {
+            "single": 5407,
+            "multi": 16763
+          },
+          "dev": {
+            "single": 4397,
+            "multi": 14264
+          },
+          "native": {
+            "single": 4499,
+            "multi": 18389
+          },
+          "dev_over_native": {
+            "single": 0.9773282951767059,
+            "multi": 0.7756811137092827
+          },
+          "dev_change_from_previous": {
+            "single": -0.18679489550582573,
+            "multi": -0.14907832726838877
+          }
+        },
+        {
+          "name": "HDR",
+          "previous_trames": {
+            "single": 4466,
+            "multi": 19474
+          },
+          "dev": {
+            "single": 4243,
+            "multi": 17372
+          },
+          "native": {
+            "single": 4760,
+            "multi": 21855
+          },
+          "dev_over_native": {
+            "single": 0.8913865546218488,
+            "multi": 0.7948753145733242
+          },
+          "dev_change_from_previous": {
+            "single": -0.049932825794894775,
+            "multi": -0.10793879018178087
+          }
+        },
+        {
+          "name": "Photo Filter",
+          "previous_trames": {
+            "single": 4658,
+            "multi": 14659
+          },
+          "dev": {
+            "single": 4184,
+            "multi": 12741
+          },
+          "native": {
+            "single": 4446,
+            "multi": 16589
+          },
+          "dev_over_native": {
+            "single": 0.9410706252811516,
+            "multi": 0.7680390620290554
+          },
+          "dev_change_from_previous": {
+            "single": -0.10176041219407472,
+            "multi": -0.13084112149532712
+          }
+        },
+        {
+          "name": "Ray Tracer",
+          "previous_trames": {
+            "single": 3745,
+            "multi": 22932
+          },
+          "dev": {
+            "single": 3529,
+            "multi": 19483
+          },
+          "native": {
+            "single": 3668,
+            "multi": 23470
+          },
+          "dev_over_native": {
+            "single": 0.9621046892039259,
+            "multi": 0.8301235619940349
+          },
+          "dev_change_from_previous": {
+            "single": -0.057676902536715646,
+            "multi": -0.15040118611547182
+          }
+        },
+        {
+          "name": "Structure from Motion",
+          "previous_trames": {
+            "single": 3912,
+            "multi": 17850
+          },
+          "dev": {
+            "single": 3514,
+            "multi": 14258
+          },
+          "native": {
+            "single": 3656,
+            "multi": 19919
+          },
+          "dev_over_native": {
+            "single": 0.9611597374179431,
+            "multi": 0.7157989858928661
+          },
+          "dev_change_from_previous": {
+            "single": -0.1017382413087935,
+            "multi": -0.20123249299719892
+          }
+        }
+      ]
+    },
+    "session_metrics": {
+      "syscalls": 2309368,
+      "context_switches": 2263361,
+      "hardware_mapped_bytes": 4784128,
+      "guest_resident_bytes": 3579904,
+      "vm_checkpoint_groups": 67202,
+      "vm_checkpoint_spaces": 67202,
+      "backing_domain_checks": 999,
+      "backing_page_checks": 450,
+      "parallel_memory_us": 519577,
+      "instruction_count": null
+    },
+    "execution_paths": {
+      "cohort_rounds": 37971,
+      "cohort_stop_us": 9652904,
+      "service_caller_wait_us": 528473,
+      "service_requests": 44478,
+      "serviced_syscalls": 44346,
+      "syscalls": 2309368,
+      "vm_local_syscalls": 114283,
+      "worker_direct_syscalls": 4576,
+      "worker_fd_syscalls": 907,
+      "worker_file_syscalls": 4492,
+      "worker_futex_waits": 13995,
+      "worker_futex_wakes": 22609,
+      "worker_gpu_calls": 0,
+      "worker_gpu_waits": 0,
+      "worker_poll_syscalls": 35,
+      "worker_socket_syscalls": 48,
+      "worker_syscalls": 2144641,
+      "worker_task_resumes": 59210,
+      "worker_uring_syscalls": 0
+    },
+    "interpretation": [
+      "Dev scored 3858 single / 11941 multi; 95.7% / 67.6% of the fresh native control.",
+      "Against November 1, Dev changed -10.5% / -13.6%; native changed -8.9% / -12.7%.",
+      "One sample per platform with existing stable sessions active. The historical comparison does not isolate coordinator changes or establish a statistically repeatable regression.",
+      "PDF Renderer multi is 7484 versus 12998 (-42.4%); File Compression and Photo Library multi increased. Component scores identify follow-up targets, not causes.",
+      "VM checkpoint groups are 67202 versus 7154 historically. Aggregate counters do not identify which workload caused the difference or its exclusive wall-time cost.",
+      "Platform OS, binaries, libraries, ISA dispatch and scheduling differ; this is not pure HVF overhead, Firefox UI performance, or an iPad measurement."
+    ],
+    "validation_scope": "Measurement and documentation only. No production sources, runtime pins, installed applications or stable sessions changed; unchanged prior CI results reused."
   }
 }

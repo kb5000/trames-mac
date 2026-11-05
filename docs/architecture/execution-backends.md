@@ -1906,3 +1906,60 @@ is the current source audit. See the [batch validation](https://github.com/kb500
 for concentrated Apple/Linux, actual HVF, interpreter and iPad native-link evidence.
 Physical iPad testing remains skipped per owner. This closes the current round;
 no further coordinator migration is started.
+
+## Dev 1.5.3 Geekbench 6 retest (2026-11-06)
+
+The installed Mac Dev runner uses product code `7816c12` and runtime
+`a116d834318d59ea51f3de119fc7e20ed44c58d8` (scoped exec/process lifetime).
+Its SHA-256 is `169c2dda603cf5cdc0b855358ff20d2e8de26a549ff617131a71ed29de61fffa`.
+Later documentation-only runtime pins do not change the measured executable.
+The unchanged original Geekbench 6.7.1 Linux AArch64 Preview and verified glibc
+fixture reuse the isolated Alpine benchmark store; this is not the Debian preset.
+The original macOS 6.7.1 binary ran afterward as a fresh native control.
+
+Each platform ran once, sequentially, with 12 CPUs and 24 GiB reported memory;
+Dev uses host-managed `auto`, no PTY/windows and aggregate metrics. No profiler,
+HVF diagnostics, syscall trace, build, CI or agent window capture ran concurrently.
+Existing stable sessions and normal desktop applications remained active: the
+pre-Dev snapshot showed approximately 0.71 host CPU core used by three existing
+Trames sessions. This snapshot is not whole-run load accounting. AC power,
+nominal thermal state and low-power mode off were confirmed before/after both
+runs; idle sleep was prevented. The interval between measured runs was
+82.7 seconds. Both completed all 32 workloads
+and uploaded, in 255.21 s (Dev) / 240.17 s (native).
+
+| Platform | Single-core | Multi-core |
+| --- | ---: | ---: |
+| [Previous Trames 1.4.0, November 1](https://browser.geekbench.com/v6/cpu/19419637) | 4,310 | 13,828 |
+| [Current Dev 1.5.3](https://browser.geekbench.com/v6/cpu/19437004) | 3,858 | 11,941 |
+| [Fresh native macOS](https://browser.geekbench.com/v6/cpu/19437034) | 4,033 | 17,660 |
+
+Dev is **95.7% single-core / 67.6% multi-core** of the fresh
+native control. Against November 1, Dev changed -10.5% /
+-13.6%; native changed -8.9% / -12.7%.
+The historical comparison includes different background load and all intervening
+changes. One sample per platform cannot isolate coordinator work or establish a
+repeatable regression. Different OS binaries, libraries, ISA dispatch and scheduling
+remain part of the platform comparison.
+
+Selected multi-core components (the complete 16-workload single/multi table is
+in [the JSON evidence](../validation/mac-geekbench.json)):
+
+| Workload | Previous Trames | Current Dev | Fresh native | Dev change |
+| --- | ---: | ---: | ---: | ---: |
+| PDF Renderer | 12,998 | 7,484 | 17,435 | -42.4% |
+| Background Blur | 14,077 | 10,974 | 17,427 | -22.0% |
+| Clang | 26,926 | 21,523 | 28,024 | -20.1% |
+| HTML5 Browser | 11,029 | 9,917 | 19,652 | -10.1% |
+| File Compression | 9,400 | 10,177 | 12,616 | +8.3% |
+| Photo Library | 10,168 | 11,715 | 21,202 | +15.2% |
+
+PDF Renderer multi deserves a focused follow-up; scores alone do not establish
+why it fell. The aggregate Dev session records 2,309,368 syscalls,
+2,144,641 worker syscalls, 37,971 cohort rounds and
+67,202 VM checkpoint groups (historical count:
+7,154). These are whole-session counters,
+not per-component profiles or additive wall-time categories. This run adds no
+production changes; existing passing CI is reused and the stable application and
+its sessions remain untouched. This is a Mac CPU benchmark, not iPad or Firefox
+rendering acceptance.
