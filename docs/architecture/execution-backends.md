@@ -1990,6 +1990,9 @@ do not republish every owner projection.
 
 Each row is four threads × 256 loops × four calls, longest-worker median of five
 counterbalanced unprofiled pairs, with two warmups per binary/configuration.
+The update row reapplies the full mask, SCHED_OTHER/zero parameter and nice 7;
+it is not continuous migration timing. Actual migration/cold slots have separate
+compatibility acceptance.
 Including complete process startup/teardown, the corresponding twelve-CPU
 medians are 201.41 → 13.62 ms, 197.63 → 14.45 ms and 203.73 → 13.35 ms.
 Native Linux is an exact-ELF contextual reference in the six-vCPU local CI
