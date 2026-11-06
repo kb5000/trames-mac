@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Original namespace resources form a recursive Send graph.
+#![recursion_limit = "512"]
 //! Terminal-first Mac composition of the shared Linux process kernel.
 //! The Hypervisor adapter owns instruction execution and MMU transport.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

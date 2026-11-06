@@ -61,6 +61,12 @@ pub(crate) fn window_size() -> Option<(u16, u16)> {
         .filter(|&(rows, columns)| rows != 0 && columns != 0)
 }
 impl GuestOutput for Output {
+    fn host_memory_source(
+        &self,
+    ) -> Option<std::sync::Arc<dyn Fn() -> trames_linux::HostMemoryInfo + Send + Sync>> {
+        self.host_memory_total
+            .map(|total| std::sync::Arc::new(move || super::host_memory::snapshot(total)) as _)
+    }
     fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
         self.host_memory_total.map(super::host_memory::snapshot)
     }
