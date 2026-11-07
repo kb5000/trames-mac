@@ -40,7 +40,92 @@ impl Peer {
         true
     }
 }
+#[derive(Default)]
+struct BootState {
+    bytes: VecDeque<u8>,
+    closed: bool,
+    revision: u64,
+}
+#[derive(Default)]
+pub struct BootOutput {
+    state: std::sync::Mutex<BootState>,
+    readiness: std::sync::Arc<trames_vfs::Readiness>,
+}
+impl trames_vfs::ReadinessDriver for BootOutput {
+    fn notification_only(&self) -> bool {
+        true
+    }
+    fn attach(&self, _: std::sync::Arc<trames_vfs::HostEvents>) -> io::Result<()> {
+        Ok(())
+    }
+}
+impl BootOutput {
+    fn new() -> std::sync::Arc<Self> {
+        let output = std::sync::Arc::new(Self::default());
+        let driver: std::sync::Arc<dyn trames_vfs::ReadinessDriver> = output.clone();
+        output
+            .readiness
+            .set_driver(std::sync::Arc::downgrade(&driver));
+        output
+    }
+    fn write(&self, bytes: &[u8]) -> Result<usize, trames_vfs::Errno> {
+        let mut state = self.state.lock().unwrap();
+        if state.closed {
+            return Err(trames_vfs::Errno(32));
+        }
+        let count = bytes.len().min(QUEUE_LIMIT - state.bytes.len());
+        if count == 0 && !bytes.is_empty() {
+            return Err(trames_vfs::Errno(11));
+        }
+        state.bytes.extend(&bytes[..count]);
+        if count != 0 {
+            state.revision = state.revision.wrapping_add(1);
+        }
+        Ok(count)
+    }
+    fn take(&self) -> Vec<u8> {
+        let mut state = self.state.lock().unwrap();
+        let bytes = state.bytes.drain(..).collect::<Vec<_>>();
+        if !bytes.is_empty() {
+            state.revision = state.revision.wrapping_add(1);
+        }
+        drop(state);
+        if !bytes.is_empty() {
+            self.readiness.notify_locked();
+        }
+        bytes
+    }
+    fn close(&self) {
+        self.state.lock().unwrap().closed = true;
+        self.readiness.notify_locked();
+    }
+    fn source(self: &std::sync::Arc<Self>) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+        let write = self.clone();
+        let poll = self.clone();
+        std::sync::Arc::new(
+            trames_vfs::ConsoleCallbacks::new(
+                |_| Err(trames_vfs::Errno(11)),
+                move |_, bytes| write.write(bytes),
+                move |stream, events| {
+                    let state = poll.state.lock().unwrap();
+                    let ready = if state.closed {
+                        16
+                    } else if stream != trames_vfs::ConsoleStream::Input
+                        && state.bytes.len() < QUEUE_LIMIT
+                    {
+                        4
+                    } else {
+                        0
+                    };
+                    (ready & (events | 16), [state.revision; 2])
+                },
+            )
+            .readiness(self.readiness.clone()),
+        )
+    }
+}
 pub struct Console {
+    boot: std::sync::Arc<BootOutput>,
     listener: UnixListener,
     path: PathBuf,
     peers: Vec<Peer>,
@@ -63,6 +148,7 @@ impl Console {
         listener.set_nonblocking(true)?;
         fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
         Ok(Self {
+            boot: BootOutput::new(),
             listener,
             path: path.to_owned(),
             peers: Vec::new(),
@@ -73,6 +159,7 @@ impl Console {
         })
     }
     pub fn poll(&mut self) -> io::Result<()> {
+        self.flush_boot();
         // No new poll loop/thread: accept/read a bounded amount on the original
         // scheduler's host-input opportunity. Structural opens alone request join.
         match self.listener.accept() {
@@ -236,6 +323,7 @@ impl Console {
         true
     }
     pub fn flush(&mut self) {
+        self.flush_boot();
         for mut peer in std::mem::take(&mut self.peers) {
             if self.flush_peer(&mut peer) {
                 self.peers.push(peer);
@@ -245,7 +333,25 @@ impl Console {
             }
         }
     }
-    pub fn write(&mut self, bytes: &[u8]) -> usize {
+    pub fn source(&self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+        self.boot.source()
+    }
+    pub fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.boot.write(bytes).map_err(|e| {
+            if e.0 == 11 {
+                io::ErrorKind::WouldBlock.into()
+            } else {
+                io::ErrorKind::BrokenPipe.into()
+            }
+        })
+    }
+    fn flush_boot(&mut self) {
+        let bytes = self.boot.take();
+        if !bytes.is_empty() {
+            self.write_inline(&bytes);
+        }
+    }
+    fn write_inline(&mut self, bytes: &[u8]) -> usize {
         // Only PID 1's boot console, never other terminals' private output.
         let keep = &bytes[bytes.len().saturating_sub(16384)..];
         let excess = (self.history.len() + keep.len()).saturating_sub(16384);
@@ -262,6 +368,7 @@ impl Console {
 }
 impl Drop for Console {
     fn drop(&mut self) {
+        self.boot.close();
         let _ = fs::remove_file(&self.path);
     }
 }

@@ -8,6 +8,7 @@ use trames_session::{MemoryLimits, RuntimeOptions, Terminal};
 type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
+    source: Option<std::sync::Arc<dyn trames_vfs::ConsoleIo>>,
     exec: Option<super::exec::Server>,
     init: Option<super::systemd::Monitor>,
     console: Option<super::console::Console>,
@@ -61,6 +62,18 @@ pub(crate) fn window_size() -> Option<(u16, u16)> {
         .filter(|&(rows, columns)| rows != 0 && columns != 0)
 }
 impl GuestOutput for Output {
+    fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+        if let Some(source) = &self.source {
+            return source.clone();
+        }
+        let source: std::sync::Arc<dyn trames_vfs::ConsoleIo> = match &self.console {
+            Some(console) => console.source(),
+            None => std::sync::Arc::new(trames_vfs::NativeConsole::stdio()),
+        };
+        self.source = Some(source.clone());
+        source
+    }
+
     fn host_memory_source(
         &self,
     ) -> Option<std::sync::Arc<dyn Fn() -> trames_linux::HostMemoryInfo + Send + Sync>> {
@@ -143,7 +156,7 @@ impl GuestOutput for Output {
     }
     fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
         if let Some(console) = &mut self.console {
-            return Ok(console.write(bytes));
+            return console.write(bytes);
         }
         match fd {
             OutputFd::Stdout => {
@@ -618,6 +631,7 @@ pub fn run(
     }
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
+        source: None,
         exec: console
             .as_deref()
             .map(|path| super::exec::Server::bind(path, envp.clone()))
@@ -845,6 +859,7 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            source: None,
             exec: None,
             console: None,
             terminals: None,
