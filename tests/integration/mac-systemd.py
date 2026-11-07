@@ -122,7 +122,9 @@ TimeoutStopSec=3s
                 while child.poll() is None and time.monotonic() < deadline:
                     pump()
                 child.wait(timeout=5)
-                stop_output = stop.communicate(timeout=5)
+                # The getty can close before PID 1 has finished stopping all
+                # units. Match the product's existing 90-second stop contract.
+                stop_output = stop.communicate(timeout=90)
                 assert child.returncode == 0 and stop.returncode == 0, (log, stop_output)
                 assert b'Stopped debian' in stop_output[0], log
                 assert 'trames: systemd ready' in (home / 'logs/debian.log').read_text()

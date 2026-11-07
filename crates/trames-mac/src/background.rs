@@ -4,6 +4,7 @@ use super::environments::{self, Result};
 use std::{
     fs, io,
     os::unix::fs::OpenOptionsExt,
+    os::unix::net::UnixStream,
     path::{Path, PathBuf},
     process::Command,
     time::{Duration, Instant},
@@ -46,6 +47,11 @@ fn plist(root: &Path, name: &str) -> Result<String> {
     let exe = std::env::current_exe()?;
     let error = root.join("logs").join(format!("{name}.log"));
     Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n<key>Label</key><string>{}</string>\n<key>ProgramArguments</key><array><string>{}</string><string>env</string><string>_serve</string><string>{}</string></array>\n<key>EnvironmentVariables</key><dict><key>TRAMES_HOME</key><string>{}</string></dict>\n<key>RunAtLoad</key><true/>\n<key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>\n<key>ThrottleInterval</key><integer>5</integer>\n<key>ExitTimeOut</key><integer>90</integer>\n<key>Umask</key><integer>63</integer>\n<key>StandardOutPath</key><string>{}</string>\n<key>StandardErrorPath</key><string>{}</string>\n</dict></plist>\n",xml(&label(root,name))?,xml(exe.to_str().ok_or("executable path is not UTF-8")?)?,xml(name)?,xml(root.to_str().ok_or("registry path is not UTF-8")?)?,xml(error.to_str().ok_or("log path is not UTF-8")?)?,xml(error.to_str().unwrap())?))
+}
+// Socket pathnames survive a server exit. A live listener, rather than a stale
+// inode, is the readiness boundary for management clients; no guest is created.
+fn console_ready(path: &Path) -> bool {
+    UnixStream::connect(path).is_ok()
 }
 fn loaded(root: &Path, name: &str) -> bool {
     Command::new("/bin/launchctl")
@@ -90,10 +96,14 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
         .open(root.join("locks").join(format!(".background-{name}")))?;
     guard.lock()?;
     if environments::running(root, name) {
-        if environments::console_socket(root, name)?.exists() {
+        if console_ready(&environments::console_socket(root, name)?) {
             return Ok(());
         }
-        return Err("environment has a foreground/maintenance owner; stop it before starting a managed background session".into());
+        if !loaded(root, name) {
+            return Err("environment has a foreground/maintenance owner; stop it before starting a managed background session".into());
+        }
+        // A login-started server can hold its original owner lock before it
+        // has rebound/listened on the console. Reuse startup's bounded wait.
     }
     ensure_dirs(root)?;
     let log = root.join("logs").join(format!("{name}.log"));
@@ -119,7 +129,9 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
     }
     let until = Instant::now() + Duration::from_secs(60);
     while Instant::now() < until {
-        if environments::running(root, name) && environments::console_socket(root, name)?.exists() {
+        if environments::running(root, name)
+            && console_ready(&environments::console_socket(root, name)?)
+        {
             eprintln!("Started {name} in background");
             return Ok(());
         }
@@ -208,6 +220,23 @@ pub fn remove(root: &Path, name: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn background_console_readiness_rejects_a_stale_socket_path() {
+        let path = PathBuf::from("/tmp").join(format!(
+            "tr-bg-{}-{}.sock",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let listener = std::os::unix::net::UnixListener::bind(&path).unwrap();
+        assert!(console_ready(&path));
+        drop(listener);
+        assert!(path.exists());
+        assert!(!console_ready(&path));
+        fs::remove_file(path).unwrap();
+    }
     #[test]
     fn registry_and_channel_are_part_of_job_identity_and_paths_are_xml_escaped() {
         let a = Path::new("/tmp/stable space");
