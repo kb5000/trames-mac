@@ -135,7 +135,7 @@ def main():
     metrics = json.loads(re.search(r'trames mac execution paths: (\{[^\n]+\})', text)[1])
     assert metrics['service_requests'] == metrics['serviced_syscalls'] == 0
     if not args.baseline and args.cpus > 1:
-        assert metrics['cohort_rounds'] <= 2, metrics
+        assert metrics['cohort_rounds'] == 1, metrics
     result = dict(passed=True, cpus=args.cpus, runner_sha256=hashlib.sha256(args.runner.read_bytes()).hexdigest(),
                   exec_16_elapsed_ns=elapsed, metrics=metrics,
                   checks=['live_exec', 'native_terminal_open', 'initial_size', 'live_resize',
