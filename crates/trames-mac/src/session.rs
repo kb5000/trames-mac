@@ -83,20 +83,18 @@ impl GuestOutput for Output {
     fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
         self.host_memory_total.map(super::host_memory::snapshot)
     }
-    fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
+    fn live_host_processes(&self) -> bool {
+        true
+    }
+    fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         self.poll_admin();
         if let Some(exec) = &mut self.exec {
             exec.poll()?;
-            if exec.pending() {
-                return Ok(true);
-            }
+            exec.control(vfs);
         }
         if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
             console.poll()?;
-            if !terminals.can_pump_live(&console.channels) {
-                return Ok(true);
-            }
             terminals.pump(&mut console.channels);
             console.flush();
         }
@@ -147,9 +145,6 @@ impl GuestOutput for Output {
     }
     fn host_spawn(&mut self) -> Option<trames_linux::HostSpawn> {
         self.exec.as_mut()?.spawn()
-    }
-    fn host_signal(&mut self) -> Option<(u32, u32)> {
-        self.exec.as_mut()?.signal()
     }
     fn root_signal(&mut self) -> Option<u32> {
         self.root_signal.take()

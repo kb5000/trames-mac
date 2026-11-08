@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Structured host commands. Only spawn/signal use the existing lifecycle hook;
-//! bytes use retained pipe/PTY resources directly, including with workers live.
+//! Structured host commands use original process/pipe/PTY resources while CPUs run.
+//! Accepted image loading and task admission use existing runtime workers.
 use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
@@ -14,13 +14,10 @@ use std::{
         },
     },
     path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicI32, AtomicU32, Ordering},
-        Arc,
-    },
+    sync::{atomic::Ordering, Arc},
     time::Duration,
 };
-use trames_linux::{HostSpawn, HOST_RUNNING};
+use trames_linux::{HostProcess, HostSpawn, HOST_RUNNING};
 use trames_vfs::{DirectFd, Vfs};
 const MAGIC: &[u8; 8] = b"TRMEXEC1";
 const LIMIT: usize = 65536;
@@ -37,8 +34,14 @@ struct Job {
     input: Option<DirectFd>,
     output: [Option<DirectFd>; 2],
     terminal: Option<Arc<trames_vfs::Pty>>,
-    pid: Arc<AtomicU32>,
-    status: Arc<AtomicI32>,
+    process: Arc<HostProcess>,
+}
+impl Drop for Job {
+    fn drop(&mut self) {
+        if self.process.status() == HOST_RUNNING {
+            self.process.cancel();
+        }
+    }
 }
 struct Peer {
     socket: UnixStream,
@@ -79,7 +82,6 @@ pub struct Server {
     path: PathBuf,
     peers: Vec<Peer>,
     launches: VecDeque<HostSpawn>,
-    signals: VecDeque<(u32, u32)>,
     environment: Vec<String>,
 }
 impl Server {
@@ -101,21 +103,11 @@ impl Server {
             path,
             peers: vec![],
             launches: VecDeque::new(),
-            signals: VecDeque::new(),
             environment,
         })
     }
     pub fn spawn(&mut self) -> Option<HostSpawn> {
         self.launches.pop_front()
-    }
-    pub fn signal(&mut self) -> Option<(u32, u32)> {
-        self.signals.pop_front()
-    }
-    pub fn pending(&self) -> bool {
-        self.peers
-            .iter()
-            .any(|p| p.request.is_some() && p.job.is_none() && !p.done)
-            || !self.signals.is_empty()
     }
     pub fn poll(&mut self) -> io::Result<()> {
         match self.listener.accept() {
@@ -187,10 +179,7 @@ impl Server {
                     2 => {
                         if let Some(job) = &p.job {
                             let signal = p.incoming[5] as u32;
-                            let pid = job.pid.load(Ordering::Relaxed);
-                            if pid != 0 && (1..=64).contains(&signal) {
-                                self.signals.push_back((pid, signal));
-                            }
+                            job.process.signal(signal);
                         }
                     }
                     3 => {
@@ -211,11 +200,6 @@ impl Server {
             }
             if alive {
                 self.peers.push(p);
-            } else if let Some(job) = p.job {
-                let pid = job.pid.load(Ordering::Relaxed);
-                if pid != 0 && job.status.load(Ordering::Relaxed) == HOST_RUNNING {
-                    self.signals.push_back((pid, 1));
-                }
             }
         }
         Ok(())
@@ -229,12 +213,7 @@ impl Server {
                 let result = if let Some(pair) = &job.terminal {
                     pair.master_write(p.stdin.as_slices().0)
                         .map(|(n, signals)| {
-                            pair.host_signals.fetch_or(
-                                signals
-                                    .into_iter()
-                                    .fold(0, |mask, sig| mask | (1 << (sig - 1))),
-                                Ordering::Relaxed,
-                            );
+                            pair.queue_host_signals(signals);
                             n
                         })
                 } else {
@@ -278,7 +257,7 @@ impl Server {
                 }
             }
         }
-        let status = job.status.load(Ordering::Relaxed);
+        let status = job.process.status();
         if status != HOST_RUNNING
             && (status < 0 || job.output.iter().all(Option::is_none))
             && !p.done
@@ -378,22 +357,19 @@ fn prepare(
         environment.retain(|e| e.split_once('=').is_none_or(|(k, _)| k != key));
         environment.push(entry.clone());
     }
-    let pid = Arc::new(AtomicU32::new(0));
-    let status = Arc::new(AtomicI32::new(HOST_RUNNING));
+    let process = Arc::new(HostProcess::default());
     let launch = HostSpawn {
         argv: r.argv.iter().map(|s| s.as_bytes().to_vec()).collect(),
         environment: environment.iter().map(|s| s.as_bytes().to_vec()).collect(),
         vfs: child,
-        status: status.clone(),
-        pid: pid.clone(),
+        process: process.clone(),
     };
     Ok((
         Job {
             input: Some(input),
             output,
             terminal,
-            pid,
-            status,
+            process,
         },
         launch,
     ))
