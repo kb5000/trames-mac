@@ -925,21 +925,23 @@ mod tests {
         assert_eq!(runtime.engine.mapped_bytes(), 0);
     }
     fn threaded_image(cpus: usize, tail: &[u32]) -> Vec<u8> {
-        let mut words = vec![
-            0xd2800000 | (((cpus - 1) as u32) << 5) | 19,
-            0xd281e000,
-            0xf2a00020,
-            0x910003e1,
-            0xcb133021,
-            0xd2800002,
-            0xd2800003,
-            0xd2800004,
-            0xd2801b88,
-            0xd4000001,
-            0xb4000060,
-            0xd1000673,
-            0xb5000000 | (((-11i32 as u32) & 0x7ffff) << 5) | 19,
-        ];
+        let mut words = vec![0xd2800000 | (((cpus - 1) as u32) << 5) | 19];
+        if cpus > 1 {
+            words.extend_from_slice(&[
+                0xd281e000,
+                0xf2a00020,
+                0x910003e1,
+                0xcb133021,
+                0xd2800002,
+                0xd2800003,
+                0xd2800004,
+                0xd2801b88,
+                0xd4000001,
+                0xb4000060,
+                0xd1000673,
+                0xb5000000 | (((-11i32 as u32) & 0x7ffff) << 5) | 19,
+            ]);
+        }
         words.extend_from_slice(tail);
         let mut bytes = vec![0; 256 + 4 * words.len()];
         bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
@@ -964,6 +966,135 @@ mod tests {
             bytes[256 + i * 4..260 + i * 4].copy_from_slice(&word.to_le_bytes());
         }
         bytes
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn uring_signal_requests_keep_original_native_submitters_in_solo_and_live_cohorts() {
+        for cpus in [1, 4, 12] {
+            let image = threaded_image(
+                cpus,
+                &[
+                    0xd2a00038, 0x8b132318, 0xd2800016, 0xd2800000, 0x91008301, 0xd2800002,
+                    0xd2800103, 0xd28010e8, 0xd4000001, 0xaa0002d6, 0xf9400314, 0xaa1403e0,
+                    0xd2800021, 0xd2800002, 0xd2800003, 0xd2800004, 0xd2800005, 0xd2803548,
+                    0xd4000001, 0xd1000400, 0xaa0002d6, 0xd2801648, 0xd4000001, 0xaa0003f5,
+                    0xaa1503e0, 0xd2800141, 0xd2801048, 0xd4000001, 0xaa0002d6, 0xaa1403e0,
+                    0xd2800001, 0xd2800022, 0xd2800023, 0xd2800004, 0xd2800005, 0xd2803548,
+                    0xd4000001, 0xaa0002d6, 0xf9400700, 0xb9400000, 0x51020000, 0xaa0002d6,
+                    0xb9404300, 0x51002800, 0xaa0002d6, 0xb9404f00, 0x51000400, 0xaa0002d6,
+                    0xf9006316, 0xd2800020, 0xf9006700, 0xaa1603e0, 0xd2800ba8, 0xd4000001,
+                    0x14000000,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["uring-authority".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let file = trames_shared::SharedFile::anonymous().unwrap();
+            file.set_len(16384).unwrap();
+            let mapping = file.map(0, 16384).unwrap();
+            // SAFETY: this retained initialized allocation owns the complete RW
+            // scratch range; original SharedPage/HVF ownership admits its bytes.
+            let resource = unsafe {
+                trames_memory::SharedMapping::from_allocation(
+                    mapping.allocation_pointer(),
+                    mapping.allocation_len(),
+                    mapping.clone(),
+                )
+            };
+            runtime.memory.map_anonymous_live(0x10000, 4096).unwrap();
+            runtime
+                .memory
+                .import_mapping(0x10000, 4096, resource)
+                .unwrap();
+            let signal = runtime.linux.vfs.signalfd(-1, 1 << 9, 0).unwrap();
+            let mut rings = Vec::new();
+            for cpu in 0..cpus {
+                let (fd, ring) = runtime.linux.vfs.uring_create(4, 8).unwrap();
+                let base = 0x20000 + cpu as u64 * 0x20000;
+                for (address, offset, len) in [
+                    (base, 0, ring.ring_bytes),
+                    (base + 0x10000, 0x10000000, ring.sqe_bytes),
+                ] {
+                    runtime
+                        .memory
+                        .map_backed(
+                            address,
+                            runtime
+                                .linux
+                                .vfs
+                                .mapping_pages(fd, offset, len, true, true)
+                                .unwrap(),
+                            true,
+                            trames_memory::Permissions::RW,
+                            false,
+                        )
+                        .unwrap();
+                }
+                let at = 0x10000 + cpu as u64 * 256;
+                runtime
+                    .memory
+                    .write_array(at, (fd as u64).to_le_bytes())
+                    .unwrap();
+                runtime
+                    .memory
+                    .write_array(
+                        at + 8,
+                        (base + trames_vfs::URING_CQES as u64 + 8).to_le_bytes(),
+                    )
+                    .unwrap();
+                runtime
+                    .memory
+                    .write_array(at + 32, (1u64 << 9).to_le_bytes())
+                    .unwrap();
+                let mut sqe = [0; 64];
+                sqe[0] = 22;
+                sqe[4..8].copy_from_slice(&signal.to_le_bytes());
+                sqe[16..24].copy_from_slice(&(at + 64).to_le_bytes());
+                sqe[24..28].copy_from_slice(&128u32.to_le_bytes());
+                sqe[32..40].copy_from_slice(&(cpu as u64 + 101).to_le_bytes());
+                runtime.memory.write(base + 0x10000, &sqe).unwrap();
+                runtime
+                    .memory
+                    .write_array(base + 4, 1u32.to_le_bytes())
+                    .unwrap();
+                rings.push(ring);
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            let completions: Vec<_> = rings
+                .iter()
+                .map(|ring| i32::from_le_bytes(ring.read_queue::<4>(trames_vfs::URING_CQES + 8)))
+                .collect();
+            eprintln!("hardware uring-authority CPUs={cpus} exit={} cq={completions:?} cohorts={} returned={:?}", exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls);
+            assert_eq!(exit.code, 0);
+            assert_eq!(completions, vec![128; cpus]);
+            for cpu in 0..cpus {
+                // SAFETY: every guest actor returned at final group completion.
+                // The aligned fields lie in this retained 16 KiB allocation.
+                let error = unsafe {
+                    mapping
+                        .allocation_pointer()
+                        .add(cpu * 256 + 192)
+                        .cast::<u64>()
+                        .read()
+                };
+                let complete = unsafe {
+                    mapping
+                        .allocation_pointer()
+                        .add(cpu * 256 + 200)
+                        .cast::<u64>()
+                        .read()
+                };
+                assert_eq!(error, 0, "CPU={cpu}");
+                assert_eq!(complete, 1, "CPU={cpu}");
+            }
+            assert_eq!(runtime.metrics.service_requests, 0);
+            if cpus > 1 {
+                assert_eq!(runtime.metrics.parallel_rounds, 1);
+                assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            }
+        }
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
