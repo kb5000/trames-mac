@@ -1164,6 +1164,95 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn time_observations_and_vdso_realtime_complete_on_original_native_workers() {
+        use trames_execution::Registers;
+        let code: &[u32] = &[
+            0xd2a000b4, 0x8b132294, 0xaa1403e0, 0x91004281, 0xd2801528, 0xd4000001, 0xb5000560,
+            0xf9400289, 0xb4000529, 0xf9400689, 0xd288480a, 0xf2a001ea, 0xeb0a013f, 0x54000482,
+            0xf9400a89, 0xb5000449, 0xaa1403e0, 0xd2800001, 0xd63f0340, 0xb50003c0, 0xd2800000,
+            0xd2800001, 0xd2801528, 0xd4000001, 0xb5000320, 0xd2800000, 0x91008281, 0xd2800e28,
+            0xd4000001, 0xb5000280, 0xd2800020, 0x9100c281, 0xd4000001, 0xb5000200, 0xd2800020,
+            0xd2800001, 0xd2800e48, 0xd4000001, 0xb5000160, 0x91010280, 0xd2800021, 0xd2801528,
+            0xd4000001, 0xb100381f, 0x540000a1, 0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000,
+            0xd2800b60, 0xd2800bc8, 0xd4000001, 0x14000000,
+        ];
+        for cpus in [4, 12] {
+            let image = threaded_image(cpus, code);
+            let mut runtime = Runtime::load(&image, &["native-time".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            // Resolve the actual versioned vDSO export, rather than a test stub
+            // or a copied instruction offset. This exercises libc's SVC route.
+            let base = runtime
+                .linux
+                .auxiliary
+                .chunks_exact(16)
+                .find(|a| {
+                    u64::from_le_bytes(a[..8].try_into().unwrap()) == trames_linux::vdso::AUXV
+                })
+                .map(|a| u64::from_le_bytes(a[8..].try_into().unwrap()))
+                .unwrap();
+            let vdso = trames_linux::vdso::image();
+            let u64_at =
+                |at: usize| u64::from_le_bytes(vdso[at..at + 8].try_into().unwrap()) as usize;
+            let u32_at =
+                |at: usize| u32::from_le_bytes(vdso[at..at + 4].try_into().unwrap()) as usize;
+            let ph = u64_at(32);
+            let dynamic = (0..u16::from_le_bytes(vdso[56..58].try_into().unwrap()) as usize)
+                .map(|i| ph + i * 56)
+                .find(|&at| u32_at(at) == 2)
+                .unwrap();
+            let offset = u64_at(dynamic + 8);
+            let entries = &vdso[offset..offset + u64_at(dynamic + 32)];
+            let tag = |key: u64| {
+                entries
+                    .chunks_exact(16)
+                    .find(|d| u64::from_le_bytes(d[..8].try_into().unwrap()) == key)
+                    .map(|d| u64::from_le_bytes(d[8..].try_into().unwrap()) as usize)
+                    .unwrap()
+            };
+            let (symbols, strings, count) = (tag(6), tag(5), u32_at(tag(4) + 4));
+            let symbol = (1..count)
+                .map(|i| symbols + i * 24)
+                .find(|&s| {
+                    vdso[strings + u32_at(s)..]
+                        .split(|&b| b == 0)
+                        .next()
+                        .unwrap()
+                        == b"__kernel_gettimeofday"
+                })
+                .unwrap();
+            runtime.cpu.set_x(26, base + u64_at(symbol + 8) as u64);
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware time CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                let at = 0x50000 + id as u64 * 256;
+                for delta in [0, 32] {
+                    assert!(
+                        u64::from_le_bytes(runtime.memory.read_array::<8>(at + delta).unwrap())
+                            > 1_700_000_000
+                    );
+                }
+                assert_eq!(runtime.memory.read_array::<8>(at + 16).unwrap(), [0; 8]);
+                assert_eq!(runtime.memory.read_array::<16>(at + 64).unwrap(), [0; 16]);
+            }
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
