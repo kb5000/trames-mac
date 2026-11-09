@@ -1253,6 +1253,103 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn published_global_metadata_and_uring_complete_on_original_native_workers() {
+        use trames_execution::Registers;
+        let code: &[u32] = &[
+            0xd2a000b4, 0x8b132294, 0xd2820015, 0xf2a000b5, 0xaa1903e0, 0xaa1403e1, 0xd2800102,
+            0xd2800003, 0xd2800868, 0xd4000001, 0xf100201f, 0x540001e1, 0xb8737aa0, 0xd2800021,
+            0xd2800022, 0xd2800023, 0xd2800004, 0xd2800005, 0xd2803548, 0xd4000001, 0xf100041f,
+            0x540000a1, 0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000, 0xd2800b60, 0xd2800bc8,
+            0xd4000001, 0x14000000,
+        ];
+        for cpus in [4, 12] {
+            let image = threaded_image(cpus, code);
+            let mut runtime = Runtime::load(&image, &["native-published".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime.linux.vfs.set_runtime_info(1, Default::default());
+            let file = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/proc/version", 0, 0)
+                .unwrap();
+            runtime.cpu.set_x(25, file as u64);
+            runtime
+                .memory
+                .map(0x50000, 2 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            let mut rings = Vec::new();
+            for id in 0..cpus {
+                let (fd, ring) = runtime.linux.vfs.uring_create(4, 8).unwrap();
+                let rb = 0x100000 + id as u64 * 0x10000;
+                let sq = 0x200000 + id as u64 * 0x10000;
+                for (at, offset, len) in
+                    [(rb, 0, ring.ring_bytes), (sq, 0x10000000, ring.sqe_bytes)]
+                {
+                    runtime
+                        .memory
+                        .map_backed(
+                            at,
+                            runtime
+                                .linux
+                                .vfs
+                                .mapping_pages(fd, offset, len, true, true)
+                                .unwrap(),
+                            true,
+                            trames_memory::Permissions::RW,
+                            false,
+                        )
+                        .unwrap();
+                }
+                runtime
+                    .memory
+                    .write_array(0x51000 + id as u64 * 4, fd.to_le_bytes())
+                    .unwrap();
+                let mut entry = [0u8; 64];
+                entry[0] = 22;
+                entry[4..8].copy_from_slice(&file.to_le_bytes());
+                entry[16..24].copy_from_slice(&(0x50010 + id as u64 * 256).to_le_bytes());
+                entry[24..28].copy_from_slice(&8u32.to_le_bytes());
+                entry[32..40].copy_from_slice(&(id as u64 + 1).to_le_bytes());
+                runtime.memory.write(sq, &entry).unwrap();
+                runtime
+                    .memory
+                    .write_array(rb + 4, 1u32.to_le_bytes())
+                    .unwrap();
+                rings.push(ring);
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware published CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for (id, ring) in rings.iter().enumerate() {
+                let at = 0x50000 + id as u64 * 256;
+                assert_eq!(runtime.memory.read_array::<8>(at).unwrap(), *b"Linux ve");
+                assert_eq!(
+                    runtime.memory.read_array::<8>(at + 16).unwrap(),
+                    *b"Linux ve"
+                );
+                assert_eq!(ring.cq_ready(), 1);
+                assert_eq!(
+                    ring.read_queue::<8>(trames_vfs::URING_CQES),
+                    (id as u64 + 1).to_le_bytes()
+                );
+                assert_eq!(
+                    ring.read_queue::<4>(trames_vfs::URING_CQES + 8),
+                    8u32.to_le_bytes()
+                );
+            }
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
@@ -1303,6 +1400,21 @@ mod tests {
             // An OFD opened from legacy runtime-info has no source proc
             // payload provider. Its real read keeps the setup boundary explicit.
             runtime.linux.vfs.set_runtime_info(1, Default::default());
+            // Keep an actual excluded provider for the cold setup; an ordinary
+            // published global proc file now belongs to source execution.
+            struct Unavailable;
+            impl trames_vfs::ProcSource for Unavailable {
+                fn available(&self, _: trames_vfs::ProcRefresh) -> bool {
+                    false
+                }
+                fn observe(&self, _: trames_vfs::ProcQuery<'_>) -> trames_vfs::RuntimeInfo {
+                    panic!("unavailable source provider")
+                }
+            }
+            runtime
+                .linux
+                .vfs
+                .set_proc_source(std::sync::Arc::new(Unavailable));
             let legacy = runtime
                 .linux
                 .vfs
