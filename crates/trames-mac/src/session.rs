@@ -967,6 +967,49 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn guest_poweroff_retires_original_native_group_without_returned_syscall() {
+        for cpus in [4, 12] {
+            // Every CLONE_THREAD child runs native instructions. Only original
+            // PID 1 (x19 == 0) requests guest halt. No host power API is called.
+            let image = threaded_image(
+                cpus,
+                &[
+                    0xb5000193,
+                    0x52800000 | (0xdead << 5),
+                    0x72a00000 | (0xfee1 << 5),
+                    0x52800001 | (0x1969 << 5),
+                    0x72a00001 | (0x2812 << 5),
+                    0x52800002 | (0x0123 << 5),
+                    0x72a00002 | (0xcdef << 5),
+                    0xd28011c8,
+                    0xd4000001,
+                    0xd28009a0,
+                    0xd2800bc8,
+                    0xd4000001,
+                    0x14000000,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["guest-poweroff".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            assert_eq!(
+                exit.code, 0,
+                "poweroff must not return to the following exit(77)"
+            );
+            eprintln!(
+                "hardware poweroff CPUs={cpus} cohorts={} returned={:?}",
+                runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn sysinfo_preserves_one_hardware_cohort_with_four_and_twelve_cpus() {
         struct Host {
             shared: trames_shared::Mapping,
