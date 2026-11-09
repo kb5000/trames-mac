@@ -967,6 +967,95 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn mqueue_paths_and_directories_run_without_joined_native_dispatch() {
+        for cpus in [4, 12] {
+            let image = threaded_image(
+                cpus,
+                &[
+                    0xd2a00034, 0x8b132294, 0xd2a00055, 0xd2800016, 0x92800c60, 0xaa1503e1,
+                    0xaa1403e2, 0xd2800003, 0xd28009e8, 0xd4000001, 0xaa0002d6, 0xaa1503e0,
+                    0xaa1403e1, 0xd2800568, 0xd4000001, 0xaa0002d6, 0x92800c60, 0xaa1503e1,
+                    0xd2880002, 0xd2800003, 0xd2800708, 0xd4000001, 0xaa0003f7, 0xaa1403e1,
+                    0xd2802002, 0xd28007a8, 0xd4000001, 0xd100c000, 0xaa0002d6, 0xaa1703e0,
+                    0xd2800001, 0xd2800002, 0xd28007c8, 0xd4000001, 0xaa0002d6, 0xaa1703e0,
+                    0xd2800728, 0xd4000001, 0xaa0002d6, 0xf9007296, 0xd2800020, 0xf9007680,
+                    0xaa1603e0, 0xd2800ba8, 0xd4000001, 0x14000000,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["mqueue".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let file = trames_shared::SharedFile::anonymous().unwrap();
+            file.set_len(16384).unwrap();
+            let mapping = file.map(0, 16384).unwrap();
+            // SAFETY: this retained initialized allocation owns the complete RW
+            // scratch range; the original SharedPage/HVF owner admits its bytes.
+            let resource = unsafe {
+                trames_memory::SharedMapping::from_allocation(
+                    mapping.allocation_pointer(),
+                    mapping.allocation_len(),
+                    mapping.clone(),
+                )
+            };
+            runtime.memory.map_anonymous_live(0x10000, 4096).unwrap();
+            runtime
+                .memory
+                .import_mapping(0x10000, 4096, resource)
+                .unwrap();
+            runtime
+                .memory
+                .map(0x20000, 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            runtime.memory.write(0x20000, b"/mq\0").unwrap();
+            runtime.linux.vfs.mkdir_at(-100, b"/mq", 0o755).unwrap();
+            runtime
+                .linux
+                .vfs
+                .mount(None, b"/mq", Some(b"mqueue"), 14, None)
+                .unwrap();
+            runtime
+                .memory
+                .map(0x30000, 3 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            assert_eq!(exit.code, 0);
+            for i in 0..cpus {
+                // SAFETY: final group completion has returned every guest actor.
+                // Both aligned fields lie inside the retained 16 KiB allocation.
+                let error = unsafe {
+                    mapping
+                        .allocation_pointer()
+                        .add(i * 256 + 224)
+                        .cast::<u64>()
+                        .read()
+                };
+                let completed = unsafe {
+                    mapping
+                        .allocation_pointer()
+                        .add(i * 256 + 232)
+                        .cast::<u64>()
+                        .read()
+                };
+                assert_eq!(error, 0, "CPU={i}");
+                assert_eq!(completed, 1, "CPU={i}");
+            }
+            eprintln!(
+                "hardware mqueue CPUs={cpus} cohorts={} returned={:?} mapping={:?}",
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.vm_checkpoint_calls
+            );
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.vm_checkpoint_calls[5], 0);
+            assert_eq!(runtime.metrics.vm_checkpoint_calls[7], 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn memory_queries_run_on_original_native_views_without_mapping_checkpoints() {
         for cpus in [4, 12] {
             let image = threaded_image(
