@@ -969,8 +969,122 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
-    fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
+    fn descriptor_discovery_controls_use_original_native_workers_without_ioctl_joins() {
         use trames_execution::Registers;
+        let imm = |words: &mut Vec<u32>, reg: u32, n: u32| {
+            words.push(0xd2800000 | ((n & 0xffff) << 5) | reg);
+            if n > 0xffff {
+                words.push(0xf2a00000 | ((n >> 16) << 5) | reg);
+            }
+        };
+        for cpus in [4, 12] {
+            let mut tail = Vec::new();
+            let mut branches = Vec::new();
+            for (reg, request, pointer, expected) in [
+                (25, 0x1234, 0, u32::MAX),
+                (26, 0x8933, 0x50000, 0),
+                (27, 0xc0406400, 0x51000, 0),
+                (28, 0xb703, 0, 0x40000000),
+            ] {
+                tail.push(0xaa0003e0 | (reg << 16));
+                imm(&mut tail, 1, request);
+                imm(&mut tail, 2, pointer);
+                imm(&mut tail, 8, 29);
+                tail.push(0xd4000001);
+                if expected == u32::MAX {
+                    tail.push(0xb100641f);
+                } else {
+                    imm(&mut tail, 3, expected);
+                    tail.push(0xeb03001f);
+                }
+                branches.push(tail.len());
+                tail.push(0);
+            }
+            imm(&mut tail, 0, 0);
+            imm(&mut tail, 8, 93);
+            tail.extend([0xd4000001, 0x14000000]);
+            let failed = tail.len();
+            imm(&mut tail, 0, 91);
+            imm(&mut tail, 8, 94);
+            tail.extend([0xd4000001, 0x14000000]);
+            for at in branches {
+                tail[at] = 0x54000001 | ((((failed - at) as u32) & 0x7ffff) << 5);
+            }
+            let image = threaded_image(cpus, &tail);
+            let mut runtime = Runtime::load(&image, &["native-ioctl".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime.linux.vfs.enable_video_device();
+            runtime
+                .linux
+                .vfs
+                .configure_network(trames_vfs::NetworkMode::Loopback)
+                .unwrap();
+            runtime.linux.vfs.set_runtime_info(
+                1,
+                trames_vfs::RuntimeInfo {
+                    processes: vec![trames_vfs::ProcessInfo {
+                        pid: 1,
+                        tgid: 1,
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+            );
+            let pipe = runtime.linux.vfs.pipe(0).unwrap()[0];
+            let socket = runtime.linux.vfs.socket(2, 2, 0).unwrap();
+            let render = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/dev/dri/renderD128", 2, 0)
+                .unwrap();
+            let namespace = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/proc/self/ns/net", 0, 0)
+                .unwrap();
+            for (reg, fd) in [(25, pipe), (26, socket), (27, render), (28, namespace)] {
+                runtime.cpu.set_x(reg, fd as u64);
+            }
+            runtime
+                .memory
+                .map(0x50000, 3 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            runtime.memory.write(0x50000, b"lo\0").unwrap();
+            for offset in [16u64, 32, 48] {
+                runtime
+                    .memory
+                    .write_array(0x51000 + offset, 64u64.to_le_bytes())
+                    .unwrap();
+                runtime
+                    .memory
+                    .write_array(0x51008 + offset, (0x52000 + offset * 4).to_le_bytes())
+                    .unwrap();
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware ioctl CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            assert_eq!(
+                runtime.memory.read_array::<4>(0x50010).unwrap(),
+                1u32.to_le_bytes()
+            );
+            assert_eq!(
+                runtime.memory.read_array::<4>(0x51000).unwrap(),
+                1u32.to_le_bytes()
+            );
+            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&29), None);
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
                 1,
@@ -978,8 +1092,8 @@ mod tests {
                     0xd2a00038, 0xd2800220, 0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004,
                     0xd2801b88, 0xd4000001, 0xb40005a0, 0xb7f807e0, 0xaa1803e0, 0xd2800061,
                     0xd2800002, 0xd2800023, 0x91001304, 0xd2800005, 0xd2800c48, 0xd4000001,
-                    0xf100041f, 0x54000060, 0xb4fffec0, 0x14000033, 0xaa1903e0, 0xd2824681,
-                    0xd2800002, 0xd28003a8, 0xd4000001, 0xb100641f, 0x54000581, 0xd2800220,
+                    0xf100041f, 0x54000060, 0xb4fffec0, 0x14000033, 0xd28000a0, 0xd2800001,
+                    0xd2800002, 0xd28014e8, 0xd4000001, 0xb100581f, 0x54000581, 0xd2800220,
                     0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004, 0xd2801b88, 0xd4000001,
                     0xb40003c0, 0xb7f80460, 0x91001300, 0xd2800021, 0xd2800022, 0xd2800c48,
                     0xd4000001, 0xf100041f, 0x54000381, 0xb9400b00, 0x34ffffe0, 0x7100041f,
@@ -1017,8 +1131,8 @@ mod tests {
                     false,
                 )
                 .unwrap();
-            let pipe = runtime.linux.vfs.pipe(0).unwrap();
-            runtime.cpu.set_x(25, pipe[0] as u64);
+            // PR_GET_UNALIGN remains a genuine unsupported prctl subcommand:
+            // one explicit setup boundary leaves the original child dormant.
             let exit = runtime
                 .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
                 .unwrap();
@@ -1026,7 +1140,7 @@ mod tests {
             eprintln!("hardware dormant CPUs={cpus} exit={} marker={marker:?} cohorts={} scopes={} returned={:?}",exit.code,runtime.metrics.parallel_rounds,runtime.metrics.vm_checkpoint_spaces,runtime.metrics.cohort_return_syscalls);
             assert_eq!(exit.code, 0);
             assert_eq!(marker, 1u32.to_le_bytes());
-            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&29), Some(&1));
+            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&167), Some(&1));
             assert_eq!(
                 runtime.metrics.parallel_rounds, 2,
                 "one setup dispatch, then the original live queue"
