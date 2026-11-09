@@ -924,6 +924,178 @@ mod tests {
         ));
         assert_eq!(runtime.engine.mapped_bytes(), 0);
     }
+    fn threaded_image(cpus: usize, tail: &[u32]) -> Vec<u8> {
+        let mut words = vec![
+            0xd2800000 | (((cpus - 1) as u32) << 5) | 19,
+            0xd281e000,
+            0xf2a00020,
+            0x910003e1,
+            0xcb133021,
+            0xd2800002,
+            0xd2800003,
+            0xd2800004,
+            0xd2801b88,
+            0xd4000001,
+            0xb4000060,
+            0xd1000673,
+            0xb5000000 | (((-11i32 as u32) & 0x7ffff) << 5) | 19,
+        ];
+        words.extend_from_slice(tail);
+        let mut bytes = vec![0; 256 + 4 * words.len()];
+        bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
+        for (at, value) in [(16, 2u16), (18, 183), (52, 64), (54, 56), (56, 1)] {
+            bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+        }
+        for (at, value) in [(20, 1u32), (64, 1), (68, 5)] {
+            bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        let length = bytes.len() as u64;
+        for (at, value) in [
+            (24, 0x400100u64),
+            (32, 64),
+            (80, 0x400000),
+            (96, length),
+            (104, length),
+            (112, 4096),
+        ] {
+            bytes[at..at + 8].copy_from_slice(&value.to_le_bytes());
+        }
+        for (i, word) in words.into_iter().enumerate() {
+            bytes[256 + i * 4..260 + i * 4].copy_from_slice(&word.to_le_bytes());
+        }
+        bytes
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn host_pause_resume_preserves_one_hardware_cohort() {
+        struct Pauses {
+            counters: trames_shared::Mapping,
+            previous: Vec<u64>,
+            paused: bool,
+            stable: usize,
+            cycles: usize,
+            since: Instant,
+            deadline: Instant,
+            done: bool,
+        }
+        impl GuestOutput for Pauses {
+            fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+                std::sync::Arc::new(trames_vfs::CapturedConsole::default())
+            }
+            fn paused(&self) -> bool {
+                self.paused
+            }
+            fn control_poll_interval(&self) -> Duration {
+                Duration::from_millis(2)
+            }
+            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
+                assert!(
+                    Instant::now() < self.deadline,
+                    "hardware pause/resume timed out: paused={} cycles={} stable={}",
+                    self.paused,
+                    self.cycles,
+                    self.stable
+                );
+                let current: Vec<_> = (0..self.previous.len())
+                    .map(|i| {
+                        // SAFETY: this retained initialized mapping is page-aligned.
+                        // Each guest thread writes one distinct aligned u64. Native
+                        // ARM64 LDR/STR is atomic; volatile reads create no Rust byte
+                        // references over concurrent external hardware stores.
+                        unsafe {
+                            std::ptr::read_volatile(
+                                self.counters.pointer().add(i * 8).cast::<u64>(),
+                            )
+                        }
+                    })
+                    .collect();
+                if self.paused {
+                    if current == self.previous {
+                        self.stable += 1;
+                    } else {
+                        assert!(self.stable < 3, "hardware guest executed while paused");
+                        self.stable = 0;
+                        self.previous = current;
+                    }
+                    if self.stable >= 3 && self.since.elapsed() >= Duration::from_millis(30) {
+                        self.paused = false;
+                        self.cycles += 1;
+                        self.stable = 0;
+                    }
+                } else if current
+                    .iter()
+                    .zip(&self.previous)
+                    .all(|(now, before)| now > before)
+                {
+                    if self.cycles == 3 {
+                        self.done = true;
+                        return Ok(true);
+                    }
+                    self.previous = current;
+                    self.paused = true;
+                    self.since = Instant::now();
+                }
+                Ok(false)
+            }
+            fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
+                Ok(!self.done)
+            }
+            fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
+                Ok(bytes.len())
+            }
+        }
+        for cpus in [4, 12] {
+            // x19 is unique for the parent and each CLONE_THREAD child.
+            let image = threaded_image(
+                cpus,
+                &[
+                    0xd2a00020, 0x8b130c00, 0xd2800001, 0x91000421, 0xf9000001, 0x17fffffe,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["host-pause".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let file = trames_shared::SharedFile::anonymous().unwrap();
+            file.set_len(16384).unwrap();
+            let mapping = file.map(0, 16384).unwrap();
+            // SAFETY: the retained mapping owns a complete initialized RW page;
+            // original SharedPage/HVF admission owns guest access and geometry.
+            let resource = unsafe {
+                trames_memory::SharedMapping::from_allocation(
+                    mapping.allocation_pointer(),
+                    mapping.allocation_len(),
+                    mapping.clone(),
+                )
+            };
+            runtime.memory.map_anonymous_live(0x10000, 4096).unwrap();
+            runtime
+                .memory
+                .import_mapping(0x10000, 4096, resource)
+                .unwrap();
+            let mut host = Pauses {
+                counters: mapping,
+                previous: vec![0; cpus],
+                paused: false,
+                stable: 0,
+                cycles: 0,
+                since: Instant::now(),
+                deadline: Instant::now() + Duration::from_secs(5),
+                done: false,
+            };
+            assert!(matches!(
+                runtime.run(&mut host, u64::MAX),
+                Err(trames_session::RuntimeError::Cancelled)
+            ));
+            assert_eq!(host.cycles, 3);
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            eprintln!(
+                "hardware pause CPUs={cpus} cycles={} cohorts={}",
+                host.cycles, runtime.metrics.parallel_rounds
+            );
+        }
+    }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn memory_pressure_preserves_one_live_cohort_with_four_and_twelve_cpus() {
@@ -932,49 +1104,6 @@ mod tests {
         }
         // A native AArch64 ELF creates CLONE_THREAD peers, then all tasks keep
         // issuing getpid. No libc, network, external fixture or guest exit is used.
-        fn image(cpus: usize) -> Vec<u8> {
-            let words = [
-                0xd2800000 | (((cpus - 1) as u32) << 5) | 19,
-                0xd281e000,
-                0xf2a00020,
-                0x910003e1,
-                0xcb133021,
-                0xd2800002,
-                0xd2800003,
-                0xd2800004,
-                0xd2801b88,
-                0xd4000001,
-                0xb4000060,
-                0xd1000673,
-                0xb5000000 | (((-11i32 as u32) & 0x7ffff) << 5) | 19,
-                0xd2801588,
-                0xd4000001,
-                0x17fffffe,
-            ];
-            let mut bytes = vec![0; 256 + 4 * words.len()];
-            bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
-            for (at, value) in [(16, 2u16), (18, 183), (52, 64), (54, 56), (56, 1)] {
-                bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
-            }
-            for (at, value) in [(20, 1u32), (64, 1), (68, 5)] {
-                bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
-            }
-            let length = bytes.len() as u64;
-            for (at, value) in [
-                (24, 0x400100u64),
-                (32, 64),
-                (80, 0x400000),
-                (96, length),
-                (104, length),
-                (112, 4096),
-            ] {
-                bytes[at..at + 8].copy_from_slice(&value.to_le_bytes());
-            }
-            for (i, word) in words.into_iter().enumerate() {
-                bytes[256 + i * 4..260 + i * 4].copy_from_slice(&word.to_le_bytes());
-            }
-            bytes
-        }
         struct Live {
             output: Output,
             polls: usize,
@@ -1030,7 +1159,12 @@ mod tests {
         let _signals = super::super::lifecycle::Signals::install().unwrap();
         for cpus in [4, 12] {
             trames_hvf::take_memory_pressure().unwrap();
-            let mut runtime = Runtime::load(&image(cpus), &["pressure".into()], &[]).unwrap();
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &[0xd2801588, 0xd4000001, 0x17fffffe]),
+                &["pressure".into()],
+                &[],
+            )
+            .unwrap();
             runtime.cpu_count = cpus;
             runtime.profile_syscalls = true;
             let mut output = Live {
