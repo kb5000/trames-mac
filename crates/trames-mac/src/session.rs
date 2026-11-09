@@ -969,6 +969,73 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
+        use trames_execution::Registers;
+        for cpus in [4, 12] {
+            let image = threaded_image(
+                1,
+                &[
+                    0xd2a00038, 0xd2800220, 0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004,
+                    0xd2801b88, 0xd4000001, 0xb40005a0, 0xb7f807e0, 0xaa1803e0, 0xd2800061,
+                    0xd2800002, 0xd2800023, 0x91001304, 0xd2800005, 0xd2800c48, 0xd4000001,
+                    0xf100041f, 0x54000060, 0xb4fffec0, 0x14000033, 0xaa1903e0, 0xd2824681,
+                    0xd2800002, 0xd28003a8, 0xd4000001, 0xb100641f, 0x54000581, 0xd2800220,
+                    0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004, 0xd2801b88, 0xd4000001,
+                    0xb40003c0, 0xb7f80460, 0x91001300, 0xd2800021, 0xd2800022, 0xd2800c48,
+                    0xd4000001, 0xf100041f, 0x54000381, 0xb9400b00, 0x34ffffe0, 0x7100041f,
+                    0x54000301, 0xd2800000, 0xd2800bc8, 0xd4000001, 0x14000000, 0xaa1803e0,
+                    0xd2800001, 0xd2800002, 0xd2800003, 0xd2800c48, 0xd4000001, 0xb50001a0,
+                    0x52800020, 0xb9000b00, 0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000,
+                    0x91003300, 0xd2801001, 0xd2800002, 0xd2800003, 0xd2800c48, 0xd4000001,
+                    0xd2800c60, 0xd2800bc8, 0xd4000001, 0x14000000,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["dormant-shared-futex".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .linux
+                .vfs
+                .import_file(b"/dormant-futex", vec![0; 4096])
+                .unwrap();
+            let file = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/dormant-futex", 2, 0)
+                .unwrap();
+            runtime
+                .memory
+                .map_backed(
+                    0x10000,
+                    runtime
+                        .linux
+                        .vfs
+                        .mapping_pages(file, 0, 4096, true, true)
+                        .unwrap(),
+                    true,
+                    trames_memory::Permissions::RW,
+                    false,
+                )
+                .unwrap();
+            let pipe = runtime.linux.vfs.pipe(0).unwrap();
+            runtime.cpu.set_x(25, pipe[0] as u64);
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            let marker = runtime.memory.read_array::<4>(0x10008).unwrap();
+            eprintln!("hardware dormant CPUs={cpus} exit={} marker={marker:?} cohorts={} scopes={} returned={:?}",exit.code,runtime.metrics.parallel_rounds,runtime.metrics.vm_checkpoint_spaces,runtime.metrics.cohort_return_syscalls);
+            assert_eq!(exit.code, 0);
+            assert_eq!(marker, 1u32.to_le_bytes());
+            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&29), Some(&1));
+            assert_eq!(
+                runtime.metrics.parallel_rounds, 2,
+                "one setup dispatch, then the original live queue"
+            );
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn uring_signal_requests_keep_original_native_submitters_in_solo_and_live_cohorts() {
         for cpus in [1, 4, 12] {
             let image = threaded_image(
