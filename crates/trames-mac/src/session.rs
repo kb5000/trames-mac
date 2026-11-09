@@ -1485,6 +1485,76 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn caught_native_cpu_faults_and_signal_frames_complete_on_original_workers() {
+        let code: &[u32] = &[
+            0xd2a000b4, 0x8b131e94, 0xd2800160, 0xd2820001, 0xf2a000a1, 0xd2800002, 0xd2800103,
+            0xd28010c8, 0xd4000001, 0xb5000140, 0xd2a01209, 0x8b133129, 0xf9400120, 0x52800021,
+            0xb9001281, 0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000, 0xd2800b60, 0xd2800bc8,
+            0xd4000001, 0x14000000, 0xb9000280, 0xb940082a, 0xb900068a, 0xf940082a, 0xf900068a,
+            0xf940dc4a, 0x9100114a, 0xf900dc4a, 0xd65f03c0, 0xd2801168, 0xd4000001, 0x14000000,
+        ];
+        for cpus in [4, 12] {
+            let mut image = threaded_image(cpus, code);
+            let tail_offset = image.len() - code.len() * 4;
+            // Signal frames exceed one 4 KiB page. Each thread needs its own
+            // 16 KiB stack interval while its frame/SME records are live.
+            let mut patched = false;
+            for instruction in image[256..tail_offset].chunks_exact_mut(4) {
+                if instruction == 0xcb133021u32.to_le_bytes() {
+                    instruction.copy_from_slice(&0xcb133821u32.to_le_bytes());
+                    patched = true;
+                }
+            }
+            assert!(patched);
+            let handler = 0x400000 + tail_offset as u64 + 0x5c;
+            let restorer = 0x400000 + tail_offset as u64 + 0x80;
+            let mut runtime = Runtime::load(&image, &["native-source-fault".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 8192, trames_memory::Permissions::RW)
+                .unwrap();
+            let action: Vec<u8> = [handler, 0x04000004, restorer, 0]
+                .into_iter()
+                .flat_map(u64::to_le_bytes)
+                .collect();
+            runtime.memory.write(0x51000, &action).unwrap();
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware source-fault CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                let at = 0x50000 + id as u64 * 128;
+                assert_eq!(
+                    runtime.memory.read_array::<4>(at).unwrap(),
+                    11u32.to_le_bytes()
+                );
+                assert_eq!(
+                    runtime.memory.read_array::<4>(at + 4).unwrap(),
+                    1u32.to_le_bytes()
+                );
+                assert_eq!(
+                    runtime.memory.read_u64(at + 8).unwrap(),
+                    0x900000 + id as u64 * 4096
+                );
+                assert_eq!(
+                    runtime.memory.read_array::<4>(at + 16).unwrap(),
+                    1u32.to_le_bytes()
+                );
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert!(runtime.metrics.cohort_return_native.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
