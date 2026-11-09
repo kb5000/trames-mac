@@ -1084,6 +1084,86 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn prctl_names_and_sme_configuration_complete_on_original_native_workers() {
+        use trames_execution::Registers;
+        for cpus in [4, 12] {
+            let code: &[u32] = match cpus {
+                4 => &[
+                    0xd2a000b5, 0x8b1316b5, 0xd2820014, 0xf2a000b4, 0x8b131694, 0xd2840016,
+                    0xf2a000b6, 0xd28001e0, 0xaa1503e1, 0xd28014e8, 0xd4000001, 0xb5000460,
+                    0x885ffec9, 0x11000529, 0x880afec9, 0x35ffffaa, 0x88dffec9, 0x7100113f,
+                    0x54ffffc3, 0xd2800200, 0xaa1403e1, 0xd4000001, 0xb5000300, 0xd28000a0,
+                    0xd2800001, 0xd4000001, 0xb100581f, 0x54000261, 0xd2800800, 0xd4000001,
+                    0xeb1b001f, 0x540001e1, 0xd28007e0, 0xd2800801, 0xf2a00041, 0xd4000001,
+                    0xeb1c001f, 0x54000121, 0xd2800800, 0xd4000001, 0xeb1c001f, 0x540000a1,
+                    0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000, 0xd2800b60, 0xd2800bc8,
+                    0xd4000001, 0x14000000,
+                ],
+                12 => &[
+                    0xd2a000b5, 0x8b1316b5, 0xd2820014, 0xf2a000b4, 0x8b131694, 0xd2840016,
+                    0xf2a000b6, 0xd28001e0, 0xaa1503e1, 0xd28014e8, 0xd4000001, 0xb5000460,
+                    0x885ffec9, 0x11000529, 0x880afec9, 0x35ffffaa, 0x88dffec9, 0x7100313f,
+                    0x54ffffc3, 0xd2800200, 0xaa1403e1, 0xd4000001, 0xb5000300, 0xd28000a0,
+                    0xd2800001, 0xd4000001, 0xb100581f, 0x54000261, 0xd2800800, 0xd4000001,
+                    0xeb1b001f, 0x540001e1, 0xd28007e0, 0xd2800801, 0xf2a00041, 0xd4000001,
+                    0xeb1c001f, 0x54000121, 0xd2800800, 0xd4000001, 0xeb1c001f, 0x540000a1,
+                    0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000, 0xd2800b60, 0xd2800bc8,
+                    0xd4000001, 0x14000000,
+                ],
+                _ => unreachable!(),
+            };
+            let image = threaded_image(cpus, code);
+            let mut runtime = Runtime::load(&image, &["native-prctl".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let sme = trames_hvf::features().hwcap2 & (1 << 23) != 0;
+            runtime
+                .cpu
+                .set_x(27, if sme { 64 } else { 0u64.wrapping_sub(22) });
+            runtime.cpu.set_x(
+                28,
+                if sme {
+                    64 | (1 << 17)
+                } else {
+                    0u64.wrapping_sub(22)
+                },
+            );
+            runtime
+                .memory
+                .map(0x50000, 3 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            for id in 0..cpus {
+                runtime
+                    .memory
+                    .write(
+                        0x50000 + id as u64 * 32,
+                        format!("native-{id:02}\0").as_bytes(),
+                    )
+                    .unwrap();
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware prctl CPUs={cpus} SME={sme} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                let actual = runtime
+                    .memory
+                    .read_array::<16>(0x51000 + id as u64 * 32)
+                    .unwrap();
+                let expected = format!("native-{id:02}\0");
+                assert_eq!(&actual[..expected.len()], expected.as_bytes());
+            }
+            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&167), None);
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
@@ -1092,8 +1172,8 @@ mod tests {
                     0xd2a00038, 0xd2800220, 0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004,
                     0xd2801b88, 0xd4000001, 0xb40005a0, 0xb7f807e0, 0xaa1803e0, 0xd2800061,
                     0xd2800002, 0xd2800023, 0x91001304, 0xd2800005, 0xd2800c48, 0xd4000001,
-                    0xf100041f, 0x54000060, 0xb4fffec0, 0x14000033, 0xd28000a0, 0xd2800001,
-                    0xd2800002, 0xd28014e8, 0xd4000001, 0xb100581f, 0x54000581, 0xd2800220,
+                    0xf100041f, 0x54000060, 0xb4fffec0, 0x14000033, 0xaa1903e0, 0x91008301,
+                    0xd2800102, 0xd28007e8, 0xd4000001, 0xf100201f, 0x54000581, 0xd2800220,
                     0xd2800001, 0xd2800002, 0xd2800003, 0xd2800004, 0xd2801b88, 0xd4000001,
                     0xb40003c0, 0xb7f80460, 0x91001300, 0xd2800021, 0xd2800022, 0xd2800c48,
                     0xd4000001, 0xf100041f, 0x54000381, 0xb9400b00, 0x34ffffe0, 0x7100041f,
@@ -1131,8 +1211,15 @@ mod tests {
                     false,
                 )
                 .unwrap();
-            // PR_GET_UNALIGN remains a genuine unsupported prctl subcommand:
-            // one explicit setup boundary leaves the original child dormant.
+            // An OFD opened from legacy runtime-info has no source proc
+            // payload provider. Its real read keeps the setup boundary explicit.
+            runtime.linux.vfs.set_runtime_info(1, Default::default());
+            let legacy = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/proc/version", 0, 0)
+                .unwrap();
+            trames_execution::Registers::set_x(&mut runtime.cpu, 25, legacy as u64);
             let exit = runtime
                 .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
                 .unwrap();
@@ -1140,7 +1227,7 @@ mod tests {
             eprintln!("hardware dormant CPUs={cpus} exit={} marker={marker:?} cohorts={} scopes={} returned={:?}",exit.code,runtime.metrics.parallel_rounds,runtime.metrics.vm_checkpoint_spaces,runtime.metrics.cohort_return_syscalls);
             assert_eq!(exit.code, 0);
             assert_eq!(marker, 1u32.to_le_bytes());
-            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&167), Some(&1));
+            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&63), Some(&1));
             assert_eq!(
                 runtime.metrics.parallel_rounds, 2,
                 "one setup dispatch, then the original live queue"
