@@ -967,6 +967,120 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn sysinfo_preserves_one_hardware_cohort_with_four_and_twelve_cpus() {
+        struct Host {
+            shared: trames_shared::Mapping,
+            cpus: usize,
+            started: std::time::Instant,
+            done: bool,
+            completed: u64,
+        }
+        impl trames_linux::GuestOutput for Host {
+            fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+                std::sync::Arc::new(trames_vfs::CapturedConsole::default())
+            }
+            fn write(&mut self, _: trames_linux::OutputFd, bytes: &[u8]) -> std::io::Result<usize> {
+                Ok(bytes.len())
+            }
+            fn control_poll_interval(&self) -> std::time::Duration {
+                std::time::Duration::from_millis(1)
+            }
+            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> std::io::Result<bool> {
+                // SAFETY: a retained 16 KiB shared allocation contains naturally
+                // aligned AArch64 words. Each original guest actor writes its own
+                // 128-byte slot; live volatile reads are approximate statistics.
+                let counts: Vec<_> = (0..self.cpus)
+                    .map(|i| unsafe {
+                        self.shared
+                            .allocation_pointer()
+                            .add(i * 128 + 112)
+                            .cast::<u64>()
+                            .read_volatile()
+                    })
+                    .collect();
+                self.completed = counts.iter().sum();
+                assert!(
+                    self.started.elapsed() < std::time::Duration::from_secs(5),
+                    "hardware sysinfo failed to progress"
+                );
+                self.done = counts.iter().all(|&n| n > 0)
+                    && self.started.elapsed() >= std::time::Duration::from_millis(200);
+                Ok(self.done)
+            }
+            fn control(&mut self, _: &mut trames_vfs::Vfs) -> std::io::Result<bool> {
+                Ok(!self.done)
+            }
+        }
+        for cpus in [4, 12] {
+            let image = threaded_image(
+                cpus,
+                &[
+                    0xd2a00034, // mov x20, #0x10000
+                    0x8b131e94, // add x20, x20, x19, lsl #7
+                    0xaa1403e0, // mov x0, x20
+                    0xd2801668, // mov x8, #179
+                    0xd4000001, 0x910006b5, // add x21, x21, #1
+                    0xf9003a95, // str x21, [x20, #112]
+                    0x17fffffb,
+                ],
+            );
+            let mut runtime = Runtime::load(&image, &["sysinfo".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let file = trames_shared::SharedFile::anonymous().unwrap();
+            file.set_len(16384).unwrap();
+            let mapping = file.map(0, 16384).unwrap();
+            // SAFETY: retained initialized RW storage, admitted by the original
+            // SharedPage/HVF mapping owner just like other native shared bytes.
+            let resource = unsafe {
+                trames_memory::SharedMapping::from_allocation(
+                    mapping.allocation_pointer(),
+                    mapping.allocation_len(),
+                    mapping.clone(),
+                )
+            };
+            runtime.memory.map_anonymous_live(0x10000, 4096).unwrap();
+            runtime
+                .memory
+                .import_mapping(0x10000, 4096, resource)
+                .unwrap();
+            let mut host = Host {
+                shared: mapping,
+                cpus,
+                started: std::time::Instant::now(),
+                done: false,
+                completed: 0,
+            };
+            assert!(matches!(
+                runtime.run(&mut host, u64::MAX),
+                Err(trames_session::RuntimeError::Cancelled)
+            ));
+            // All execution has returned before inspecting complete ABI records.
+            for i in 0..cpus {
+                // SAFETY: these fixed-width fields lie in the retained allocation;
+                // cancellation above completed all original guest byte actors.
+                let procs = unsafe {
+                    host.shared
+                        .allocation_pointer()
+                        .add(i * 128 + 80)
+                        .cast::<u16>()
+                        .read()
+                };
+                assert_eq!(procs, cpus as u16);
+            }
+            eprintln!(
+                "hardware sysinfo CPUs={cpus} completed={} cohorts={} returned={:?}",
+                host.completed,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(runtime.metrics.service_requests, 0);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn host_pause_resume_preserves_one_hardware_cohort() {
         struct Pauses {
             counters: trames_shared::Mapping,
