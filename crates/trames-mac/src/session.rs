@@ -1350,6 +1350,150 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn original_uring_event_graph_completes_on_native_workers() {
+        fn imm(code: &mut Vec<u32>, r: u32, value: u64) {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | r);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | r);
+                }
+            }
+        }
+        fn call(code: &mut Vec<u32>, nr: u64, args: [u64; 6], loads: &[(u32, u32)], result: u32) {
+            for (r, value) in args.into_iter().enumerate() {
+                imm(code, r as u32, value);
+            }
+            for (r, offset) in loads {
+                code.push(0xf9400000 | ((*offset / 8) << 10) | (21 << 5) | *r);
+            }
+            imm(code, 8, nr);
+            code.extend([0xd4000001, 0xaa0003e0 | result]);
+        }
+        for cpus in [4, 12] {
+            let mut code = Vec::new();
+            imm(&mut code, 21, 0x54000);
+            code.push(0x8b000000 | (19 << 16) | (8 << 10) | (21 << 5) | 21);
+            call(&mut code, 426, [0, 1, 0, 0, 0, 0], &[(0, 0)], 22);
+            call(&mut code, 57, [0; 6], &[(0, 8)], 23);
+            // ADD after acceptance must wake the retained original parent.
+            code.push(0x910102a3); // x3 = this thread's epoll_event at row+64
+            for (r, v) in [(1, 1), (4, 0), (5, 0)] {
+                imm(&mut code, r, v);
+            }
+            code.push(0xf9400aa0); // child fd at row+16
+            code.push(0xf9400ea2); // leaf fd at row+24
+            imm(&mut code, 8, 21);
+            code.extend([0xd4000001, 0xaa0003f8]);
+            code.push(0xf9400ea0); // original leaf
+            code.push(0x910142a1); // counter at row+80
+            imm(&mut code, 2, 8);
+            imm(&mut code, 8, 64);
+            code.extend([0xd4000001, 0xaa0003f9]);
+            call(&mut code, 426, [0, 0, 1, 1, 0, 0], &[(0, 0)], 26);
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &code),
+                &["native-uring-maintenance".into()],
+                &[],
+            )
+            .unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x54000, 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            let mut rings = Vec::new();
+            for id in 0..cpus {
+                let leaf = runtime.linux.vfs.eventfd(0, 0).unwrap();
+                let child = runtime.linux.vfs.epoll_create(0).unwrap();
+                let parent = runtime.linux.vfs.epoll_create(0).unwrap();
+                runtime
+                    .linux
+                    .vfs
+                    .epoll_ctl(parent, 1, child, 1, 41)
+                    .unwrap();
+                let (fd, ring) = runtime.linux.vfs.uring_create(4, 8).unwrap();
+                let base = 0x100000 + id as u64 * 0x20000;
+                for (address, offset, len) in [
+                    (base, 0, ring.ring_bytes),
+                    (base + 0x10000, 0x10000000, ring.sqe_bytes),
+                ] {
+                    runtime
+                        .memory
+                        .map_backed(
+                            address,
+                            runtime
+                                .linux
+                                .vfs
+                                .mapping_pages(fd, offset, len, true, true)
+                                .unwrap(),
+                            true,
+                            trames_memory::Permissions::RW,
+                            false,
+                        )
+                        .unwrap();
+                }
+                let mut sqe = [0u8; 64];
+                sqe[0] = 6;
+                sqe[4..8].copy_from_slice(&parent.to_le_bytes());
+                sqe[28..32].copy_from_slice(&1u32.to_le_bytes());
+                sqe[32..40].copy_from_slice(&(300 + id as u64).to_le_bytes());
+                runtime.memory.write(base + 0x10000, &sqe).unwrap();
+                runtime
+                    .memory
+                    .write_array(base + 4, 1u32.to_le_bytes())
+                    .unwrap();
+                let row = 0x54000 + id as u64 * 256;
+                for (offset, value) in [
+                    (0, fd as u64),
+                    (8, parent as u64),
+                    (16, child as u64),
+                    (24, leaf as u64),
+                    (64, 1),
+                    (72, 42),
+                    (80, 1),
+                ] {
+                    runtime
+                        .memory
+                        .write_array(row + offset, value.to_le_bytes())
+                        .unwrap();
+                }
+                rings.push(ring);
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "native uring-maintenance CPUs={cpus} exit={} cohorts={} returned={:?} scopes={}",
+                exit.code,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.vm_checkpoint_groups
+            );
+            assert_eq!(exit.code, 0);
+            for (id, ring) in rings.iter().enumerate() {
+                assert_eq!(ring.cq_ready(), 1);
+                assert_eq!(
+                    ring.read_queue::<8>(trames_vfs::URING_CQES),
+                    (300 + id as u64).to_le_bytes()
+                );
+                assert_eq!(
+                    ring.read_queue::<4>(trames_vfs::URING_CQES + 8),
+                    1u32.to_le_bytes()
+                );
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+            // clone_vm setup retains its real mapping-reader synchronization.
+            // This fixture asserts source execution, not zero mapping scopes.
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn retained_original_uring_bodies_complete_without_a_join_on_native_workers() {
         use trames_execution::Registers;
         let code: &[u32] = &[
