@@ -1685,6 +1685,129 @@ mod tests {
 
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn original_posix_ofd_and_directory_locks_complete_without_joined_native_dispatch() {
+        let imm = |code: &mut Vec<u32>, reg: u32, value: u64| {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | reg);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | reg);
+                }
+            }
+        };
+        // number, original FD register (31 = missing), command, lock kind, result.
+        let calls = [
+            (25, 22, 7, 1, 0i64),
+            (25, 22, 5, 1, 0),
+            (25, 22, 6, 2, 0),
+            (25, 22, 38, 1, 0),
+            (25, 22, 36, 1, 0),
+            (25, 22, 37, 2, 0),
+            (32, 25, 2, 0, 0),
+            (32, 25, 8, 0, 0),
+            (25, 26, 7, 1, -9),
+            (25, 31, 38, 1, -9),
+            (25, 25, 6, 1, -9),
+            (32, 31, 0, 0, -22),
+        ];
+        for cpus in [4, 12] {
+            let mut code = vec![0xd2a000b4, 0x8b132294]; // results: 0x50000+id*256
+            imm(&mut code, 21, 0x51000);
+            code.push(0x8b131ab5); // record: base+id*64
+            imm(&mut code, 23, 0x52000);
+            code.push(0xf8737af6); // original FD table
+            for (i, (number, fd, command, kind, _)) in calls.iter().enumerate() {
+                if *fd == 31 {
+                    imm(&mut code, 0, u32::MAX as u64);
+                } else {
+                    code.push(0xaa0003e0 | (*fd << 16));
+                }
+                imm(&mut code, 1, *command);
+                if *number == 25 {
+                    code.push(0xaa1503e2);
+                    imm(&mut code, 9, *kind);
+                    code.push(0x790002a9);
+                } else {
+                    imm(&mut code, 2, 0);
+                }
+                imm(&mut code, 8, *number);
+                code.extend([0xd4000001, 0xf9000280 | ((i as u32) << 10)]);
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &code),
+                &["native-file-locks".into()],
+                &[],
+            )
+            .unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 12288, trames_memory::Permissions::RW)
+                .unwrap();
+            let directory = runtime.linux.vfs.open_at(-100, b"/", 0, 0).unwrap();
+            let path = runtime
+                .linux
+                .vfs
+                .open_at(-100, b"/", trames_vfs::O_PATH, 0)
+                .unwrap();
+            use trames_execution::Registers;
+            runtime.cpu.set_x(25, directory as u64);
+            runtime.cpu.set_x(26, path as u64);
+            let mut files = Vec::new();
+            for id in 0..cpus {
+                let fd = runtime
+                    .linux
+                    .vfs
+                    .open_at(-100, b"/native-locks", 0x42, 0o600)
+                    .unwrap();
+                runtime
+                    .memory
+                    .write(0x52000 + id as u64 * 8, &(fd as u64).to_le_bytes())
+                    .unwrap();
+                let mut record = [0; 32];
+                record[8..16].copy_from_slice(&(id as u64 * 16).to_le_bytes());
+                record[16..24].copy_from_slice(&8u64.to_le_bytes());
+                runtime
+                    .memory
+                    .write(0x51000 + id as u64 * 64, &record)
+                    .unwrap();
+                files.push(fd);
+            }
+            let observer = runtime.linux.vfs.clone_with_files(false);
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware file-lock CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for (id, fd) in files.iter().enumerate() {
+                for (i, (_, _, command, _, expected)) in calls.iter().enumerate() {
+                    assert_eq!(
+                        runtime
+                            .memory
+                            .read_u64(0x50000 + id as u64 * 256 + i as u64 * 8)
+                            .unwrap(),
+                        *expected as u64,
+                        "thread={id} command={command}"
+                    );
+                }
+                let requested = observer
+                    .normalize_lock(*fd, 1, 0, id as i64 * 16, 8)
+                    .unwrap();
+                assert_eq!(observer.record_lock_conflict(*fd, requested), Ok(None));
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
