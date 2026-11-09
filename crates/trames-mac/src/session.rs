@@ -14,24 +14,29 @@ struct Output {
     console: Option<super::console::Console>,
     terminals: Option<trames_distro::terminals::NativeTerminals>,
     root_signal: Option<u32>,
-    admin_pending: bool,
     host_memory_total: Option<usize>,
     deadline: Option<Instant>,
     window: Option<(u16, u16)>,
     pressure_target: Option<u64>,
-    next_admin_check: Instant,
+    next_stop_check: Instant,
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
 impl Output {
-    fn poll_admin(&mut self) {
-        if Instant::now() >= self.next_admin_check {
-            super::lifecycle::poll_stop();
-            self.admin_pending = self
-                .init
-                .as_ref()
-                .is_some_and(|i| i.pending(super::lifecycle::stopping()));
-            self.next_admin_check = Instant::now() + Duration::from_millis(100);
+    fn poll_init(&mut self) -> io::Result<()> {
+        if Instant::now() < self.next_stop_check {
+            return Ok(());
         }
+        super::lifecycle::poll_stop();
+        self.next_stop_check = Instant::now() + Duration::from_millis(100);
+        if let Some(init) = &mut self.init {
+            if let Some(signal) = init
+                .control(super::lifecycle::stopping())
+                .map_err(|e| io::Error::other(e.to_string()))?
+            {
+                self.root_signal = Some(signal);
+            }
+        }
+        Ok(())
     }
     fn observe_pressure(&mut self) -> io::Result<()> {
         match trames_hvf::take_memory_pressure().map_err(io::Error::other)? {
@@ -88,7 +93,7 @@ impl GuestOutput for Output {
     }
     fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
-        self.poll_admin();
+        self.poll_init()?;
         if let Some(exec) = &mut self.exec {
             exec.poll()?;
             exec.control(vfs);
@@ -98,15 +103,13 @@ impl GuestOutput for Output {
             terminals.pump(&mut console.channels);
             console.flush();
         }
-        Ok(self.admin_pending
-            || (super::lifecycle::stopping() && self.init.is_none())
+        Ok((super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
             || self.deadline.is_some_and(|d| Instant::now() >= d)
             || self.pressure_target.is_some())
     }
     fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
-        self.poll_admin();
-        self.admin_pending = false;
+        self.poll_init()?;
         if let Some(exec) = &mut self.exec {
             exec.poll()?;
             exec.control(vfs);
@@ -117,11 +120,6 @@ impl GuestOutput for Output {
             console.poll()?;
             terminals.pump(&mut console.channels);
             console.flush();
-        }
-        if let Some(init) = &mut self.init {
-            self.root_signal = init
-                .control(super::lifecycle::stopping())
-                .map_err(|e| io::Error::other(e.to_string()))?;
         }
         if (super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
@@ -638,7 +636,6 @@ pub fn run(
             .transpose()?,
         init,
         root_signal: None,
-        admin_pending: false,
         host_memory_total: options
             .memory_limits
             .is_host_managed()
@@ -646,7 +643,7 @@ pub fn run(
             .transpose()?,
         deadline: (timeout != 0).then(|| Instant::now() + Duration::from_secs(timeout)),
         pressure_target: None,
-        next_admin_check: Instant::now(),
+        next_stop_check: Instant::now(),
         bridge,
         window: None,
     };
@@ -860,12 +857,11 @@ mod tests {
             terminals: None,
             init: None,
             root_signal: None,
-            admin_pending: false,
             host_memory_total: None,
             deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,
             pressure_target: None,
-            next_admin_check: Instant::now(),
+            next_stop_check: Instant::now(),
             bridge: None,
         };
         let mut vfs = trames_vfs::Vfs::default();
