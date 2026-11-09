@@ -1555,6 +1555,136 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn original_fd_status_and_memfd_seals_complete_without_joined_native_dispatch() {
+        use trames_execution::Registers;
+        let imm = |code: &mut Vec<u32>, register: u32, value: u64| {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | register);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | register);
+                }
+            }
+        };
+        for cpus in [4, 12] {
+            let noatime = trames_vfs::O_NOATIME as u64;
+            // x25/x26/x27/x28 retain original status/foreign/busy/path FDs.
+            // x21 loads this actual thread's memfd from the original table.
+            let calls: [(u32, u64, u64, i64); 18] = [
+                (25, 4, noatime, 0),
+                (26, 4, noatime, -1),
+                (25, 4, 0x80000000, -22),
+                (28, 4, 0, -9),
+                (25, 12, u64::MAX, -22),
+                (28, 12, u64::MAX, -9),
+                (21, 1034, 0, 0),
+                (21, 1033, 16, -22),
+                (21, 1033, 6, 0),
+                (21, 1034, 0, 6),
+                (27, 1033, 8, -16),
+                (21, 1033, 8, 0),
+                (21, 1034, 0, 14),
+                (21, 1033, 1, 0),
+                (21, 1034, 0, 15),
+                (21, 1033, 0, -1),
+                (25, 3, 0, (noatime | 2) as i64),
+                (26, 1034, 0, -22),
+            ];
+            let mut code = vec![0xd2a000b4, 0x8b132294]; // x20=0x50000+thread*256
+            imm(&mut code, 22, 0x52000);
+            code.push(0xf8737ad5); // ldr x21,[x22,x19,lsl #3]
+            for (i, (fd, command, argument, _)) in calls.iter().enumerate() {
+                code.push(0xaa0003e0 | (*fd << 16));
+                imm(&mut code, 1, *command);
+                imm(&mut code, 2, *argument);
+                imm(&mut code, 8, 25);
+                code.extend([0xd4000001, 0xf9000280 | ((i as u32) << 10)]);
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime =
+                Runtime::load(&threaded_image(cpus, &code), &["native-fcntl".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 12288, trames_memory::Permissions::RW)
+                .unwrap();
+            let v = &mut runtime.linux.vfs;
+            v.import_file(b"/owned", b"original".to_vec()).unwrap();
+            v.import_file(b"/foreign", Vec::new()).unwrap();
+            let owned = v.open_at(-100, b"/owned", 2, 0).unwrap();
+            v.chown_fd(owned, 1000, 1000).unwrap();
+            let foreign = v.open_at(-100, b"/foreign", 2, 0).unwrap();
+            let busy = v.memfd_create(b"busy", 2).unwrap();
+            v.truncate_fd(busy, 4096).unwrap();
+            runtime
+                .memory
+                .map_backed(
+                    0x70000,
+                    v.mapping_pages(busy, 0, 4096, true, true).unwrap(),
+                    true,
+                    trames_memory::Permissions::RW,
+                    false,
+                )
+                .unwrap();
+            let path = v.open_at(-100, b"/", trames_vfs::O_PATH, 0).unwrap();
+            let mut memfds = Vec::new();
+            for id in 0..cpus {
+                let fd = v.memfd_create(b"thread-seal", 2).unwrap();
+                v.write(fd, b"payload").unwrap();
+                runtime
+                    .memory
+                    .write(0x52000 + id as u64 * 8, &(fd as u64).to_le_bytes())
+                    .unwrap();
+                runtime
+                    .memory
+                    .map_backed(
+                        0x60000 + id as u64 * 4096,
+                        v.mapping_pages(fd, 0, 4096, false, false).unwrap(),
+                        false,
+                        trames_memory::Permissions::R,
+                        false,
+                    )
+                    .unwrap();
+                memfds.push(fd);
+            }
+            v.credentials = trames_vfs::Credentials::user(1000, 1000);
+            for (register, fd) in [(25, owned), (26, foreign), (27, busy), (28, path)] {
+                runtime.cpu.set_x(register, fd as u64);
+            }
+            // Keep original inode observations after the guest closes its Files.
+            let observer = runtime.linux.vfs.clone_with_files(false);
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware fcntl CPUs={cpus} exit={} cohorts={} returned={:?}",
+                exit.code, runtime.metrics.parallel_rounds, runtime.metrics.cohort_return_syscalls
+            );
+            assert_eq!(exit.code, 0);
+            for (id, fd) in memfds.iter().enumerate() {
+                for (i, (_, command, _, expected)) in calls.iter().enumerate() {
+                    assert_eq!(
+                        runtime
+                            .memory
+                            .read_u64(0x50000 + id as u64 * 256 + i as u64 * 8)
+                            .unwrap(),
+                        *expected as u64,
+                        "thread={id} command={command}"
+                    );
+                }
+                assert_eq!(observer.seals(*fd, None), Ok(15));
+                assert_eq!(observer.pread(*fd, 7, 0).unwrap(), b"payload");
+            }
+            assert_eq!(observer.seals(busy, None), Ok(0));
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
