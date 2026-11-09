@@ -1350,6 +1350,137 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn original_task_proc_memory_views_do_not_require_host_statistics() {
+        struct LegacyMemory {
+            output: trames_linux::CapturedOutput,
+            total: usize,
+            samples: std::cell::Cell<usize>,
+        }
+        impl GuestOutput for LegacyMemory {
+            fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+                self.output.source_console()
+            }
+            fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
+                self.output.write(fd, bytes)
+            }
+            fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
+                self.output.poll_control(vfs)
+            }
+            fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
+                self.samples.set(self.samples.get() + 1);
+                Some(crate::host_memory::snapshot(self.total))
+            }
+            // Deliberately retain the legacy synchronous adapter, with no
+            // Send+Sync host_memory_source callback for source executors.
+        }
+        fn imm(code: &mut Vec<u32>, r: u32, value: u64) {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | r);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | r);
+                }
+            }
+        }
+        fn svc(code: &mut Vec<u32>, nr: u64) {
+            imm(code, 8, nr);
+            code.push(0xd4000001);
+        }
+        let paths: &[&[u8]] = &[
+            b"/proc/thread-self/status",
+            b"/proc/thread-self/stat",
+            b"/proc/thread-self/statm",
+            b"/proc/thread-self/maps",
+        ];
+        for cpus in [4, 12] {
+            let mut code = Vec::new();
+            imm(&mut code, 21, 0x50000);
+            imm(&mut code, 23, 0x70000);
+            code.push(0x8b000000 | (19 << 16) | (12 << 10) | (21 << 5) | 21);
+            code.push(0x8b000000 | (19 << 16) | (8 << 10) | (23 << 5) | 23);
+            for i in 0..paths.len() {
+                let store = |code: &mut Vec<u32>, offset: u32| {
+                    code.push(0xf9000000 | ((offset / 8) << 10) | (23 << 5))
+                };
+                imm(&mut code, 0, (-100i64) as u64);
+                code.push(0x91000000 | ((i as u32 * 64) << 10) | (21 << 5) | 1);
+                imm(&mut code, 2, 0);
+                imm(&mut code, 3, 0);
+                svc(&mut code, 56);
+                store(&mut code, i as u32 * 32);
+                code.push(0xaa0003f6);
+                for (nr, offset, result) in [(63, 512, 8), (67, 1024, 16)] {
+                    code.push(0xaa1603e0);
+                    code.push(0x91000000 | (offset << 10) | (21 << 5) | 1);
+                    imm(&mut code, 2, 256);
+                    imm(&mut code, 3, 0);
+                    svc(&mut code, nr);
+                    store(&mut code, i as u32 * 32 + result);
+                }
+                code.push(0xaa1603e0);
+                svc(&mut code, 57);
+                store(&mut code, i as u32 * 32 + 24);
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &code),
+                &["native-task-proc".into()],
+                &[],
+            )
+            .unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime.memory_limits = MemoryLimits::host_managed();
+            runtime
+                .memory
+                .map(0x50000, cpus as u64 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            runtime
+                .memory
+                .map(0x70000, 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            for id in 0..cpus {
+                for (i, path) in paths.iter().enumerate() {
+                    let at = 0x50000 + id as u64 * 4096 + i as u64 * 64;
+                    runtime.memory.write(at, path).unwrap();
+                    runtime.memory.write(at + path.len() as u64, &[0]).unwrap();
+                }
+            }
+            let mut output = LegacyMemory {
+                output: Default::default(),
+                total: crate::host_memory::physical_bytes().unwrap(),
+                samples: std::cell::Cell::new(0),
+            };
+            let exit = runtime.run(&mut output, u64::MAX).unwrap();
+            eprintln!(
+                "native task-proc CPUs={cpus} exit={} cohorts={} returned={:?} scopes={} host_samples={}",
+                exit.code,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.vm_checkpoint_groups,
+                output.samples.get()
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                for i in 0..paths.len() {
+                    let at = 0x70000 + id as u64 * 256 + i as u64 * 32;
+                    assert!((3..trames_vfs::MAX_FDS as u64)
+                        .contains(&runtime.memory.read_u64(at).unwrap()));
+                    for offset in [8, 16] {
+                        assert!((1..=256).contains(&runtime.memory.read_u64(at + offset).unwrap()));
+                    }
+                    assert_eq!(runtime.memory.read_u64(at + 24).unwrap(), 0);
+                }
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert_eq!(output.samples.get(), 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn original_uring_event_graph_completes_on_native_workers() {
         fn imm(code: &mut Vec<u32>, r: u32, value: u64) {
             code.push(0xd2800000 | ((value as u16 as u32) << 5) | r);
