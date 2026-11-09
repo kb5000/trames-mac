@@ -2213,6 +2213,229 @@ mod tests {
 
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn guest_event_dispatch_completes_on_original_native_workers() {
+        fn imm(code: &mut Vec<u32>, register: u32, value: u64) {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | register);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | register);
+                }
+            }
+        }
+        type Call = (u64, [u64; 6], &'static [(u32, u32, u16)], i64, Option<u32>);
+        let calls: &[Call] = &[
+            (20, [0; 6], &[], -1000, Some(22)),
+            (20, [0; 6], &[], -1000, Some(23)),
+            (19, [1, 0, 0, 0, 0, 0], &[], -1000, Some(24)),
+            (
+                21,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 23, 0), (2, 24, 0), (3, 21, 0)],
+                0,
+                None,
+            ),
+            (
+                21,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 22, 0), (2, 23, 0), (3, 21, 0)],
+                0,
+                None,
+            ),
+            (
+                22,
+                [0, 0, 1, 0, 0, 0],
+                &[(0, 22, 0), (1, 21, 0x70)],
+                1,
+                None,
+            ),
+            (
+                73,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 21, 0x20), (2, 21, 0xa0)],
+                1,
+                None,
+            ),
+            (
+                72,
+                [0, 0, 0, 0, 0, 0],
+                &[(0, 22, 1), (1, 21, 0x40), (4, 21, 0xa0)],
+                1,
+                None,
+            ),
+            (
+                73,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 21, 0x90), (2, 21, 0xa0)],
+                1,
+                None,
+            ),
+            (21, [0, 2, 0, 0, 0, 0], &[(0, 24, 0), (2, 23, 0)], -22, None),
+            (
+                21,
+                [0, 2, u32::MAX as u64, 0, 0, 0],
+                &[(0, 22, 0)],
+                -9,
+                None,
+            ),
+            (
+                21,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 23, 0), (2, 22, 0), (3, 21, 0)],
+                -40,
+                None,
+            ),
+            (21, [0, 2, 0, 0, 0, 0], &[(0, 22, 0), (2, 23, 0)], 0, None),
+            (
+                22,
+                [0, 0, 1, 0, 0, 0],
+                &[(0, 22, 0), (1, 21, 0x70)],
+                0,
+                None,
+            ),
+            (
+                21,
+                [0, 1, 0, 0, 0, 0],
+                &[(0, 22, 0), (2, 23, 0), (3, 21, 0)],
+                0,
+                None,
+            ),
+            (
+                286,
+                [0, 0, 1, u64::MAX, 0, 0],
+                &[(0, 24, 0), (1, 21, 0x50)],
+                8,
+                None,
+            ),
+            (
+                22,
+                [0, 0, 1, 0, 0, 0],
+                &[(0, 22, 0), (1, 21, 0x70)],
+                0,
+                None,
+            ),
+            (
+                287,
+                [0, 0, 1, u64::MAX, 0, 2],
+                &[(0, 24, 0), (1, 21, 0xb0)],
+                -22,
+                None,
+            ),
+            (
+                22,
+                [0, 0, 1, 0, 0, 0],
+                &[(0, 22, 0), (1, 21, 0x70)],
+                1,
+                None,
+            ),
+            (57, [0; 6], &[(0, 24, 0)], 0, None),
+            (57, [0; 6], &[(0, 23, 0)], 0, None),
+            (57, [0; 6], &[(0, 22, 0)], 0, None),
+        ];
+        for cpus in [4, 12] {
+            let mut code = Vec::new();
+            imm(&mut code, 20, 0x50000);
+            imm(&mut code, 21, 0x54000);
+            code.push(0x8b000000 | (19 << 16) | (9 << 10) | (20 << 5) | 20);
+            code.push(0x8b000000 | (19 << 16) | (8 << 10) | (21 << 5) | 21);
+            for (i, (number, args, registers, _, save)) in calls.iter().enumerate() {
+                for (register, value) in args.iter().enumerate() {
+                    imm(&mut code, register as u32, *value);
+                }
+                for (to, from, offset) in *registers {
+                    code.push(0x91000000 | (u32::from(*offset) << 10) | (*from << 5) | *to);
+                }
+                imm(&mut code, 8, *number);
+                code.push(0xd4000001);
+                if let Some(register) = save {
+                    code.push(0xaa0003e0 | *register);
+                }
+                code.push(0xf9000280 | ((i as u32) << 10));
+                if i == 2 {
+                    code.push(0xb9000000 | (8 << 10) | (21 << 5) | 22); // pollfd.fd = root
+                    imm(&mut code, 9, 1);
+                    code.push(0x9ac02000 | (22 << 16) | (9 << 5) | 9); // fd_set
+                    code.push(0xf9000000 | (8 << 10) | (21 << 5) | 9);
+                }
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &code),
+                &["native-event-dispatch".into()],
+                &[],
+            )
+            .unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 8 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            for id in 0..cpus {
+                let base = 0x54000 + id as u64 * 256;
+                for (offset, value) in [
+                    (0, 1),
+                    (8, 42),
+                    (0x24, 1),
+                    (0x50, base + 0x60),
+                    (0x58, 8),
+                    (0x68, 1),
+                    (0x90, 999),
+                    (0x94, 1),
+                    (0xb0, base + 0x68),
+                    (0xb8, 8),
+                ] {
+                    // 32-bit poll flags share a row with revents, so setting a
+                    // u64 here also initializes its unused high half to zero.
+                    runtime
+                        .memory
+                        .write_array(base + offset, value.to_le_bytes())
+                        .unwrap();
+                }
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware event-dispatch CPUs={cpus} exit={} cohorts={} returned={:?} scopes={}",
+                exit.code,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.vm_checkpoint_groups
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                for (i, (number, _, _, expected, _)) in calls.iter().enumerate() {
+                    let value = runtime
+                        .memory
+                        .read_u64(0x50000 + id as u64 * 512 + i as u64 * 8)
+                        .unwrap();
+                    if *expected == -1000 {
+                        assert!((3..64).contains(&value));
+                    } else {
+                        assert_eq!(
+                            value, *expected as u64,
+                            "thread={id} syscall={number} call={i}"
+                        );
+                    }
+                }
+                assert_eq!(
+                    runtime.memory.read_u64(0x54060 + id as u64 * 256).unwrap(),
+                    1
+                );
+                assert_eq!(
+                    runtime.memory.read_u64(0x54078 + id as u64 * 256).unwrap(),
+                    42
+                );
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
