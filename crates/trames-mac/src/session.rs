@@ -17,7 +17,7 @@ struct Output {
     host_memory_total: Option<usize>,
     deadline: Option<Instant>,
     window: Option<(u16, u16)>,
-    pressure_target: Option<u64>,
+    pressure: Option<trames_hvf::Reclaim>,
     next_stop_check: Instant,
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
@@ -40,16 +40,22 @@ impl Output {
     }
     fn observe_pressure(&mut self) -> io::Result<()> {
         match trames_hvf::take_memory_pressure().map_err(io::Error::other)? {
-            1 => self.pressure_target = None,
+            1 => self.pressure = None,
             level if level & 6 != 0 => {
                 let mapped = trames_hvf::paging_stats().mapped_bytes;
-                self.pressure_target = Some(if level & 4 != 0 {
+                let target = if level & 4 != 0 {
                     mapped / 4
                 } else {
                     mapped / 4 * 3
-                });
+                };
+                self.pressure = trames_hvf::reclaim_request(mapped - target);
             }
             _ => {}
+        }
+        if let Some(request) = &mut self.pressure {
+            if request.progress().map_err(io::Error::other)? {
+                self.pressure = None;
+            }
         }
         Ok(())
     }
@@ -105,8 +111,7 @@ impl GuestOutput for Output {
         }
         Ok((super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
-            || self.deadline.is_some_and(|d| Instant::now() >= d)
-            || self.pressure_target.is_some())
+            || self.deadline.is_some_and(|d| Instant::now() >= d))
     }
     fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
         self.poll_init()?;
@@ -128,17 +133,6 @@ impl GuestOutput for Output {
             return Ok(false);
         }
         self.observe_pressure()?;
-        if let Some(target) = self.pressure_target {
-            let remaining = trames_hvf::paging_stats()
-                .mapped_bytes
-                .saturating_sub(target);
-            if remaining != 0 {
-                trames_hvf::reclaim(remaining.min(8 << 20)).map_err(io::Error::other)?;
-            }
-            if trames_hvf::paging_stats().mapped_bytes <= target {
-                self.pressure_target = None;
-            }
-        }
         Ok(true)
     }
     fn host_spawn(&mut self) -> Option<trames_linux::HostSpawn> {
@@ -642,7 +636,7 @@ pub fn run(
             .then(super::host_memory::physical_bytes)
             .transpose()?,
         deadline: (timeout != 0).then(|| Instant::now() + Duration::from_secs(timeout)),
-        pressure_target: None,
+        pressure: None,
         next_stop_check: Instant::now(),
         bridge,
         window: None,
@@ -811,7 +805,7 @@ mod tests {
     }
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
-    fn pressure_notification_only_latches_until_joined_control_reclaims() {
+    fn pressure_notification_reclaims_without_join_and_restores_original_bytes() {
         unsafe extern "C" {
             fn trames_hvf_inject_pressure_for_test(bits: u32);
         }
@@ -860,7 +854,7 @@ mod tests {
             host_memory_total: None,
             deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,
-            pressure_target: None,
+            pressure: None,
             next_stop_check: Instant::now(),
             bridge: None,
         };
@@ -870,10 +864,10 @@ mod tests {
         unsafe {
             trames_hvf_inject_pressure_for_test(4);
         }
-        assert!(output.poll_control(&vfs).unwrap());
-        assert_eq!(trames_hvf::paging_stats().mapped_bytes, before.mapped_bytes);
-        assert!(output.control(&mut vfs).unwrap());
+        assert!(!output.poll_control(&vfs).unwrap());
         assert_eq!(trames_hvf::paging_stats().mapped_bytes, 0);
+        assert!(output.pressure.is_none());
+        assert!(output.control(&mut vfs).unwrap());
         state.pc = 0x10000;
         loop {
             if executor
@@ -929,5 +923,156 @@ mod tests {
             trames_session::RuntimeError::Configuration(_)
         ));
         assert_eq!(runtime.engine.mapped_bytes(), 0);
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn memory_pressure_preserves_one_live_cohort_with_four_and_twelve_cpus() {
+        unsafe extern "C" {
+            fn trames_hvf_inject_pressure_for_test(bits: u32);
+        }
+        // A native AArch64 ELF creates CLONE_THREAD peers, then all tasks keep
+        // issuing getpid. No libc, network, external fixture or guest exit is used.
+        fn image(cpus: usize) -> Vec<u8> {
+            let words = [
+                0xd2800000 | (((cpus - 1) as u32) << 5) | 19,
+                0xd281e000,
+                0xf2a00020,
+                0x910003e1,
+                0xcb133021,
+                0xd2800002,
+                0xd2800003,
+                0xd2800004,
+                0xd2801b88,
+                0xd4000001,
+                0xb4000060,
+                0xd1000673,
+                0xb5000000 | (((-11i32 as u32) & 0x7ffff) << 5) | 19,
+                0xd2801588,
+                0xd4000001,
+                0x17fffffe,
+            ];
+            let mut bytes = vec![0; 256 + 4 * words.len()];
+            bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
+            for (at, value) in [(16, 2u16), (18, 183), (52, 64), (54, 56), (56, 1)] {
+                bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+            }
+            for (at, value) in [(20, 1u32), (64, 1), (68, 5)] {
+                bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+            }
+            let length = bytes.len() as u64;
+            for (at, value) in [
+                (24, 0x400100u64),
+                (32, 64),
+                (80, 0x400000),
+                (96, length),
+                (104, length),
+                (112, 4096),
+            ] {
+                bytes[at..at + 8].copy_from_slice(&value.to_le_bytes());
+            }
+            for (i, word) in words.into_iter().enumerate() {
+                bytes[256 + i * 4..260 + i * 4].copy_from_slice(&word.to_le_bytes());
+            }
+            bytes
+        }
+        struct Live {
+            output: Output,
+            polls: usize,
+            injected: Option<trames_hvf::PagingStats>,
+            observed: Option<trames_hvf::PagingStats>,
+            deadline: Instant,
+        }
+        impl GuestOutput for Live {
+            fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+                self.output.source_console()
+            }
+            fn control_poll_interval(&self) -> Duration {
+                Duration::from_millis(2)
+            }
+            fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
+                assert!(
+                    Instant::now() < self.deadline,
+                    "pressure did not complete live"
+                );
+                self.polls += 1;
+                if self.polls == 3 {
+                    self.injected = Some(trames_hvf::paging_stats());
+                    // Process-local notification latch; never system-wide pressure.
+                    unsafe { trames_hvf_inject_pressure_for_test(4) };
+                }
+                assert!(
+                    !self.output.poll_control(vfs)?,
+                    "pressure requested a joined callback"
+                );
+                let now = trames_hvf::paging_stats();
+                if self.polls >= 8
+                    && self.output.pressure.is_none()
+                    && self.injected.is_some_and(|old| {
+                        now.page_out_bytes > old.page_out_bytes && now.page_ins > old.page_ins
+                    })
+                {
+                    self.observed = Some(now);
+                    return Ok(true); // Only the explicit test completion cancels.
+                }
+                Ok(false)
+            }
+            fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
+                if self.observed.is_some() {
+                    Ok(false)
+                } else {
+                    self.output.control(vfs)
+                }
+            }
+            fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
+                Ok(bytes.len())
+            }
+        }
+        let _signals = super::super::lifecycle::Signals::install().unwrap();
+        for cpus in [4, 12] {
+            trames_hvf::take_memory_pressure().unwrap();
+            let mut runtime = Runtime::load(&image(cpus), &["pressure".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            let mut output = Live {
+                output: Output {
+                    source: Some(std::sync::Arc::new(trames_vfs::CapturedConsole::default())),
+                    exec: None,
+                    init: None,
+                    console: None,
+                    terminals: None,
+                    root_signal: None,
+                    host_memory_total: None,
+                    deadline: None,
+                    window: None,
+                    pressure: None,
+                    next_stop_check: Instant::now(),
+                    bridge: None,
+                },
+                polls: 0,
+                injected: None,
+                observed: None,
+                deadline: Instant::now() + Duration::from_secs(5),
+            };
+            assert!(matches!(
+                runtime.run(&mut output, u64::MAX),
+                Err(trames_session::RuntimeError::Cancelled)
+            ));
+            assert!(runtime.metrics.peak_parallel_cpus >= 2);
+            assert_eq!(
+                runtime.metrics.parallel_rounds, 1,
+                "pressure must not rebuild the cohort"
+            );
+            assert_eq!(runtime.metrics.service_requests, 0);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            let before = output.injected.unwrap();
+            let after = output.observed.unwrap();
+            eprintln!(
+                "pressure cohort CPUs={cpus} peak={} rounds={} evicted={} page_ins={}",
+                runtime.metrics.peak_parallel_cpus,
+                runtime.metrics.parallel_rounds,
+                after.page_out_bytes - before.page_out_bytes,
+                after.page_ins - before.page_ins
+            );
+        }
     }
 }

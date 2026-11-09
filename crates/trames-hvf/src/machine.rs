@@ -550,8 +550,7 @@ impl Machine {
         }
     }
     fn trim_to(&self, target: u64, avoid: u64) -> Result<u64, Error> {
-        let mut mapped = self.mapped.load(Ordering::Relaxed);
-        if mapped <= target {
+        if self.mapped.load(Ordering::Relaxed) <= target {
             return Ok(0);
         }
         let target = target.saturating_sub(1 << 20);
@@ -559,43 +558,72 @@ impl Machine {
         blocks.sort_unstable_by_key(|b| b.touched.load(Ordering::Relaxed));
         let mut reclaimed = 0;
         for block in blocks {
-            if mapped <= target {
+            // Other executors can map, retire or reclaim different objects.
+            // A private subtraction cursor is not the live mapped-byte count.
+            if self.mapped.load(Ordering::Relaxed) <= target {
                 break;
             }
-            if block.gpa == avoid {
-                continue;
+            if block.gpa != avoid {
+                reclaimed += self.evict(&block, None)?.unwrap_or(0);
             }
-            let mut gate = block.gate.lock().unwrap();
-            if !gate.mapped || gate.hosts != 0 {
-                continue;
-            }
-            // hv_vm_unmap completes stage-two invalidation before any eviction.
-            // The stable host VM object retains bytes. Once HVF releases the
-            // mapping, macOS can compress/page it through its native pager.
-            // Never discard anonymous contents or perform synchronous disk I/O.
-            check(unsafe { trames_hvf_unmap(std::ptr::null_mut(), block.gpa, block.length) })?;
-            gate.mapped = false;
-            if let Some(arena) = &block._arena {
-                arena.set_mapped(false);
-            }
-            // Darwin DONTNEED uses VM_SYNC_DEACTIVATE, not KILLPAGES: retain
-            // every byte and let the native pager reclaim inactive residency.
-            // See apple-oss-distributions/xnu/osfmk/vm/vm_map.c. This file is
-            // macOS-only; Linux's destructive DONTNEED semantics do not apply.
-            unsafe {
-                libc::madvise(
-                    block.pointer.as_ptr().cast(),
-                    block.length,
-                    libc::MADV_DONTNEED,
-                );
-            }
-            self.mapped
-                .fetch_sub(block.length as u64, Ordering::Relaxed);
-            mapped -= block.length as u64;
-            reclaimed += block.length as u64;
         }
-        self.outs.fetch_add(reclaimed, Ordering::Relaxed);
         Ok(reclaimed)
+    }
+    /// None means an original host byte lease still excludes this mapping.
+    fn evict(
+        &self,
+        block: &Physical,
+        notify: Option<&mut Option<Arc<HardwareWait>>>,
+    ) -> Result<Option<u64>, Error> {
+        let mut gate = block.gate.lock().unwrap();
+        if !gate.mapped {
+            return Ok(Some(0));
+        }
+        if gate.hosts != 0 {
+            if let Some(notify) = notify {
+                let wait = notify.get_or_insert_with(|| Arc::new(HardwareWait::default()));
+                gate.waiters.push(wait.clone());
+            }
+            return Ok(None);
+        }
+        // hv_vm_unmap completes stage-two invalidation before eviction. Stable
+        // host VA ownership and every byte survive; no global CPU stop is needed.
+        check(unsafe { trames_hvf_unmap(std::ptr::null_mut(), block.gpa, block.length) })?;
+        gate.mapped = false;
+        if let Some(arena) = &block._arena {
+            arena.set_mapped(false);
+        }
+        // Darwin DONTNEED is VM_SYNC_DEACTIVATE, not Linux's destructive
+        // operation. The OS pager can compress/page the original live contents.
+        unsafe {
+            libc::madvise(
+                block.pointer.as_ptr().cast(),
+                block.length,
+                libc::MADV_DONTNEED,
+            );
+        }
+        let bytes = block.length as u64;
+        self.mapped.fetch_sub(bytes, Ordering::Relaxed);
+        self.outs.fetch_add(bytes, Ordering::Relaxed);
+        Ok(Some(bytes))
+    }
+    fn reclaim_batch(&self, after: Option<u64>, end: u64) -> (Vec<(u64, Weak<Physical>)>, bool) {
+        use std::ops::Bound::{Excluded, Included, Unbounded};
+        let mut blocks = self.blocks.lock().unwrap();
+        let batch: Vec<_> = blocks
+            .range((after.map_or(Unbounded, Excluded), Included(end)))
+            .take(RECLAIM_SCAN)
+            .map(|(&key, block)| (key, block.clone()))
+            .collect();
+        let exhausted = batch.len() < RECLAIM_SCAN || batch.last().is_some_and(|b| b.0 == end);
+        // Only this bounded metadata slice is held here. Destruction, page
+        // withdrawal, host advice and byte-lease waits all happen unlocked.
+        for (key, block) in &batch {
+            if block.strong_count() == 0 {
+                blocks.remove(key);
+            }
+        }
+        (batch, exhausted)
     }
 }
 impl Drop for Machine {
@@ -969,13 +997,137 @@ pub fn paging_stats() -> PagingStats {
     let machine = { MACHINE.lock().unwrap().as_ref().and_then(Weak::upgrade) };
     machine.map_or(PagingStats::default(), |m| m.stats())
 }
-/// Reclaim up to the requested live physical bytes, preserving all contents.
+const RECLAIM_SCAN: usize = 64;
+const RECLAIM_BYTES: u64 = 8 << 20;
+enum ReclaimPhase {
+    Scan { after: Option<u64>, end: u64 },
+    Retry(std::collections::VecDeque<Weak<Physical>>),
+    Waiting,
+    Done,
+}
+/// One original-machine reclamation request, not a persistent residency cap.
+/// Each progress call scans at most 64 entries and retires an 8 MiB batch,
+/// rounded to an original physical mapping. Borrowed bytes use their existing
+/// lease-release readiness; no executor, service thread or polling bus is added.
+pub struct Reclaim {
+    machine: Arc<Machine>,
+    remaining: u64,
+    reclaimed: u64,
+    phase: ReclaimPhase,
+    borrowed: std::collections::VecDeque<Weak<Physical>>,
+    wake: Option<Arc<HardwareWait>>,
+    wait_for_borrows: bool,
+}
+impl Reclaim {
+    pub fn progress(&mut self) -> Result<bool, Error> {
+        if matches!(self.phase, ReclaimPhase::Waiting) {
+            if !self.wake.as_ref().is_some_and(|wait| wait.ready()) {
+                return Ok(false);
+            }
+            self.wake = None;
+            self.phase = ReclaimPhase::Retry(std::mem::take(&mut self.borrowed));
+        }
+        let before = self.reclaimed;
+        self.phase = match std::mem::replace(&mut self.phase, ReclaimPhase::Done) {
+            ReclaimPhase::Scan { mut after, end } => {
+                let (batch, exhausted) = self.machine.reclaim_batch(after, end);
+                let count = batch.len();
+                let mut scanned = 0;
+                for (key, block) in batch {
+                    after = Some(key);
+                    scanned += 1;
+                    self.retire(block)?;
+                    if self.remaining == 0 || self.reclaimed - before >= RECLAIM_BYTES {
+                        break;
+                    }
+                }
+                if self.remaining == 0 {
+                    ReclaimPhase::Done
+                } else if scanned == count && exhausted {
+                    self.after_pass()
+                } else {
+                    ReclaimPhase::Scan { after, end }
+                }
+            }
+            ReclaimPhase::Retry(mut batch) => {
+                for _ in 0..RECLAIM_SCAN {
+                    let Some(block) = batch.pop_front() else {
+                        break;
+                    };
+                    self.retire(block)?;
+                    if self.remaining == 0 || self.reclaimed - before >= RECLAIM_BYTES {
+                        break;
+                    }
+                }
+                if self.remaining == 0 {
+                    ReclaimPhase::Done
+                } else if batch.is_empty() {
+                    self.after_pass()
+                } else {
+                    ReclaimPhase::Retry(batch)
+                }
+            }
+            ReclaimPhase::Done => ReclaimPhase::Done,
+            ReclaimPhase::Waiting => unreachable!("waiting readiness checked before progress"),
+        };
+        Ok(matches!(self.phase, ReclaimPhase::Done))
+    }
+    fn retire(&mut self, block: Weak<Physical>) -> Result<(), Error> {
+        if let Some(original) = block.upgrade() {
+            let notify = self.wait_for_borrows.then_some(&mut self.wake);
+            match self.machine.evict(&original, notify)? {
+                Some(bytes) => {
+                    self.reclaimed += bytes;
+                    self.remaining = self.remaining.saturating_sub(bytes);
+                }
+                None if self.wait_for_borrows => self.borrowed.push_back(block),
+                None => {}
+            }
+        }
+        Ok(())
+    }
+    fn after_pass(&self) -> ReclaimPhase {
+        if self.borrowed.is_empty() {
+            ReclaimPhase::Done
+        } else {
+            ReclaimPhase::Waiting
+        }
+    }
+}
+/// Bind a finite reclamation request to the current original VM and mappings.
+/// New faults may remap bytes; they do not turn this request into a RAM quota.
+pub fn reclaim_request(bytes: u64) -> Option<Reclaim> {
+    let machine = MACHINE.lock().unwrap().as_ref().and_then(Weak::upgrade)?;
+    let end = machine
+        .blocks
+        .lock()
+        .unwrap()
+        .last_key_value()
+        .map(|(&end, _)| end);
+    Some(Reclaim {
+        machine,
+        remaining: bytes,
+        reclaimed: 0,
+        phase: match end {
+            Some(end) if bytes != 0 => ReclaimPhase::Scan { after: None, end },
+            _ => ReclaimPhase::Done,
+        },
+        borrowed: Default::default(),
+        wake: None,
+        wait_for_borrows: true,
+    })
+}
+/// Immediate explicit reclaim, rounded to physical mappings. Host-borrowed
+/// resources are skipped; the request API can instead retain their readiness.
 pub fn reclaim(bytes: u64) -> Result<u64, Error> {
-    let machine = MACHINE.lock().unwrap().as_ref().and_then(Weak::upgrade);
-    let Some(machine) = machine else {
+    let Some(mut request) = reclaim_request(bytes) else {
         return Ok(0);
     };
-    machine.trim_to(machine.stats().mapped_bytes.saturating_sub(bytes), u64::MAX)
+    // The immediate API skips borrowed objects rather than leaving orphaned
+    // release subscriptions for a caller which cannot retain the request.
+    request.wait_for_borrows = false;
+    while !request.progress()? {}
+    Ok(request.reclaimed)
 }
 /// Latch-only OS event subscription; no guest-byte access or eviction here.
 /// Returns 0 for no update, 1 normal, 2 warning, or 4 critical pressure.
@@ -987,3 +1139,7 @@ pub fn take_memory_pressure() -> Result<u32, Error> {
     }
     Ok(unsafe { trames_hvf_take_pressure() })
 }
+
+#[cfg(test)]
+#[path = "reclaim_tests.rs"]
+mod reclaim_tests;

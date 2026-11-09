@@ -22,7 +22,10 @@ pub(crate) mod diagnostics;
 #[path = "machine.rs"]
 mod machine;
 use machine::Machine;
-pub use machine::{paging_stats, reclaim, set_resident_limit, take_memory_pressure, PagingStats};
+pub use machine::{
+    paging_stats, reclaim, reclaim_request, set_resident_limit, take_memory_pressure, PagingStats,
+    Reclaim,
+};
 const VECTOR_VA: u64 = 0xffffffe00000;
 #[repr(C)]
 #[derive(Default)]

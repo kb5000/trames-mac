@@ -1792,3 +1792,82 @@ fn clock_vdso_handles_long_elapsed_carry_and_leaves_realtime_for_the_syscall() {
     assert_eq!(state.registers[0], 0);
     assert_ne!(state.pc, 0x10010); // returned at the fallback SVC, before its body
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn live_vcpus_preserve_dirty_bytes_during_concurrent_pressure_reclamation() {
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Barrier,
+    };
+    for cpus in [4, 12] {
+        let machine = Machine::shared().unwrap();
+        let start = Arc::new(Barrier::new(cpus + 1));
+        let stop = Arc::new(AtomicBool::new(false));
+        let workers: Vec<_> = (0..cpus)
+            .map(|id| {
+                let start = start.clone();
+                let stop = stop.clone();
+                std::thread::spawn(move || {
+                    let mut executor = Executor::new().unwrap();
+                    let mut memory = memory();
+                    memory.protect(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+                    memory
+                        .write_array(0x1000c, 0x17ff_fffdu32.to_le_bytes())
+                        .unwrap();
+                    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+                    let sentinel = [0x50 + id as u8; 64];
+                    memory.write(0x20008, &sentinel).unwrap();
+                    let mut cpu = state();
+                    executor
+                        .run(&mut cpu, &mut memory, Duration::from_millis(2))
+                        .unwrap();
+                    start.wait();
+                    let deadline = Instant::now() + Duration::from_secs(10);
+                    let mut previous = 15;
+                    let mut slices = 0;
+                    loop {
+                        assert!(Instant::now() < deadline);
+                        executor
+                            .run(&mut cpu, &mut memory, Duration::from_millis(2))
+                            .unwrap();
+                        let value = memory.read_u64(0x20000).unwrap();
+                        assert!(value >= previous, "dirty counter must not reset");
+                        previous = value;
+                        assert_eq!(memory.read_array::<64>(0x20008).unwrap(), sentinel);
+                        slices += 1;
+                        if stop.load(Ordering::Relaxed) {
+                            break;
+                        }
+                    }
+                    assert!(previous > 15);
+                    slices
+                })
+            })
+            .collect();
+        start.wait();
+        let before = machine.stats();
+        for _ in 0..16 {
+            let mut request = reclaim_request(machine.stats().mapped_bytes).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !request.progress().unwrap() {
+                assert!(Instant::now() < deadline);
+                std::thread::park_timeout(Duration::from_millis(1));
+            }
+            std::thread::park_timeout(Duration::from_millis(1));
+        }
+        stop.store(true, Ordering::Relaxed);
+        let slices: usize = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .sum();
+        let after = machine.stats();
+        assert!(after.page_out_bytes > before.page_out_bytes);
+        assert!(after.page_ins > before.page_ins);
+        eprintln!(
+            "pressure live CPUs={cpus} slices={slices} evicted={} page_ins={}",
+            after.page_out_bytes - before.page_out_bytes,
+            after.page_ins - before.page_ins
+        );
+    }
+}
