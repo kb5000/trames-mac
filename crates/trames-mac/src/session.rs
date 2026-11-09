@@ -2070,6 +2070,149 @@ mod tests {
 
     #[test]
     #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn guest_file_cache_advice_completes_on_original_native_workers() {
+        let imm = |code: &mut Vec<u32>, register: u32, value: u64| {
+            code.push(0xd2800000 | ((value as u16 as u32) << 5) | register);
+            for shift in 1..4 {
+                let word = ((value >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | register);
+                }
+            }
+        };
+        type Call = (u64, [u64; 6], &'static [(u32, u32)], i64, Option<u32>);
+        let calls: [Call; 30] = [
+            (279, [0x54000, 3, 0, 0, 0, 0], &[], -1000, Some(23)),
+            (213, [0, 0, u64::MAX, 0, 0, 0], &[(0, 23)], 0, None),
+            (213, [0, u64::MAX, 0, 0, 0, 0], &[(0, 23)], -22, None),
+            (223, [0, 0, 0, 0, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 0, i64::MAX as u64, 1, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 1, 0, 2, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 1, 7, 3, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 1, 7, 4, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 0, 0, 5, 0, 0], &[(0, 23)], 0, None),
+            (223, [0, 0, 0, 6, 0, 0], &[(0, 23)], -22, None),
+            (223, [u32::MAX as u64, 0, 0, 6, 0, 0], &[], -9, None),
+            (46, [0, 1 << 30, 0, 0, 0, 0], &[(0, 23)], 0, None),
+            (64, [0, 0x54040, 7, 0, 0, 0], &[(0, 23)], 7, None),
+            (25, [0, 1033, 6, 0, 0, 0], &[(0, 23)], 0, None),
+            (
+                222,
+                [0, 4096, 3, 0x11, 0, 0],
+                &[(0, 22), (4, 23)],
+                -1001,
+                None,
+            ),
+            (215, [0, 4096, 0, 0, 0, 0], &[(0, 22)], 0, None),
+            (25, [0, 1033, 8, 0, 0, 0], &[(0, 23)], 0, None),
+            (25, [0, 1033, 1, 0, 0, 0], &[(0, 23)], 0, None),
+            (25, [0, 1034, 0, 0, 0, 0], &[(0, 23)], 15, None),
+            (23, [0, 0, 0, 0, 0, 0], &[(0, 23)], -1000, Some(24)),
+            (57, [0, 0, 0, 0, 0, 0], &[(0, 23)], 0, None),
+            (279, [0x54010, 0, 0, 0, 0, 0], &[], -1000, Some(23)),
+            (68, [0, 0x54040, 1, 0, 0, 0], &[(0, 24)], -1, None),
+            (62, [0, 0, 0, 0, 0, 0], &[(0, 24)], 0, None),
+            (63, [0, 0, 7, 0, 0, 0], &[(0, 24), (1, 26)], 7, None),
+            (64, [0, 0x54040, 1, 0, 0, 0], &[(0, 23)], 1, None),
+            (25, [0, 1034, 0, 0, 0, 0], &[(0, 24)], 15, None),
+            (25, [0, 1034, 0, 0, 0, 0], &[(0, 23)], 1, None),
+            (57, [0, 0, 0, 0, 0, 0], &[(0, 24)], 0, None),
+            (57, [0, 0, 0, 0, 0, 0], &[(0, 23)], 0, None),
+        ];
+        for cpus in [4, 12] {
+            let mut code = vec![0xd2a000b4, 0x8b132294]; // results = 0x50000 + id*256
+            imm(&mut code, 22, 0x60000);
+            code.push(0x8b1332d6); // mapping = base + id*4096
+            imm(&mut code, 26, 0x52000);
+            code.push(0x8b131f5a); // read buffer = base + id*128
+            for (i, (number, args, registers, _, save)) in calls.iter().enumerate() {
+                for (register, value) in args.iter().enumerate() {
+                    imm(&mut code, register as u32, *value);
+                }
+                for (to, from) in *registers {
+                    code.push(0xaa0003e0 | (*from << 16) | *to);
+                }
+                imm(&mut code, 8, *number);
+                code.push(0xd4000001);
+                if let Some(register) = save {
+                    code.push(0xaa0003e0 | *register);
+                }
+                code.push(0xf9000280 | ((i as u32) << 10));
+                if *number == 222 {
+                    imm(&mut code, 9, 0x41424344);
+                    code.push(0xb90002c9);
+                }
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime = Runtime::load(
+                &threaded_image(cpus, &code),
+                &["native-file-advice".into()],
+                &[],
+            )
+            .unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, 5 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            for (at, bytes) in [
+                (0x54000, b"guest-memory\0".as_slice()),
+                (0x54010, b"replacement\0".as_slice()),
+                (0x54040, b"payload".as_slice()),
+            ] {
+                runtime.memory.write(at, bytes).unwrap();
+            }
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "hardware file-advice CPUs={cpus} exit={} cohorts={} returned={:?} scopes={}",
+                exit.code,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.vm_checkpoint_groups
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                for (i, (number, _, _, expected, _)) in calls.iter().enumerate() {
+                    let value = runtime
+                        .memory
+                        .read_u64(0x50000 + id as u64 * 256 + i as u64 * 8)
+                        .unwrap();
+                    if *expected == -1000 {
+                        assert!(
+                            (3..4096).contains(&value),
+                            "thread={id} call={i} fd={value}"
+                        );
+                    } else {
+                        assert_eq!(
+                            value,
+                            if *expected == -1001 {
+                                0x60000 + id as u64 * 4096
+                            } else {
+                                *expected as u64
+                            },
+                            "thread={id} syscall={number} call={i}"
+                        );
+                    }
+                }
+                assert_eq!(
+                    runtime
+                        .memory
+                        .read_array::<7>(0x52000 + id as u64 * 128)
+                        .unwrap(),
+                    *b"DCBAoad"
+                );
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
     fn dormant_shared_futex_child_resumes_without_another_joined_native_cohort() {
         for cpus in [4, 12] {
             let image = threaded_image(
