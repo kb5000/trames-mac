@@ -78,6 +78,7 @@ pub fn path(console: &Path) -> PathBuf {
     console.with_extension("exec")
 }
 pub struct Server {
+    wake: Option<Arc<trames_linux::HostWake>>,
     listener: UnixListener,
     path: PathBuf,
     peers: Vec<Peer>,
@@ -85,6 +86,35 @@ pub struct Server {
     environment: Vec<String>,
 }
 impl Server {
+    pub fn bind_wake(&mut self, wake: Arc<trames_linux::HostWake>) {
+        self.wake = Some(wake);
+    }
+    pub fn interest(&self, wait: &mut trames_linux::HostWait) -> io::Result<()> {
+        wait.watch(&self.listener, false)?;
+        for peer in &self.peers {
+            if !peer.done && peer.incoming.len() < LIMIT + 12 && peer.stdin.len() < LIMIT {
+                wait.watch(&peer.socket, false)?;
+            }
+            if !peer.outgoing.is_empty() {
+                wait.watch(&peer.socket, true)?;
+            }
+            if let Some(job) = &peer.job {
+                wait.retain([job.process.completion().subscribe(wait.signal())]);
+                if !peer.stdin.is_empty() {
+                    if let Some(fd) = &job.input {
+                        wait.retain(fd.subscribe(wait.signal()));
+                    }
+                }
+                if peer.outgoing.len() <= LIMIT {
+                    for fd in job.output.iter().flatten() {
+                        wait.retain(fd.subscribe(wait.signal()));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn bind(console: &Path, environment: Vec<String>) -> io::Result<Self> {
         let path = path(console);
         match fs::symlink_metadata(&path) {
@@ -99,6 +129,7 @@ impl Server {
         listener.set_nonblocking(true)?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
         Ok(Self {
+            wake: None,
             listener,
             path,
             peers: vec![],
@@ -113,6 +144,9 @@ impl Server {
         match self.listener.accept() {
             Ok((socket, _)) if self.peers.len() < 32 => {
                 socket.set_nonblocking(true)?;
+                if let Some(wake) = &self.wake {
+                    wake.notify();
+                }
                 self.peers.push(Peer {
                     socket,
                     incoming: vec![],
@@ -129,6 +163,8 @@ impl Server {
             Err(e) => return Err(e),
         }
         for mut p in std::mem::take(&mut self.peers) {
+            let had_output = !p.outgoing.is_empty();
+            let had_input = !p.stdin.is_empty();
             let mut alive = p.flush();
             if alive && !p.done && p.incoming.len() < LIMIT + 12 && p.stdin.len() < LIMIT {
                 let mut bytes = [0; 4096];
@@ -199,6 +235,11 @@ impl Server {
                 alive = p.flush();
             }
             if alive {
+                if !had_output && !p.outgoing.is_empty() || !had_input && !p.stdin.is_empty() {
+                    if let Some(wake) = &self.wake {
+                        wake.notify();
+                    }
+                }
                 self.peers.push(p);
             }
         }
@@ -290,6 +331,11 @@ impl Server {
                     p.frame(3, &(-22i32).to_be_bytes());
                     p.done = true;
                 }
+            }
+            // This request has just created its original I/O/completion sources
+            // (or an error response). Subscribe and retry them before sleeping.
+            if let Some(wake) = &self.wake {
+                wake.notify();
             }
         }
     }
@@ -535,6 +581,49 @@ pub fn run(console: &Path, request: Request) -> io::Result<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn late_request_admission_notifies_before_new_sources_or_responses_are_waited_on() {
+        for invalid_cwd in [false, true] {
+            let console = std::env::temp_dir().join(format!(
+                "trames-late-exec-{}-{}-{invalid_cwd}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            let mut server = Server::bind(&console, vec!["PATH=/bin".into()]).unwrap();
+            let mut wait = trames_linux::HostWait::new().unwrap();
+            server.bind_wake(wait.wake());
+            let (socket, _client) = UnixStream::pair().unwrap();
+            socket.set_nonblocking(true).unwrap();
+            server.peers.push(Peer {
+                socket,
+                incoming: Vec::new(),
+                outgoing: VecDeque::new(),
+                request: Some(Request {
+                    argv: vec!["cat".into()],
+                    cwd: invalid_cwd.then(|| "/missing-directory".into()),
+                    ..Default::default()
+                }),
+                job: None,
+                stdin: VecDeque::new(),
+                eof: false,
+                done: false,
+            });
+            wait.begin();
+            server.interest(&mut wait).unwrap();
+            server.control(&Vfs::default());
+            assert_eq!(server.peers[0].job.is_some(), !invalid_cwd);
+            let start = std::time::Instant::now();
+            wait.until(start + Duration::from_secs(2));
+            wait.wait().unwrap();
+            assert!(
+                start.elapsed() < Duration::from_secs(1),
+                "new sources/response did not notify the embedding"
+            );
+        }
+    }
     #[test]
     fn launch_transport_preserves_init_locks_and_owns_independent_binary_streams() {
         let mut root = Vfs::default();

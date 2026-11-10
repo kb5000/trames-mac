@@ -11,6 +11,7 @@ unsafe extern "C" {
     fn trames_hvf_pressure_supported() -> i32;
     fn trames_hvf_populated(memory: *mut c_void, length: usize, groups: *mut u64) -> i32;
     fn trames_hvf_take_pressure() -> u32;
+    fn trames_hvf_pressure_fd() -> i32;
     fn trames_hvf_vm_create(error: *mut i32) -> *mut c_void;
     fn trames_hvf_vm_destroy(vm: *mut c_void);
     fn trames_hvf_cpu_create(vm: *mut c_void, error: *mut i32) -> *mut c_void;
@@ -1017,14 +1018,28 @@ pub struct Reclaim {
     borrowed: std::collections::VecDeque<Weak<Physical>>,
     wake: Option<Arc<HardwareWait>>,
     wait_for_borrows: bool,
+    host_subscribed: bool,
 }
 impl Reclaim {
+    pub fn host_interest(&mut self, wait: &mut trames_shared::HostWait) {
+        if !self.host_subscribed {
+            if let Some(wake) = &self.wake {
+                let target = wait.wake();
+                wake.subscribe(move || target.notify());
+                self.host_subscribed = true;
+            }
+        }
+        if !matches!(self.phase, ReclaimPhase::Waiting | ReclaimPhase::Done) {
+            wait.wake().notify();
+        }
+    }
     pub fn progress(&mut self) -> Result<bool, Error> {
         if matches!(self.phase, ReclaimPhase::Waiting) {
             if !self.wake.as_ref().is_some_and(|wait| wait.ready()) {
                 return Ok(false);
             }
             self.wake = None;
+            self.host_subscribed = false;
             self.phase = ReclaimPhase::Retry(std::mem::take(&mut self.borrowed));
         }
         let before = self.reclaimed;
@@ -1115,6 +1130,7 @@ pub fn reclaim_request(bytes: u64) -> Option<Reclaim> {
         borrowed: Default::default(),
         wake: None,
         wait_for_borrows: true,
+        host_subscribed: false,
     })
 }
 /// Immediate explicit reclaim, rounded to physical mappings. Host-borrowed
@@ -1131,6 +1147,14 @@ pub fn reclaim(bytes: u64) -> Result<u64, Error> {
 }
 /// Latch-only OS event subscription; no guest-byte access or eviction here.
 /// Returns 0 for no update, 1 normal, 2 warning, or 4 critical pressure.
+pub fn pressure_interest(wait: &mut trames_shared::HostWait) -> std::io::Result<()> {
+    let fd = unsafe { trames_hvf_pressure_fd() };
+    if fd < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // The native pressure source owns this descriptor for process lifetime.
+    wait.watch(unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) }, false)
+}
 pub fn take_memory_pressure() -> Result<u32, Error> {
     if unsafe { trames_hvf_pressure_supported() } == 0 {
         return Err(Error::Unsupported(

@@ -18,16 +18,12 @@ struct Output {
     deadline: Option<Instant>,
     window: Option<(u16, u16)>,
     pressure: Option<trames_hvf::Reclaim>,
-    next_stop_check: Instant,
+    host_wake: Option<std::sync::Arc<trames_linux::HostWake>>,
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
 impl Output {
     fn poll_init(&mut self) -> io::Result<()> {
-        if Instant::now() < self.next_stop_check {
-            return Ok(());
-        }
         super::lifecycle::poll_stop();
-        self.next_stop_check = Instant::now() + Duration::from_millis(100);
         if let Some(init) = &mut self.init {
             if let Some(signal) = init
                 .control(super::lifecycle::stopping())
@@ -97,6 +93,41 @@ impl GuestOutput for Output {
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
             || self.deadline.is_some_and(|d| Instant::now() >= d)
     }
+    fn bind_host_wake(&mut self, wake: std::sync::Arc<trames_linux::HostWake>) {
+        if let Some(console) = &mut self.console {
+            console.bind_wake(wake.clone());
+        }
+        if let Some(exec) = &mut self.exec {
+            exec.bind_wake(wake.clone());
+        }
+        if let Some(bridge) = &self.bridge {
+            bridge.bind_host(wake.clone());
+        }
+        self.host_wake = Some(wake);
+    }
+    fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> io::Result<()> {
+        super::lifecycle::interest(wait)?;
+        trames_hvf::pressure_interest(wait)?;
+        if let Some(request) = &mut self.pressure {
+            request.host_interest(wait);
+        }
+        if let Some(console) = &self.console {
+            console.interest(wait)?;
+        }
+        if let Some(exec) = &self.exec {
+            exec.interest(wait)?;
+        }
+        if let Some(terminals) = &self.terminals {
+            wait.retain(terminals.subscribe(wait.signal()));
+        }
+        if let Some(init) = &self.init {
+            wait.retain([init.subscribe(wait.signal())]);
+        }
+        if let Some(at) = self.deadline {
+            wait.until(at);
+        }
+        Ok(())
+    }
     fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
         self.observe_pressure()?;
         self.poll_init()?;
@@ -106,7 +137,11 @@ impl GuestOutput for Output {
         }
         if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
             console.poll()?;
-            terminals.pump(&mut console.channels);
+            if terminals.pump(&mut console.channels) {
+                if let Some(wake) = &self.host_wake {
+                    wake.notify();
+                }
+            }
             console.flush();
         }
         Ok(trames_linux::HostState::from_cancelled(
@@ -618,7 +653,7 @@ pub fn run(
             .transpose()?,
         deadline: (timeout != 0).then(|| Instant::now() + Duration::from_secs(timeout)),
         pressure: None,
-        next_stop_check: Instant::now(),
+        host_wake: None,
         bridge,
         window: None,
     };
@@ -836,7 +871,7 @@ mod tests {
             deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,
             pressure: None,
-            next_stop_check: Instant::now(),
+            host_wake: None,
             bridge: None,
         };
         let vfs = trames_vfs::Vfs::default();
@@ -3138,8 +3173,9 @@ mod tests {
             fn write(&mut self, _: trames_linux::OutputFd, bytes: &[u8]) -> std::io::Result<usize> {
                 Ok(bytes.len())
             }
-            fn control_poll_interval(&self) -> std::time::Duration {
-                std::time::Duration::from_millis(1)
+            fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> std::io::Result<()> {
+                wait.until(std::time::Instant::now() + std::time::Duration::from_millis(1));
+                Ok(())
             }
             fn poll_host(
                 &mut self,
@@ -3255,8 +3291,9 @@ mod tests {
             fn paused(&self) -> bool {
                 self.paused
             }
-            fn control_poll_interval(&self) -> Duration {
-                Duration::from_millis(2)
+            fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> std::io::Result<()> {
+                wait.until(std::time::Instant::now() + Duration::from_millis(2));
+                Ok(())
             }
             fn poll_host(&mut self, _: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 assert!(
@@ -3383,8 +3420,9 @@ mod tests {
             fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
                 self.output.source_console()
             }
-            fn control_poll_interval(&self) -> Duration {
-                Duration::from_millis(2)
+            fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> std::io::Result<()> {
+                wait.until(std::time::Instant::now() + Duration::from_millis(2));
+                Ok(())
             }
             fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 assert!(
@@ -3441,7 +3479,7 @@ mod tests {
                     deadline: None,
                     window: None,
                     pressure: None,
-                    next_stop_check: Instant::now(),
+                    host_wake: None,
                     bridge: None,
                 },
                 polls: 0,
@@ -3577,8 +3615,9 @@ mod tests {
             fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
                 Ok(bytes.len())
             }
-            fn control_poll_interval(&self) -> Duration {
-                Duration::from_millis(1)
+            fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> std::io::Result<()> {
+                wait.until(std::time::Instant::now() + Duration::from_millis(1));
+                Ok(())
             }
             fn poll_host(&mut self, _: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 self.cancelled = self

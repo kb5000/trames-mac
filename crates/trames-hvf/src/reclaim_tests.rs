@@ -162,3 +162,25 @@ fn pressure_native_ranges_respect_the_byte_batch_without_releasing_address_owner
         .is_none());
     assert_eq!(machine.stats().mapped_bytes, 2 << 20);
 }
+
+#[test]
+fn pressure_event_wakes_the_embedding_without_periodic_polling() {
+    unsafe extern "C" {
+        fn trames_hvf_inject_pressure_for_test(bits: u32);
+    }
+    let _ = take_memory_pressure().unwrap();
+    let mut wait = trames_shared::HostWait::new().unwrap();
+    wait.begin();
+    pressure_interest(&mut wait).unwrap();
+    wait.until(std::time::Instant::now() + std::time::Duration::from_secs(2));
+    // Test-only injection follows the real callback's latch and native pipe.
+    unsafe {
+        trames_hvf_inject_pressure_for_test(4);
+    }
+    wait.wait().unwrap();
+    assert!(
+        wait.signal().ready(),
+        "pressure did not notify the native waiter"
+    );
+    assert_eq!(take_memory_pressure().unwrap(), 4);
+}

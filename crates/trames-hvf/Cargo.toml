@@ -11,6 +11,7 @@ diagnostics = []
 
 [dependencies]
 trames-engine = { workspace = true }
+trames-shared = { workspace = true }
 trames-accel = { workspace = true }
 trames-execution = { workspace = true }
 trames-memory = { workspace = true }

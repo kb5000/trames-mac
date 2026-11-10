@@ -95,8 +95,17 @@ pub struct Bridge {
     binding: Mutex<Option<Binding>>,
     failure: Mutex<Option<String>>,
     stopped: AtomicBool,
+    host_wake: std::sync::OnceLock<Arc<trames_linux::HostWake>>,
 }
 impl Bridge {
+    pub fn bind_host(&self, wake: Arc<trames_linux::HostWake>) {
+        self.host_wake.get_or_init(|| wake);
+    }
+    fn notify_host(&self) {
+        if let Some(wake) = self.host_wake.get() {
+            wake.notify();
+        }
+    }
     pub fn attach(&self, server: Server) {
         let target: Arc<dyn IoWake> = self.wake.clone();
         let signal = IoSignal::new(0, Arc::downgrade(&target));
@@ -114,6 +123,7 @@ impl Bridge {
     fn fail(&self, error: impl ToString) {
         *self.failure.lock().unwrap() = Some(error.to_string());
         self.stopped.store(true, Ordering::Relaxed);
+        self.notify_host();
     }
     fn refresh(&self) -> Result<(), String> {
         let binding = self
@@ -298,6 +308,7 @@ extern "C" fn event(
         }
         if kind == 9 {
             bridge.stopped.store(true, Ordering::Relaxed);
+            bridge.notify_host();
             return Ok(());
         }
         let server = bridge
@@ -371,6 +382,7 @@ pub fn run(command: super::session::Command) -> Result<u8, String> {
         binding: Mutex::new(None),
         failure: Mutex::new(None),
         stopped: AtomicBool::new(false),
+        host_wake: Default::default(),
     });
     unsafe {
         trames_ui_callbacks(native, Arc::as_ptr(&bridge).cast(), refresh, event);

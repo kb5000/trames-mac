@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! Process cancellation uses the existing stopped control hook, never a worker.
+//! Host cancellation uses native signal/control readiness and source completion.
 use std::{
     io,
     os::fd::AsRawFd,
@@ -8,9 +8,31 @@ use std::{
 static STOP: AtomicBool = AtomicBool::new(false);
 static SIGNAL: AtomicI32 = AtomicI32::new(0);
 static CONTROL: AtomicI32 = AtomicI32::new(-1);
+static SIGNAL_FD: AtomicI32 = AtomicI32::new(-1);
+static SIGNAL_PIPE: std::sync::OnceLock<(
+    std::os::unix::net::UnixStream,
+    std::os::unix::net::UnixStream,
+)> = std::sync::OnceLock::new();
+pub fn interest(wait: &mut trames_linux::HostWait) -> io::Result<()> {
+    if let Some((read, _)) = SIGNAL_PIPE.get() {
+        wait.watch(read, false)?;
+    }
+    let fd = CONTROL.load(Ordering::Relaxed);
+    if fd >= 0 {
+        // SessionControl outlives Runtime::run and the synchronous duplication.
+        wait.watch(unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) }, false)?;
+    }
+    Ok(())
+}
 extern "C" fn cancel(signal: libc::c_int) {
     SIGNAL.store(signal, Ordering::Relaxed);
     STOP.store(true, Ordering::Relaxed);
+    let fd = SIGNAL_FD.load(Ordering::Relaxed);
+    if fd >= 0 {
+        unsafe {
+            libc::write(fd, b"s".as_ptr().cast(), 1);
+        }
+    }
 }
 pub fn stopping() -> bool {
     STOP.load(Ordering::Relaxed)
@@ -32,6 +54,11 @@ pub fn ready() {
     eprintln!("trames: session ready");
 }
 pub fn poll_stop() {
+    if let Some((read, _)) = SIGNAL_PIPE.get() {
+        use std::io::Read;
+        let mut byte = [0; 256];
+        while (&*read).read(&mut byte).is_ok_and(|n| n != 0) {}
+    }
     let fd = CONTROL.load(Ordering::Relaxed);
     if fd < 0 {
         return;
@@ -66,6 +93,13 @@ impl Drop for SessionControl {
 pub struct Signals(Vec<(i32, libc::sigaction)>);
 impl Signals {
     pub fn install() -> io::Result<Self> {
+        if SIGNAL_PIPE.get().is_none() {
+            let (read, write) = std::os::unix::net::UnixStream::pair()?;
+            read.set_nonblocking(true)?;
+            write.set_nonblocking(true)?;
+            let _ = SIGNAL_PIPE.set((read, write));
+        }
+        SIGNAL_FD.store(SIGNAL_PIPE.get().unwrap().1.as_raw_fd(), Ordering::Relaxed);
         STOP.store(false, Ordering::Relaxed);
         let mut saved = Self(Vec::new());
         for signal in [libc::SIGTERM, libc::SIGHUP, libc::SIGINT, libc::SIGPIPE] {

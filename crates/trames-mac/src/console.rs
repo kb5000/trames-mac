@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Independent guest PTYs over local sockets, pumped by the existing host hook.
+use std::sync::Arc;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fs,
@@ -81,6 +82,10 @@ impl BootOutput {
         if count != 0 {
             state.revision = state.revision.wrapping_add(1);
         }
+        drop(state);
+        if count != 0 {
+            self.readiness.notify_locked();
+        }
         Ok(count)
     }
     fn take(&self) -> Vec<u8> {
@@ -125,6 +130,7 @@ impl BootOutput {
     }
 }
 pub struct Console {
+    wake: Option<Arc<trames_linux::HostWake>>,
     boot: std::sync::Arc<BootOutput>,
     listener: UnixListener,
     path: PathBuf,
@@ -135,6 +141,27 @@ pub struct Console {
     histories: BTreeMap<u64, VecDeque<u8>>,
 }
 impl Console {
+    pub fn bind_wake(&mut self, wake: Arc<trames_linux::HostWake>) {
+        self.wake = Some(wake);
+    }
+    pub fn interest(&self, wait: &mut trames_linux::HostWait) -> io::Result<()> {
+        wait.watch(&self.listener, false)?;
+        for peer in &self.peers {
+            let room = peer
+                .id
+                .and_then(|id| self.channels.get(&id))
+                .map_or(QUEUE_LIMIT, |c| QUEUE_LIMIT - c.input.len());
+            if peer.incoming.len() + 4096 <= room {
+                wait.watch(&peer.stream, false)?;
+            }
+            if !peer.outgoing.is_empty() {
+                wait.watch(&peer.stream, true)?;
+            }
+        }
+        wait.retain([self.boot.readiness.subscribe(wait.signal())]);
+        Ok(())
+    }
+
     pub fn bind(path: &Path) -> io::Result<Self> {
         match fs::symlink_metadata(path) {
             Ok(m) if !m.file_type().is_socket() => {
@@ -148,6 +175,7 @@ impl Console {
         listener.set_nonblocking(true)?;
         fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
         Ok(Self {
+            wake: None,
             boot: BootOutput::new(),
             listener,
             path: path.to_owned(),
@@ -165,6 +193,9 @@ impl Console {
         match self.listener.accept() {
             Ok((stream, _)) => {
                 stream.set_nonblocking(true)?;
+                if let Some(wake) = &self.wake {
+                    wake.notify();
+                }
                 if self.peers.len() < LIMIT {
                     self.peers.push(Peer {
                         stream,
@@ -325,11 +356,20 @@ impl Console {
     pub fn flush(&mut self) {
         self.flush_boot();
         for mut peer in std::mem::take(&mut self.peers) {
+            let had_output = !peer.outgoing.is_empty();
             if self.flush_peer(&mut peer) {
+                if !had_output && !peer.outgoing.is_empty() {
+                    if let Some(wake) = &self.wake {
+                        wake.notify();
+                    }
+                }
                 self.peers.push(peer);
             } else if let Some(id) = peer.id {
                 self.channels.remove(&id);
                 self.histories.remove(&id);
+                if let Some(wake) = &self.wake {
+                    wake.notify();
+                }
             }
         }
     }

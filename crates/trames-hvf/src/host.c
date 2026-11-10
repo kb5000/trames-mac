@@ -718,11 +718,18 @@ uint32_t trames_hvf_max_vcpus(void) {
 static dispatch_source_t pressure_source;
 static pthread_once_t pressure_once=PTHREAD_ONCE_INIT;
 static atomic_uint pressure_bits;
+static int pressure_pipe[2]={-1,-1};
+static void pressure_notify(void) {
+    if (pressure_pipe[1]>=0) { char byte=1; (void)write(pressure_pipe[1],&byte,1); }
+}
 static void pressure_event(void *context) {
     unsigned bits=(unsigned)dispatch_source_get_data((dispatch_source_t)context);
     atomic_store_explicit(&pressure_bits,bits,memory_order_relaxed);
+    pressure_notify();
 }
 static void pressure_init(void) {
+    if (pipe(pressure_pipe)!=0) return;
+    for (int i=0;i<2;i++) { fcntl(pressure_pipe[i],F_SETFL,O_NONBLOCK); fcntl(pressure_pipe[i],F_SETFD,FD_CLOEXEC); }
     pressure_source=dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE,0,
         DISPATCH_MEMORYPRESSURE_NORMAL|DISPATCH_MEMORYPRESSURE_WARN|DISPATCH_MEMORYPRESSURE_CRITICAL,
         dispatch_get_global_queue(QOS_CLASS_UTILITY,0));
@@ -734,12 +741,18 @@ static void pressure_init(void) {
 int trames_hvf_pressure_supported(void) {
     pthread_once(&pressure_once,pressure_init); return pressure_source!=NULL;
 }
+int trames_hvf_pressure_fd(void) {
+    pthread_once(&pressure_once,pressure_init); return pressure_pipe[0];
+}
 unsigned trames_hvf_take_pressure(void) {
+    char bytes[64];
+    while (read(pressure_pipe[0],bytes,sizeof(bytes))>0) {}
     return atomic_exchange_explicit(&pressure_bits,0,memory_order_relaxed);
 }
 // Referenced only by signed unit tests; no product CLI or IPC exposes injection.
 void trames_hvf_inject_pressure_for_test(unsigned bits) {
     atomic_store_explicit(&pressure_bits,bits,memory_order_relaxed);
+    pressure_notify();
 }
 
 // Deterministic signed-test injection: stop at real EL1 PCs with the supplied

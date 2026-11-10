@@ -23,8 +23,8 @@ pub(crate) mod diagnostics;
 mod machine;
 use machine::Machine;
 pub use machine::{
-    paging_stats, reclaim, reclaim_request, set_resident_limit, take_memory_pressure, PagingStats,
-    Reclaim,
+    paging_stats, pressure_interest, reclaim, reclaim_request, set_resident_limit,
+    take_memory_pressure, PagingStats, Reclaim,
 };
 const VECTOR_VA: u64 = 0xffffffe00000;
 #[repr(C)]

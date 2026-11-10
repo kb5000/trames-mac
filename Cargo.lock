@@ -744,6 +744,7 @@ dependencies = [
  "trames-execution",
  "trames-linux",
  "trames-memory",
+ "trames-shared",
 ]
 
 [[package]]
