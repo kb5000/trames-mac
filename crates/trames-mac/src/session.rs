@@ -3583,4 +3583,148 @@ mod tests {
             assert_eq!(runtime.metrics.service_requests, 0);
         }
     }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn native_structural_task_memory_and_ring_controls_share_original_dispatch() {
+        fn imm(code: &mut Vec<u32>, r: u32, n: u64) {
+            code.push(0xd2800000 | ((n as u16 as u32) << 5) | r);
+            for shift in 1..4 {
+                let word = ((n >> (shift * 16)) & 0xffff) as u32;
+                if word != 0 {
+                    code.push(0xf2800000 | (shift << 21) | (word << 5) | r);
+                }
+            }
+        }
+        fn svc(code: &mut Vec<u32>, nr: u32) {
+            imm(code, 8, (1u64 << 32) | nr as u64);
+            code.push(0xd4000001);
+        }
+        fn reg(code: &mut Vec<u32>, to: u32, from: u32) {
+            code.push(0xaa0003e0 | (from << 16) | to);
+        }
+        fn add(code: &mut Vec<u32>, to: u32, from: u32, n: u32) {
+            code.push(0x91000000 | (n << 10) | (from << 5) | to);
+        }
+        fn store(code: &mut Vec<u32>, i: u32) {
+            code.push(0xf9000000 | (i << 10) | (23 << 5));
+        }
+        for cpus in [4, 12] {
+            let mut code = Vec::new();
+            imm(&mut code, 21, 0x50000);
+            imm(&mut code, 23, 0x70000);
+            imm(&mut code, 25, 0x80000);
+            for (r, shift) in [(21, 12), (23, 9), (25, 16)] {
+                code.push(0x8b000000 | (19 << 16) | (shift << 10) | (r << 5) | r);
+            }
+            // Each submitter owns a vector describing its original mapped page.
+            code.push(0xf9000000 | (32 << 10) | (21 << 5) | 21);
+            imm(&mut code, 22, 4096);
+            code.push(0xf9000000 | (33 << 10) | (21 << 5) | 22);
+            imm(&mut code, 0, 4);
+            reg(&mut code, 1, 21);
+            svc(&mut code, 425);
+            store(&mut code, 0);
+            reg(&mut code, 26, 0);
+            reg(&mut code, 0, 26);
+            imm(&mut code, 1, 1u64 << 32);
+            add(&mut code, 2, 21, 256);
+            imm(&mut code, 3, (1u64 << 32) | 1);
+            svc(&mut code, 427);
+            store(&mut code, 1);
+            reg(&mut code, 0, 26);
+            imm(&mut code, 1, (1u64 << 32) | 1);
+            imm(&mut code, 2, 0);
+            imm(&mut code, 3, 1u64 << 32);
+            svc(&mut code, 427);
+            store(&mut code, 2);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            imm(&mut code, 2, 3);
+            imm(&mut code, 3, 0x32);
+            imm(&mut code, 4, u64::MAX);
+            imm(&mut code, 5, 0);
+            svc(&mut code, 222);
+            store(&mut code, 3);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            imm(&mut code, 2, 1);
+            svc(&mut code, 226);
+            store(&mut code, 4);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            add(&mut code, 2, 21, 512);
+            svc(&mut code, 232);
+            store(&mut code, 5);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            imm(&mut code, 2, (1u64 << 32) | 4);
+            svc(&mut code, 233);
+            store(&mut code, 6);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            imm(&mut code, 2, 3);
+            svc(&mut code, 226);
+            store(&mut code, 7);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 4096);
+            imm(&mut code, 2, 8192);
+            imm(&mut code, 3, 1);
+            svc(&mut code, 216);
+            store(&mut code, 8);
+            reg(&mut code, 0, 25);
+            imm(&mut code, 1, 8192);
+            svc(&mut code, 215);
+            store(&mut code, 9);
+            reg(&mut code, 0, 26);
+            svc(&mut code, 57);
+            store(&mut code, 10);
+            imm(&mut code, 0, 0);
+            svc(&mut code, 93);
+            code.push(0x14000000);
+            // Preserve threaded_image's original clone loop while exercising
+            // Linux's complete x8 value through native child admission too.
+            let mut elf = threaded_image(cpus, &code);
+            assert_eq!(&elf[292..296], &0xd4000001u32.to_le_bytes());
+            elf.splice(292..292, 0xf2c00028u32.to_le_bytes());
+            let branch = 0xb5000000 | (((-12i32 as u32) & 0x7ffff) << 5) | 19;
+            elf[308..312].copy_from_slice(&branch.to_le_bytes());
+            let length = elf.len() as u64;
+            elf[96..104].copy_from_slice(&length.to_le_bytes());
+            elf[104..112].copy_from_slice(&length.to_le_bytes());
+            let mut runtime = Runtime::load(&elf, &["native-structural".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, cpus as u64 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            runtime
+                .memory
+                .map(0x70000, 8192, trames_memory::Permissions::RW)
+                .unwrap();
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!("native structural CPUs={cpus} exit={} cohorts={} returned={:?} services={} scopes={}",exit.code,runtime.metrics.parallel_rounds,runtime.metrics.cohort_return_syscalls,runtime.metrics.service_requests,runtime.metrics.vm_checkpoint_groups);
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                let at = 0x70000 + id as u64 * 512;
+                assert!(
+                    (3..trames_vfs::MAX_FDS as u64).contains(&runtime.memory.read_u64(at).unwrap())
+                );
+                for i in 1..11 {
+                    let value = runtime.memory.read_u64(at + i * 8).unwrap();
+                    let expected = if matches!(i, 3 | 8) {
+                        0x80000 + id as u64 * 65536
+                    } else {
+                        0
+                    };
+                    assert_eq!(value, expected, "CPUs={cpus} thread={id} operation={i}");
+                }
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
 }
