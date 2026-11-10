@@ -3492,4 +3492,95 @@ mod tests {
             );
         }
     }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn native_futex_wake_op_uses_original_atomic_memory_without_owner_returns() {
+        fn imm(code: &mut Vec<u32>, r: u32, n: u32) {
+            code.push(0xd2800000 | ((n & 0xffff) << 5) | r);
+            if n > 0xffff {
+                code.push(0xf2a00000 | ((n >> 16) << 5) | r);
+            }
+        }
+        for cpus in [4, 12] {
+            let mut code = Vec::new();
+            imm(&mut code, 21, 0x50000);
+            imm(&mut code, 23, 0x70000);
+            code.push(0x8b000000 | (19 << 16) | (12 << 10) | (21 << 5) | 21);
+            code.push(0x8b000000 | (19 << 16) | (9 << 10) | (23 << 5) | 23);
+            let mut expected = Vec::new();
+            for op in 0..5u32 {
+                for compare in 0..6u32 {
+                    let (old, arg) = (-5i32, -3i32);
+                    imm(&mut code, 22, old as u32);
+                    code.push(0xb9000000 | (1 << 10) | (21 << 5) | 22);
+                    code.push(0xaa1503e0); // x0 = original first word
+                    imm(&mut code, 1, 133);
+                    imm(&mut code, 2, 1);
+                    imm(&mut code, 3, 1);
+                    code.push(0x91000000 | (4 << 10) | (21 << 5) | 4);
+                    imm(
+                        &mut code,
+                        5,
+                        (op << 28)
+                            | (compare << 24)
+                            | (((arg as u32) & 4095) << 12)
+                            | ((arg as u32) & 4095),
+                    );
+                    imm(&mut code, 8, 98);
+                    code.push(0xd4000001);
+                    let offset = expected.len() as u32 * 16;
+                    code.push(0xf9000000 | ((offset / 8) << 10) | (23 << 5));
+                    code.push(0xb9400000 | (1 << 10) | (21 << 5));
+                    code.push(0xf9000000 | (((offset + 8) / 8) << 10) | (23 << 5));
+                    expected.push(match op {
+                        0 => arg,
+                        1 => old.wrapping_add(arg),
+                        2 => old | arg,
+                        3 => old & !arg,
+                        4 => old ^ arg,
+                        _ => unreachable!(),
+                    } as u32);
+                }
+            }
+            code.extend([0xd2800000, 0xd2800ba8, 0xd4000001, 0x14000000]);
+            let mut runtime =
+                Runtime::load(&threaded_image(cpus, &code), &["native-futex".into()], &[]).unwrap();
+            runtime.cpu_count = cpus;
+            runtime.profile_syscalls = true;
+            runtime
+                .memory
+                .map(0x50000, cpus as u64 * 4096, trames_memory::Permissions::RW)
+                .unwrap();
+            runtime
+                .memory
+                .map(0x70000, 8192, trames_memory::Permissions::RW)
+                .unwrap();
+            let exit = runtime
+                .run(&mut trames_linux::CapturedOutput::default(), u64::MAX)
+                .unwrap();
+            eprintln!(
+                "native futex CPUs={cpus} exit={} cohorts={} returned={:?} services={} scopes={}",
+                exit.code,
+                runtime.metrics.parallel_rounds,
+                runtime.metrics.cohort_return_syscalls,
+                runtime.metrics.service_requests,
+                runtime.metrics.vm_checkpoint_groups
+            );
+            assert_eq!(exit.code, 0);
+            for id in 0..cpus {
+                for (i, value) in expected.iter().enumerate() {
+                    let at = 0x70000 + id as u64 * 512 + i as u64 * 16;
+                    assert_eq!(
+                        runtime.memory.read_u64(at).unwrap(),
+                        0,
+                        "CPUs={cpus} thread={id} operation={i}"
+                    );
+                    assert_eq!(runtime.memory.read_u64(at + 8).unwrap(), *value as u64);
+                }
+            }
+            assert_eq!(runtime.metrics.parallel_rounds, 1);
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+            assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
 }
