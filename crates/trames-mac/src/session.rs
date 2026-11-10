@@ -97,6 +97,11 @@ impl GuestOutput for Output {
     fn live_host_processes(&self) -> bool {
         true
     }
+    fn cancellation_requested(&self) -> bool {
+        (super::lifecycle::stopping() && self.init.is_none())
+            || self.bridge.as_ref().is_some_and(|b| b.stopped())
+            || self.deadline.is_some_and(|d| Instant::now() >= d)
+    }
     fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
         self.observe_pressure()?;
         self.poll_init()?;
@@ -903,18 +908,12 @@ mod tests {
     }
     #[test]
     fn exact_instruction_budget_is_rejected_before_creating_hardware() {
-        let mut runtime = Runtime {
-            memory_limits: MemoryLimits::default(),
-            vulkan_display: Default::default(),
-            cpu: Default::default(),
-            engine: Default::default(),
-            memory: Default::default(),
-            linux: trames_linux::Linux::new(0),
-            terminal: None,
-            metrics: Default::default(),
-            profile_syscalls: false,
-            cpu_count: 1,
-        };
+        let mut runtime = Runtime::load(
+            &threaded_image(1, &[0x14000000]),
+            &["budget-contract".into()],
+            &[],
+        )
+        .unwrap();
         let error = runtime
             .run(&mut trames_linux::CapturedOutput::default(), 1)
             .unwrap_err();
@@ -1462,12 +1461,13 @@ mod tests {
             );
             assert_eq!(exit.code, 0);
             for id in 0..cpus {
-                for i in 0..paths.len() {
+                for (i, path) in paths.iter().enumerate() {
                     let at = 0x70000 + id as u64 * 256 + i as u64 * 32;
                     assert!((3..trames_vfs::MAX_FDS as u64)
                         .contains(&runtime.memory.read_u64(at).unwrap()));
                     for offset in [8, 16] {
-                        assert!((1..=256).contains(&runtime.memory.read_u64(at + offset).unwrap()));
+                        let count = runtime.memory.read_u64(at + offset).unwrap();
+                        assert!((1..=256).contains(&count), "CPUs={cpus} thread={id} path={} result_offset={offset} count={count:#x}", String::from_utf8_lossy(path));
                     }
                     assert_eq!(runtime.memory.read_u64(at + 24).unwrap(), 0);
                 }
@@ -3581,6 +3581,84 @@ mod tests {
             assert_eq!(runtime.metrics.parallel_rounds, 1);
             assert!(runtime.metrics.cohort_return_syscalls.is_empty());
             assert_eq!(runtime.metrics.service_requests, 0);
+        }
+    }
+    #[test]
+    #[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+    fn native_session_completion_and_host_cancel_use_sources_at_one_four_and_twelve_cpus() {
+        struct Host {
+            deadline: Option<Instant>,
+            cancelled: bool,
+            controls: usize,
+        }
+        impl GuestOutput for Host {
+            fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
+                std::sync::Arc::new(trames_vfs::CapturedConsole::default())
+            }
+            fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
+                Ok(bytes.len())
+            }
+            fn control_poll_interval(&self) -> Duration {
+                Duration::from_millis(1)
+            }
+            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
+                self.cancelled = self
+                    .deadline
+                    .is_some_and(|deadline| Instant::now() >= deadline);
+                Ok(false)
+            }
+            fn cancellation_requested(&self) -> bool {
+                self.cancelled
+            }
+            fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
+                self.controls += 1;
+                assert_eq!(
+                    self.controls, 1,
+                    "terminal completion called the stopped host hook"
+                );
+                Ok(true)
+            }
+        }
+        for cpus in [1, 4, 12] {
+            for cancel in [false, true] {
+                let code = if cancel {
+                    vec![0xd2a00020, 0xd2800541, 0xf9000001, 0x14000000]
+                } else {
+                    vec![0xd2800000, 0xd2800ba8, 0xd4000001]
+                };
+                let mut runtime = Runtime::load(
+                    &threaded_image(cpus, &code),
+                    &["native-source-completion".into()],
+                    &[],
+                )
+                .unwrap();
+                runtime.cpu_count = cpus;
+                runtime.profile_syscalls = true;
+                runtime
+                    .memory
+                    .map(0x10000, 4096, trames_memory::Permissions::RW)
+                    .unwrap();
+                let mut host = Host {
+                    deadline: cancel.then(|| Instant::now() + Duration::from_millis(20)),
+                    cancelled: false,
+                    controls: 0,
+                };
+                let result = runtime.run(&mut host, u64::MAX);
+                if cancel {
+                    assert!(
+                        matches!(result, Err(trames_session::RuntimeError::Cancelled)),
+                        "CPUs={cpus}: {result:?}"
+                    );
+                    assert_eq!(runtime.memory.read_u64(0x10000).unwrap(), 42);
+                } else {
+                    assert_eq!(result.unwrap().code, 0);
+                }
+                assert_eq!(host.controls, 1);
+                assert_eq!(runtime.metrics.parallel_rounds, 1);
+                assert!(runtime.metrics.cohort_return_syscalls.is_empty());
+                assert_eq!(runtime.metrics.service_requests, 0);
+                assert!(runtime.metrics.worker_slices > 0);
+            }
         }
     }
     #[test]
