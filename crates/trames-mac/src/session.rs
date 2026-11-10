@@ -91,9 +91,6 @@ impl GuestOutput for Output {
         self.host_memory_total
             .map(|total| std::sync::Arc::new(move || super::host_memory::snapshot(total)) as _)
     }
-    fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
-        self.host_memory_total.map(super::host_memory::snapshot)
-    }
 
     fn cancellation_requested(&self) -> bool {
         (super::lifecycle::stopping() && self.init.is_none())
@@ -1338,7 +1335,7 @@ mod tests {
         struct LegacyMemory {
             output: trames_linux::CapturedOutput,
             total: usize,
-            samples: std::cell::Cell<usize>,
+            samples: std::sync::Arc<std::sync::atomic::AtomicUsize>,
         }
         impl GuestOutput for LegacyMemory {
             fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
@@ -1350,12 +1347,17 @@ mod tests {
             fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 self.output.poll_host(vfs)
             }
-            fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
-                self.samples.set(self.samples.get() + 1);
-                Some(crate::host_memory::snapshot(self.total))
+            fn host_memory_source(
+                &self,
+            ) -> Option<std::sync::Arc<dyn Fn() -> trames_linux::HostMemoryInfo + Send + Sync>>
+            {
+                let samples = self.samples.clone();
+                let total = self.total;
+                Some(std::sync::Arc::new(move || {
+                    samples.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    crate::host_memory::snapshot(total)
+                }))
             }
-            // Deliberately retain the legacy synchronous adapter, with no
-            // Send+Sync host_memory_source callback for source executors.
         }
         fn imm(code: &mut Vec<u32>, r: u32, value: u64) {
             code.push(0xd2800000 | ((value as u16 as u32) << 5) | r);
@@ -1433,7 +1435,7 @@ mod tests {
             let mut output = LegacyMemory {
                 output: Default::default(),
                 total: crate::host_memory::physical_bytes().unwrap(),
-                samples: std::cell::Cell::new(0),
+                samples: std::sync::Arc::default(),
             };
             let exit = runtime.run(&mut output, u64::MAX).unwrap();
             eprintln!(
@@ -1442,7 +1444,7 @@ mod tests {
                 runtime.metrics.parallel_rounds,
                 runtime.metrics.cohort_return_syscalls,
                 runtime.metrics.vm_checkpoint_groups,
-                output.samples.get()
+                output.samples.load(std::sync::atomic::Ordering::Relaxed)
             );
             assert_eq!(exit.code, 0);
             for id in 0..cpus {
@@ -1458,7 +1460,7 @@ mod tests {
                 }
             }
             assert_eq!(runtime.metrics.parallel_rounds, 1);
-            assert_eq!(output.samples.get(), 1);
+            assert_eq!(output.samples.load(std::sync::atomic::Ordering::Relaxed), 1);
             assert!(runtime.metrics.cohort_return_syscalls.is_empty());
             assert_eq!(runtime.metrics.service_requests, 0);
         }
