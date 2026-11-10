@@ -2743,11 +2743,11 @@ mod tests {
                     false,
                 )
                 .unwrap();
-            // An OFD opened from legacy runtime-info has no source proc
-            // payload provider. Its real read keeps the setup boundary explicit.
+            // This original legacy OFD lacks the optimized proc query provider.
+            // Its full Linux body must run on source, without a setup join.
             runtime.linux.vfs.set_runtime_info(1, Default::default());
-            // Keep an actual excluded provider for the cold setup; an ordinary
-            // published global proc file now belongs to source execution.
+            // Keep the optimized provider unavailable to exercise the complete
+            // original-VFS read rather than its direct query fast path.
             struct Unavailable;
             impl trames_vfs::ProcSource for Unavailable {
                 fn available(&self, _: trames_vfs::ProcRefresh) -> bool {
@@ -2774,10 +2774,10 @@ mod tests {
             eprintln!("hardware dormant CPUs={cpus} exit={} marker={marker:?} cohorts={} scopes={} returned={:?}",exit.code,runtime.metrics.parallel_rounds,runtime.metrics.vm_checkpoint_spaces,runtime.metrics.cohort_return_syscalls);
             assert_eq!(exit.code, 0);
             assert_eq!(marker, 1u32.to_le_bytes());
-            assert_eq!(runtime.metrics.cohort_return_syscalls.get(&63), Some(&1));
+            assert!(runtime.metrics.cohort_return_syscalls.is_empty());
             assert_eq!(
-                runtime.metrics.parallel_rounds, 2,
-                "one setup dispatch, then the original live queue"
+                runtime.metrics.parallel_rounds, 1,
+                "cold full-VFS reads and dormant futexes share the original source queue"
             );
             assert_eq!(runtime.metrics.service_requests, 0);
         }
