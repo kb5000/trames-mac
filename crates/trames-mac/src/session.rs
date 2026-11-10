@@ -94,15 +94,13 @@ impl GuestOutput for Output {
     fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
         self.host_memory_total.map(super::host_memory::snapshot)
     }
-    fn live_host_processes(&self) -> bool {
-        true
-    }
+
     fn cancellation_requested(&self) -> bool {
         (super::lifecycle::stopping() && self.init.is_none())
             || self.bridge.as_ref().is_some_and(|b| b.stopped())
             || self.deadline.is_some_and(|d| Instant::now() >= d)
     }
-    fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
+    fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
         self.observe_pressure()?;
         self.poll_init()?;
         if let Some(exec) = &mut self.exec {
@@ -114,32 +112,13 @@ impl GuestOutput for Output {
             terminals.pump(&mut console.channels);
             console.flush();
         }
-        Ok((super::lifecycle::stopping() && self.init.is_none())
-            || self.bridge.as_ref().is_some_and(|b| b.stopped())
-            || self.deadline.is_some_and(|d| Instant::now() >= d))
+        Ok(trames_linux::HostState::from_cancelled(
+            (super::lifecycle::stopping() && self.init.is_none())
+                || self.bridge.as_ref().is_some_and(|b| b.stopped())
+                || self.deadline.is_some_and(|d| Instant::now() >= d),
+        ))
     }
-    fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
-        self.poll_init()?;
-        if let Some(exec) = &mut self.exec {
-            exec.poll()?;
-            exec.control(vfs);
-        }
-        if let (Some(console), Some(terminals)) = (&mut self.console, &mut self.terminals) {
-            // The solo/cooperative driver calls this hook directly, without
-            // the persistent workers' preceding poll_control opportunity.
-            console.poll()?;
-            terminals.pump(&mut console.channels);
-            console.flush();
-        }
-        if (super::lifecycle::stopping() && self.init.is_none())
-            || self.bridge.as_ref().is_some_and(|b| b.stopped())
-            || self.deadline.is_some_and(|d| Instant::now() >= d)
-        {
-            return Ok(false);
-        }
-        self.observe_pressure()?;
-        Ok(true)
-    }
+
     fn host_spawn(&mut self) -> Option<trames_linux::HostSpawn> {
         self.exec.as_mut()?.spawn()
     }
@@ -863,16 +842,22 @@ mod tests {
             next_stop_check: Instant::now(),
             bridge: None,
         };
-        let mut vfs = trames_vfs::Vfs::default();
+        let vfs = trames_vfs::Vfs::default();
         trames_hvf::take_memory_pressure().unwrap();
         // SAFETY: process-local metadata injection; no system-wide pressure.
         unsafe {
             trames_hvf_inject_pressure_for_test(4);
         }
-        assert!(!output.poll_control(&vfs).unwrap());
+        assert_eq!(
+            output.poll_host(&vfs).unwrap(),
+            trames_linux::HostState::Running
+        );
         assert_eq!(trames_hvf::paging_stats().mapped_bytes, 0);
         assert!(output.pressure.is_none());
-        assert!(output.control(&mut vfs).unwrap());
+        assert_eq!(
+            output.poll_host(&vfs).unwrap(),
+            trames_linux::HostState::Running
+        );
         state.pc = 0x10000;
         loop {
             if executor
@@ -1362,8 +1347,8 @@ mod tests {
             fn write(&mut self, fd: OutputFd, bytes: &[u8]) -> io::Result<usize> {
                 self.output.write(fd, bytes)
             }
-            fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
-                self.output.poll_control(vfs)
+            fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
+                self.output.poll_host(vfs)
             }
             fn host_memory(&self) -> Option<trames_linux::HostMemoryInfo> {
                 self.samples.set(self.samples.get() + 1);
@@ -3154,7 +3139,10 @@ mod tests {
             fn control_poll_interval(&self) -> std::time::Duration {
                 std::time::Duration::from_millis(1)
             }
-            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> std::io::Result<bool> {
+            fn poll_host(
+                &mut self,
+                _: &trames_vfs::Vfs,
+            ) -> std::io::Result<trames_linux::HostState> {
                 // SAFETY: a retained 16 KiB shared allocation contains naturally
                 // aligned AArch64 words. Each original guest actor writes its own
                 // 128-byte slot; live volatile reads are approximate statistics.
@@ -3174,10 +3162,7 @@ mod tests {
                 );
                 self.done = counts.iter().all(|&n| n > 0)
                     && self.started.elapsed() >= std::time::Duration::from_millis(200);
-                Ok(self.done)
-            }
-            fn control(&mut self, _: &mut trames_vfs::Vfs) -> std::io::Result<bool> {
-                Ok(!self.done)
+                Ok(trames_linux::HostState::from_cancelled(self.done))
             }
         }
         for cpus in [4, 12] {
@@ -3271,7 +3256,7 @@ mod tests {
             fn control_poll_interval(&self) -> Duration {
                 Duration::from_millis(2)
             }
-            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
+            fn poll_host(&mut self, _: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 assert!(
                     Instant::now() < self.deadline,
                     "hardware pause/resume timed out: paused={} cycles={} stable={}",
@@ -3312,17 +3297,15 @@ mod tests {
                 {
                     if self.cycles == 3 {
                         self.done = true;
-                        return Ok(true);
+                        return Ok(trames_linux::HostState::Cancelled);
                     }
                     self.previous = current;
                     self.paused = true;
                     self.since = Instant::now();
                 }
-                Ok(false)
+                Ok(trames_linux::HostState::Running)
             }
-            fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
-                Ok(!self.done)
-            }
+
             fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
                 Ok(bytes.len())
             }
@@ -3401,7 +3384,7 @@ mod tests {
             fn control_poll_interval(&self) -> Duration {
                 Duration::from_millis(2)
             }
-            fn poll_control(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<bool> {
+            fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 assert!(
                     Instant::now() < self.deadline,
                     "pressure did not complete live"
@@ -3413,7 +3396,7 @@ mod tests {
                     unsafe { trames_hvf_inject_pressure_for_test(4) };
                 }
                 assert!(
-                    !self.output.poll_control(vfs)?,
+                    self.output.poll_host(vfs)? == trames_linux::HostState::Running,
                     "pressure requested a joined callback"
                 );
                 let now = trames_hvf::paging_stats();
@@ -3424,17 +3407,11 @@ mod tests {
                     })
                 {
                     self.observed = Some(now);
-                    return Ok(true); // Only the explicit test completion cancels.
+                    return Ok(trames_linux::HostState::Cancelled); // Only the explicit test completion cancels.
                 }
-                Ok(false)
+                Ok(trames_linux::HostState::Running)
             }
-            fn control(&mut self, vfs: &mut trames_vfs::Vfs) -> io::Result<bool> {
-                if self.observed.is_some() {
-                    Ok(false)
-                } else {
-                    self.output.control(vfs)
-                }
-            }
+
             fn write(&mut self, _: OutputFd, bytes: &[u8]) -> io::Result<usize> {
                 Ok(bytes.len())
             }
@@ -3601,22 +3578,19 @@ mod tests {
             fn control_poll_interval(&self) -> Duration {
                 Duration::from_millis(1)
             }
-            fn poll_control(&mut self, _: &trames_vfs::Vfs) -> io::Result<bool> {
+            fn poll_host(&mut self, _: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
                 self.cancelled = self
                     .deadline
                     .is_some_and(|deadline| Instant::now() >= deadline);
-                Ok(false)
+                Ok(trames_linux::HostState::Running)
             }
             fn cancellation_requested(&self) -> bool {
                 self.cancelled
             }
-            fn control(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<bool> {
+            fn initialize(&mut self, _: &mut trames_vfs::Vfs) -> io::Result<()> {
                 self.controls += 1;
-                assert_eq!(
-                    self.controls, 1,
-                    "terminal completion called the stopped host hook"
-                );
-                Ok(true)
+                assert_eq!(self.controls, 1, "bootstrap ran more than once");
+                Ok(())
             }
         }
         for cpus in [1, 4, 12] {

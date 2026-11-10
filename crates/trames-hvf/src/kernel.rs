@@ -192,7 +192,6 @@ impl trames_engine::Cpu for Cpu {
     }
     // Every worker owns its thread-affine vCPU; physical bytes are shared
     // through the common frozen View and its hardware host-borrow gate.
-    const PARALLEL: bool = true;
     const EXACT_INSTRUCTIONS: bool = false;
     fn new(pc: u64, sp: u64) -> Self {
         Self {
@@ -316,15 +315,7 @@ impl trames_engine::Cpu for Cpu {
         };
         self.outcome(result, memory)
     }
-    fn run_coordinated(
-        &mut self,
-        engine: &mut Engine,
-        memory: &mut Memory,
-        registry: &mut trames_memory::parallel::Registry,
-        _: u64,
-    ) -> SliceOutcome {
-        self.coordinated_slice(engine, memory, registry, Duration::from_millis(2))
-    }
+
     fn run_quiesced(
         &mut self,
         engine: &mut Engine,

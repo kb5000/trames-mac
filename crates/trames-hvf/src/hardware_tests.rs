@@ -593,7 +593,15 @@ fn serial_and_worker_dispatch_keep_one_snapshot_registration_domain() {
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             assert!(Instant::now() < deadline);
-            match serial.run_coordinated(&mut engine, &mut memory, &mut registry, 4096) {
+            match serial
+                .run_quiesced(
+                    &mut engine,
+                    &mut memory,
+                    &mut registry,
+                    Duration::from_millis(2),
+                )
+                .unwrap()
+            {
                 SliceOutcome::Syscall { .. } => break,
                 SliceOutcome::Yield { .. } => {}
                 outcome => panic!("unexpected serial outcome: {outcome:?}"),
