@@ -451,5 +451,910 @@
     "Danmu-off observation also included host sampling; no clear improvement was seen, but it is not a clean causal test.",
     "Cache, playback resume position, codec/bitstream and navigation history differ between runs. No single-function root cause or completed fix claimed."
   ],
-  "final_state": "Product code/binaries unchanged. Isolated native reference closed; original codec preference overrides removed, danmu restored; guest test video paused. No signed media URLs or account data published."
+  "composition_update_20261112": {
+    "runtime_commit": "c2a97ff9a3f57c80039dcd3300e2b25b1a122e00",
+    "ipad_commit": "6bf3f88",
+    "wire_revision": 15,
+    "installed_dev_runner_sha256": "48706f600caa5fa6d83d101fb7399aa986eeabcdb132e3e121c7859301f94828",
+    "unchanged_stable_runner_sha256": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614",
+    "icd_sha256": "009a5f46a795e20dd6866e12a239f4a6476236be3af0efb75458b4be685e455a",
+    "native_final_present_probe": {
+      "phases": {
+        "encode": {
+          "count": 43679,
+          "median_ms": 0.032,
+          "p95_ms": 0.047,
+          "max_ms": 5.264
+        },
+        "completion": {
+          "count": 43679,
+          "median_ms": 1.354,
+          "p95_ms": 1.747,
+          "max_ms": 2.561
+        },
+        "gpu": {
+          "count": 43679,
+          "median_ms": 0.803,
+          "p95_ms": 1.28,
+          "max_ms": 2.025
+        },
+        "wait_until_scheduled": {
+          "count": 43679,
+          "median_ms": 0.254,
+          "p95_ms": 0.325,
+          "max_ms": 1.153
+        }
+      },
+      "scope": "Temporary instrumentation, removed before packaging; page/GUI workload. The forced-codec probe had no valid video decoder, so these are final presenter timings, not a hardware-video comparison."
+    },
+    "descriptor_benchmark_initial": {
+      "inputs": {
+        "compute": "158ac1d42af51cf15d812c68d2f63e4acabc13e0343ef07ac4374c1c07d0a6e8",
+        "compute.spv": "46a8dfd85c78c7ef9f39212b0699503b4800184a04b1e8a4bd81b07143a44072",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "libtrames_vulkan_icd.so": "009a5f46a795e20dd6866e12a239f4a6476236be3af0efb75458b4be685e455a",
+        "icd.json": "e0d07b46ddccd7241bddbdb95f0eda8c4aaf1ca7f9d1e4bd0d8f9317a66edd36"
+      },
+      "cases": [
+        {
+          "runner": "legacy",
+          "runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+          "cpus": 1,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 44.207,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "legacy",
+          "runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+          "cpus": 1,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 44.848,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "legacy",
+          "runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+          "cpus": 12,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 46.907,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "legacy",
+          "runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+          "cpus": 12,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 48.923,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "0d4796cc0b1ccad6fb40f88cd6fb14f2bf1d346acf68fd55a05ff2bae0633bc6",
+          "cpus": 1,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 6.911,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "0d4796cc0b1ccad6fb40f88cd6fb14f2bf1d346acf68fd55a05ff2bae0633bc6",
+          "cpus": 1,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 7.314,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "0d4796cc0b1ccad6fb40f88cd6fb14f2bf1d346acf68fd55a05ff2bae0633bc6",
+          "cpus": 12,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 7.168,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "0d4796cc0b1ccad6fb40f88cd6fb14f2bf1d346acf68fd55a05ff2bae0633bc6",
+          "cpus": 12,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 7.417,
+          "gpu_output_ok": true
+        }
+      ]
+    },
+    "descriptor_benchmark_final": {
+      "inputs": {
+        "compute": "158ac1d42af51cf15d812c68d2f63e4acabc13e0343ef07ac4374c1c07d0a6e8",
+        "compute.spv": "46a8dfd85c78c7ef9f39212b0699503b4800184a04b1e8a4bd81b07143a44072",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "libtrames_vulkan_icd.so": "009a5f46a795e20dd6866e12a239f4a6476236be3af0efb75458b4be685e455a",
+        "icd.json": "5ae8624fb86d31f0e54e32b3162fc3bca99ec69f42d07f73ea9421b15dbb3060"
+      },
+      "cases": [
+        {
+          "runner": "batch",
+          "runner_sha256": "09326e3fccd5804be553a0c4e063a7616f8d52d65acdad1026af5f126bb24f12",
+          "cpus": 1,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 8.143,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "09326e3fccd5804be553a0c4e063a7616f8d52d65acdad1026af5f126bb24f12",
+          "cpus": 1,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 9.604,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "09326e3fccd5804be553a0c4e063a7616f8d52d65acdad1026af5f126bb24f12",
+          "cpus": 12,
+          "mode": "batch-benchmark",
+          "exit": 0,
+          "update_ms": 7.151,
+          "gpu_output_ok": true
+        },
+        {
+          "runner": "batch",
+          "runner_sha256": "09326e3fccd5804be553a0c4e063a7616f8d52d65acdad1026af5f126bb24f12",
+          "cpus": 12,
+          "mode": "batch-template-benchmark",
+          "exit": 0,
+          "update_ms": 8.574,
+          "gpu_output_ok": true
+        }
+      ]
+    },
+    "webgl": {
+      "legacy_initial": {
+        "trials": 3,
+        "median_elapsed_ms": 1044,
+        "median_draw_update_finish_ms": 648,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1044,
+            "gpu_work_ms": 695,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 1152.713792
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1055,
+            "gpu_work_ms": 648,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 1073.6263339999996
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 945,
+            "gpu_work_ms": 605,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 971.2119169999997
+          }
+        ]
+      },
+      "batch_only": {
+        "trials": 3,
+        "median_elapsed_ms": 1029,
+        "median_draw_update_finish_ms": 648,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 894,
+            "gpu_work_ms": 556,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 975.3525409999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1029,
+            "gpu_work_ms": 684,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 1046.7961670000007
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 1064,
+            "gpu_work_ms": 648,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 1095.269417
+          }
+        ]
+      },
+      "final_initial": {
+        "trials": 3,
+        "median_elapsed_ms": 980,
+        "median_draw_update_finish_ms": 586,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 980,
+            "gpu_work_ms": 578,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 1066.0110829999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 932,
+            "gpu_work_ms": 586,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 947.891458
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 999,
+            "gpu_work_ms": 618,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 1024.5561670000002
+          }
+        ]
+      },
+      "final_quiet_warm": {
+        "trials": 5,
+        "median_elapsed_ms": 690,
+        "median_draw_update_finish_ms": 393,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 683,
+            "gpu_work_ms": 385,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 743.0086670000003
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 698,
+            "gpu_work_ms": 398,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 733.559042
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 681,
+            "gpu_work_ms": 383,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 698.147
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 691,
+            "gpu_work_ms": 393,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 710.1174170000002
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 690,
+            "gpu_work_ms": 393,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 701.336125
+          }
+        ]
+      },
+      "legacy_quiet_control": {
+        "trials": 5,
+        "median_elapsed_ms": 830,
+        "median_draw_update_finish_ms": 509,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 858,
+            "gpu_work_ms": 534,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 938.3834159999989
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 834,
+            "gpu_work_ms": 509,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 851.1519160000009
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 793,
+            "gpu_work_ms": 494,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 812.9967090000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 830,
+            "gpu_work_ms": 515,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 845.2302080000003
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 825,
+            "gpu_work_ms": 502,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 836.7334170000014
+          }
+        ]
+      },
+      "legacy_quiet_repeat": {
+        "trials": 5,
+        "median_elapsed_ms": 872,
+        "median_draw_update_finish_ms": 533,
+        "pixels_ok": true,
+        "rows": [
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 954,
+            "gpu_work_ms": 589,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 1,
+            "warmup": false,
+            "host_ms": 978.3131250000001
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 865,
+            "gpu_work_ms": 527,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 2,
+            "warmup": false,
+            "host_ms": 891.1460409999999
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 872,
+            "gpu_work_ms": 533,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 3,
+            "warmup": false,
+            "host_ms": 908.1339170000002
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 857,
+            "gpu_work_ms": 532,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 4,
+            "warmup": false,
+            "host_ms": 888.1974589999996
+          },
+          {
+            "batches": 64,
+            "draws": 512,
+            "elapsed_ms": 902,
+            "gpu_work_ms": 551,
+            "pixel": [
+              64,
+              128,
+              191,
+              255
+            ],
+            "pixel_ok": true,
+            "gl_error": 0,
+            "context_lost": false,
+            "renderer": "Generic Renderer",
+            "trial": 5,
+            "warmup": false,
+            "host_ms": 916.265708
+          }
+        ]
+      }
+    },
+    "local_1080p60_final": {
+      "elapsed_browser": 15.005,
+      "accepted_fps": 60.04665111629456,
+      "dropped_frames": 0,
+      "total_frames": 901,
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "frame_gaps": {
+        "count": 368,
+        "p50_ms": 40.63999999999942,
+        "p95_ms": 41.6200000000008,
+        "p99_ms": 46.70000000000073,
+        "max_ms": 48.67999999999847,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.9985852049316895
+    },
+    "bilibili_batch_only": {
+      "navigation": {
+        "responseStart": 461,
+        "responseEnd": 487,
+        "domInteractive": 2433,
+        "domContentLoaded": 2666,
+        "load": 25494,
+        "duration": 25494
+      },
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": false,
+        "codec": "video/av1",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30.000112533569336
+      },
+      "dpr": 2,
+      "focus": true,
+      "visibility": "visible",
+      "active_tail": {
+        "seconds": 19.926,
+        "accepted_fps": 7.42748168222423,
+        "dropped": 372,
+        "total": 520,
+        "minimum_buffered_seconds": 0
+      },
+      "max_main_timer_gap_ms": 5911,
+      "events": [
+        {
+          "event": "play",
+          "wall": 3207,
+          "time": 0,
+          "ready": 0
+        },
+        {
+          "event": "waiting",
+          "wall": 3207,
+          "time": 0,
+          "ready": 0
+        },
+        {
+          "event": "loadedmetadata",
+          "wall": 4402,
+          "time": 0,
+          "ready": 1
+        },
+        {
+          "event": "loadeddata",
+          "wall": 5659,
+          "time": 0,
+          "ready": 4
+        },
+        {
+          "event": "canplay",
+          "wall": 5676,
+          "time": 0,
+          "ready": 4
+        },
+        {
+          "event": "playing",
+          "wall": 5677,
+          "time": 0,
+          "ready": 4
+        },
+        {
+          "event": "waiting",
+          "wall": 20554,
+          "time": 14.627777,
+          "ready": 4
+        },
+        {
+          "event": "waiting",
+          "wall": 20997,
+          "time": 15.04653,
+          "ready": 2
+        },
+        {
+          "event": "canplay",
+          "wall": 23344,
+          "time": 15.04653,
+          "ready": 4
+        },
+        {
+          "event": "playing",
+          "wall": 23344,
+          "time": 15.04653,
+          "ready": 4
+        }
+      ]
+    },
+    "bilibili_final": {
+      "navigation": {
+        "responseStart": 441,
+        "responseEnd": 465,
+        "domInteractive": 2116,
+        "domContentLoaded": 2276,
+        "load": 3497,
+        "duration": 3497
+      },
+      "decoder": {
+        "name": "shutdown",
+        "hardware": false,
+        "codec": "video/av1",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30.00005531311035
+      },
+      "dpr": 2,
+      "focus": true,
+      "visibility": "visible",
+      "active_tail": {
+        "seconds": 19.911,
+        "accepted_fps": 13.409673045050473,
+        "dropped": 330,
+        "total": 597,
+        "minimum_buffered_seconds": 0.037206999999995105
+      },
+      "max_main_timer_gap_ms": 1950,
+      "events": [
+        {
+          "event": "play",
+          "wall": 2781,
+          "time": 0,
+          "ready": 0
+        },
+        {
+          "event": "waiting",
+          "wall": 2781,
+          "time": 0,
+          "ready": 0
+        },
+        {
+          "event": "loadedmetadata",
+          "wall": 3597,
+          "time": 191,
+          "ready": 1
+        },
+        {
+          "event": "seeking",
+          "wall": 3609,
+          "time": 191,
+          "ready": 1
+        },
+        {
+          "event": "seeked",
+          "wall": 4521,
+          "time": 191,
+          "ready": 4
+        },
+        {
+          "event": "loadeddata",
+          "wall": 4522,
+          "time": 191,
+          "ready": 4
+        },
+        {
+          "event": "canplay",
+          "wall": 4571,
+          "time": 191,
+          "ready": 4
+        },
+        {
+          "event": "playing",
+          "wall": 4572,
+          "time": 191,
+          "ready": 4
+        },
+        {
+          "event": "pause",
+          "wall": 35941,
+          "time": 222.1,
+          "ready": 2
+        },
+        {
+          "event": "ended",
+          "wall": 36132,
+          "time": 222.1,
+          "ready": 2
+        }
+      ]
+    },
+    "validation": {
+      "vulkan_unit_tests": 63,
+      "mac_hvf_tests": 5,
+      "mac_product_tests": 22,
+      "vulkan12_native_gpu_cpus": [
+        1,
+        12
+      ],
+      "batch_compute_native_gpu_cpus": [
+        1,
+        12
+      ],
+      "actual_linux_musl_transport_regression": "passed",
+      "icd_source_recipe_binary_gate": "passed",
+      "mac_workspace_lints_and_tests": "passed",
+      "ipad_arm64_ffi_compile": "passed",
+      "unchanged_cpu_kernel_network_checks": "reused"
+    },
+    "limitations": [
+      "Ordered observations with cache, power, profile and browser scheduling variation; no randomized whole-page speedup claim. The quiet old-runner controls were repeated after the final candidate.",
+      "WebGL draw/update/finish elapsed time includes guest scheduling; it is not a GPU timestamp. Pixels match in every trial.",
+      "Bilibili default remains software AV1 at 1080p. The final run resumes at 191 seconds and reaches end; only its active tail is summarized. Buffering reaches zero. Not a controlled comparison to the earlier H.264 experiment or the earlier video position.",
+      "Forced H.264 navigation again produced audio with videoWidth zero and decoder unavailable; excluded from playback comparisons. Codec overrides were then cleared.",
+      "Local H.264 accepted-frame counts do not prove physical 60 Hz scanout; callback delivery remains about 24.5 Hz.",
+      "No physical iPad GPU or IPA installation in this change."
+    ]
+  },
+  "initial_investigation_final_state": "Product code/binaries unchanged. Isolated native reference closed; original codec preference overrides removed, danmu restored; guest test video paused. No signed media URLs or account data published.",
+  "final_state": "Shared runtime and paired ICD fixes published; Mac Dev updated. Stable Mac runner hash unchanged; iPad source pin updated, installed iPad apps unchanged. Temporary instrumentation removed; codec defaults and danmu preserved; isolated Firefox opened for manual inspection. Bilibili loading/AV1 stalls remain unresolved."
 }

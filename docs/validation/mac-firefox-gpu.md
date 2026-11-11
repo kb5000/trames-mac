@@ -1683,3 +1683,78 @@ raw profile or user text is published.
 The [compact diagnostic record](mac-bilibili-BV1FRHV68EUX.json) retains the
 non-sensitive measurements and distinguishes confirmed findings from remaining
 hypotheses. This is diagnosis, not a completed performance fix.
+
+## Descriptor transport and recording completion collection (2026-11-12)
+
+Shared runtime `c2a97ff` and the paired wire-15 ICD remove two sources of small
+cross-boundary work in the composition path:
+
+- One descriptor update/template update is serialized in synchronous packets of
+  up to 32 records, with owned payloads and about 8 KiB of bounded scratch space.
+  Capability negotiation preserves individual calls on older runtimes. There
+  is no deferred update, new lock, service thread or coordinator.
+- Pure command recording no longer invokes the global GPU completion collector
+  between every bind, draw, barrier or state update. Begin/end/reset, submit,
+  waits, resource/lifetime operations and secondary-buffer execution retain
+  collection. Abandoned teardown readiness is queried only for abandoned jobs.
+
+A temporary presenter probe measured a median final GPU pass of about 0.8 ms,
+completion of 1.36 ms and `waitUntilScheduled` of 0.27 ms. These timings do not
+support making the final Metal pass the primary explanation for multi-second
+stalls. The probe's forced-codec page had no valid video decoder; its presenter
+measurements are GUI observations, not a hardware-video A/B. All instrumentation
+was removed before packaging; native presentation policy is unchanged.
+
+| Identical descriptor fixture, 512 × 72 updates | Old runtime | Batch-only | Final runtime |
+| --- | ---: | ---: | ---: |
+| Writes, one CPU | 44.207 ms | 6.911 ms | 8.143 ms |
+| Template, one CPU | 44.848 ms | 7.314 ms | 9.604 ms |
+| Writes, twelve CPUs | 46.907 ms | 7.168 ms | 7.151 ms |
+| Template, twelve CPUs | 48.923 ms | 7.417 ms | 8.574 ms |
+
+All runs use the identical new ICD: the old runtime takes the negotiated legacy
+path. The host transport fixture verifies 72 writes become three NativeCalls,
+including payload lifetime, image/texel/buffer serialization, both packet
+boundaries and dependent copies. Each native benchmark also verifies exact
+compute results after updating the descriptors.
+
+| Fixed 512-draw WebGL workload; median | Elapsed | Draw/update/finish elapsed |
+| --- | ---: | ---: |
+| Old runtime, initial three trials | 1044 ms | 648 ms |
+| Batch-only, three trials | 1029 ms | 648 ms |
+| Final, initial three trials | 980 ms | 586 ms |
+| Final, five quiet warmed trials | 690 ms | 393 ms |
+| Old runtime, later quiet five-trial control | 830 ms | 509 ms |
+| Old runtime, repeated quiet control | 872 ms | 533 ms |
+
+The quiet old controls were repeated after the final candidate. Every pixel
+oracle passes without GL errors or context loss. The ordered observations show
+about 17–21% lower total elapsed time against the later quiet controls, but cache,
+power and scheduling variation remain; this is not a randomized whole-page or
+video speedup claim. `Draw/update/finish` includes guest scheduling, not just GPU
+time. Descriptor batching alone did not materially improve this WebGL workload.
+
+Final local 1920×1080 H.264/AAC playback verifies actual hardware decode: 901
+frames in 15.005 seconds, zero drops, about 60.05 accepted fps, no waiting events
+and maximum callback gap 48.68 ms. These remain browser accepted-frame counters;
+callback notifications arrive at about 24.5 Hz, not physical 60-Hz scanout proof.
+
+The supplied Bilibili page still selects software AV1 at 1080p and retains severe
+drops/loading stalls. The final run resumes at 191 seconds, reaches the end and
+has a maximum main-thread timer gap of 1.95 seconds; buffering also reaches zero.
+It does not isolate a speedup against earlier codecs, video positions or cache
+states. Another forced-H.264 attempt has no video and is excluded. Codec
+overrides were cleared. The Bilibili issue remains open.
+
+Local validation passes 63 shared Vulkan tests, strict affected lints, 5 Mac HVF
+and 22 Mac product tests, actual Linux-musl transport execution, artifact/source
+hash gates and ARM64 iPad FFI compilation. The complete existing Vulkan 1.2 GPU
+oracle passes at one/twelve CPUs, including secondary buffers, events, pending
+descriptors, subpasses and resolves. Unchanged CPU/kernel/network acceptance is
+reused. Both product source pins reference the same runtime; no IPA is installed.
+
+The installed Mac **Dev** bundle now reports runtime `c2a97ff`, retains embedded
+MoltenVK and passes signature verification. The stable runner hash is unchanged.
+The isolated Firefox page is reopened for manual inspection. Exact hashes,
+phase timings and all observation limits are under `composition_update_20261112`
+in [the existing validation record](mac-bilibili-BV1FRHV68EUX.json).
