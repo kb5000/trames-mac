@@ -7,11 +7,11 @@
 #import <simd/simd.h>
 #include <stdatomic.h>
 #include <stdint.h>
-struct image { uint32_t kind,root; void *address; size_t length; uint32_t offset,width,height,stride,alpha; int32_t x,y,scale; uint32_t transform; };
+struct image { uint32_t kind,root; void *address; size_t length; uint32_t offset,width,height,stride,alpha; int32_t x,y,scale; uint32_t transform,display_width,display_height; float source[4]; };
 struct window_info { uint64_t id,revision; uint32_t interaction_serial,interaction_edges; uint32_t width,height,min_width,min_height,max_width,max_height,mode; const char *title; };
-_Static_assert(sizeof(struct image)==64,"Rust image layout");
+_Static_assert(sizeof(struct image)==88,"Rust image layout");
 _Static_assert(sizeof(struct window_info)==64,"Rust window layout");
-struct uniform { vector_float2 origin,size,viewport; uint32_t offset,stride,width,height,alpha,transform; };
+struct uniform { vector_float2 origin,size,viewport; uint32_t offset,stride,width,height,alpha,transform; vector_float4 source; };
 extern void trames_ui_frame_release(void *, uint32_t, uint32_t);
 typedef void (*refresh_fn)(const void *);
 typedef void (*event_fn)(const void *,uint64_t,uint32_t,double,double,uint32_t,uint32_t,uint32_t);
@@ -394,8 +394,8 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         NSMutableArray<TramesCanvas *> *views=[NSMutableArray arrayWithObject:family.canvas];
         NSMutableSet<NSNumber *> *visible=[NSMutableSet new];NSRect root=family.canvas.bounds;
         for(size_t i=0;i<count;i++){
-            const struct image *image=&images[i];double scale=MAX(1,image->scale);
-            NSRect rect=NSMakeRect(image->x,image->y,(image->transform&1?image->height:image->width)/scale,(image->transform&1?image->width:image->height)/scale);
+            const struct image *image=&images[i];
+            NSRect rect=NSMakeRect(image->x,image->y,image->display_width,image->display_height);
             if(NSContainsRect(root,rect))continue;
             // The root SHM image can include CSD shadow outside xdg geometry.
             // Clip that image to the native content rectangle: NSWindow already
@@ -445,8 +445,8 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             pass.colorAttachments[0].texture=drawable.texture;pass.colorAttachments[0].loadAction=MTLLoadActionClear;pass.colorAttachments[0].storeAction=MTLStoreActionStore;pass.colorAttachments[0].clearColor=MTLClearColorMake(0,0,0,0);
             id<MTLRenderCommandEncoder> encoder=[command renderCommandEncoderWithDescriptor:pass];if(!encoder)return -1;
             for(size_t i=0;i<count;i++){
-                const struct image *image=&images[i];float divisor=MAX(1,image->scale);
-                struct uniform value={.origin={(float)image->x-view.origin.x,(float)image->y-view.origin.y},.size={(image->transform&1?image->height:image->width)/divisor,(image->transform&1?image->width:image->height)/divisor},.viewport={view.bounds.size.width,view.bounds.size.height},.offset=image->offset,.stride=image->stride,.width=image->width,.height=image->height,.alpha=image->alpha,.transform=image->transform};
+                const struct image *image=&images[i];
+                struct uniform value={.origin={(float)image->x-view.origin.x,(float)image->y-view.origin.y},.size={image->display_width,image->display_height},.viewport={view.bounds.size.width,view.bounds.size.height},.offset=image->offset,.stride=image->stride,.width=image->width,.height=image->height,.alpha=image->alpha,.transform=image->transform,.source={image->source[0],image->source[1],image->source[2],image->source[3]}};
                 [encoder setVertexBytes:&value length:sizeof(value) atIndex:0];[encoder setFragmentBytes:&value length:sizeof(value) atIndex:1];
                 if(image->kind==1){[encoder setRenderPipelineState:ui.shmPipeline];[encoder setFragmentBuffer:sources[i] offset:0 atIndex:0];}else{[encoder setRenderPipelineState:ui.texturePipeline];[encoder setFragmentTexture:sources[i] atIndex:0];}
                 [encoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];

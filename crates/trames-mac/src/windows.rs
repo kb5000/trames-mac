@@ -24,6 +24,9 @@ struct Image {
     y: i32,
     scale: i32,
     transform: u32,
+    display_width: u32,
+    display_height: u32,
+    source: [f32; 4],
 }
 #[repr(C)]
 struct Window {
@@ -167,6 +170,9 @@ impl Bridge {
                     y: image.y,
                     scale: image.scale,
                     transform: image.transform,
+                    display_width: image.destination.0,
+                    display_height: image.destination.1,
+                    source: image.source,
                 };
                 match &image.buffer {
                     ImageBuffer::Shm(lease) => {

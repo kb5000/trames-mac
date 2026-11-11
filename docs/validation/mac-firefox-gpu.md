@@ -1529,3 +1529,43 @@ versions, cache/network state and viewport/DPR differ from the native reference.
 Driver pairing, build configuration and shared metadata optimization changed
 together, so neither these results nor the earlier invalid setup isolate the
 performance effect of coordinator removal.
+
+
+## HiDPI content-surface pass-through (2026-11-11)
+
+The installed Dev now renders Firefox at **DPR 2**, with zoom **1.0** and the
+unchanged default `layout.css.devPixelsPerPx = -1.0`. The native 1920x928 logical
+window uses a 3840x1856 EGL content buffer. Native mouse clicks and typed text
+still reach the correct logical positions; no forced browser DPI preference is
+used.
+
+Two dependencies were missing. Density groups advertised identical logical
+origins, so Firefox mixed the scale-two output with the first scale-one mode.
+Distinct output origins fix that lookup. Firefox 151.0.3 additionally requires
+`wp_viewporter` for its independent EGL child's integer/ceiled scaling path.
+The shared runtime now implements crop/destination state, commit/lifetime rules
+and protocol errors. Both native presenters consume the committed source UV and
+logical destination using the original image capability; iPad PiP follows the
+same geometry. There is no intermediate resize/copy, new coordinator or service
+thread. The original native image ABI remains fixed-size; v2 adds a separate
+geometry output to the same frame lookup.
+
+At DPR 2, the existing 1080p60 H.264/AAC fixture accepts **59.98 fps**, dropping
+**1/1802** counted frames in 30.025 seconds after an 8-second warmup. Frame-callback
+gap p99/max is **47.1/50.5 ms**, with no interval over 100 ms. Webpage volume changes
+take **2.3-23.0 ms**. Hardware decoding is confirmed, and the final installed-bundle
+run has protocol logging disabled with no concurrent build or sampler. This is
+one warmed observation and accepted-frame accounting, not a physical-scanout
+rate or proof that initial-cache stalls are solved.
+
+Validation passes: 22 Wayland unit tests, six original C client tests (including
+viewport transforms/reset and error cases), 13 FFI tests with a v1 guard-byte
+check, Mac workspace tests/all-target clippy, a complete unsigned iPad app build,
+and the iPad simulator FFI check. The earlier unaffected CPU/network/driver checks
+are reused. Stable binaries and physical iPad installations are unchanged.
+
+Density pass-through is verified for integer 2x. Virtual monitor geometry is still
+synthetic; full physical monitor topology/DOM screen metrics and fractional output
+density are outside this acceptance. The [follow-up record](mac-firefox-fixed-20261111.json)
+retains those limits, binary/source hashes and exact measurements. Protocol and
+upstream context are in the [shared architecture document](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/wayland.md#host-density-and-viewport-geometry-2026-11-11).

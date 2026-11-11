@@ -561,5 +561,181 @@
     "Bilibili shader-LOD probe / WebGL context-loss messages remain in logs. Six page markers completed and native input/rendering passed without an observed browser/tab crash; this short test does not establish long-term stability or all WebGL compatibility.",
     "A separate diagnostic sample suggested parked-job deadline scanning as another lead; no CPU-time share or causal bottleneck was established and no scheduling rewrite is included.",
     "Driver pairing/configuration and memory-report code changed together. Improvements cannot be assigned solely to any one change or coordinator removal."
-  ]
+  ],
+  "hidpi_followup": {
+    "date": "2026-11-11",
+    "runtime_revision": "20b608e86b5827371cf08f8b54e2d6f6174e1d35",
+    "cause": [
+      "Virtual density outputs shared the same logical origin; Firefox combined the scale-two monitor with the first scale-one pixel mode.",
+      "Firefox 151.0.3 requires wp_viewporter even for its ceiled/integer content-surface scale. GTK reached buffer scale two while the independent Firefox child fell back to default monitor zero."
+    ],
+    "implementation": [
+      "Give virtual output groups disjoint logical origins.",
+      "Implement double-buffered standard viewport crop, destination scale, reset/destruction and protocol errors in the shared runtime.",
+      "Carry committed target dimensions and transformed normalized crop UVs to the Mac/iPad Metal presenters and iPad PiP; retain direct original SHM/GPU sources.",
+      "Preserve 64-byte FFI image v1. New v2 obtains a separate 24-byte geometry record in the same frame lookup."
+    ],
+    "mac_source_sha256": {
+      "crates/trames-mac/src/windows.rs": "e2c2579a64dbed2ed851066f046476d800d2ce1be460d250374b8aec3a49499e",
+      "crates/trames-mac/src/window.m": "8826ee8eb5c5114af363d441ed33f19265fc5b2d3e7301180ea9bba44b7765aa",
+      "crates/trames-mac/src/window.metal": "47456fbc9c5907c0d3a93134ac6625d9d12d7883f34fb77e84e905398f1e02e1"
+    },
+    "dpr": {
+      "content": {
+        "dpr": 2,
+        "width": 1920,
+        "height": 844,
+        "screenWidth": 512,
+        "screenHeight": 384,
+        "visible": "visible",
+        "focus": true,
+        "resolution2x": true
+      },
+      "chrome": {
+        "zoom": 1,
+        "override": "-1.0",
+        "dpr": 2
+      },
+      "version": "151.0.3"
+    },
+    "native_input": {
+      "counter": "1",
+      "text": "HiDPI 2x input",
+      "dpr": 2,
+      "width": 1920,
+      "height": 844
+    },
+    "egl": {
+      "logical": [
+        1920,
+        928
+      ],
+      "pixels": [
+        3840,
+        1856
+      ],
+      "observed_from": "Firefox WidgetWayland ApplyEGLWindowSize / wp_viewport destination diagnostic log",
+      "diagnostic_log_sha256": "a3b8727998790a5388925293f090524134c3894ba922dbca6072b53ae9616432"
+    },
+    "video": {
+      "elapsed_browser": 30.025,
+      "elapsed_host": 30.063405084000003,
+      "accepted_fps": 59.98334721065779,
+      "callback_fps": 24.27976686094921,
+      "dropped_frames": 1,
+      "total_frames": 1802,
+      "playback_events": [],
+      "snapshot_roundtrip_ms": [
+        20.477957999998964,
+        59.133374999994714
+      ],
+      "elapsed_host_bounds": [
+        30.004269750000006,
+        30.083881082999998
+      ],
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "frame_gaps": {
+        "count": 729,
+        "p50_ms": 41.02000000000044,
+        "p95_ms": 42.719999999997526,
+        "p99_ms": 47.099999999998545,
+        "max_ms": 50.48000000000138,
+        "over_50_ms": 1,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.9998508243130725,
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 22.961166000001754
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 6.962459000000365
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 2.254791000005696
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 19.346583000000805
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 52,
+        "p50_ms": 40.9800000000032,
+        "p95_ms": 42.400000000001455,
+        "p99_ms": 43.12000000000262,
+        "max_ms": 43.12000000000262,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "interaction_ms": 248.25650000000365,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      }
+    },
+    "video_setup": {
+      "warmup_seconds": 8,
+      "measured_seconds": 30,
+      "profile": "persistent warmed isolated profile from prior acceptance",
+      "window": "visible/focused; DPR=2",
+      "diagnostics": "WAYLAND_DEBUG and MOZ_LOG disabled; no build or sampler overlaps timing",
+      "counters": "accepted frames, not physical 60-Hz scanout proof",
+      "raw_sha256": "fdceb277995124af26a7169cf1373ff2eb0e7dcf5e2fe8bef15cedaa2a3ba669"
+    },
+    "validation": {
+      "shared_wayland_unit_tests_passed": 22,
+      "independent_original_c_client_tests_passed": 6,
+      "viewport_scenarios": [
+        "crop",
+        "destination",
+        "90-degree transform",
+        "reset on destroy",
+        "bad size",
+        "out of buffer",
+        "duplicate viewport",
+        "destroyed surface",
+        "bad value"
+      ],
+      "old_output_layout_control": "The new independent output-layout assertion fails against the original runtime and passes with the fix.",
+      "ffi_tests_passed": 13,
+      "ffi_v1_guard_bytes_and_v2_geometry": true,
+      "mac_workspace_tests_passed": 27,
+      "mac_all_target_all_feature_clippy": true,
+      "ipad_release_rust_and_unsigned_app_build": true,
+      "ipad_simulator_ffi_check": true,
+      "physical_ipad_test": false,
+      "unchanged_checks": "Earlier CPU, network, native GPU driver and unrelated product checks reused; no full unrelated rerun for documentation or waiting changes."
+    },
+    "installation": {
+      "installed": "/Users/main/Applications/Trames Dev.app",
+      "sha256": "9b8c7da124090878f54036f3dd316aa9405c856630a07cab353d35d5b0670ebc",
+      "version": "Trames Dev 1.5.4 (dev) runtime 20b608e86b5827371cf08f8b54e2d6f6174e1d35",
+      "stable_sha256_unchanged": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
+    },
+    "final_page": {
+      "url": "https://en.wikipedia.org/wiki/Firefox",
+      "title": "Firefox - Wikipedia",
+      "dpr": 2,
+      "width": 1920,
+      "height": 844,
+      "visible": "visible",
+      "focus": true
+    },
+    "limits": [
+      "Host output density remains integer 1-4x; fractional output density is not advertised.",
+      "Virtual monitor geometry remains synthetic; full physical monitor topology and DOM screen metrics are not validated. The observed content screen size is 512x384 despite the correct 1920x844 viewport and DPR=2.",
+      "No new pixel readback, resized intermediate image, coordinator or resource-service thread. Viewport rendering adds UV/target geometry to the existing pass.",
+      "This is selected viewport/Firefox acceptance, not complete Wayland conformance or first-use performance acceptance."
+    ]
+  }
 }

@@ -11,6 +11,7 @@ struct SceneImage {
     uint height;
     uint alpha;
     uint transform;
+    float4 source;
 };
 struct Vertex { float4 position [[position]]; float2 uv; };
 vertex Vertex waylandVertex(uint id [[vertex_id]], constant SceneImage &image [[buffer(0)]]) {
@@ -29,14 +30,14 @@ static float2 bufferUV(float2 uv, uint transform) {
 }
 fragment float4 waylandShm(Vertex vtx [[stage_in]], const device uchar *bytes [[buffer(0)]],
                            constant SceneImage &image [[buffer(1)]]) {
-    float2 uv=bufferUV(vtx.uv,image.transform);
+    float2 uv=bufferUV(image.source.xy+vtx.uv*image.source.zw,image.transform);
     uint2 at = min(uint2(uv * float2(image.width, image.height)), uint2(image.width-1,image.height-1));
     uint p = image.offset + at.y * image.stride + at.x * 4;
     return float4(bytes[p+2],bytes[p+1],bytes[p],image.alpha ? bytes[p+3] : 255) / 255.0;
 }
 fragment float4 waylandTexture(Vertex vtx [[stage_in]], texture2d<float> image [[texture(0)]], constant SceneImage &info [[buffer(1)]]) {
     constexpr sampler linear(coord::normalized, filter::linear, address::clamp_to_edge);
-    float4 color=image.sample(linear,bufferUV(vtx.uv,info.transform));
+    float4 color=image.sample(linear,bufferUV(info.source.xy+vtx.uv*info.source.zw,info.transform));
     if (!info.alpha) color.a=1;
     return color;
 }
