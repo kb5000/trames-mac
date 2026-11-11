@@ -1410,6 +1410,12 @@ intermittent exits are not ruled out.
 
 ## Dev retest after coordinator removal (2026-11-11)
 
+**Setup correction:** this run selected an older wire-13 guest ICD which lacked
+the current native image-import path. Its raw observations below are retained,
+but they do not represent the paired wire-14 accelerated stack. The follow-up
+below records the corrected setup; the old 3.889-fps software result must not be
+attributed to coordinator removal or compared as hardware-decoded performance.
+
 The current pinned Mac/runtime source completes six Firefox navigations and trusted
 click/text checks, but this retest does not meet browser or video performance
 acceptance. The retained measurements use Firefox 151.0.3, twelve CPUs, host-managed
@@ -1460,3 +1466,66 @@ work should examine layout publication, page bookkeeping and playback wake paths
 on their existing workers, without restoring a coordinator. Both isolated browser
 test processes are closed after validation; user environments and the original
 native Firefox session are preserved.
+
+
+## Corrected driver pairing and mapping reports (2026-11-11)
+
+The previous retest accidentally selected a stale wire-13 ICD from a cached build
+folder. Current source already implements wire-14 DMA_BUF image import. Rebuilding
+that artifact restores the EGL render-node advertisement and Firefox VA-API
+admission. Firefox 151.0.3 now reports hardware WebRender and actual hardware
+H.264 decoding through the existing VideoToolbox path. Source/recipe/binary hashes
+are checked before packaging, and video validation requires the real decoder.
+
+Ordinary Mac builds now retain a verified embedded MoltenVK configuration and fail
+on missing or changed archives. Explicit external-driver SDK CI builds are named
+accordingly and rejected for formal production packaging. This prevents a plain
+rebuild from silently losing the native graphics dependency.
+
+Shared runtime `63b85e6` also separates mapping-layout publication from instruction
+writes. JIT/executable writes still invalidate instruction state, but do not force
+workers to rebuild unchanged map reports. Region reports merge the already ordered
+indexes directly, eliminating the large per-page temporary vector and sort. This
+adds no guest-byte visibility barriers, new locks, coordinator or service thread.
+The same runtime is pinned by Mac and iPad.
+
+| Content marker, seconds | Corrected Trames first | Corrected Trames repeat |
+| --- | ---: | ---: |
+| Wikipedia Firefox article | 1.351 | 0.661 |
+| GitHub Firefox source | 2.177 | 1.443 |
+| Bilibili home | 1.837 | 1.953 |
+
+All six navigations complete. Native keyboard input appears in the real window,
+a native mouse click increments the page counter, and the video frame is visible.
+The isolated browser exits normally before and after the restart test.
+
+| 1080p60 H.264/AAC, 30-second interval | Accepted fps | Dropped / total | Callback gap p99 / max |
+| --- | ---: | ---: | ---: |
+| First use, fresh profile; 8 s warmup | 19.12 | 1228 / 1802 | 2192 / 3162 ms |
+| Same process, warmed | 59.72 | 1 / 1794 | 45.6 / 50.1 ms |
+| Restart, same profile/store; 8 s warmup | 59.87 | 4 / 1801 | 44.8 / 49.6 ms |
+
+Each interval verifies actual hardware decoding. Restart volume changes take
+2.1–30.1 ms, with no callback gap over 100 ms during the volume check. These are
+browser accepted-frame counters, not 60-Hz physical-presentation proof; callback
+notifications run at about 24.5 Hz here, similar to the earlier native reference.
+The native Firefox 160.0 reference accepts 59.98 fps with no counted drops.
+
+Initial stalls remain: first use is poor even after the 8-second warmup, and the
+restart had already counted 67 drops before its measured interval. Cache/profile
+initialization is a hypothesis, not an established cause or a completed fix.
+Bilibili still logs shader-LOD probes/context loss; short functional acceptance
+passes but does not establish all WebGL compatibility or long-term stability.
+
+Full local runtime Mac/Linux CI and Mac product CI pass, along with 482 Mac
+process tests, 344 selected Linux process tests, 12 FFI tests, 78 signed native
+hardware tests, selected Vulkan 1.2 output oracles at 1/12 CPUs, and iPad device/
+simulator FFI checks. Unchanged passed checks were reused. The verified embedded
+bundle is installed as **Trames Dev 1.5.4**; stable app bytes are unchanged.
+
+The [corrected record](mac-firefox-fixed-20261111.json) includes hashes, complete
+measurement summaries and limitations. All timings are single observations;
+versions, cache/network state and viewport/DPR differ from the native reference.
+Driver pairing, build configuration and shared metadata optimization changed
+together, so neither these results nor the earlier invalid setup isolate the
+performance effect of coordinator removal.

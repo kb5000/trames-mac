@@ -10,6 +10,14 @@ case "$TRAMES_BUILD_CHANNEL" in
   dev) bundle_name="Trames Dev.app" ;;
   *) echo 'TRAMES_BUILD_CHANNEL must be stable or dev' >&2; exit 1 ;;
 esac
+native_directory="$(python3 scripts/configure-native-vulkan.py)"
+if [[ -n "$native_directory" ]]; then
+  export TRAMES_MOLTENVK_STATIC_DIR="$native_directory"
+  export TRAMES_VULKAN_LINKAGE=embedded
+else
+  unset TRAMES_MOLTENVK_STATIC_DIR
+  export TRAMES_VULKAN_LINKAGE=external
+fi
 cargo build -p trames-mac --release --locked
 # A minimal agent bundle supplies AppKit identity without a startup window.
 # The CLI re-execs this binary in place; stdin/stdout and the PID are retained.
@@ -29,7 +37,7 @@ channel=os.environ['TRAMES_BUILD_CHANNEL']
 name='Trames' if channel=='stable' else 'Trames Dev'
 path=pathlib.Path('target/release')/(name+'.app')/'Contents/Info.plist'
 version=re.search(r'version = "([^"]+)"',pathlib.Path('Cargo.toml').read_text())[1]
-path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac'+('' if channel=='stable' else '.dev'),CFBundleName=name,CFBundleDisplayName=name,TramesChannel=channel,CFBundleExecutable='trames-manager',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=version,CFBundleVersion=version,CFBundleDevelopmentRegion='en',CFBundleLocalizations=['en','zh-Hans'],LSUIElement=True,NSHighResolutionCapable=True,NSMicrophoneUsageDescription='Allow Linux applications in Trames to use your microphone when you enable audio input.')))
+path.write_bytes(plistlib.dumps(dict(CFBundleIdentifier='org.trames.Trames.mac'+('' if channel=='stable' else '.dev'),CFBundleName=name,CFBundleDisplayName=name,TramesChannel=channel,TramesVulkanLinkage=os.environ['TRAMES_VULKAN_LINKAGE'],CFBundleExecutable='trames-manager',CFBundlePackageType='APPL',CFBundleIconFile='Trames.icns',CFBundleShortVersionString=version,CFBundleVersion=version,CFBundleDevelopmentRegion='en',CFBundleLocalizations=['en','zh-Hans'],LSUIElement=True,NSHighResolutionCapable=True,NSMicrophoneUsageDescription='Allow Linux applications in Trames to use your microphone when you enable audio input.')))
 PLIST
 identity="${TRAMES_SIGN_IDENTITY:--}"
 if [[ "$identity" == "-" ]]; then

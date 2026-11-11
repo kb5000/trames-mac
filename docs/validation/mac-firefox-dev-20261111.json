@@ -443,5 +443,12 @@
     "Native control follows guest; this does not establish a slowdown caused specifically by coordinator removal.",
     "Guest test profile/storage and native control profile are separate from user environments.",
     "Earlier failed setup probes and software-renderer navigation are retained only as local diagnostics, excluded from the GPU table."
-  ]
+  ],
+  "correction": {
+    "date": "2026-11-11",
+    "status": "Superseded for current paired-stack performance; original observations retained.",
+    "cause": "The retest selected the stale target/vulkan-guest wire-13 ICD. Its binary hash matched its old manifest, but it lacked the current wire-14 native image import / DMA_BUF path. This was an experiment setup error, not evidence of a render-node regression in the pinned runtime.",
+    "followup": "mac-firefox-fixed-20261111.json",
+    "attribution": "Neither the old-to-new browser results nor software-to-hardware playback isolate the effect of coordinator removal or the memory-report optimization."
+  }
 }

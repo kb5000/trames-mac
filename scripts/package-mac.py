@@ -43,6 +43,11 @@ def main():
     info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
     version = info['CFBundleShortVersionString']
     channel = info.get('TramesChannel', 'stable')
+    linkage = info.get('TramesVulkanLinkage', 'external')
+    if linkage not in ('embedded', 'external'):
+        p.error('Unknown native Vulkan linkage')
+    if not args.development and linkage != 'embedded':
+        p.error('A production release requires an embedded native Vulkan driver')
     if channel not in ('stable', 'dev'):
         p.error('Unknown application channel')
     product_name = 'Trames' if channel == 'stable' else 'Trames Dev'
@@ -60,6 +65,8 @@ def main():
             p.error(f'Release source is dirty: {repo}')
     args.output.mkdir(parents=True, exist_ok=True)
     basename = f"{'Trames' if channel == 'stable' else 'Trames-Dev'}-{version}-mac-arm64" + ('-unnotarized' if args.development else '')
+    if linkage == 'external':
+        basename += '-external-vulkan'
     output = args.output / f'{basename}.zip'
     if output.exists():
         p.error('Output already exists; choose a new output directory')
@@ -78,7 +85,7 @@ def main():
             if not source.is_file():
                 p.error(f'Missing source archive: {source}')
             shutil.copy2(source, sources / source.name)
-        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'development': args.development, 'channel': channel, 'notarized': not args.development, 'architecture': 'arm64'}, indent=2) + '\n')
+        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'development': args.development, 'channel': channel, 'notarized': not args.development, 'architecture': 'arm64', 'native_vulkan': linkage}, indent=2) + '\n')
         if args.notarize_profile:
             submission = Path(tmp) / 'notarize.zip'
             run('/usr/bin/ditto', '-c', '-k', '--keepParent', str(stage / (product_name + '.app')), str(submission))

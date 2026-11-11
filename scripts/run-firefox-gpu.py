@@ -119,8 +119,14 @@ def main():
                   'probe=$(/usr/lib/firefox/glxtest --wayland)',
                   'printf "%s\\n" "$probe"',
                   'printf "%s\\n" "$probe" | grep -q "OpenGL ES 3\\."',
-                  'printf "%s\\n" "$probe" | grep -q MOLTENVK',
-                  'exec firefox --no-remote --profile ' + quote(args.profile) + ' ' + quote(args.url)]
+                  'printf "%s\\n" "$probe" | grep -q MOLTENVK']
+        if args.video_driver:
+            # Native video needs the actual image-import render node as well as
+            # GL acceleration. An old compatible ICD can otherwise pass GLES
+            # while silently sending Firefox to its software decoder.
+            setup += ['printf "%s\\n" "$probe" | grep -q DRM_RENDERDEVICE',
+                      'printf "%s\\n" "$probe" | grep -q /dev/dri/renderD128']
+        setup += ['exec firefox --no-remote --profile ' + quote(args.profile) + ' ' + quote(args.url)]
         return subprocess.run(command + ['/bin/sh', '-ec', '; '.join(setup)]).returncode
 
 

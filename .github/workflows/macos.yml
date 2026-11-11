@@ -15,14 +15,14 @@ jobs:
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - run: cargo test --workspace --all-features --locked
       - run: bash -n scripts/build-mac.sh scripts/install-mac.sh
-      - run: python3 -m py_compile scripts/package-mac.py scripts/benchmark-firefox-video.py scripts/run-firefox-gpu.py tests/integration/mac-environments.py tests/integration/mac-packages.py tests/integration/mac-systemd.py tests/integration/mac-cli.py tests/integration/mac-channels.py tests/integration/mac-background.py tests/integration/mac-exec.py tests/integration/mac-host-lifecycle.py
+      - run: python3 tests/integration/mac-native-driver.py && python3 -m py_compile scripts/configure-native-vulkan.py scripts/package-mac.py scripts/benchmark-firefox-video.py scripts/run-firefox-gpu.py tests/integration/mac-environments.py tests/integration/mac-packages.py tests/integration/mac-systemd.py tests/integration/mac-cli.py tests/integration/mac-channels.py tests/integration/mac-background.py tests/integration/mac-exec.py tests/integration/mac-host-lifecycle.py
       - run: bash tests/native/task-stream.sh
-      - run: bash scripts/build-mac.sh
-      - run: TRAMES_BUILD_CHANNEL=stable bash scripts/build-mac.sh
+      - run: TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh
+      - run: TRAMES_BUILD_CHANNEL=stable TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh
       - run: python3 scripts/package-mac.py --app 'target/release/Trames Dev.app' --unnotarized
       - run: python3 scripts/package-mac.py --app target/release/Trames.app --unnotarized
       - uses: actions/upload-artifact@v4
         with:
-          name: trames-mac-development
+          name: trames-mac-external-vulkan
           path: target/dist/*
           if-no-files-found: error

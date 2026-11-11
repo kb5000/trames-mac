@@ -19,7 +19,7 @@ navigation = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(navigation)
 
 
-def measure(client, selector, seconds, warmup, check_input, check_volume=False):
+def measure(client, selector, seconds, warmup, check_input, check_volume=False, require_hardware=False):
     selector = json.dumps(selector)
     deadline = time.monotonic() + 60
     while time.monotonic() < deadline:
@@ -45,6 +45,19 @@ def measure(client, selector, seconds, warmup, check_input, check_volume=False):
     try:
         print("TRAMES_VIDEO_WARMUP", file=sys.stderr, flush=True)
         time.sleep(warmup)
+        decoder = None
+        if require_hardware:
+            reply = client.call('WebDriver:ExecuteScript', {
+                'script': f'''return document.querySelector({selector}).mozRequestDebugInfo().then(d=>{{
+                  const r=d.decoder.reader;return {{name:r.videoDecoderName,
+                  hardware:r.videoHardwareAccelerated,width:r.videoWidth,height:r.videoHeight,
+                  fps:r.videoRate}};}});''',
+                'args': [], 'newSandbox': False, 'sandbox': 'system',
+                'line': 0, 'filename': 'video-decoder-check',
+            })
+            decoder = reply['value']
+            if not decoder.get('hardware'):
+                raise RuntimeError(f'hardware decode was required but is inactive: {decoder}')
 
         def snapshot():
             return client.script('''const s=globalThis.tramesVideoBenchmark,v=s.video,
@@ -55,10 +68,13 @@ def measure(client, selector, seconds, warmup, check_input, check_volume=False):
               focus:document.hasFocus(),duration:v.duration,events:s.events,frame_gaps:s.gaps,
               buffered:Array.from({length:v.buffered.length},(_,i)=>[v.buffered.start(i),v.buffered.end(i)])};''')
 
+        before_start = time.monotonic()
         before = snapshot()
         start = time.monotonic()
         time.sleep(seconds)
+        after_start = time.monotonic()
         after = snapshot()
+        after_end = time.monotonic()
         elapsed = (after['wall'] - before['wall']) / 1000
         frames = after['total'] - before['total']
         dropped = after['dropped'] - before['dropped']
@@ -70,6 +86,11 @@ def measure(client, selector, seconds, warmup, check_input, check_volume=False):
                       callback_fps=(after['callbacks']-before['callbacks'])/elapsed,
                       dropped_frames=dropped,total_frames=frames,
                       playback_events=[event for event in after['events'] if event['wall'] >= before['wall']])
+        result['snapshot_roundtrip_ms'] = [(start-before_start)*1000,
+                                          (after_end-after_start)*1000]
+        result['elapsed_host_bounds'] = [after_start-start, after_end-before_start]
+        if decoder is not None:
+            result['decoder'] = decoder
         def gaps_summary(events, start, end):
             gaps=sorted(item['gap'] for item in events if start <= item['wall'] <= end)
             if not gaps:
@@ -129,6 +150,7 @@ def main():
     parser.add_argument('--warmup',type=float,default=5)
     parser.add_argument('--check-input',action='store_true')
     parser.add_argument('--check-volume',action='store_true',help='Test webpage volume changes after the FPS interval')
+    parser.add_argument('--require-hardware-decode',action='store_true',help='Require actual hardware decoding in the isolated system-access-enabled profile')
     args = parser.parse_args()
     if not 0 < args.port < 65536 or args.seconds <= 0 or args.warmup < 0:
         parser.error('positive port/seconds and non-negative warmup required')
@@ -138,7 +160,7 @@ def main():
         client.call('WebDriver:SetTimeouts',{'script':30000,'pageLoad':60000,'implicit':10000})
         if args.url:
             client.call('WebDriver:Navigate',{'url':args.url})
-        result = measure(client,args.selector,args.seconds,args.warmup,args.check_input,args.check_volume)
+        result = measure(client,args.selector,args.seconds,args.warmup,args.check_input,args.check_volume,args.require_hardware_decode)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(result,indent=2)+'\n')
         print(json.dumps({key:value for key,value in result.items() if key not in ('before','after')}))

@@ -1,0 +1,565 @@
+{
+  "date": "2026-11-11",
+  "scope": "Corrected Mac Dev Firefox acceleration and observational performance acceptance; no stable release or user environment changes.",
+  "source": {
+    "mac_base_revision": "ba90107f0fba7ae43b02889a33d31cfb319ce858",
+    "runtime_revision": "63b85e69306c489718e68f80c2bd3c1c6dcdf601",
+    "mac_inputs_sha256": {
+      "scripts/configure-native-vulkan.py": "40002245770e36c6b11c4e55e65f0dc3ea6d4186c651df4f410322cf1dfca2f8",
+      "scripts/build-mac.sh": "c1d4f0614046c6b60382406256bd6b0afe601df93f1254d3db75761836869939",
+      "scripts/package-mac.py": "409db9a8574859d58c67b6c81cae7da45afd9a5b890a3e0ee72cea576f61d640",
+      "scripts/run-firefox-gpu.py": "fa5c421797e33179ec213dc70a912cb105cd93e77fe21505bd5a57bcbfc2728d",
+      "scripts/benchmark-firefox-video.py": "3f4f684d204d3569a6610c77c719a818768262de2c5d080ff7eb62b118105169",
+      "runtime-version.json": "71826884de72ed06b5acc4a0486893e2f2525eb520462765b69b0ad4db09d850"
+    }
+  },
+  "fixes": [
+    "Separate mapping-layout publication revision from instruction-write invalidation. Existing workers reuse map reports across code writes and merge the three ordered region indexes without a per-page temporary vector or sort.",
+    "Remember a verified embedded native Vulkan archive for ordinary Mac rebuilds. Fail explicitly on stale or missing configuration; external CI artifacts are labelled and cannot be formal production packages.",
+    "Rebuild current wire-14 guest ICD; reject stale source, build-recipe, wire or binary manifests before iPad packaging. Require render-node discovery for video-enabled Firefox launch and actual hardware decoder admission for accelerated benchmarks."
+  ],
+  "setup": {
+    "machine": "Apple M6 / macOS 27.0.1",
+    "cpus": 12,
+    "memory": "host-managed auto",
+    "guest_firefox": "151.0.3",
+    "storage": "one isolated APFS COW store; fresh mounted profile initially; same persistent store/profile reused for restart",
+    "page": {
+      "url": "https://www.bilibili.com/",
+      "title": "哔哩哔哩 (゜-゜)つロ 干杯~-bilibili",
+      "width": 1920,
+      "height": 843,
+      "dpr": 1,
+      "visible": "visible",
+      "focus": true
+    },
+    "restart_page": {
+      "title": "Trames 1080p60 playback check",
+      "width": 1920,
+      "height": 843,
+      "dpr": 1,
+      "visible": "visible",
+      "focus": true,
+      "video": [
+        1920,
+        1080
+      ]
+    },
+    "gfx": {
+      "features": {
+        "compositor": "webrender",
+        "hwCompositing": {
+          "status": "available"
+        },
+        "gpuProcess": {
+          "status": "unused"
+        },
+        "webrender": {
+          "status": "available"
+        },
+        "wrCompositor": {
+          "status": "blocklisted:FEATURE_FAILURE_WEBRENDER_COMPOSITOR_DISABLED"
+        },
+        "openglCompositing": {
+          "status": "available"
+        }
+      },
+      "compositor": "WebRender"
+    },
+    "guest_artifacts_sha256": {
+      "libEGL.so.1": "9ebb409430a0d35381f8ccef08590c7dcdeb08702909e0cd42c4dad9217abc60",
+      "libgallium-25.1.9.so": "2fbbe081e0924fd6ddeadc9af686d45fcc0ebd91a867d8642d93833510a6abaa",
+      "libtrames_vulkan_icd.so": "fe0ce8a040200a9b8aedf91e425276bfd4e6bea7a1f2dc13288f087a00aa9a83",
+      "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+      "trames_drv_video.so": "406c3c1b304fbafb6cb9a325af22642641f5481d9e8e459d6d5c872dc0fbdc10",
+      "libasound_module_pcm_trames.so": "0fec04537271ea3a458b51bf7b691787906064ad0b950c06f9db5153dd3293f2",
+      "trames.json": "37100d98af28361262481b7ac785523a1341e04cb45c0b0eac8b1d0c157ec874",
+      "asound.conf": "3dd2775eecc8bc05a399ba9761fbfc8f8fd2c2852ea2f97b9466773f2f158722"
+    },
+    "icd_manifest": {
+      "profile": 65542,
+      "auxv_key": "0x54520008",
+      "wire_revision": 14,
+      "optional_host_bridge": {
+        "capability_operation": 200,
+        "shared_mapping_bit": 1,
+        "completion_wait_bit": 2,
+        "shared_map_hint": "0x534841524544",
+        "fence_wait_operation": 201,
+        "timeline_wait_operation": 202
+      },
+      "multisample_graphics": {
+        "resolve_image_operation": 215,
+        "image_samples_argument": 14,
+        "render_pass_attachment_metadata_argument": 14,
+        "pipeline_multisample_config_bit": 16384
+      },
+      "render_graph": {
+        "create": 217,
+        "next_subpass": 218,
+        "execute_secondary": 219
+      },
+      "descriptor_indexing": {
+        "copy": 216,
+        "feature_words": 2,
+        "layout_stride": 6,
+        "variable_allocation_argument": 5
+      },
+      "core12_completion": {
+        "events": [
+          220,
+          227
+        ],
+        "memory_commitment": 228,
+        "subresource_layout": 229,
+        "ycbcr": [
+          230,
+          231
+        ],
+        "peer_memory": 232,
+        "sparse_requirements": 233,
+        "draw_indirect_count": [
+          235,
+          236
+        ],
+        "dedicated_requirements": 239
+      },
+      "native_image_import": {
+        "capability_bit": 8192,
+        "handle_type": "DMA_BUF",
+        "import_only": true,
+        "formats": [
+          "R8",
+          "RG8",
+          "RGBA8",
+          "BGRA8"
+        ],
+        "modifier": "LINEAR",
+        "fd_properties_operation": 241,
+        "modifier_operation": 242,
+        "image_barrier_stride": 12
+      },
+      "gpu_indirect_commands": {
+        "draw": 203,
+        "draw_indexed": 204,
+        "dispatch": 205
+      },
+      "compute_features": {
+        "capabilities_operation": 206,
+        "properties_operation": 207,
+        "buffer_device_address_operation": 208,
+        "host_query_reset_operation": 209,
+        "dispatch_base_operation": 210,
+        "device_mask_operation": 211,
+        "layout_support_operation": 212,
+        "update_buffer_operation": 213,
+        "render_granularity_operation": 214,
+        "schema_sha256": "b366cd8129178facf8c307d79d54f85cfd65b523466cb2021c7f5a32ae4a0deb"
+      },
+      "compressed_texture_blocks": "native-supported ETC2/EAC, ASTC LDR and BC",
+      "experimental": true,
+      "instance_api": "1.2.0",
+      "device_api": "1.2.0",
+      "scope": "selected compute, graphics, queries, descriptor templates, Wayland and fixed-display WSI API; not Vulkan conformance or complete Zink",
+      "icd_sha256": "fe0ce8a040200a9b8aedf91e425276bfd4e6bea7a1f2dc13288f087a00aa9a83",
+      "loader": "unmodified distro libvulkan.so.1",
+      "headers": "1.3.281",
+      "native_moltenvk": "1.4.2",
+      "default_enabled": false,
+      "build_recipe_sha256": "e9a493e61c2fc04cd3e8b28198de8e9edadd8b5338d0f8fb324d8bd11994339d",
+      "source_sha256": {
+        "accelerator/vulkan/calls.S": "6b5a0aa9a39039b059d115b42330646e8eb30312ea9dd75c40a838887b3a08d8",
+        "accelerator/vulkan/compute-schema.inc": "4de10b163e8e038a0d8daa2d4c93b5a64a89fdc271d69eb452755ab9986f4bf4",
+        "accelerator/vulkan/compute.inc": "d3550b700d293a8b70c4c2933183ca23646708cfd551e0c572a585eb2c33dc01",
+        "accelerator/vulkan/core12.inc": "1578ada17c1f81a4b8b0a320d822281be19c458b0fd85d2c4a709059b9261ad4",
+        "accelerator/vulkan/entrypoints.inc": "a24adb0b4e34c0f714c5755ab42f8dd76a17808d0ed36d6d2440f988a1e39b2a",
+        "accelerator/vulkan/external.inc": "f6cbdd747d05ffb4d8a44862aea6b34e9635cc99da51d8ec6e5f87601c7f4228",
+        "accelerator/vulkan/graphics.inc": "9ac30f6064d147eb5d147e405246d6776ac79f2c88a1e1a92b3515feac52d7db",
+        "accelerator/vulkan/icd.c": "add654f9ae4a27a09e2a2af67f2beb0e999c98d14bb80af32146d6a4b4d682f8",
+        "accelerator/vulkan/queries.inc": "7192481d71211d66e78ec2773c978e4188a86e970e15e7442eaa227c69e0b5d4",
+        "accelerator/vulkan/rendergraph.inc": "6c875a4ed8e4925c07c9f8a1e4458c7fb47ec7b742db8d608e3287dd4955bc1a",
+        "accelerator/vulkan/sync.inc": "bf22dcd4ab12172104dff136c6d54a4ea3830685dc85ca66f2292c673b1e1ac0",
+        "accelerator/vulkan/templates.inc": "d9313daa68740503353798499a97369c0e0993930a49e99d79d1405305acd987",
+        "accelerator/vulkan/wayland.inc": "d7c59f1fcd1c891c99d3e3347666636b4cc5d1788be2c96b582542dbe30bdad3",
+        "accelerator/vulkan/wsi.inc": "112874115f133d5ec0bba432812dfddf2d82972e03d6bbc04a7be7a8e232c95f",
+        "accelerator/vulkan/zink.inc": "9ac2a0f5672431761be207fe1f1bc28deef29c7cf5f0a1aaf08ed984da54585e"
+      }
+    },
+    "native_archive_sha256": "538c5a1f3f73dbcf1bdb91d80353ea9b6997d4724769227eb373569af6eec77d",
+    "fixture_sha256": "4537c2ef54701574d04bfe15b10278fc923eb27ff46398f806ffaa9d4c865afb",
+    "retained_timing": "No build, sampler or runtime-metrics logger overlaps the retained timings. Linux CI VM stopped. Test window visible and focused; normal existing graphics/decoder settings, no sandbox disabling."
+  },
+  "navigation": [
+    {
+      "case": "wiki",
+      "trial": 0,
+      "click_start_unix": 1794403125.2747362,
+      "click_command_ms": 74.45183399999999,
+      "content_ms": 1351.4347089999999,
+      "observed_elapsed_ms": 1351.4364589999998,
+      "warmup": true
+    },
+    {
+      "case": "github",
+      "trial": 0,
+      "click_start_unix": 1794403127.293864,
+      "click_command_ms": 296.5112910000003,
+      "content_ms": 2177.309666,
+      "observed_elapsed_ms": 2177.311166,
+      "warmup": true
+    },
+    {
+      "case": "bilibili",
+      "trial": 0,
+      "click_start_unix": 1794403129.909176,
+      "click_command_ms": 154.57937499999997,
+      "content_ms": 1837.0617499999992,
+      "observed_elapsed_ms": 1837.0634159999995,
+      "warmup": true
+    },
+    {
+      "case": "wiki",
+      "trial": 1,
+      "click_start_unix": 1794403133.2217228,
+      "click_command_ms": 51.65866699999988,
+      "content_ms": 661.2132499999994,
+      "observed_elapsed_ms": 661.2147499999992,
+      "warmup": false
+    },
+    {
+      "case": "github",
+      "trial": 1,
+      "click_start_unix": 1794403134.519556,
+      "click_command_ms": 204.10662499999967,
+      "content_ms": 1443.1183339999993,
+      "observed_elapsed_ms": 1443.1197499999992,
+      "warmup": false
+    },
+    {
+      "case": "bilibili",
+      "trial": 1,
+      "click_start_unix": 1794403136.487177,
+      "click_command_ms": 140.93008300000065,
+      "content_ms": 1952.5975000000012,
+      "observed_elapsed_ms": 1952.5991670000008,
+      "warmup": false
+    }
+  ],
+  "video": {
+    "first_use": {
+      "elapsed_browser": 30.022,
+      "elapsed_host": 30.063048625000004,
+      "accepted_fps": 19.119312504163613,
+      "callback_fps": 9.959363133701952,
+      "dropped_frames": 1228,
+      "total_frames": 1802,
+      "playback_events": [],
+      "snapshot_roundtrip_ms": [
+        15.870290999998815,
+        58.58979199999936
+      ],
+      "elapsed_host_bounds": [
+        30.004457,
+        30.078917082999997
+      ],
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "frame_gaps": {
+        "count": 299,
+        "p50_ms": 41.65999999999622,
+        "p95_ms": 216.36000000000058,
+        "p99_ms": 2192.4199999999983,
+        "max_ms": 3161.7800000000025,
+        "over_50_ms": 60,
+        "over_100_ms": 28
+      },
+      "media_speed": 1.0005003330890683,
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 129.03816600000084
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 13.784958000002234
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 104.35970900000058
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 717.1307080000063
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 46,
+        "p50_ms": 40.95999999999913,
+        "p95_ms": 93.77999999999884,
+        "p99_ms": 825.3399999999965,
+        "max_ms": 825.3399999999965,
+        "over_50_ms": 6,
+        "over_100_ms": 2
+      },
+      "interaction_ms": 261.69629199999633,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      },
+      "before": {
+        "time": 11.166604,
+        "total": 671,
+        "dropped": 260,
+        "visibility": "visible",
+        "focus": true
+      },
+      "warmup_seconds": 8,
+      "raw_sha256": "358613a21afddfef1dd0c485dbc6e2d7200071e06cc5f447a771588c5b274664"
+    },
+    "warm_same_process": {
+      "elapsed_browser": 30.022,
+      "elapsed_host": 30.048368083,
+      "accepted_fps": 59.722869895410035,
+      "callback_fps": 24.482046499233896,
+      "dropped_frames": 1,
+      "total_frames": 1794,
+      "playback_events": [
+        {
+          "event": "seeking",
+          "wall": 183161,
+          "time": 0.029145,
+          "ready": 4
+        },
+        {
+          "event": "seeked",
+          "wall": 183161,
+          "time": 0.029145,
+          "ready": 4
+        }
+      ],
+      "snapshot_roundtrip_ms": [
+        22.659541999999977,
+        43.46637500000128
+      ],
+      "elapsed_host_bounds": [
+        30.004899417,
+        30.071025334
+      ],
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "frame_gaps": {
+        "count": 735,
+        "p50_ms": 40.720000000001164,
+        "p95_ms": 41.95999999999185,
+        "p99_ms": 45.639999999984866,
+        "max_ms": 50.10000000000582,
+        "over_50_ms": 1,
+        "over_100_ms": 0
+      },
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 13.765874999997152
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 32.41225000000014
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 51.45216600000069
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 9.902957999997852
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 53,
+        "p50_ms": 40.73999999999069,
+        "p95_ms": 50,
+        "p99_ms": 51.079999999987194,
+        "max_ms": 51.079999999987194,
+        "over_50_ms": 1,
+        "over_100_ms": 0
+      },
+      "before": {
+        "time": 38.735291,
+        "total": 10433,
+        "dropped": 2031,
+        "visibility": "visible",
+        "focus": true
+      },
+      "warmup_seconds": 0,
+      "raw_sha256": "c2c5b77dba8c9357dab4a5233547702efe400b7e4a4e95be452c2a4eebdd90f8"
+    },
+    "restart_same_profile": {
+      "elapsed_browser": 30.014,
+      "elapsed_host": 30.062319207999998,
+      "accepted_fps": 59.87205970547078,
+      "callback_fps": 24.521889784767108,
+      "dropped_frames": 4,
+      "total_frames": 1801,
+      "playback_events": [],
+      "snapshot_roundtrip_ms": [
+        17.274499999999193,
+        61.06941699999879
+      ],
+      "elapsed_host_bounds": [
+        30.00124675,
+        30.079590666999998
+      ],
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "frame_gaps": {
+        "count": 736,
+        "p50_ms": 40.68000000000029,
+        "p95_ms": 41.599999999998545,
+        "p99_ms": 44.81999999999971,
+        "max_ms": 49.55999999999767,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.999656427000733,
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 30.074499999997784
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 2.0679169999979763
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 3.2217500000015775
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 19.302125000002945
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 53,
+        "p50_ms": 40.65999999999622,
+        "p95_ms": 49.5,
+        "p99_ms": 56.93999999999505,
+        "max_ms": 56.93999999999505,
+        "over_50_ms": 1,
+        "over_100_ms": 0
+      },
+      "interaction_ms": 235.61883399999317,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      },
+      "before": {
+        "time": 8.107291,
+        "total": 486,
+        "dropped": 67,
+        "visibility": "visible",
+        "focus": true
+      },
+      "warmup_seconds": 8,
+      "raw_sha256": "48c27fcf37fb85d3a6045452cdd5694c24cb8442edac31a5cee080ce92c32b57"
+    }
+  },
+  "native_input": {
+    "counter": "1",
+    "text": "Trames fixed keyboard",
+    "visible": "visible",
+    "focus": true,
+    "width": 1920,
+    "height": 843,
+    "dpr": 1
+  },
+  "native_reference": {
+    "source": "mac-firefox-dev-20261111.json",
+    "version": "160.0",
+    "accepted_fps": 59.97800806370997,
+    "dropped_frames": 0,
+    "scope": "Same-machine contextual reference from earlier isolated native profile; different Firefox versions, viewport/DPR and cache/network state. No controlled A/B attribution."
+  },
+  "validation": {
+    "runtime_macos_ci": {
+      "completed": true,
+      "steps": 7
+    },
+    "runtime_arm64_linux_ci": {
+      "completed": true,
+      "steps": 7
+    },
+    "mac_product_ci": {
+      "completed": true,
+      "steps": 12,
+      "linkage": "explicit external SDK CI; final candidate rebuilt with plain command and embedded native driver"
+    },
+    "mac_process_tests": {
+      "passed": 482,
+      "ignored": 2
+    },
+    "linux_process_subset": {
+      "passed": 344,
+      "ignored": 2,
+      "filtered": 138
+    },
+    "ffi_tests_passed": 12,
+    "signed_native_hardware_tests_passed": 78,
+    "vulkan12_selected_output_oracles": {
+      "cpus": [
+        1,
+        12
+      ],
+      "passed": true,
+      "full_cts": false
+    },
+    "ipad_ffi_checks": [
+      {
+        "target": "aarch64-apple-ios",
+        "code": 0,
+        "seconds": 6.021421792
+      },
+      {
+        "target": "aarch64-apple-ios-sim",
+        "code": 0,
+        "seconds": 9.658925250000001
+      }
+    ],
+    "guest_icd_actual_builder_and_stale_manifest_regression": true,
+    "native_driver_configuration_regression": true,
+    "both_isolated_guest_exits": [
+      0,
+      0
+    ]
+  },
+  "installation": {
+    "installed": "/Users/main/Applications/Trames Dev.app",
+    "sha256": "057133ec04dc0188c8f8e0e4349f8a4f53e89a8234114834aca6fe63240cbb42",
+    "stable_sha256_unchanged": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614",
+    "version": "Trames Dev 1.5.4 (dev) runtime 63b85e69306c489718e68f80c2bd3c1c6dcdf601",
+    "native_vulkan": "embedded"
+  },
+  "limitations": [
+    "The first hardware-decoded interval after fresh-profile initialization accepted only 19.12 fps despite the 8-second warmup. Later same-process and persistent-profile restart intervals reached 59.72 and 59.87 fps. The initial stalls are not solved or causally attributed; restart already counted 67 dropped frames before its measured interval.",
+    "Accepted/dropped video counters are not physical scanout. requestVideoFrameCallback ran at about 24.5 Hz (native contextual reference also about 25 Hz); the compositor/display callback cadence remains distinct from 60-fps decode acceptance.",
+    "Each website cell and each video interval is one observation. Navigation ends at a site DOM marker, not full-load/interactivity or physical presentation.",
+    "Bilibili shader-LOD probe / WebGL context-loss messages remain in logs. Six page markers completed and native input/rendering passed without an observed browser/tab crash; this short test does not establish long-term stability or all WebGL compatibility.",
+    "A separate diagnostic sample suggested parked-job deadline scanning as another lead; no CPU-time share or causal bottleneck was established and no scheduling rewrite is included.",
+    "Driver pairing/configuration and memory-report code changed together. Improvements cannot be assigned solely to any one change or coordinator removal."
+  ]
+}

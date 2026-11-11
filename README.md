@@ -30,7 +30,7 @@ For source builds:
 ```sh
 git clone --recurse-submodules https://github.com/kb5000/trames-mac.git
 cd trames-mac
-bash scripts/build-mac.sh
+TRAMES_MOLTENVK_STATIC_DIR=/path/to/verified/macos-driver bash scripts/build-mac.sh
 target/release/trames-mac-run --manager       # Trames Dev by default
 ```
 
@@ -117,6 +117,16 @@ installation and restart Firefox. Browser certificate validation remains enabled
 Real-site interaction performance is still under investigation; the offline
 input acknowledgements in the validation record are not a general browser
 performance or release-readiness result.
+
+The default Mac build embeds the verified native Vulkan driver. Its first build
+records the explicit `TRAMES_MOLTENVK_STATIC_DIR` in `target/native-vulkan.json`;
+later `bash scripts/build-mac.sh` calls reuse that configuration without an
+environment variable. A missing or changed archive fails the build instead of
+silently disabling graphics. The pinned archive recipe is documented in
+[Firefox GPU setup](docs/validation/mac-firefox-gpu.md#reproduce-and-run).
+SDK/CPU-only CI builds explicitly use `TRAMES_VULKAN_LINKAGE=external`; their
+archives are labelled `external-vulkan` and require a configured host library.
+Production packaging requires the embedded driver.
 
 Native Vulkan compute and offscreen graphics are enabled for new environments,
 independently of windows. Set `config set windows false` for a headless compute
