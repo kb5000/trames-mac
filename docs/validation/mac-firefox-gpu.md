@@ -1758,3 +1758,81 @@ MoltenVK and passes signature verification. The stable runner hash is unchanged.
 The isolated Firefox page is reopened for manual inspection. Exact hashes,
 phase timings and all observation limits are under `composition_update_20261112`
 in [the existing validation record](mac-bilibili-BV1FRHV68EUX.json).
+
+## Layout, native imports and parked scheduling metadata (2026-11-12)
+
+Runtime `f100c32` maintains compact immutable mapping intervals independently of
+resident page descriptors. Mapping edits replace only their interval; publishing
+proc layout no longer walks every resident page. The shared run queue indexes
+parked deadlines and native-interest/GPU membership at insertion/removal, so an
+ordinary dispatch no longer scans every parked task. Original resource wakeups,
+late native producers, absolute deadlines and STOP/CONT retain their protocol.
+
+Mac retires each native import by its exact weak identity after successful HVF
+unmapping, replacing the full-table weak sweep on every imported host granule.
+Writable shared hardware bindings publish in root-frame words at the original
+before-run boundary. Mapping synchronization still retires invalid bindings;
+provider publication and executable-code versions are retained. There is no new
+coordinator, service thread, deferred global dirty set or ordinary data barrier.
+A deferred whole-VM publication experiment regressed the real page and was
+removed before integration.
+
+| Quiet local metadata fixture | Previous | Candidate |
+| --- | ---: | ---: |
+| 400 map/unmap/report edits, 65,536 materialized pages | 124,247 µs | 1,417 µs |
+| Shared hardware publication, 12 CPUs / 512 pages / 128 joins | 6,286 µs | 3,729 µs |
+| 10,000 deadline queries with 512 parked sleepers | 44,128 µs | 27 µs |
+
+These isolate metadata work; their ratios are not video speedups. The deadline
+fixture excludes insertion/removal and tests the repeated no-expiry dispatch
+query that formerly scanned the whole map.
+
+| Bilibili AV1 1080p30; warmed seek to 10 s, 20 s observation | Installed `c2a97ff` | Candidate |
+| --- | ---: | ---: |
+| Accepted video fps | 16.20 | 20.99 |
+| Dropped / total frames | 279 / 606 | 182 / 605 |
+| Callback gap P95 | 151 ms | 115 ms |
+| Callback gaps over 100 ms | 63 | 23 |
+
+This ordered same-profile pair observes about 30% higher accepted-frame rate.
+Both intervals are visible and unfocused, without seek/wait events; measured
+media times are about 15.6–36.1 s, buffered ahead throughout. Codec preferences
+are unmodified, danmaku remains enabled, and AV1 uses the software decoder.
+Other candidate starts yield 19.91 and 22.41 fps. Old starts vary too: one later
+19.12 fps control includes a delayed site-resume seek and is not a matched
+interval. These are useful improvement observations, not a randomized causal
+estimate or a claim that complex-site playback is now smooth.
+
+The real page reports compositor drops with zero decoded/sink drops and a small
+nonwaiting decoder output queue. Candidate host sampling no longer shows the
+removed layout/deadline/import table walks as leading active stacks; shared
+writable-frame publication and commit remain prominent. All-thread sample counts
+include waits and are not interpreted as CPU percentages.
+
+Local fixture regressions pass independently of the site: actual H.264 hardware
+decode at 1080p60 accepts 900/901 frames in 15.016 s (59.94 fps), with no callback
+gap above 50 ms in the measured playback interval. Volume setters take 6–11 ms,
+with no gap above 100 ms during volume changes; click and text input reach the
+page. Generated AV1/AAC 1080p30 accepts 600/601 frames in 20.029 s (29.96 fps),
+matching the old build's 600/601 frames. Callback notifications remain about
+24.5 Hz; accepted-frame counters do not prove physical scanout cadence.
+
+Validation includes 484 interpreter kernel cases, 205 memory unit cases plus six
+metadata/translation tests, 607 VFS unit cases, 320 Linux unit cases, strict
+product Clippy, Mac product tests, the 54 signed native HVF cases, native Vulkan
+1.2 exact-data oracles on 1/12 CPUs, and ARM64 iPad FFI compilation. Existing
+passed checks are reused where source is unchanged. A suite-dependent memfd
+failure also occurs against published production source: its old bounded
+fixture assumes completion within a 10 ms round. It now retains one persistent
+cohort through its actual futex-idle state; the final concurrent suite passes.
+The published-source control also exhibits an unrelated timing-sensitive VM
+assertion; this change does not claim to repair all existing test timing issues.
+
+HEVC and AV1 hardware decode are still unimplemented and unadvertised. Improving
+composition remains useful independently of codec work: local software AV1 is
+already near its source rate, while the real page loses frames at composition.
+The [VA-API architecture](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/vaapi.md)
+records the stateless-VA to stateful-VideoToolbox bitstream boundary that the
+codec work must handle. Filtered counters are in the existing
+[Bilibili record](mac-bilibili-BV1FRHV68EUX.json); profiles, signed media URLs,
+account data and raw traces remain local.

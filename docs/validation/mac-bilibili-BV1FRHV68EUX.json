@@ -1356,5 +1356,450 @@
     ]
   },
   "initial_investigation_final_state": "Product code/binaries unchanged. Isolated native reference closed; original codec preference overrides removed, danmu restored; guest test video paused. No signed media URLs or account data published.",
-  "final_state": "Shared runtime and paired ICD fixes published; Mac Dev updated. Stable Mac runner hash unchanged; iPad source pin updated, installed iPad apps unchanged. Temporary instrumentation removed; codec defaults and danmu preserved; isolated Firefox opened for manual inspection. Bilibili loading/AV1 stalls remain unresolved."
+  "final_state": "Shared runtime and paired ICD fixes published; Mac Dev updated. Stable Mac runner hash unchanged; iPad source pin updated, installed iPad apps unchanged. Temporary instrumentation removed; codec defaults and danmu preserved; isolated Firefox opened for manual inspection. Bilibili loading/AV1 stalls remain unresolved.",
+  "metadata_update_20261112": {
+    "date": "2026-11-12",
+    "baseline_runtime": "c2a97ff9a3f57c80039dcd3300e2b25b1a122e00",
+    "baseline_runner_sha256": "48706f600caa5fa6d83d101fb7399aa986eeabcdb132e3e121c7859301f94828",
+    "video": "https://www.bilibili.com/video/BV1FRHV68EUX/",
+    "configuration": {
+      "cpus": 12,
+      "memory": "auto",
+      "firefox": "151.0.3",
+      "site_video": "1920x1080 AV1 ~30 fps, software decode",
+      "danmaku": true,
+      "codec_overrides": false,
+      "local_measurements_do_not_overlap_builds_or_sampling": true
+    },
+    "warmed_seek_10_control": {
+      "elapsed_browser": 20.186,
+      "accepted_fps": 16.199346081442584,
+      "callback_fps": 14.465471118597048,
+      "dropped_frames": 279,
+      "total_frames": 606,
+      "frame_gaps": {
+        "count": 292,
+        "p50_ms": 50,
+        "p95_ms": 151,
+        "p99_ms": 250,
+        "max_ms": 277,
+        "over_50_ms": 127,
+        "over_100_ms": 63
+      },
+      "media_speed": 1.0015203111067077,
+      "playback_events": [],
+      "before": {
+        "time": 15.89,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            5.01551,
+            80.248163
+          ]
+        ]
+      },
+      "after": {
+        "time": 36.106689,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            15,
+            105
+          ]
+        ]
+      }
+    },
+    "warmed_seek_10_candidate": {
+      "elapsed_browser": 20.155,
+      "accepted_fps": 20.987348052592406,
+      "callback_fps": 18.55618953113371,
+      "dropped_frames": 182,
+      "total_frames": 605,
+      "frame_gaps": {
+        "count": 375,
+        "p50_ms": 49,
+        "p95_ms": 115,
+        "p99_ms": 199,
+        "max_ms": 255,
+        "over_50_ms": 132,
+        "over_100_ms": 23
+      },
+      "media_speed": 1.0000928305631356,
+      "playback_events": [],
+      "before": {
+        "time": 15.634058,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            5.01551,
+            85
+          ]
+        ]
+      },
+      "after": {
+        "time": 35.790929,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            5.01551,
+            105
+          ]
+        ]
+      }
+    },
+    "observed_accepted_fps_change_percent": 29.556760791935876,
+    "other_candidate_runs": [
+      {
+        "elapsed_browser": 20.191,
+        "accepted_fps": 19.909860829082266,
+        "callback_fps": 18.42405031944926,
+        "dropped_frames": 204,
+        "total_frames": 606,
+        "frame_gaps": {
+          "count": 371,
+          "p50_ms": 49,
+          "p95_ms": 124,
+          "p99_ms": 213,
+          "max_ms": 227,
+          "over_50_ms": 125,
+          "over_100_ms": 32
+        },
+        "media_speed": 0.9992058838096181,
+        "playback_events": [],
+        "before": {
+          "time": 27.141768,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": true,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              5.01551,
+              80.248163
+            ]
+          ]
+        },
+        "after": {
+          "time": 47.316734,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": true,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              20,
+              120
+            ]
+          ]
+        }
+      },
+      {
+        "elapsed_browser": 20.259,
+        "accepted_fps": 22.40979317834049,
+        "callback_fps": 19.892393504121625,
+        "dropped_frames": 154,
+        "total_frames": 608,
+        "frame_gaps": {
+          "count": 403,
+          "p50_ms": 49,
+          "p95_ms": 100,
+          "p99_ms": 134,
+          "max_ms": 175,
+          "over_50_ms": 120,
+          "over_100_ms": 20
+        },
+        "media_speed": 0.9986054593020387,
+        "playback_events": [],
+        "before": {
+          "time": 26.020385,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": false,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              5.01551,
+              95.294693
+            ]
+          ]
+        },
+        "after": {
+          "time": 46.251133,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": false,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              20,
+              115.356734
+            ]
+          ]
+        }
+      }
+    ],
+    "local_h264_1080p60_hardware": {
+      "elapsed_browser": 15.016,
+      "accepted_fps": 59.93606819392648,
+      "callback_fps": 24.640383590836443,
+      "dropped_frames": 1,
+      "total_frames": 901,
+      "frame_gaps": {
+        "count": 370,
+        "p50_ms": 40.44000000000233,
+        "p95_ms": 41.1200000000008,
+        "p99_ms": 42.88000000000102,
+        "max_ms": 49.26000000000022,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.9985237746403834,
+      "playback_events": [],
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 60
+      },
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 10.527915999997361
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 7.561959000000229
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 5.7366660000006675
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 9.496750000000276
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 51,
+        "p50_ms": 40.419999999998254,
+        "p95_ms": 41.02000000000044,
+        "p99_ms": 50.06000000000131,
+        "max_ms": 50.06000000000131,
+        "over_50_ms": 1,
+        "over_100_ms": 0
+      },
+      "interaction_ms": 228.60966700000063,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      },
+      "before": {
+        "time": 5.004479,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            0,
+            45
+          ]
+        ]
+      },
+      "after": {
+        "time": 19.998312,
+        "size": [
+          1920,
+          1080
+        ],
+        "focus": false,
+        "visibility": "visible",
+        "ready": 4,
+        "buffered": [
+          [
+            0,
+            45
+          ]
+        ]
+      }
+    },
+    "local_av1_1080p30_software": {
+      "baseline": {
+        "elapsed_browser": 20.035,
+        "accepted_fps": 29.947591714499627,
+        "callback_fps": 24.0079860244572,
+        "dropped_frames": 1,
+        "total_frames": 601,
+        "frame_gaps": {
+          "count": 481,
+          "p50_ms": 41.2400000000016,
+          "p95_ms": 44.340000000000146,
+          "p99_ms": 47.400000000001455,
+          "max_ms": 50.43999999999869,
+          "over_50_ms": 2,
+          "over_100_ms": 0
+        },
+        "media_speed": 1.0002838532568006,
+        "playback_events": [],
+        "before": {
+          "time": 5.033458,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": true,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              0,
+              40
+            ]
+          ]
+        },
+        "after": {
+          "time": 25.074145,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": true,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              0,
+              40
+            ]
+          ]
+        }
+      },
+      "candidate": {
+        "elapsed_browser": 20.029,
+        "accepted_fps": 29.956562983673674,
+        "callback_fps": 24.514454041639624,
+        "dropped_frames": 1,
+        "total_frames": 601,
+        "frame_gaps": {
+          "count": 491,
+          "p50_ms": 40.539999999999054,
+          "p95_ms": 42.159999999999854,
+          "p99_ms": 47.60000000000218,
+          "max_ms": 51.05999999999767,
+          "over_50_ms": 2,
+          "over_100_ms": 0
+        },
+        "media_speed": 0.9981817864097059,
+        "playback_events": [],
+        "before": {
+          "time": 4.982958,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": false,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              0,
+              40
+            ]
+          ]
+        },
+        "after": {
+          "time": 24.975541,
+          "size": [
+            1920,
+            1080
+          ],
+          "focus": false,
+          "visibility": "visible",
+          "ready": 4,
+          "buffered": [
+            [
+              0,
+              40
+            ]
+          ]
+        }
+      }
+    },
+    "candidate_decoder_drops": {
+      "frameStats": {
+        "droppedCompositorFrames": 1033,
+        "droppedDecodedFrames": 0,
+        "droppedSinkFrames": 0
+      },
+      "state": {
+        "demuxEOS": 0,
+        "demuxQueueSize": 0,
+        "drainState": 0,
+        "hasDecoder": false,
+        "hasDemuxRequest": false,
+        "hasPromise": false,
+        "lastStreamSourceID": 0,
+        "needInput": false,
+        "numSamplesInput": 2656,
+        "numSamplesOutput": 2654,
+        "pending": 0,
+        "queueSize": 2,
+        "timeTreshold": -1,
+        "timeTresholdHasSeeked": false,
+        "waitingForData": false,
+        "waitingForKey": false,
+        "waitingPromise": false
+      },
+      "hardware": false,
+      "codec": "video/av1"
+    },
+    "limits": [
+      "Ordered real-site observations, not a randomized causal estimate. Startup/site resume and focus vary; warmed pair is visible and unfocused in both builds, with no seek/wait events.",
+      "Browser accepted-frame counters are not physical scanout.",
+      "Bilibili remains below its nominal 30 fps; shared writable-frame publication/commit remains prominent in candidate host samples.",
+      "No HEVC/AV1 hardware decoder is advertised or implemented by this performance change.",
+      "No signed media URLs, account data, profile contents, or raw traces are published."
+    ],
+    "runtime_commit": "f100c3235830b7a53bb79b06a2b905c45aac5a48"
+  }
 }

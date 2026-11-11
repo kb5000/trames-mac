@@ -203,7 +203,7 @@ struct AddressSpace {
     chunks: BTreeMap<u64, CachedChunk>,
     version: Option<(u64, u64)>,
     used: u64,
-    publications: BTreeMap<u64, trames_memory::HardwareWriteFrame>,
+    publications: BTreeMap<usize, u64>,
     private_writable: usize,
 }
 impl AddressSpace {
@@ -219,16 +219,23 @@ impl AddressSpace {
     }
     fn track_write(
         &mut self,
-        va: u64,
         old: Option<trames_memory::HardwareWriteFrame>,
         new: Option<trames_memory::HardwareWriteFrame>,
     ) {
         self.private_writable -= usize::from(old.is_some_and(|write| !write.needs_publication()));
         self.private_writable += usize::from(new.is_some_and(|write| !write.needs_publication()));
-        if let Some(write) = new.filter(|write| write.needs_publication()) {
-            self.publications.insert(va, write);
-        } else {
-            self.publications.remove(&va);
+        if let Some((word, bit)) = old.and_then(|write| write.publication_word()) {
+            let bits = self
+                .publications
+                .get_mut(&word)
+                .expect("tracked publication word");
+            *bits &= !bit;
+            if *bits == 0 {
+                self.publications.remove(&word);
+            }
+        }
+        if let Some((word, bit)) = new.and_then(|write| write.publication_word()) {
+            *self.publications.entry(word).or_default() |= bit;
         }
     }
 }
@@ -575,14 +582,14 @@ impl Executor {
                 };
                 page.info = info;
                 let write = page.write;
-                space.track_write(va, previous, write);
+                space.track_write(previous, write);
             }
             #[cfg(feature = "diagnostics")]
             diagnostics::count(diagnostics::Count::Retire, retired.len());
             for va in retired {
                 check(unsafe { trames_hvf_page(self.host.as_ptr(), va, 0, 0) })?;
                 let old = space.remove_page(va).unwrap();
-                space.track_write(va, old.write, None);
+                space.track_write(old.write, None);
                 #[cfg(test)]
                 {
                     self.translations.retired += 1;
@@ -603,8 +610,8 @@ impl Executor {
             if space.private_writable != 0 || !space.blocks.is_empty() {
                 memory.mark_hardware_private_writes();
             }
-            for &write in space.publications.values() {
-                memory.mark_hardware_frame_write(write)?;
+            for (&word, &bits) in &space.publications {
+                memory.mark_hardware_write_word(word, bits)?;
             }
         }
         space.version = Some(version);
@@ -639,7 +646,7 @@ impl Executor {
                 self.pte(address, 0, 0)?;
                 let space = self.spaces.get_mut(&self.active).unwrap();
                 let old = space.remove_page(address).unwrap();
-                space.track_write(address, old.write, None);
+                space.track_write(old.write, None);
             }
             check(unsafe {
                 trames_hvf_block(self.host.as_ptr(), base, storage.physical_address(), 3)
@@ -836,7 +843,7 @@ impl Executor {
         }
         // Installing one leaf cannot acknowledge changes to other old leaves
         // in the chunk. Only synchronize_view advances an existing stamp.
-        space.track_write(va, old.and_then(|page| page.write), write);
+        space.track_write(old.and_then(|page| page.write), write);
         #[cfg(feature = "diagnostics")]
         {
             diagnostics::count(diagnostics::Count::Export, 1);

@@ -381,7 +381,6 @@ impl Machine {
         let block = if let Some(block) = imports.get(&base).and_then(Weak::upgrade) {
             block
         } else {
-            imports.retain(|_, p| p.strong_count() != 0);
             let gpa = unsafe { trames_hvf_reserve(self.pointer.as_ptr()) };
             if let Err(error) = check(unsafe {
                 trames_hvf_map(std::ptr::null_mut(), base as *mut c_void, gpa, self.granule)
@@ -818,6 +817,20 @@ impl Drop for Physical {
                 vm.mapped.fetch_sub(self.length as u64, Ordering::Relaxed);
             }
             if self.external.is_some() {
+                // Retire only this original import. A racing importer can have
+                // replaced a dead weak entry while this native unmap ran; its
+                // replacement must survive. Never scan all live imports on each
+                // new host granule (large staging/SHM maps made that quadratic).
+                let identity = self as *const Self;
+                let mut imports = vm.imports.lock().unwrap();
+                let base = self.pointer.as_ptr() as usize;
+                if imports
+                    .get(&base)
+                    .is_some_and(|old| std::ptr::eq(old.as_ptr(), identity))
+                {
+                    imports.remove(&base);
+                }
+                drop(imports);
                 unsafe { trames_hvf_release(vm.pointer.as_ptr(), self.gpa) };
             }
             // Private addresses belong to the containing arena until its last

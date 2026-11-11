@@ -184,3 +184,76 @@ fn pressure_event_wakes_the_embedding_without_periodic_polling() {
     );
     assert_eq!(take_memory_pressure().unwrap(), 4);
 }
+
+fn imported_test_mapping(length: usize) -> SharedMapping {
+    struct Mapping(usize, usize);
+    impl Drop for Mapping {
+        fn drop(&mut self) {
+            assert_eq!(unsafe { libc::munmap(self.0 as *mut c_void, self.1) }, 0);
+        }
+    }
+    let pointer = unsafe {
+        libc::mmap(
+            std::ptr::null_mut(),
+            length,
+            libc::PROT_READ | libc::PROT_WRITE,
+            libc::MAP_ANON | libc::MAP_PRIVATE,
+            -1,
+            0,
+        )
+    };
+    assert_ne!(pointer, libc::MAP_FAILED);
+    // SAFETY: mmap provides initialized demand-zero complete host granules;
+    // the retained owner unmaps only after every imported alias has returned.
+    unsafe {
+        SharedMapping::from_allocation(pointer.cast(), length, Mapping(pointer as usize, length))
+    }
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn imported_granules_retire_without_scanning_other_live_imports() {
+    let machine = Machine::shared().unwrap();
+    let mapping = imported_test_mapping(machine.granule * 256);
+    let slots: Vec<_> = (0..256)
+        .map(|i| {
+            machine
+                .import(mapping.with_offset(i * machine.granule).unwrap())
+                .unwrap()
+        })
+        .collect();
+    assert_eq!(machine.imports.lock().unwrap().len(), 256);
+    let alias = machine
+        .import(mapping.with_offset(PAGE_SIZE as usize).unwrap())
+        .unwrap();
+    assert_eq!(
+        alias.physical_address(),
+        slots[0].physical_address() + PAGE_SIZE
+    );
+    drop(slots);
+    assert_eq!(machine.imports.lock().unwrap().len(), 1);
+    assert_eq!(machine.stats().mapped_bytes, machine.granule as u64);
+    drop(alias);
+    assert!(machine.imports.lock().unwrap().is_empty());
+    assert_eq!(machine.stats().mapped_bytes, 0);
+}
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn concurrent_import_retirement_keeps_replacement_weak_entries() {
+    let machine = Machine::shared().unwrap();
+    let mapping = imported_test_mapping(machine.granule);
+    std::thread::scope(|scope| {
+        for _ in 0..4 {
+            let machine = machine.clone();
+            let mapping = mapping.clone();
+            scope.spawn(move || {
+                for _ in 0..512 {
+                    let slot = machine.import(mapping.clone()).unwrap();
+                    std::thread::yield_now();
+                    drop(slot);
+                }
+            });
+        }
+    });
+    assert!(machine.imports.lock().unwrap().is_empty());
+    assert_eq!(machine.stats().mapped_bytes, 0);
+}
