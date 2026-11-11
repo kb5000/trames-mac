@@ -1625,3 +1625,61 @@ and [dispatch cancellation lifetime](https://developer.apple.com/documentation/d
 The [compact input record](mac-firefox-native-input-20261111.json) identifies the
 candidate and installed hashes. Only Mac Dev is updated; the shared runtime pin,
 iPad product and stable Mac app are unchanged.
+
+
+## BV1FRHV68EUX loading investigation
+
+The supplied [Bilibili video](https://www.bilibili.com/video/BV1FRHV68EUX/)
+reproduces substantial loading stalls on Mac Dev `fe061fc` / runtime `20b608e`,
+with the paired v14 guest ICD, DPR 2 and a 1920x844 logical viewport. No product
+code or stable installation changes are made in this investigation.
+
+Two different costs are present. The initial page chooses **1080p AV1** (initial reported rate about 30 fps) and
+Firefox reports `videoHardwareAccelerated=false`. The current VA-API driver
+advertises H.264 profiles only, so `--video` does not supply AV1 hardware decode.
+A runtime preference experiment selects **1080p AVC/H.264** and confirms actual
+hardware decoding; it still stalls during loading. Switching codecs alone is
+therefore insufficient to explain or fix the loading problem.
+
+| Observation | Evidence |
+| --- | --- |
+| Initial AV1 page load | DOMContentLoaded 2.023 s; load event 2.721 s; video playing at 4.231 s; a subsequent 100 ms page timer has a 5.680 s gap |
+| AV1 after loading | 360/671 counted frames dropped over the late 22.397 s window, despite at least 13.879 s of buffered video; accepted rate 13.886 fps |
+| Fresh-process H.264 follow-up | DOMContentLoaded 2.306 s; load event 2.921 s; initial seek/playing reaches 11.691 s; another buffer wait ends at 16.065 s; longest page-timer gap 4.542 s |
+| H.264 recovery | Last 5.382 s of that loading sample accepts 29.915 fps with 1/162 counted drops and at least 69.757 s buffered |
+| Continued H.264 playback | 20.188 s accepts 17.387 fps with 133/484 counted drops, buffered throughout; the short recovery is not sustained |
+| Instrumented rendering | Firefox Renderer `Texture uploads` intervals: 103, median 2.314 ms, p95 216.247 ms, maximum 288.019 ms; these are elapsed intervals, not CPU percentages |
+| Native contextual reference | macOS Firefox 160.0 chooses hardware AV1 at **360p30**, with 0/1125 counted drops; its load event is 0.988 s. Different resolution/profile prevents a 1080p speed-ratio claim |
+
+The video has enough data during many dropped-frame intervals. Earlier decoder
+statistics show compositor drops with zero decoded-frame drops. The symptom
+therefore reaches beyond download and decoding: page initialization/main-thread
+latency and delayed rendering/presentation remain material. The profiler also
+records multi-second GC and content-presentation intervals; their elapsed times
+include scheduling/waiting and are not proof of equally long CPU computation.
+
+Host samples repeatedly include eager `Memory::memory_report -> regions` layout
+publication, parallel-view/page mapping, waits, and Metal command submission.
+`memory_report` currently rebuilds the region list after a real mapping revision;
+that is still an optimization candidate during mapping-heavy initialization.
+A sampled wait is not necessarily harmful, and no causal percentage or specific
+lock is established here. The next controlled optimization should measure the
+render/upload/submit critical path and mapping-publication cost separately.
+AV1 VideoToolbox/VA-API coverage is an additional missing capability.
+
+Method/limits: page events, video-quality counters, buffer ranges and a 100 ms
+main-thread timer are recorded; Gecko/host profiling is a separate, perturbed
+pass. Repeated-navigation runs become much slower, including a warmed H.264
+30 s interval with 743/895 drops; a fresh process recovers substantially. Its
+cause is unresolved, so those runs are not treated as a codec A/B. Turning off
+danmu did not show a clear improvement in the sampled follow-up, but that pass
+also ran host sampling and is inconclusive. One forced-codec restart produced
+audio without video and is excluded. The decoder-reported rate changes from roughly 30 to 24 fps between intervals;
+this is not a container-level fixed-rate measurement. Native frame counters
+describe browser acceptance, not physical scanout. Original codec preferences and danmu settings
+are restored in the disposable test profile. No signed media URLs, account data,
+raw profile or user text is published.
+
+The [compact diagnostic record](mac-bilibili-BV1FRHV68EUX.json) retains the
+non-sensitive measurements and distinguishes confirmed findings from remaining
+hypotheses. This is diagnosis, not a completed performance fix.

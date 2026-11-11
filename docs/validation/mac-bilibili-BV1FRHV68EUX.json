@@ -1,0 +1,455 @@
+{
+  "video": "https://www.bilibili.com/video/BV1FRHV68EUX/",
+  "mac_commit": "fe061fc425f6a0c2ea87d256aa1fc8ae074efd79",
+  "runtime_commit": "20b608e86b5827371cf08f8b54e2d6f6174e1d35",
+  "installed_runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+  "initial_av1": {
+    "navigation": {
+      "responseStart": 509,
+      "responseEnd": 540,
+      "domInteractive": 1801,
+      "domContentLoaded": 2023,
+      "load": 2721,
+      "duration": 2721
+    },
+    "decoder": {
+      "name": "ffmpeg video decoder (RDD remote)",
+      "hardware": false,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.00002670288086,
+      "keys": [
+        "audioChannels",
+        "audioDecoderName",
+        "audioFramesDecoded",
+        "audioRate",
+        "audioState",
+        "audioType",
+        "frameStats",
+        "totalReadMetadataTimeMs",
+        "totalWaitingForVideoDataTimeMs",
+        "videoDecoderName",
+        "videoHardwareAccelerated",
+        "videoHeight",
+        "videoNumSamplesOutputTotal",
+        "videoNumSamplesSkippedTotal",
+        "videoRate",
+        "videoState",
+        "videoType",
+        "videoWidth"
+      ],
+      "frameStats": null
+    },
+    "dpr": 2,
+    "viewport": [
+      1920,
+      844
+    ],
+    "focus": true,
+    "timer_max_gap_ms": 5680,
+    "observed_interval_seconds": 39.745,
+    "accepted_fps_including_startup": 11.221537300289345,
+    "dropped_frames": 653,
+    "total_frames": 1099,
+    "events": [
+      {
+        "event": "play",
+        "wall": 2576,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "waiting",
+        "wall": 2576,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "loadedmetadata",
+        "wall": 2691,
+        "time": 17,
+        "ready": 1
+      },
+      {
+        "event": "seeking",
+        "wall": 2693,
+        "time": 17,
+        "ready": 1
+      },
+      {
+        "event": "seeked",
+        "wall": 4138,
+        "time": 17,
+        "ready": 4
+      },
+      {
+        "event": "loadeddata",
+        "wall": 4138,
+        "time": 17,
+        "ready": 4
+      },
+      {
+        "event": "canplay",
+        "wall": 4215,
+        "time": 17,
+        "ready": 4
+      },
+      {
+        "event": "playing",
+        "wall": 4231,
+        "time": 17,
+        "ready": 4
+      },
+      {
+        "event": "waiting",
+        "wall": 17653,
+        "time": 30.093061,
+        "ready": 2
+      },
+      {
+        "event": "canplay",
+        "wall": 18722,
+        "time": 30.093061,
+        "ready": 4
+      },
+      {
+        "event": "playing",
+        "wall": 18722,
+        "time": 30.093061,
+        "ready": 4
+      }
+    ],
+    "buffered_ahead_at_end_seconds": 71.377302
+  },
+  "initial_codec_detail": {
+    "decoder": "ffmpeg video decoder (RDD remote)",
+    "hardware": false,
+    "videoType": "video/av1",
+    "audio": "audio/mp4a-latm",
+    "frameStats": {
+      "droppedCompositorFrames": 1448,
+      "droppedDecodedFrames": 0,
+      "droppedSinkFrames": 19
+    },
+    "waitMs": 799.029834,
+    "metadataMs": 982.302625,
+    "outputs": 2560,
+    "skipped": 0
+  },
+  "h264_clean_loading": {
+    "navigation": {
+      "responseStart": 478,
+      "responseEnd": 478,
+      "domInteractive": 1917,
+      "domContentLoaded": 2306,
+      "load": 2921,
+      "duration": 2921
+    },
+    "decoder": {
+      "name": "ffmpeg video decoder (RDD remote)",
+      "hardware": true,
+      "codec": "video/avc",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.00006675720215,
+      "keys": [
+        "audioChannels",
+        "audioDecoderName",
+        "audioFramesDecoded",
+        "audioRate",
+        "audioState",
+        "audioType",
+        "frameStats",
+        "totalReadMetadataTimeMs",
+        "totalWaitingForVideoDataTimeMs",
+        "videoDecoderName",
+        "videoHardwareAccelerated",
+        "videoHeight",
+        "videoNumSamplesOutputTotal",
+        "videoNumSamplesSkippedTotal",
+        "videoRate",
+        "videoState",
+        "videoType",
+        "videoWidth"
+      ],
+      "frameStats": null
+    },
+    "dpr": 2,
+    "viewport": [
+      1920,
+      844
+    ],
+    "focus": true,
+    "timer_max_gap_ms": 4542,
+    "observed_interval_seconds": 23.454,
+    "accepted_fps_including_startup": 12.066172081521275,
+    "dropped_frames": 58,
+    "total_frames": 341,
+    "events": [
+      {
+        "event": "play",
+        "wall": 2954,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "waiting",
+        "wall": 2954,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "loadedmetadata",
+        "wall": 3949,
+        "time": 130,
+        "ready": 1
+      },
+      {
+        "event": "seeking",
+        "wall": 4075,
+        "time": 130,
+        "ready": 1
+      },
+      {
+        "event": "seeked",
+        "wall": 11687,
+        "time": 130,
+        "ready": 3
+      },
+      {
+        "event": "loadeddata",
+        "wall": 11687,
+        "time": 130,
+        "ready": 3
+      },
+      {
+        "event": "canplay",
+        "wall": 11690,
+        "time": 130,
+        "ready": 3
+      },
+      {
+        "event": "playing",
+        "wall": 11691,
+        "time": 130,
+        "ready": 3
+      },
+      {
+        "event": "waiting",
+        "wall": 12557,
+        "time": 130.403265,
+        "ready": 2
+      },
+      {
+        "event": "canplay",
+        "wall": 16054,
+        "time": 130.403265,
+        "ready": 4
+      },
+      {
+        "event": "playing",
+        "wall": 16065,
+        "time": 130.403265,
+        "ready": 4
+      }
+    ],
+    "buffered_ahead_at_end_seconds": 73.643992
+  },
+  "h264_clean_steady": {
+    "elapsed_browser": 20.188,
+    "accepted_fps": 17.386566276996238,
+    "dropped_frames": 133,
+    "total_frames": 484,
+    "decoder": {
+      "name": "ffmpeg video decoder (RDD remote)",
+      "hardware": true,
+      "width": 1920,
+      "height": 1080,
+      "fps": 24.005496978759766
+    },
+    "frame_gaps": {
+      "count": 306,
+      "p50_ms": 49.94000000000233,
+      "p95_ms": 133.3399999999965,
+      "p99_ms": 233.39999999999418,
+      "max_ms": 1449,
+      "over_50_ms": 137,
+      "over_100_ms": 30
+    },
+    "media_speed": 1.0014076183871603,
+    "playback_events": [],
+    "before_buffered": [
+      [
+        70,
+        165.000997
+      ]
+    ],
+    "after_buffered": [
+      [
+        95,
+        188.166
+      ]
+    ],
+    "focus": [
+      true,
+      true
+    ]
+  },
+  "h264_repeated_navigation_steady": {
+    "elapsed_browser": 30.075,
+    "accepted_fps": 5.054031587697423,
+    "dropped_frames": 743,
+    "total_frames": 895,
+    "decoder": {
+      "name": "ffmpeg video decoder (RDD remote)",
+      "hardware": true,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30.000022888183594
+    },
+    "frame_gaps": {
+      "count": 188,
+      "p50_ms": 166.7600000000093,
+      "p95_ms": 432.9400000000023,
+      "p99_ms": 533,
+      "max_ms": 615.9800000000396,
+      "over_50_ms": 132,
+      "over_100_ms": 110
+    },
+    "media_speed": 0.9994009642560266,
+    "playback_events": [],
+    "before_buffered": [
+      [
+        65,
+        155
+      ]
+    ],
+    "after_buffered": [
+      [
+        90,
+        180.558367
+      ]
+    ],
+    "focus": [
+      false,
+      false
+    ]
+  },
+  "native_reference": {
+    "navigation": {
+      "responseStart": 213,
+      "responseEnd": 213,
+      "domInteractive": 734,
+      "domContentLoaded": 764,
+      "load": 988,
+      "duration": 988
+    },
+    "decoder": {
+      "name": "apple hardware VT decoder (RDD remote)",
+      "hardware": true,
+      "codec": "video/av1",
+      "width": 640,
+      "height": 360,
+      "fps": 30.000000000000018,
+      "keys": [
+        "audioChannels",
+        "audioDecoderName",
+        "audioFramesDecoded",
+        "audioRate",
+        "audioState",
+        "audioType",
+        "frameStats",
+        "totalReadMetadataTimeMs",
+        "totalWaitingForVideoDataTimeMs",
+        "videoDecoderName",
+        "videoHardwareAccelerated",
+        "videoHeight",
+        "videoNumSamplesOutputTotal",
+        "videoNumSamplesSkippedTotal",
+        "videoRate",
+        "videoState",
+        "videoType",
+        "videoWidth"
+      ],
+      "frameStats": null
+    },
+    "dpr": 2,
+    "viewport": [
+      1880,
+      835
+    ],
+    "focus": false,
+    "timer_max_gap_ms": 387,
+    "observed_interval_seconds": 39.266,
+    "accepted_fps_including_startup": 28.650741099169768,
+    "dropped_frames": 0,
+    "total_frames": 1125,
+    "events": [
+      {
+        "event": "play",
+        "wall": 982,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "waiting",
+        "wall": 982,
+        "time": 0,
+        "ready": 0
+      },
+      {
+        "event": "loadedmetadata",
+        "wall": 1465,
+        "time": 0,
+        "ready": 1
+      },
+      {
+        "event": "loadeddata",
+        "wall": 3120,
+        "time": 0,
+        "ready": 4
+      },
+      {
+        "event": "canplay",
+        "wall": 3139,
+        "time": 0,
+        "ready": 4
+      },
+      {
+        "event": "playing",
+        "wall": 3140,
+        "time": 0,
+        "ready": 4
+      }
+    ],
+    "buffered_ahead_at_end_seconds": 67.489796
+  },
+  "profiled_texture_upload_intervals": {
+    "count": 103,
+    "sum_elapsed_ms": 3926.448,
+    "median_ms": 2.314,
+    "p95_ms": 216.247,
+    "max_ms": 288.019,
+    "scope": "Separate instrumented reload. Elapsed marker durations, not CPU percentages."
+  },
+  "confirmed": [
+    "The default page selected AV1 and software decoding; the current VA-API driver only advertises H.264.",
+    "H.264 hardware decode is active in the runtime-preference experiment, but buffered playback still drops frames.",
+    "Page main-thread timers experience multi-second delays during loading.",
+    "A short 29.915 fps recovery does not persist: the subsequent 20.188 s interval accepts 17.387 fps with 133/484 drops."
+  ],
+  "candidates": [
+    "WebRender texture upload and Zink/Vulkan/Metal submission/presentation latency.",
+    "Eager Memory::memory_report -> regions on mapping revisions and parallel-view/page metadata publication.",
+    "Long-lived degradation after repeated navigation; not causally isolated."
+  ],
+  "limits": [
+    "No controlled same-resolution native/guest A/B: native Firefox 160.0 selected hardware AV1 at 360p; guest Firefox 151.0.3 used 1080p.",
+    "Decoder-reported rate varies: initially about 30, later about 24 fps; no container-level fixed-rate claim is made.",
+    "Profiling perturbs timing, and sampled waits or elapsed markers are not CPU-time percentages.",
+    "One forced-codec startup produced audio without video; excluded from playback comparisons.",
+    "Danmu-off observation also included host sampling; no clear improvement was seen, but it is not a clean causal test.",
+    "Cache, playback resume position, codec/bitstream and navigation history differ between runs. No single-function root cause or completed fix claimed."
+  ],
+  "final_state": "Product code/binaries unchanged. Isolated native reference closed; original codec preference overrides removed, danmu restored; guest test video paused. No signed media URLs or account data published."
+}
