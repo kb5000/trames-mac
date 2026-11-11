@@ -1,0 +1,89 @@
+{
+  "date": "2026-11-11",
+  "product": "Mac Dev 1.5.4",
+  "runtime_commit": "20b608e86b5827371cf08f8b54e2d6f6174e1d35",
+  "mac_parent_commit": "1c72d5cdaee5cdc8958aa8646bcc29f00261f2a5",
+  "source_sha256": {
+    "crates/trames-mac/src/windows.rs": "d9e9700b95d76ae509717b68182b93b9b25f341822c1b8a9e69fc794d2bcc29a",
+    "crates/trames-mac/src/window.m": "0ee0333b0d3b9b0d374b20a0401513342a381fe90f5acb46bec7bccafda4cbc7",
+    "crates/trames-mac/src/window-input.h": "f5a14a25f17586d5e1bc29f7f0819f15c2580b4195cf0fd3eba3ac12abde31e2",
+    "crates/trames-mac/src/window-input.m": "37a1f4f0b24d4c1b2ecc7f6af1f505918316683fcffeef7c65548b70de0e31dc",
+    "crates/trames-mac/src/window-clipboard.m": "d08ad7d2797ed214358e43d7d059f7782032fd384ef919df2d05be98abec6fbc",
+    "tests/native/window-input.m": "38e69decb8f64f2944d6ddeab04524ec2bc4e134bedaa75553da82dd0a2f1d70"
+  },
+  "candidate_and_installed_runner_sha256": "15c9b11db54ac63edcbda7c12c29ba92a98984c6ebeac06bbd70277c229fe729",
+  "stable_runner_sha256_unchanged": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614",
+  "installed_ascii": {
+    "match": true,
+    "dpr": 2,
+    "counts": {
+      "keyup": 12,
+      "keydown": 10,
+      "beforeinput": 10,
+      "input": 10
+    }
+  },
+  "installed_host_paste": {
+    "match": true,
+    "dpr": 2,
+    "counts": {
+      "keyup": 16,
+      "keydown": 12,
+      "beforeinput": 11,
+      "input": 11,
+      "paste": 1
+    }
+  },
+  "chinese_ime": {
+    "native_candidate_ui_and_commit": "owner confirmed working",
+    "candidate_event_summary": {
+      "dpr": 2,
+      "textPresent": true,
+      "hasUnicode": true,
+      "events": {
+        "beforeinput": 103,
+        "input": 112,
+        "compositionstart": 9,
+        "compositionupdate": 66,
+        "compositionend": 9,
+        "copy": 3,
+        "paste": 6
+      }
+    },
+    "stage": "Candidate before final physical US/ABC dispatch, local replacement/cancellation refinements and clipboard quota cleanup; final adapter paths covered by native regression."
+  },
+  "automation_focus": {
+    "remote.prefs.recommended": false,
+    "focusmanager.testmode": false,
+    "initial_failure": "Synthetic automation focus left Firefox GTK IME without its focused widget and caused guest exit 139. Real-focus restart passed composition; no shared runtime patch applied."
+  },
+  "checks": {
+    "fmt": "pass",
+    "clippy_workspace_all_targets_all_features": "pass",
+    "workspace_tests": "27 passed; 78 hardware/integration cases ignored as configured; unchanged prior hardware acceptance reused",
+    "final_mac_tests": "pass",
+    "native_ui_task_stream_and_manager": "pass",
+    "native_text": "UTF-16/UTF-8 selection, surrogate boundaries, v1/v3 replacement, updated composition serial, cancellation/focus reset and physical-key dispatch pass",
+    "native_clipboard": "Private real NSPasteboard: Unicode bidirectional, 17 MiB host-to-guest over backpressure, stale exports, external-change race, shutdown pass",
+    "execution_boundaries": "pass",
+    "native_vulkan_build_configuration": "pass",
+    "embedded_dev_build_and_install": "pass",
+    "codesign_deep_strict": "pass"
+  },
+  "architecture": {
+    "shared_protocols": "Existing Wayland text-input v1/v3, data-device and XIM commit",
+    "dispatch": "Existing AppKit main queue with nonblocking pipe readiness, 64 KiB work budget and cancellation handlers",
+    "new_coordinator_or_service_threads": 0,
+    "clipboard_polling": false,
+    "additional_text_payload_quota": false,
+    "abandoned_pipe_deadline_seconds": 120
+  },
+  "limits": [
+    "Text clipboard only; rich HTML, images and file drag/drop not implemented.",
+    "XIM supports commits without surrounding-text deletion.",
+    "Independent Firefox-to-another-native-app paste was not separately recorded; provider export passed private-pasteboard tests.",
+    "Chinese candidate UI was manually verified; no exact candidate screen-coordinate measurement was recorded.",
+    "This acceptance does not establish general Firefox crash freedom."
+  ],
+  "scope": "Only Mac Dev changed. Runtime pin, iPad and stable app unchanged. No user clipboard or manually typed text included."
+}

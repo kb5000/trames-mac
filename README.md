@@ -95,8 +95,9 @@ weston-terminal &
 The host supplies `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY`. Shared-memory pixels
 are presented through Metal, with no remote desktop server or complete Linux VM.
 Physical keyboard, pointer, scroll, native close/zoom/minimize, and client-side
-move/resize requests use the common Wayland seat and shell. Host clipboard and
-IME integration remain follow-up work. Native GPU texture presentation is implemented;
+move/resize requests use the common Wayland seat and shell. Host UTF-8 clipboard text and native macOS IME composition use the shared
+Wayland data-device/text-input protocols. Standard Command copy/paste shortcuts
+and the native Edit menu are forwarded to Linux applications. Native GPU texture presentation is implemented;
 see [hardware Firefox rendering](docs/validation/mac-firefox-gpu.md).
 See [native window ownership and validation](docs/validation/mac-windows.md).
 

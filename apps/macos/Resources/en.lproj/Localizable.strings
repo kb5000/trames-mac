@@ -89,3 +89,10 @@
 "%@ — Linux Environments" = "%@ — Linux Environments";
 
 "Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it." = "Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it.";
+"Edit" = "Edit";
+"Undo" = "Undo";
+"Redo" = "Redo";
+"Cut" = "Cut";
+"Copy" = "Copy";
+"Paste" = "Paste";
+"Select All" = "Select All";

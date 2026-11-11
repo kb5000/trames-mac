@@ -1569,3 +1569,59 @@ synthetic; full physical monitor topology/DOM screen metrics and fractional outp
 density are outside this acceptance. The [follow-up record](mac-firefox-fixed-20261111.json)
 retains those limits, binary/source hashes and exact measurements. Protocol and
 upstream context are in the [shared architecture document](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/wayland.md#host-density-and-viewport-geometry-2026-11-11).
+
+
+## Native clipboard and input methods (2026-11-11)
+
+Mac windows now implement AppKit `NSTextInputClient` and connect the existing
+shared Wayland text-input v1/v3 and clipboard providers. The native adapter owns
+UTF-16 selection/preedit state, translates wire offsets to UTF-8, preserves the
+originating context/epoch and latest client serial, and places candidates at the
+logical caret rectangle, including 2x windows and child surfaces. Composition
+cancellation and focus replacement discard the old native marked state. XIM
+continues to support commits without surrounding-text deletion.
+
+Command-C/X/V/A/Z and common browser shortcuts map to their Linux Control
+counterparts; the localized Edit menu uses the same path. Ordinary US/ABC keys
+retain physical Wayland key events and client repeat. Native composition/dead
+keys and Unicode use the text protocol without duplicate physical key presses.
+
+Clipboard text is fetched only on a paste request. App/window activation and
+paste check the pasteboard change counter; no periodic clipboard polling is used.
+Nonblocking pipe readiness runs on the existing AppKit queue, yielding after
+64 KiB of work. Source cancellation closes each FD only after dispatch releases
+its registration. Selection generations and the pasteboard change counter stop
+late exports from overwriting a newer external copy. Shutdown cancels pending
+transfers; a one-shot 120-second deadline releases abandoned pipes. Payloads have
+no additional size quota. Rich HTML, images and file drag/drop are not implemented.
+No coordinator, clipboard worker, new service thread or rendering copy is added.
+
+Acceptance on the isolated Firefox 151.0.3 profile at DPR 2:
+
+| Check | Result |
+| --- | --- |
+| Native ASCII entry | Exact DOM match |
+| Host paste of Chinese and emoji | Exact DOM match through Command-V |
+| Real system Chinese input | Owner confirms candidate UI and committed Chinese work; 9 composition starts/ends and 66 updates observed |
+| Provider direction/lifetime | Private real NSPasteboard: Unicode both ways, 17 MiB host text through backpressure, stale exports, external-copy race and shutdown pass |
+| Mac validation | Formatting, all-target/all-feature clippy, workspace tests, native UI tests, execution boundaries, native-driver configuration and embedded Dev build pass |
+
+No user clipboard contents or manually entered text are retained in the record;
+only known fixture equality checks, event counts and booleans are saved. The
+private-pasteboard tests cover guest-to-host provider export; an independent
+Firefox-to-another-native-app paste was not separately recorded.
+
+The first IME test crashed inside Firefox's GTK text dispatcher with no focused
+widget. Its automation profile had `focusmanager.testmode = true`. Restarting
+with `remote.prefs.recommended = false` and `focusmanager.testmode = false`
+established the real native focus and passed Chinese composition without a
+shared-runtime change. Native-input acceptance must keep those preferences
+explicit: [Firefox's recommended automation preferences](https://github.com/mozilla/gecko-dev/blob/master/remote/shared/RecommendedPreferences.sys.mjs)
+otherwise enable synthetic focus. This is a test setup limitation; it does not
+establish general Firefox crash freedom.
+
+AppKit integration follows Apple's [text input client contract](https://developer.apple.com/documentation/appkit/nstextinputclient?language=objc)
+and [dispatch cancellation lifetime](https://developer.apple.com/documentation/dispatch/dispatchsourceprotocol/setcancelhandler%28handler%3A%29).
+The [compact input record](mac-firefox-native-input-20261111.json) identifies the
+candidate and installed hashes. Only Mac Dev is updated; the shared runtime pin,
+iPad product and stable Mac app are unchanged.

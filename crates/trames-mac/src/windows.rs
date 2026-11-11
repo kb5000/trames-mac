@@ -2,13 +2,16 @@
 //! The AppKit main thread presents compositor leases; Linux stays thread-affine.
 use std::{
     ffi::{c_char, c_void, CString},
+    os::fd::{IntoRawFd, OwnedFd},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
 };
 use trames_shared::{IoSignal, IoSubscription, IoWake};
-use trames_wayland::{ImageBuffer, InputEvent, Server, WindowMode, WindowSnapshot};
+use trames_wayland::{
+    HostClipboard, ImageBuffer, InputEvent, Server, TextEdit, WindowMode, WindowSnapshot,
+};
 #[repr(C)]
 struct Image {
     kind: u32,
@@ -43,6 +46,35 @@ struct Window {
     mode: u32,
     title: *const c_char,
 }
+#[repr(C)]
+struct TextInfo {
+    id: u64,
+    epoch: u64,
+    window: u64,
+    version: u32,
+    serial: u32,
+    cursor: u32,
+    anchor: u32,
+    hint: u32,
+    purpose: u32,
+    caret: [i32; 4],
+    text: *const u8,
+    length: usize,
+}
+#[repr(C)]
+struct NativeTextEdit {
+    context: u64,
+    epoch: u64,
+    serial: u32,
+    before: u32,
+    after: u32,
+    cursor_begin: i32,
+    cursor_end: i32,
+    preedit: *const u8,
+    preedit_length: usize,
+    commit: *const u8,
+    commit_length: usize,
+}
 unsafe extern "C" {
     fn trames_ui_create(shader: *const c_char) -> *mut c_void;
     fn trames_ui_source(ui: *mut c_void) -> *mut c_void;
@@ -53,6 +85,7 @@ unsafe extern "C" {
         context: *const c_void,
         refresh: extern "C" fn(*const c_void),
         event: extern "C" fn(*const c_void, u64, u32, f64, f64, u32, u32, u32),
+        text: extern "C" fn(*const c_void, *const NativeTextEdit),
     );
     fn trames_ui_run(ui: *mut c_void);
     fn trames_ui_finish(ui: *mut c_void);
@@ -66,6 +99,38 @@ unsafe extern "C" {
         lease: *mut c_void,
     ) -> i32;
     fn trames_ui_end(ui: *mut c_void);
+    fn trames_ui_text(ui: *mut c_void, info: *const TextInfo);
+    fn trames_ui_clipboard_ref(ui: *mut c_void) -> *mut c_void;
+    fn trames_clipboard_release(clipboard: *mut c_void);
+    fn trames_clipboard_transfer(clipboard: *mut c_void, fd: i32, to_guest: u32);
+    fn trames_clipboard_changed(clipboard: *mut c_void);
+}
+// Owns a retained native provider; every effect/transfer is queued on AppKit's
+// existing main queue. It never dereferences the UI or guest memory on a worker.
+struct Clipboard(usize);
+impl HostClipboard for Clipboard {
+    fn changed(&self) {
+        unsafe { trames_clipboard_changed(self.0 as *mut _) };
+    }
+    fn read(&self, fd: OwnedFd) -> std::io::Result<()> {
+        let fd = trames_shared::NativePipe::import(fd)?
+            .into_fd()
+            .into_raw_fd();
+        // SAFETY: the retained provider takes this validated nonblocking pipe
+        // exactly once; its dispatch-source cancellation handler closes it.
+        unsafe { trames_clipboard_transfer(self.0 as *mut _, fd, 1) };
+        Ok(())
+    }
+    fn write(&self, pipe: trames_shared::NativePipe) -> std::io::Result<()> {
+        // SAFETY: same ownership contract; this FD is the guest selection reader.
+        unsafe { trames_clipboard_transfer(self.0 as *mut _, pipe.into_fd().into_raw_fd(), 0) };
+        Ok(())
+    }
+}
+impl Drop for Clipboard {
+    fn drop(&mut self) {
+        unsafe { trames_clipboard_release(self.0 as *mut _) };
+    }
 }
 struct Wake(usize);
 impl IoWake for Wake {
@@ -110,6 +175,17 @@ impl Bridge {
         }
     }
     pub fn attach(&self, server: Server) {
+        // SAFETY: native UI is alive before this guest bootstrap and owns the
+        // provider until shutdown; the returned reference is independently owned.
+        let clipboard = unsafe { trames_ui_clipboard_ref(self.native as *mut _) };
+        if clipboard.is_null() {
+            self.fail("cannot create native clipboard provider");
+            return;
+        }
+        if let Err(error) = server.attach_clipboard(Arc::new(Clipboard(clipboard as usize))) {
+            self.fail(error);
+            return;
+        }
         let target: Arc<dyn IoWake> = self.wake.clone();
         let signal = IoSignal::new(0, Arc::downgrade(&target));
         let subscription = server.subscribe(&signal);
@@ -259,6 +335,27 @@ impl Bridge {
         }
         unsafe {
             trames_ui_end(self.native as *mut _);
+            if let Some(text) = &snapshot.text {
+                let info = TextInfo {
+                    id: text.id,
+                    epoch: text.epoch,
+                    window: text.window,
+                    version: text.version,
+                    serial: text.serial,
+                    cursor: text.cursor,
+                    anchor: text.anchor,
+                    hint: text.hint,
+                    purpose: text.purpose,
+                    caret: text.caret,
+                    text: text.text.as_ptr(),
+                    length: text.text.len(),
+                };
+                // Native code copies changed surrounding text synchronously;
+                // these bytes belong to the snapshot, never to guest memory.
+                trames_ui_text(self.native as *mut _, &info);
+            } else {
+                trames_ui_text(self.native as *mut _, std::ptr::null());
+            }
         }
         Ok(())
     }
@@ -356,6 +453,7 @@ extern "C" fn event(
                 time,
             }),
             11 => server.output_scale(window, a.clamp(1, 4) as i32),
+            12 => server.clipboard_changed(),
             6 => server.resize(window, a.clamp(1, 4096), b.clamp(1, 4096)),
             7 => server.close(window),
             8 => server.set_mode(
@@ -375,6 +473,50 @@ extern "C" fn event(
         Err(_) => bridge.fail("native input callback panicked"),
     }
 }
+extern "C" fn text_edit(context: *const c_void, native: *const NativeTextEdit) {
+    // SAFETY: AppKit callbacks retain Bridge through UI shutdown and provide one
+    // scoped native record. NSString-owned UTF-8 buffers live through this call.
+    let bridge = unsafe { &*context.cast::<Bridge>() };
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let native = unsafe { &*native };
+        let decode = |pointer: *const u8, length: usize| -> Result<Option<String>, String> {
+            if pointer.is_null() {
+                return Ok(None);
+            }
+            let bytes = unsafe { std::slice::from_raw_parts(pointer, length) };
+            std::str::from_utf8(bytes)
+                .map(|text| Some(text.to_owned()))
+                .map_err(|e| e.to_string())
+        };
+        let preedit = decode(native.preedit, native.preedit_length)?;
+        let commit = decode(native.commit, native.commit_length)?;
+        let server = bridge
+            .binding
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|b| b.server.clone());
+        if let Some(server) = server {
+            server
+                .edit_text(TextEdit {
+                    context: native.context,
+                    epoch: native.epoch,
+                    serial: native.serial,
+                    preedit: preedit.map(|text| (text, native.cursor_begin, native.cursor_end)),
+                    commit,
+                    delete_before: native.before,
+                    delete_after: native.after,
+                })
+                .map_err(|e| e.to_string())?;
+        }
+        Ok::<(), String>(())
+    }));
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => bridge.fail(e),
+        Err(_) => bridge.fail("native text callback panicked"),
+    }
+}
 pub fn run(command: super::session::Command) -> Result<u8, String> {
     let shader = CString::new(include_str!("window.metal")).unwrap();
     let native = unsafe { trames_ui_create(shader.as_ptr()) };
@@ -391,7 +533,13 @@ pub fn run(command: super::session::Command) -> Result<u8, String> {
         host_wake: Default::default(),
     });
     unsafe {
-        trames_ui_callbacks(native, Arc::as_ptr(&bridge).cast(), refresh, event);
+        trames_ui_callbacks(
+            native,
+            Arc::as_ptr(&bridge).cast(),
+            refresh,
+            event,
+            text_edit,
+        );
     }
     let worker_bridge = bridge.clone();
     let pointer = native as usize;

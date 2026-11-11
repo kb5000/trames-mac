@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import <AppKit/AppKit.h>
 #import "localization.h"
+#import "window-input.h"
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 #import <QuartzCore/CATransaction.h>
@@ -56,7 +57,7 @@ static void wake(CFRunLoopSourceRef source) { CFRunLoopSourceSignal(source); CFR
 static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
     for(TramesFrame *frame in [frames copy]){[frame cancel];if(frame.finished)[frames removeObject:frame];}
 }
-@interface TramesCanvas : NSView
+@interface TramesCanvas : TramesInputView
 @property(weak) TramesFamily *family;
 @property NSPoint origin;
 @end
@@ -70,6 +71,7 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property(weak) TramesUI *ui;
 @property NSWindow *window;
 @property TramesCanvas *canvas;
+@property TramesTextState *textState;
 @property NSMutableDictionary<NSNumber *,NSWindow *> *overlays;
 @property NSMutableArray<TramesFrame *> *frames;
 @property uint64_t identifier,lastRevision;
@@ -93,6 +95,8 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property const void *context;
 @property refresh_fn refresh;
 @property event_fn event;
+@property trames_text_fn text;
+@property TramesClipboard *clipboard;
 @property NSString *shader;
 @property NSMutableDictionary<NSNumber *,TramesFamily *> *windows;
 @property NSMutableIndexSet *pressed;
@@ -154,9 +158,35 @@ static const uint16_t keys[128]={
 - (void)otherMouseDown:(NSEvent *)event{[self button:event down:YES];}
 - (void)otherMouseUp:(NSEvent *)event{[self button:event down:NO];}
 - (void)scrollWheel:(NSEvent *)event{[self pointer:event];double scale=event.hasPreciseScrollingDeltas?1:10;[self.family emit:4 x:-event.scrollingDeltaX*scale y:-event.scrollingDeltaY*scale a:0 b:0 c:0];}
-- (void)keyDown:(NSEvent *)event{if(!event.isARepeat)[self.family.ui keys:event down:YES family:self.family];}
-- (void)keyUp:(NSEvent *)event{[self.family.ui keys:event down:NO family:self.family];}
+- (void)sendTextEdit:(const struct trames_text_edit *)edit {TramesUI *ui=self.family.ui;if(ui.text)ui.text(ui.context,edit);}
+- (NSPoint)textSceneOrigin{return self.origin;}
+- (void)sendEditingKey:(uint32_t)key modifiers:(uint32_t)mods {
+    [self.family emit:5 x:0 y:0 a:key b:1 c:mods];[self.family emit:5 x:0 y:0 a:key b:0 c:0];
+}
+- (void)copy:(id)sender{(void)sender;[self sendEditingKey:46 modifiers:4];}
+- (void)cut:(id)sender{(void)sender;[self sendEditingKey:45 modifiers:4];}
+- (void)paste:(id)sender{(void)sender;[self.family.ui.clipboard checkForChanges];[self sendEditingKey:47 modifiers:4];}
+- (void)selectAll:(id)sender{(void)sender;[self sendEditingKey:30 modifiers:4];}
+- (void)undo:(id)sender{(void)sender;[self sendEditingKey:44 modifiers:4];}
+- (void)redo:(id)sender{(void)sender;[self sendEditingKey:44 modifiers:5];}
+- (BOOL)performKeyEquivalent:(NSEvent *)event {
+    if((event.modifierFlags&NSEventModifierFlagCommand) && !(event.modifierFlags&(NSEventModifierFlagControl|NSEventModifierFlagOption))){
+        switch(event.keyCode){
+            case 0:case 6:case 7:case 8:case 9:case 3:case 15:case 16:case 37:
+                if(event.keyCode==9)[self.family.ui.clipboard checkForChanges];
+                [self sendEditingKey:keys[event.keyCode] modifiers:4|((event.modifierFlags&NSEventModifierFlagShift)?1:0)];return YES;
+        }
+    }
+    return [super performKeyEquivalent:event];
+}
+- (void)keyDown:(NSEvent *)event {
+    if(event.keyCode==9 && (event.modifierFlags&NSEventModifierFlagControl))[self.family.ui.clipboard checkForChanges];
+    if([self handleTextEvent:event])return;
+    if(!event.isARepeat)[self.family.ui keys:event down:YES family:self.family];
+}
+- (void)keyUp:(NSEvent *)event{if([self.family.ui.pressed containsIndex:event.keyCode])[self.family.ui keys:event down:NO family:self.family];}
 - (void)flagsChanged:(NSEvent *)event {
+    (void)[self handleTextEvent:event];
     TramesUI *ui=self.family.ui;BOOL down=![ui.pressed containsIndex:event.keyCode];
     NSEventModifierFlags mask=event.keyCode==56||event.keyCode==60?NSEventModifierFlagShift:event.keyCode==58||event.keyCode==61?NSEventModifierFlagOption:event.keyCode==59||event.keyCode==62?NSEventModifierFlagControl:event.keyCode==54||event.keyCode==55?NSEventModifierFlagCommand:NSEventModifierFlagCapsLock;
     if(!(event.modifierFlags&mask))down=NO;
@@ -166,7 +196,7 @@ static const uint16_t keys[128]={
 @implementation TramesFamily
 - (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c { if(kind==1)self.ui.focus=self.identifier; if((kind==3||kind==5)&&getenv("TRAMES_MAC_INPUT_TRACE"))fprintf(stderr,"trames mac input: time=%.9f id=%llu kind=%u a=%u b=%u\n",NSProcessInfo.processInfo.systemUptime,self.identifier,kind,a,b); if(self.ui.event)self.ui.event(self.ui.context,self.identifier,kind,x,y,a,b,c); }
 - (BOOL)windowShouldClose:(NSWindow *)sender{(void)sender;if(self.closing)return YES;[self emit:7 x:0 y:0 a:0 b:0 c:0];return NO;}
-- (void)windowDidBecomeKey:(NSNotification *)notification{(void)notification;self.dirty=YES;[self emit:1 x:0 y:0 a:0 b:0 c:0];wake(self.ui.source);}
+- (void)windowDidBecomeKey:(NSNotification *)notification{(void)notification;[self.ui.clipboard checkForChanges];self.dirty=YES;[self emit:1 x:0 y:0 a:0 b:0 c:0];wake(self.ui.source);}
 - (void)windowDidResize:(NSNotification *)notification {
     if(notification.object!=self.window)return;NSSize size=self.canvas.bounds.size;
     uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
@@ -259,6 +289,10 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     [NSApplication sharedApplication];NSApp.delegate=self;[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *actions=[NSMenu new];
     NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:[NSString stringWithFormat:T(@"Quit %@"),([NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames")] action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
+    NSMenuItem *editItem=[NSMenuItem new];[menu addItem:editItem];NSMenu *editing=[[NSMenu alloc]initWithTitle:T(@"Edit")];editItem.submenu=editing;
+    for(NSArray *item in @[@[@"Undo",@"undo:",@"z"],@[@"Redo",@"redo:",@"Z"],@[@"Cut",@"cut:",@"x"],@[@"Copy",@"copy:",@"c"],@[@"Paste",@"paste:",@"v"],@[@"Select All",@"selectAll:",@"a"]]){
+        [editing addItem:[[NSMenuItem alloc]initWithTitle:T(item[0]) action:NSSelectorFromString(item[1]) keyEquivalent:item[2]]];
+    }
     NSMenuItem *windowMenu=[NSMenuItem new];[menu addItem:windowMenu];NSMenu *windowActions=[[NSMenu alloc]initWithTitle:T(@"Window")];
     NSMenuItem *close=[[NSMenuItem alloc]initWithTitle:T(@"Close Window") action:@selector(closeFocused:) keyEquivalent:@"w"];close.target=self;[windowActions addItem:close];
     NSMenuItem *minimize=[[NSMenuItem alloc]initWithTitle:T(@"Minimize") action:@selector(minimizeFocused:) keyEquivalent:@"m"];minimize.target=self;[windowActions addItem:minimize];windowMenu.submenu=windowActions;
@@ -286,7 +320,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
     [family emit:5 x:0 y:0 a:keys[event.keyCode] b:down c:modifiers(event.modifierFlags)];
 }
 - (TramesFamily *)focusedFamily {NSView *view=NSApp.keyWindow.contentView;if(![view isKindOfClass:TramesCanvas.class])view=NSApp.mainWindow.contentView;return [view isKindOfClass:TramesCanvas.class]?((TramesCanvas *)view).family:nil;}
-- (void)applicationDidBecomeActive:(NSNotification *)notification{(void)notification;TramesFamily *family=[self focusedFamily];if(family)[family emit:1 x:0 y:0 a:0 b:0 c:0];for(TramesFamily *f in self.windows.allValues)f.dirty=YES;wake(self.source);}
+- (void)applicationDidBecomeActive:(NSNotification *)notification{(void)notification;[self.clipboard checkForChanges];TramesFamily *family=[self focusedFamily];if(family)[family emit:1 x:0 y:0 a:0 b:0 c:0];for(TramesFamily *f in self.windows.allValues)f.dirty=YES;wake(self.source);}
 - (void)closeFocused:(id)sender{(void)sender;[[self focusedFamily] emit:7 x:0 y:0 a:0 b:0 c:0];}
 - (void)minimizeFocused:(id)sender{(void)sender;[[self focusedFamily].window miniaturize:nil];}
 - (void)systemWillSleep:(NSNotification *)notification {
@@ -305,6 +339,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 }
 - (void)applicationDidResignActive:(NSNotification *)notification{
     (void)notification;
+    if([NSApp.keyWindow.firstResponder isKindOfClass:TramesCanvas.class])[(TramesCanvas *)NSApp.keyWindow.firstResponder cancelComposition];
     if(self.event)for(NSUInteger key=self.pressed.firstIndex;key!=NSNotFound;key=[self.pressed indexGreaterThanIndex:key])
         if(key<128&&keys[key])self.event(self.context,self.focus,5,0,0,keys[key],0,0);
     self.focus=0;[self.pressed removeAllIndexes];if(self.event)self.event(self.context,0,1,0,0,0,0,0);
@@ -315,11 +350,13 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 - (void)dealloc{if(_lifecycleObserved)[NSWorkspace.sharedWorkspace.notificationCenter removeObserver:self];if(_source){CFRunLoopSourceInvalidate(_source);CFRelease(_source);}}
 @end
 static TramesCanvas *canvas(TramesFamily *family,NSRect rect,NSPoint origin){
-    TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
+    TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.textState=family.textState;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
 }
 void *trames_ui_create(const char *shader){
     if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac windows: main run-loop source created\n");
     TramesUI *ui=[TramesUI new];ui.shader=[NSString stringWithUTF8String:shader];
+    ui.clipboard=[[TramesClipboard alloc]initWithPasteboard:nil];__weak TramesUI *weakUI=ui;
+    ui.clipboard.changed=^{TramesUI *owner=weakUI;if(owner.event)owner.event(owner.context,0,12,0,0,0,0,0);};
     CFRunLoopSourceContext context={0};context.info=(__bridge void *)ui;context.perform=source_perform;
     ui.source=CFRunLoopSourceCreate(NULL,0,&context);if(!ui.source)return NULL;
     CFRunLoopAddSource(CFRunLoopGetMain(),ui.source,kCFRunLoopCommonModes);return (void *)CFBridgingRetain(ui);
@@ -327,7 +364,7 @@ void *trames_ui_create(const char *shader){
 void *trames_ui_source(void *pointer){return (void *)CFRetain(((__bridge TramesUI *)pointer).source);}
 void trames_ui_wake(void *pointer){wake((CFRunLoopSourceRef)pointer);}
 void trames_ui_release_source(void *pointer){CFRelease(pointer);}
-void trames_ui_callbacks(void *pointer,const void *context,refresh_fn refresh,event_fn event){TramesUI *ui=(__bridge TramesUI *)pointer;ui.context=context;ui.refresh=refresh;ui.event=event;}
+void trames_ui_callbacks(void *pointer,const void *context,refresh_fn refresh,event_fn event,trames_text_fn text){TramesUI *ui=(__bridge TramesUI *)pointer;ui.context=context;ui.refresh=refresh;ui.event=event;ui.text=text;}
 void trames_ui_finish(void *pointer){TramesUI *ui=(__bridge TramesUI *)pointer;atomic_store_explicit(&ui->finished,true,memory_order_relaxed);wake(ui.source);}
 void trames_ui_run(void *pointer){
     TramesUI *ui=(__bridge TramesUI *)pointer;
@@ -336,7 +373,7 @@ void trames_ui_run(void *pointer){
     }
 }
 void trames_ui_destroy(void *pointer){
-    TramesUI *ui=CFBridgingRelease(pointer);CFRunLoopSourceInvalidate(ui.source);
+    TramesUI *ui=CFBridgingRelease(pointer);[ui.clipboard shutdown];CFRunLoopSourceInvalidate(ui.source);
     for(TramesFamily *family in ui.windows.allValues)[family dispose];[ui.windows removeAllObjects];
     if(NSApp.delegate==ui)NSApp.delegate=nil;
 }
@@ -352,7 +389,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         if(![ui startGraphics])return -1;
         NSNumber *key=@(info->id);TramesFamily *family=ui.windows[key];
         if(!family){
-            family=[TramesFamily new];family.ui=ui;family.identifier=info->id;family.lastRevision=UINT64_MAX;family.dirty=YES;
+            family=[TramesFamily new];family.textState=[TramesTextState new];family.ui=ui;family.identifier=info->id;family.lastRevision=UINT64_MAX;family.dirty=YES;
             family.overlays=[NSMutableDictionary new];family.frames=[NSMutableArray new];family.updating=YES;
             family.hostW=info->width;family.hostH=info->height;
             family.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,info->width,info->height) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];
@@ -488,5 +525,20 @@ unsigned trames_ui_test_sleep_lifecycle(void){
         [ui systemDidWake:nil];
         if(!ui.sleeping&&family.dirty&&family.lastRevision==UINT64_MAX)result|=8;
         return result;
+    }
+}
+
+void *trames_ui_clipboard_ref(void *pointer){return (void *)CFBridgingRetain(((__bridge TramesUI *)pointer).clipboard);}
+void trames_ui_text(void *pointer,const struct trames_text_info *info){
+    TramesUI *ui=(__bridge TramesUI *)pointer;
+    for(TramesFamily *family in ui.windows.allValues){
+        NSRect caret=family.textState.caret;
+        BOOL changed=[family.textState update:info&&info->window==family.identifier?info:NULL];
+        NSResponder *responder=NSApp.keyWindow.firstResponder;
+        if([responder isKindOfClass:TramesCanvas.class]&&((TramesCanvas *)responder).family==family){
+            TramesCanvas *view=(TramesCanvas *)responder;
+            if(changed){family.textState.discarding=YES;[view.inputContext discardMarkedText];family.textState.discarding=NO;}
+            if(family.textState.identifier&&(changed||!NSEqualRects(caret,family.textState.caret)))[view.inputContext invalidateCharacterCoordinates];
+        }
     }
 }

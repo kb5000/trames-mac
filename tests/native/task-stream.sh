@@ -22,3 +22,6 @@ cat > "$bundle/Contents/Info.plist" <<'PLIST'
 <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.trames.tests.manager-entry</string><key>CFBundleExecutable</key><string>trames-manager</string><key>CFBundlePackageType</key><string>APPL</string></dict></plist>
 PLIST
 "$bundle/Contents/MacOS/trames-manager"
+
+# Same native input/clipboard implementation as the lazy Wayland window frontend.
+bash tests/native/window-input.sh

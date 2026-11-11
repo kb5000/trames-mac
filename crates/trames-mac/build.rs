@@ -8,6 +8,9 @@ fn main() {
     );
     println!("cargo:rustc-env=TRAMES_BUILD_CHANNEL={channel}");
     println!("cargo:rerun-if-changed=src/window.m");
+    println!("cargo:rerun-if-changed=src/window-input.h");
+    println!("cargo:rerun-if-changed=src/window-input.m");
+    println!("cargo:rerun-if-changed=src/window-clipboard.m");
     println!("cargo:rerun-if-changed=src/manager.m");
     println!("cargo:rerun-if-changed=src/task-stream.m");
     println!("cargo:rerun-if-changed=src/task-stream.h");
@@ -19,6 +22,8 @@ fn main() {
     }
     cc::Build::new()
         .file("src/window.m")
+        .file("src/window-input.m")
+        .file("src/window-clipboard.m")
         .file("src/manager.m")
         .file("src/task-stream.m")
         .flag("-fobjc-arc")

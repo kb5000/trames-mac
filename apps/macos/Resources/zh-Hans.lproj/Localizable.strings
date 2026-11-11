@@ -89,3 +89,10 @@
 "%@ — Linux Environments" = "%@ — Linux 环境";
 
 "Stop the environment before changing settings. Memory 'auto' grows with actual use. Prepare systemd with trames env setup NAME --init systemd before selecting it." = "修改这些设置前请停止环境。内存设为 auto 时按实际使用量增长。选择 systemd 前请先运行 trames env setup NAME --init systemd 完成准备。";
+"Edit" = "编辑";
+"Undo" = "撤销";
+"Redo" = "重做";
+"Cut" = "剪切";
+"Copy" = "复制";
+"Paste" = "粘贴";
+"Select All" = "全选";
