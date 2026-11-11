@@ -1406,3 +1406,57 @@ mapping, followed by the same fatal Wayland error. Automatic host-memory mode
 on that executable passed the 20-window test. This establishes the independent
 quota failure path; the original Bilibili log still lacked an errno, and other
 intermittent exits are not ruled out.
+
+
+## Dev retest after coordinator removal (2026-11-11)
+
+The current pinned Mac/runtime source completes six Firefox navigations and trusted
+click/text checks, but this retest does not meet browser or video performance
+acceptance. The retained measurements use Firefox 151.0.3, twelve CPUs, host-managed
+memory, an isolated COW store and a fresh host-mounted profile. A separate native
+Firefox 160.0 profile supplies a same-machine reference. Full setup, hashes,
+observations and limitations are in [the retest record](mac-firefox-dev-20261111.json).
+
+The installed Dev test initially falls back to Software WebRender: the plain Mac
+build expects a compatible native Vulkan library and none is configured here.
+Rebuilding the same source with the existing verified macOS
+`TRAMES_MOLTENVK_STATIC_DIR` enables Apple M6/MoltenVK, GLES 3.1 and hardware
+WebRender. This test bundle remains under `target/release`; the installed Dev and
+stable applications are unchanged. Product packaging/launch configuration still
+needs to make this native dependency reproducible.
+
+| Content marker, seconds | Trames first | Trames repeat | Native first | Native repeat |
+| --- | ---: | ---: | ---: | ---: |
+| Wikipedia Firefox article | 33.655 | 4.567 | 0.536 | 0.174 |
+| GitHub Firefox source | 23.121 | 12.403 | 1.254 | 0.095 |
+| Bilibili home | 23.217 | 28.458 | 0.726 | 0.373 |
+
+Each cell is one observation, measured from a trusted launcher-link click to the
+existing site-specific DOM marker. These are not full-load, interactivity or
+physical-presentation measurements. Versions, viewport/DPR and uncontrolled
+network/content/cache state differ. The table is not an A/B attribution to
+coordinator removal. No build, sampler or syscall tracer overlaps these retained
+measurements. Bilibili logs shader errors and WebGL context loss; all six content
+markers are reached. No browser/tab-process crash is observed in this short run.
+
+The local 1920x1080 60-fps H.264/AAC fixture accepts **3.889 fps** in Trames versus
+**59.978 fps** natively. Trames drops 681 of 850 counted frames and records long
+waiting/stalled intervals; native drops none of 1800 frames. Accepted frames are
+browser playback-quality counters, not physical scanout. The requested interval
+is 30 seconds; large guest RPC delays produce an actual browser interval of
+43.451 seconds (native: 30.011). Volume changes take 623–8911 ms in Trames versus
+1.7–4.1 ms natively. Trusted playback click/text checks complete in both.
+
+Firefox reports `videoHardwareAccelerated=false`: its VA-API probe cannot open
+`renderDeviceFD`. This is a software-decoding result, not a retest of the previously
+verified VideoToolbox hardware path. Restore render-node discovery/VA-API admission
+and verify the real decoder before comparing accelerated playback.
+
+A separate one-second, 10-ms sample after guest video timing finds the host event
+loop waiting in `kevent` and AppKit waiting in `mach_msg`. Worker stacks include
+`memory_report`/`regions` construction and sorting, hardware-frame bookkeeping and
+waits. This is a profiling lead, not a CPU-time partition or a proven cause. Next
+work should examine layout publication, page bookkeeping and playback wake paths
+on their existing workers, without restoring a coordinator. Both isolated browser
+test processes are closed after validation; user environments and the original
+native Firefox session are preserved.

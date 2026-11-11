@@ -1,0 +1,447 @@
+{
+  "date": "2026-11-11",
+  "scope": "Mac Dev Firefox smoke and observational performance retest after coordinator removal; not an A/B regression attribution or conformance claim",
+  "source": {
+    "mac_revision": "9ab5a7dcd38551aef5bb9222d6a42dd72e44daf9",
+    "runtime_revision": "4b458603170622f8c1f29b0f7612d8fdaa32070c"
+  },
+  "setup": {
+    "cpu": "Apple M6",
+    "cpus": 12,
+    "memory": "host-managed auto",
+    "storage": "isolated APFS COW clone; fresh host-mounted Firefox profile",
+    "network": "outbound; range-enabled loopback fixture server",
+    "timing": "No sampler, syscall trace, metrics logger or build overlaps retained GPU/native timing. Guest stays open on about:blank during native control.",
+    "guest": {
+      "version": "151.0.3",
+      "page": {
+        "title": "Trames Firefox interaction check",
+        "url": "http://127.0.0.1:51875/interactive.html",
+        "visible": "visible",
+        "focus": true,
+        "width": 1920,
+        "height": 843,
+        "dpr": 1
+      },
+      "gfx": {
+        "compositor": "WebRender",
+        "features": {
+          "compositor": "webrender",
+          "hwCompositing": {
+            "status": "available"
+          },
+          "gpuProcess": {
+            "status": "unused"
+          },
+          "webrender": {
+            "status": "available"
+          },
+          "wrCompositor": {
+            "status": "blocklisted:FEATURE_FAILURE_WEBRENDER_COMPOSITOR_DISABLED"
+          },
+          "openglCompositing": {
+            "status": "available"
+          }
+        }
+      }
+    },
+    "native": {
+      "version": "160.0",
+      "page": {
+        "title": "",
+        "url": "about:blank",
+        "visible": "visible",
+        "focus": true,
+        "width": 1920,
+        "height": 875,
+        "dpr": 2
+      }
+    },
+    "artifacts_sha256": {
+      "libEGL.so.1": "9ebb409430a0d35381f8ccef08590c7dcdeb08702909e0cd42c4dad9217abc60",
+      "libgallium-25.1.9.so": "2fbbe081e0924fd6ddeadc9af686d45fcc0ebd91a867d8642d93833510a6abaa",
+      "libtrames_vulkan_icd.so": "d3a4025c664f17ab34245a9bf653ae6ecf372be925034498640b73983ca60682",
+      "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+      "trames_drv_video.so": "406c3c1b304fbafb6cb9a325af22642641f5481d9e8e459d6d5c872dc0fbdc10",
+      "libasound_module_pcm_trames.so": "0fec04537271ea3a458b51bf7b691787906064ad0b950c06f9db5153dd3293f2",
+      "trames.json": "37100d98af28361262481b7ac785523a1341e04cb45c0b0eac8b1d0c157ec874",
+      "asound.conf": "3dd2775eecc8bc05a399ba9761fbfc8f8fd2c2852ea2f97b9466773f2f158722"
+    },
+    "runners_sha256": {
+      "gpu_candidate": "4d31fd8ce8735c8631d6df5c69430af84032494f878396d9b3f3c4ae1e3f54ab",
+      "installed_dev": "3880d8a07814b64190dcd1d3ee37aeac7e6b8d0b85db8b3eb5838cc360474233",
+      "stable": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
+    },
+    "build": "Same pinned Dev source; TRAMES_MOLTENVK_STATIC_DIR points to the existing verified macOS MoltenVK static archive. No production source changes; installed Dev/stable unchanged."
+  },
+  "navigation": {
+    "definition": "Trusted launcher link click command start to a fixed site content DOM marker; neither full load nor physical presentation. One first visit and one repeated visit per site, in Wikipedia/GitHub/Bilibili order.",
+    "guest": [
+      {
+        "case": "wiki",
+        "trial": 0,
+        "click_start_unix": 1794397963.119068,
+        "click_command_ms": 278.47008299999976,
+        "content_ms": 33655.263167000005,
+        "observed_elapsed_ms": 33655.265083,
+        "warmup": true
+      },
+      {
+        "case": "github",
+        "trial": 0,
+        "click_start_unix": 1794397998.6696892,
+        "click_command_ms": 1366.1855000000003,
+        "content_ms": 23120.751208,
+        "observed_elapsed_ms": 23120.75275,
+        "warmup": true
+      },
+      {
+        "case": "bilibili",
+        "trial": 0,
+        "click_start_unix": 1794398031.2449439,
+        "click_command_ms": 723.2022499999999,
+        "content_ms": 23216.608375000007,
+        "observed_elapsed_ms": 23216.609708000007,
+        "warmup": true
+      },
+      {
+        "case": "wiki",
+        "trial": 1,
+        "click_start_unix": 1794398065.5130932,
+        "click_command_ms": 1342.2952499999924,
+        "content_ms": 4567.109207999991,
+        "observed_elapsed_ms": 4567.111041999993,
+        "warmup": false
+      },
+      {
+        "case": "github",
+        "trial": 1,
+        "click_start_unix": 1794398072.9460711,
+        "click_command_ms": 1740.903333999995,
+        "content_ms": 12402.502417000009,
+        "observed_elapsed_ms": 12402.503625000008,
+        "warmup": false
+      },
+      {
+        "case": "bilibili",
+        "trial": 1,
+        "click_start_unix": 1794398118.395634,
+        "click_command_ms": 488.712291000013,
+        "content_ms": 28457.94175,
+        "observed_elapsed_ms": 28457.943666000006,
+        "warmup": false
+      }
+    ],
+    "native": [
+      {
+        "case": "wiki",
+        "trial": 0,
+        "click_start_unix": 1794398605.2779012,
+        "click_command_ms": 14.982334,
+        "content_ms": 535.668792,
+        "observed_elapsed_ms": 535.670417,
+        "warmup": true
+      },
+      {
+        "case": "github",
+        "trial": 0,
+        "click_start_unix": 1794398606.0182881,
+        "click_command_ms": 9.092666999999999,
+        "content_ms": 1253.9344590000003,
+        "observed_elapsed_ms": 1253.9383340000004,
+        "warmup": true
+      },
+      {
+        "case": "bilibili",
+        "trial": 0,
+        "click_start_unix": 1794398607.311079,
+        "click_command_ms": 11.24666600000035,
+        "content_ms": 725.6683330000002,
+        "observed_elapsed_ms": 725.6700830000002,
+        "warmup": true
+      },
+      {
+        "case": "wiki",
+        "trial": 1,
+        "click_start_unix": 1794398608.164047,
+        "click_command_ms": 9.578124999999993,
+        "content_ms": 173.5898330000003,
+        "observed_elapsed_ms": 173.59154200000003,
+        "warmup": false
+      },
+      {
+        "case": "github",
+        "trial": 1,
+        "click_start_unix": 1794398608.542751,
+        "click_command_ms": 9.891375000000036,
+        "content_ms": 95.49679099999997,
+        "observed_elapsed_ms": 95.49837500000002,
+        "warmup": false
+      },
+      {
+        "case": "bilibili",
+        "trial": 1,
+        "click_start_unix": 1794398608.721236,
+        "click_command_ms": 14.1064580000001,
+        "content_ms": 372.6927500000001,
+        "observed_elapsed_ms": 372.6945829999999,
+        "warmup": false
+      }
+    ]
+  },
+  "interaction": {
+    "counter": "8",
+    "text": "Trames keyboard 20261111",
+    "events": [
+      {
+        "event": 108067,
+        "handler": 108068,
+        "nextFrame": 108119
+      },
+      {
+        "event": 108367,
+        "handler": 108368,
+        "nextFrame": 108391
+      },
+      {
+        "event": 108723,
+        "handler": 108723,
+        "nextFrame": 108898
+      },
+      {
+        "event": 109123,
+        "handler": 109123,
+        "nextFrame": 109330
+      },
+      {
+        "event": 109598,
+        "handler": 109599,
+        "nextFrame": 109657
+      },
+      {
+        "event": 110089,
+        "handler": 110089,
+        "nextFrame": 110105
+      },
+      {
+        "event": 110536,
+        "handler": 110536,
+        "nextFrame": 110542
+      },
+      {
+        "event": 111416,
+        "handler": 111416,
+        "nextFrame": 111482
+      }
+    ],
+    "visible": "visible",
+    "focus": true,
+    "click_roundtrip_ms": [
+      376.12470800000074,
+      357.10549999999944,
+      369.9030830000005,
+      522.7573329999994,
+      470.431167000001,
+      345.05437500000016,
+      400.14070799999854,
+      917.5419170000011
+    ],
+    "typing_roundtrip_ms": 61.61841599999818
+  },
+  "video": {
+    "definition": "Local 1920x1080 60 fps H.264+AAC fixture; requested 5s warmup +30s interval, then volume and trusted input. Accepted FPS is playback-quality total minus dropped frames divided by observed browser elapsed time; not physical scanout. Large guest RPC delays expand the observed interval.",
+    "guest": {
+      "page": "http://127.0.0.1:51875/video.html",
+      "elapsed_browser": 43.451,
+      "elapsed_host": 33.97305025,
+      "accepted_fps": 3.889438678051138,
+      "callback_fps": 0.06904329014291961,
+      "dropped_frames": 681,
+      "total_frames": 850,
+      "playback_events": [
+        {
+          "event": "stalled",
+          "wall": 37251,
+          "time": 10.65425,
+          "ready": 4
+        },
+        {
+          "event": "waiting",
+          "wall": 40996,
+          "time": 13.430041,
+          "ready": 2
+        },
+        {
+          "event": "stalled",
+          "wall": 44966,
+          "time": 13.430041,
+          "ready": 2
+        },
+        {
+          "event": "stalled",
+          "wall": 49630,
+          "time": 13.430041,
+          "ready": 2
+        },
+        {
+          "event": "playing",
+          "wall": 56582,
+          "time": 13.430041,
+          "ready": 3
+        },
+        {
+          "event": "stalled",
+          "wall": 60578,
+          "time": 17.16952,
+          "ready": 3
+        },
+        {
+          "event": "waiting",
+          "wall": 60858,
+          "time": 17.439625,
+          "ready": 2
+        },
+        {
+          "event": "playing",
+          "wall": 75932,
+          "time": 17.439625,
+          "ready": 3
+        }
+      ],
+      "frame_gaps": {
+        "count": 4,
+        "p50_ms": 4856,
+        "p95_ms": 30891.579999999994,
+        "p99_ms": 30891.579999999994,
+        "max_ms": 30891.579999999994,
+        "over_50_ms": 4,
+        "over_100_ms": 4
+      },
+      "media_speed": 0.25695707808796114,
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 1124.6455830000032
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 793.0713339999897
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 623.305208000005
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 8911.355333000003
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 6,
+        "p50_ms": 2601.8600000000006,
+        "p95_ms": 5406.679999999993,
+        "p99_ms": 5406.679999999993,
+        "max_ms": 5406.679999999993,
+        "over_50_ms": 5,
+        "over_100_ms": 5
+      },
+      "interaction_ms": 2100.570084000012,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      },
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "visible": "visible",
+      "focused": true
+    },
+    "native": {
+      "page": "http://127.0.0.1:51875/video.html",
+      "elapsed_browser": 30.011,
+      "elapsed_host": 30.023732957999997,
+      "accepted_fps": 59.97800806370997,
+      "callback_fps": 24.89087334643964,
+      "dropped_frames": 0,
+      "total_frames": 1800,
+      "playback_events": [],
+      "frame_gaps": {
+        "count": 747,
+        "p50_ms": 40.13999999999942,
+        "p95_ms": 40.20000000000073,
+        "p99_ms": 40.31999999999971,
+        "max_ms": 40.900000000001455,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.9987434940521809,
+      "volume_changes": [
+        {
+          "volume": 0.05,
+          "setter_roundtrip_ms": 1.7954579999965858
+        },
+        {
+          "volume": 0.12,
+          "setter_roundtrip_ms": 1.7429170000013983
+        },
+        {
+          "volume": 0.03,
+          "setter_roundtrip_ms": 4.101249999997947
+        },
+        {
+          "volume": 0.08,
+          "setter_roundtrip_ms": 3.1305410000044276
+        }
+      ],
+      "volume_frame_gaps": {
+        "count": 51,
+        "p50_ms": 40.12000000000262,
+        "p95_ms": 40.220000000001164,
+        "p99_ms": 43.799999999995634,
+        "max_ms": 43.799999999995634,
+        "over_50_ms": 0,
+        "over_100_ms": 0
+      },
+      "interaction_ms": 230.37537500000127,
+      "interaction": {
+        "clicked": "yes",
+        "text": "Trames video"
+      },
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "visible": "visible",
+      "focused": true
+    },
+    "guest_decoder": {
+      "videoDecoderName": "ffmpeg video decoder (RDD remote)",
+      "videoHardwareAccelerated": false,
+      "videoWidth": 1920,
+      "videoHeight": 1080,
+      "videoRate": 60,
+      "audioDecoderName": "ffmpeg audio decoder (Utility Generic remote)"
+    }
+  },
+  "findings": {
+    "graphics_configuration": "The initially installed Dev uses a dynamic native Vulkan loader and has no configured compatible library in this test environment; initial Firefox uses Software WebRender. A same-source static-linked test build probes Apple M6/MoltenVK GLES 3.1 and uses hardware WebRender.",
+    "media": "VA-API probe fails to open renderDeviceFD; actual Firefox decoder reports videoHardwareAccelerated=false. This test does not measure the previously validated hardware video path.",
+    "webgl": "Bilibili reports shader errors/context loss; all six retained guest navigations complete.",
+    "stability": "No whole-browser or tab-process crash observed during the retained tests; graphics crash annotations are diagnostic text, not evidence of an actual process crash. No long-duration soak performed.",
+    "sample": "One second at 10ms interval after all guest video timing: host event loop waits in kevent, AppKit waits in mach_msg; worker stacks include memory_report/regions sorting, hardware-frame accounting and waits. This is a lead, not a CPU-time partition or proven cause.",
+    "follow_up": [
+      "Make native GPU configuration reproducible for the product build/launch.",
+      "Restore VA-API render-node discovery and verify actual hardware decoding before FPS comparisons.",
+      "Profile worker memory-layout publication and page bookkeeping, plus playback scheduling/wakes; do not reintroduce a coordinator."
+    ]
+  },
+  "limitations": [
+    "Firefox versions differ: guest 151.0.3 versus native 160.0.",
+    "CSS viewports and DPR differ; raw dimensions are recorded.",
+    "Only one visit per first/repeated category; site/network/CDN and cache state are uncontrolled.",
+    "Native control follows guest; this does not establish a slowdown caused specifically by coordinator removal.",
+    "Guest test profile/storage and native control profile are separate from user environments.",
+    "Earlier failed setup probes and software-renderer navigation are retained only as local diagnostics, excluded from the GPU table."
+  ]
+}
