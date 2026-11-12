@@ -2268,3 +2268,84 @@ iPad apps are unchanged. Both product source pins share runtime `50223c7`.
 Existing CTS/VM/store/build caches are reused, the build VM is stopped, and about
 163 GiB remains free above the 140 GiB floor. This round stays inside its 8 GiB
 additional-growth budget. Raw artifacts remain in the ignored local target tree.
+
+
+## Extended dynamic state and native host image copy (2026-11-12)
+
+Shared runtime `d3509e3` and paired guest wire 19 expose EDS1/EDS2,
+the four supported EDS3 features (depth-clamp enable, polygon mode,
+sample-locations enable and line-rasterization mode), native host image copy,
+copy-commands2 and format-feature-flags2. Sample locations and line rasterization
+have their own original native dependencies. API 1.2 remains advertised;
+**synchronization2 is not exposed or implemented**. Depth-clip enable lacks its
+base extension; tessellation pipelines remain absent even though the original
+patch-control-point command is available.
+
+The full selected original CTS run reports **7,069 Pass,
+8,473 NotSupported and zero Fail, ResourceError,
+DeviceLost, Crash or Timeout** across 15,542 cases. It includes the previous
+3,305-case baseline, all 4,059 monolithic extended-state cases, 6,429 selected
+host-copy cases and 1,749 copy2 cases. The host-copy inventory contains 73,295
+cases and copy2 contains 34,962; this selection is not a full CTS/conformance
+claim. Original executable, loader, data and QPA statuses are unchanged.
+[The filtered record](mac-vulkan-cts.json) retains every final status, original
+baselines, intermediate errors, exact selections and source/build hashes.
+
+State records into the original native command buffer on the caller, with native
+function tables cached once per device. No pipeline variants, state replay,
+completion poll per scalar command, coordinator, resource service or new global
+lock is added. Host image transfers are synchronous original API calls. Guest
+rows may cross noncontiguous pages; call-owned packed CPU memory preserves row
+padding and native opaque MEMCPY layout. No GPU staging submission or global
+wait is introduced. The shared [architecture](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-compute.md#native-extended-state-and-host-image-access-2026-11-12)
+describes wire records, native ownership and compatibility limits.
+
+Generic memory retains original native allocation and image/buffer aliasing;
+external host import is used only for an explicit dedicated-buffer contract.
+Whole aligned coherent native mappings can back guest pages directly. Their
+owner retains memory/device/instance and the original budget charge until the
+last guest view ends; unaligned cases keep the existing shadow path. Mapped,
+unmapped, destroyed-handle and final-view lifetime regressions pass. Copy ingress
+also preserves texel-aligned R8 offsets, size-compatible compressed extents and
+2D-array/3D slice copies. Mesa's sample-compatible depth image flag reaches both
+query and creation, including imageless metadata.
+
+Two native bugs are independently reproduced by the exact same C program on the
+original static driver, outside Trames. Patch 0009 prevents an image HOST_READ
+barrier from copying linear bytes into the same Metal heap that already backs
+the image, corrupting native layout. Patch 0010 corrects depth/stencil host-copy
+advertising: the original reports successful image support but no valid memory
+type, because depth storage requires private memory and HOST_TRANSFER forbids it.
+The patched native table rejects that unsupported combination, allowing Mesa's
+ordinary depth path; color host copy remains enabled. Original
+`identicalMemoryLayout`, layout UUID and byte layout remain intact. The same
+native/guest source passes normal/mapped controls on one and twelve guest CPUs.
+The record includes the original native failures and patched native successes;
+there is no driver-capability waiver substituted for CTS output.
+
+The 32,768-submit binary/timeline semaphore chains exposed an unrelated old
+bridge ceiling: 64 unfinished bookkeeping submissions were treated as OOM.
+Host-managed sessions now retain the native queue's actual allocation policy,
+without an artificial GPU wait, retry or new thread. All previously failing
+chains and the final combined run pass. The first guest mapped-control retry
+was a harness duplicate-import EEXIST error, not an image mismatch; the corrected
+fixture uses a unique path. Firefox's fixed-work harness explicitly targets
+webpage content after a chrome graphics-info session.
+
+All 76 shared Vulkan tests pass, including twelve actual native GPU cases.
+One/twelve-CPU Vulkan 1.2 and core shader output oracles pass. Firefox 151.0.3
+reports WebRender with hardware/OpenGL compositing available; warmup and two
+512-draw trials return `[64,128,191,255]`, no GL errors and no context loss.
+This is a rendering regression during CTS work, not a page/video speed claim.
+Strict affected Vulkan/Mac lints, 22 Mac product tests, artifact/source/recipe
+gates, execution/completion boundaries and iPad ARM64 FFI compilation pass.
+Unchanged CPU/Linux/network/HVF hardware checks are reused. Physical iPad GPU,
+WSI CTS and complete mustpass remain unrun.
+
+The signed Mac Dev 1.5.4 app is updated with the paired runtime and corrected
+embedded driver; its installed original CTS triangle renders successfully.
+The paired wire-19 guest ICD is built and tested in the isolated graphics store.
+Stable retains its exact previous SHA; installed iPad apps are unchanged.
+Existing source/build/store/VM caches are reused; the VM is stopped. About
+160.0 GiB remains free, above the 140 GiB floor
+and within this round's 8 GiB growth budget. Raw logs remain ignored locally.

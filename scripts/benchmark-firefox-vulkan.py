@@ -78,6 +78,7 @@ def main():
         with args.output.open('x') as out:
             client = navigation.Client(args.port, 120)
             client.call('WebDriver:NewSession', {'pageLoadStrategy': 'none'})
+            client.call('Marionette:SetContext', {'value': 'content'})
             client.call('WebDriver:SetTimeouts', {
                 'script': 30000, 'pageLoad': 120000, 'implicit': 120000,
             })
