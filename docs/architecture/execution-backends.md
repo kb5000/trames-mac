@@ -2051,3 +2051,50 @@ There is no current Dev/native performance ratio because Dev did not finish.
 [Filtered evidence](../validation/mac-geekbench.json) retains all 16 native
 components, both failed attempts, execution metrics and stable upgrade hashes.
 Raw logs remain in the ignored `target/geekbench-dev-20261113` directory.
+
+
+## Terminal idle fix and completed Geekbench run (2026-11-13)
+
+Runtime `0416b41` replaces production's loose queue-idle recheck with one
+terminal-quiescence transaction. A native-service probe can release the queue
+mutex, but its observation is invalidated by runnable publication or a newer
+probe. Final validation repeats source, timer, GPU, external wait, retirement
+and admission conditions; it shares the queue lock with admission closure.
+A valid native service parks without a busy retry loop, while changed work or
+deadlines are processed again. The reason is published through the existing
+one-way control word. Ordinary dispatch gains no counter, atomic, memory barrier
+or lock; the probe token increments only on suspected terminal idle. No
+coordinator, service thread or polling bus is introduced.
+
+All 487 shared session/process regressions pass, with three unchanged manual
+profiles ignored. New tests exercise probe-gap changes, ready/run/repark,
+superseded probes, prior normal exit and actual guest futex deadlock. Strict
+core/Mac checks, 22 Mac product tests, iPad ARM64 FFI and execution/completion
+boundaries pass; unrelated instruction/GPU/network checks are reused.
+
+The installed fixed Dev runner completes and uploads all 32 unchanged original
+Geekbench 6.7.1 workloads in 240.34 seconds, using 12 CPUs and host-managed memory
+(24 GiB reported). No build, CI, profiler or window capture runs concurrently;
+thermal state is nominal and low-power mode off before/after. Stable environments
+are stopped. The isolated fixture's hosts entry is refreshed from native DNS,
+and the original glibc getent confirms resolution before the run.
+
+| Geekbench 6.7.1 | Single | Multi |
+| --- | ---: | ---: |
+| [Fixed Dev](https://browser.geekbench.com/v6/cpu/19465924) | 4,335 | 16,156 |
+| [Same-session native control](https://browser.geekbench.com/v6/cpu/19465807) | 4,459 | 20,451 |
+| Dev / native | 97.2% | 79.0% |
+
+HTML5 Browser multi scores 23,008 versus 23,880 (96.3%); PDF Renderer multi
+remains 8,933 versus 21,182 (42.2%). These Linux Preview/macOS results include
+binary, library and ISA-dispatch differences and are not pure HVF overhead.
+One successful fixed Dev sample is measured. The exact interleaving in the two
+original failing runs was not captured: unfixed terminal-error-only diagnostic
+builds also completed computation but failed DNS upload. Deterministic tests
+establish defects in the old idle protocol; the successful benchmark is not
+proof that every historical failure had the same sole cause. All attempts and
+16 component comparisons remain in the [JSON evidence](../validation/mac-geekbench.json).
+
+Both Mac Dev and the local stable app are signed and updated to this runtime.
+The stable Debian, Docker and default environments remain stopped; they were not
+started to verify installation. Installed iPad apps are unchanged.

@@ -20002,5 +20002,487 @@
       "The previous successful Dev result remains historical evidence only, not a substitute for this failed run."
     ],
     "validation_scope": "Measurement/documentation and requested local stable application upgrade only; existing code checks reused, no production source changes."
+  },
+  "terminal_idle_fix_2026_11_13": {
+    "date": "2026-11-13",
+    "timezone": "Asia/Hong_Kong",
+    "runtime_revision": "0416b41853c8c5af02130155416d8fa0683e75f1",
+    "code_mac_before_evidence_commit": "f0b35e119869b937f70f3f62bc3c148d76c28e15",
+    "mechanism": [
+      "The production path used a weaker idle() after dropping the queue lock for native-service inspection, followed by another unlocked gap before closure.",
+      "A queue-local idle-probe identity plus the existing ready-publication invalidation prevents a task that wakes/runs/reparks from reviving an old service observation. The token increments only on terminal idle probes; ordinary dispatch gains no counter, atomic, barrier or lock.",
+      "Both observations share complete queue/source/timer/GPU/host-wait/retirement/admission conditions. Invalidated probes retry source work and deadlines; a valid native-service observation parks with the same queue guard through the atomic condition-variable wait.",
+      "The final decision and admission close share the original queue mutex. The Deadlocked reason is published in the existing one-way control word, avoiding a report-lock acquisition under the queue mutex and preventing a later observer from overwriting a prior normal exit.",
+      "The weaker idle() helper is interpreter-test-only. No coordinator, service thread, polling bus or global pause is introduced."
+    ],
+    "initial_failure_section": "dev_1_5_4_retest_2026_11_13",
+    "diagnostic_builds": [
+      {
+        "directory": "diagnostic",
+        "exit": 255,
+        "seconds": 250.275744917,
+        "interpretation": "Unfixed normal scheduling with terminal-error-only diagnostics; all computation completed, but upload failed to resolve the benchmark host. Not a scored fix acceptance."
+      },
+      {
+        "directory": "diagnostic-2",
+        "exit": 255,
+        "seconds": 250.29027045799998,
+        "interpretation": "Unfixed normal scheduling with terminal-error-only diagnostics; all computation completed, but upload failed to resolve the benchmark host. Not a scored fix acceptance."
+      }
+    ],
+    "validation": {
+      "shared_session_process_conformance": {
+        "pass": 487,
+        "ignored": 3,
+        "ignored_scope": "unchanged manual preparation/metadata/scheduler timing profiles"
+      },
+      "strict_core_clippy": true,
+      "strict_mac_clippy": true,
+      "mac_tests": 22,
+      "ipad_arm64_ffi": true,
+      "paired_execution_completion_boundaries": true,
+      "regressions": [
+        "service-probe gap gains a timed wait, retirement, host admission, external/host wait or earlier normal exit",
+        "another thread publishes runnable work and reparks; old and superseded probe IDs cannot close",
+        "valid native source keeps execution open without a polling retry loop",
+        "actual guest futex deadlock still returns RuntimeError::Deadlock through source completion",
+        "one-way completion retains the first reason including Deadlocked"
+      ],
+      "unaffected_cpu_instruction_gpu_network_checks_reused": true
+    },
+    "benchmark": {
+      "version": "6.7.1",
+      "fixture": "Original Linux AArch64 Preview in the reused isolated Alpine/glibc benchmark store; installed Dev runner, not a Debian preset.",
+      "guest_binary_sha256": "2ab486aa545c2a62ad3debf53d6412d2eba0a189d6daf6dec213af2d89b247e5",
+      "read_method": "Public result read in the in-app browser after the measurement ended."
+    },
+    "method": {
+      "cpus": 12,
+      "memory": "host-managed auto, 24 GiB reported",
+      "metrics": true,
+      "tracing": false,
+      "sampler": false,
+      "concurrent_builds_ci_benchmarks_or_window_capture": false,
+      "stable_environments_stopped": true,
+      "successful_fixed_dev_samples": 1,
+      "native_control": "same-session preceding original macOS 6.7.1 control; not rerun after the fix",
+      "upload_authorized": true,
+      "fixture_dns": "Refreshed only the isolated benchmark hosts entry through native DNS; original file retained. Original glibc getent resolves it. No runtime networking code or stable environment network configuration changed."
+    },
+    "run": {
+      "date": "2026-11-13",
+      "geekbench_version": "6.7.1",
+      "variant": "installed Mac Dev",
+      "runner_version": "Trames Dev 1.5.4 (dev) runtime 0416b41853c8c5af02130155416d8fa0683e75f1",
+      "runner_sha256": "640a0975ecc02ba0785b6f9ca9104363298371e1c315a54a4d65d742fe60042d",
+      "runtime_code_commit": "0416b41853c8c5af02130155416d8fa0683e75f1",
+      "cpus": 12,
+      "memory_mib": "auto",
+      "metrics": true,
+      "hvf_diagnostics": false,
+      "sampler": false,
+      "upload_authorized": true,
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "host_logical_cpus": 12,
+      "host_memory_bytes": 25769803776,
+      "stable_environments_stopped": true,
+      "command": [
+        "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+        "--storage",
+        "/Users/main/dev/trames/target/geekbench-20261028/store",
+        "--network",
+        "outbound",
+        "--cpus",
+        "12",
+        "--memory-mib",
+        "auto",
+        "--timeout",
+        "3600",
+        "--no-pty",
+        "--no-windows",
+        "--metrics",
+        "/bin/sh",
+        "-c",
+        "cd /opt/geekbench && LD_LIBRARY_PATH=/lib ./geekbench6 --cpu"
+      ],
+      "start_unix": 1794504560.353446,
+      "exit": 0,
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19465924"
+      ],
+      "seconds": 240.340813666,
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      }
+    },
+    "scores": {
+      "source": "https://browser.geekbench.com/v6/cpu/19465924",
+      "single": 4335,
+      "multi": 16156,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single": 3504,
+          "multi": 11911
+        },
+        {
+          "name": "Navigation",
+          "single": 3477,
+          "multi": 16280
+        },
+        {
+          "name": "HTML5 Browser",
+          "single": 4660,
+          "multi": 23008
+        },
+        {
+          "name": "PDF Renderer",
+          "single": 4154,
+          "multi": 8933
+        },
+        {
+          "name": "Photo Library",
+          "single": 3896,
+          "multi": 20911
+        },
+        {
+          "name": "Clang",
+          "single": 5216,
+          "multi": 34117
+        },
+        {
+          "name": "Text Processing",
+          "single": 4032,
+          "multi": 4614
+        },
+        {
+          "name": "Asset Compression",
+          "single": 3736,
+          "multi": 23070
+        },
+        {
+          "name": "Object Detection",
+          "single": 6679,
+          "multi": 13530
+        },
+        {
+          "name": "Background Blur",
+          "single": 4431,
+          "multi": 14211
+        },
+        {
+          "name": "Horizon Detection",
+          "single": 4074,
+          "multi": 21631
+        },
+        {
+          "name": "Object Remover",
+          "single": 5381,
+          "multi": 16527
+        },
+        {
+          "name": "HDR",
+          "single": 4483,
+          "multi": 19659
+        },
+        {
+          "name": "Photo Filter",
+          "single": 4994,
+          "multi": 14670
+        },
+        {
+          "name": "Ray Tracer",
+          "single": 3775,
+          "multi": 24273
+        },
+        {
+          "name": "Structure from Motion",
+          "single": 4129,
+          "multi": 19355
+        }
+      ]
+    },
+    "native_reference": {
+      "source": "https://browser.geekbench.com/v6/cpu/19465807",
+      "single": 4459,
+      "multi": 20451
+    },
+    "comparison": {
+      "dev_over_native": {
+        "single": 0.9721910742318906,
+        "multi": 0.7899858197643147
+      },
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single": 3504,
+          "multi": 11911,
+          "native": {
+            "single": 3690,
+            "multi": 14558
+          },
+          "dev_over_native": {
+            "single": 0.9495934959349593,
+            "multi": 0.8181755735677978
+          }
+        },
+        {
+          "name": "Navigation",
+          "single": 3477,
+          "multi": 16280,
+          "native": {
+            "single": 3823,
+            "multi": 21129
+          },
+          "dev_over_native": {
+            "single": 0.909495160868428,
+            "multi": 0.7705049931373941
+          }
+        },
+        {
+          "name": "HTML5 Browser",
+          "single": 4660,
+          "multi": 23008,
+          "native": {
+            "single": 4676,
+            "multi": 23880
+          },
+          "dev_over_native": {
+            "single": 0.9965782720273738,
+            "multi": 0.9634840871021776
+          }
+        },
+        {
+          "name": "PDF Renderer",
+          "single": 4154,
+          "multi": 8933,
+          "native": {
+            "single": 4070,
+            "multi": 21182
+          },
+          "dev_over_native": {
+            "single": 1.0206388206388206,
+            "multi": 0.42172599376829384
+          }
+        },
+        {
+          "name": "Photo Library",
+          "single": 3896,
+          "multi": 20911,
+          "native": {
+            "single": 3833,
+            "multi": 24649
+          },
+          "dev_over_native": {
+            "single": 1.0164362118445083,
+            "multi": 0.8483508458761004
+          }
+        },
+        {
+          "name": "Clang",
+          "single": 5216,
+          "multi": 34117,
+          "native": {
+            "single": 5105,
+            "multi": 33385
+          },
+          "dev_over_native": {
+            "single": 1.021743388834476,
+            "multi": 1.0219260146772502
+          }
+        },
+        {
+          "name": "Text Processing",
+          "single": 4032,
+          "multi": 4614,
+          "native": {
+            "single": 4256,
+            "multi": 5726
+          },
+          "dev_over_native": {
+            "single": 0.9473684210526315,
+            "multi": 0.8057981138665735
+          }
+        },
+        {
+          "name": "Asset Compression",
+          "single": 3736,
+          "multi": 23070,
+          "native": {
+            "single": 3833,
+            "multi": 26812
+          },
+          "dev_over_native": {
+            "single": 0.9746934516044874,
+            "multi": 0.8604356258391765
+          }
+        },
+        {
+          "name": "Object Detection",
+          "single": 6679,
+          "multi": 13530,
+          "native": {
+            "single": 6505,
+            "multi": 17954
+          },
+          "dev_over_native": {
+            "single": 1.0267486548808609,
+            "multi": 0.7535925142029631
+          }
+        },
+        {
+          "name": "Background Blur",
+          "single": 4431,
+          "multi": 14211,
+          "native": {
+            "single": 4445,
+            "multi": 20832
+          },
+          "dev_over_native": {
+            "single": 0.9968503937007874,
+            "multi": 0.6821716589861752
+          }
+        },
+        {
+          "name": "Horizon Detection",
+          "single": 4074,
+          "multi": 21631,
+          "native": {
+            "single": 4847,
+            "multi": 26681
+          },
+          "dev_over_native": {
+            "single": 0.8405199092221993,
+            "multi": 0.8107267343802707
+          }
+        },
+        {
+          "name": "Object Remover",
+          "single": 5381,
+          "multi": 16527,
+          "native": {
+            "single": 5567,
+            "multi": 22541
+          },
+          "dev_over_native": {
+            "single": 0.9665888270163463,
+            "multi": 0.7331972849474291
+          }
+        },
+        {
+          "name": "HDR",
+          "single": 4483,
+          "multi": 19659,
+          "native": {
+            "single": 5065,
+            "multi": 24481
+          },
+          "dev_over_native": {
+            "single": 0.8850937808489635,
+            "multi": 0.8030309219394632
+          }
+        },
+        {
+          "name": "Photo Filter",
+          "single": 4994,
+          "multi": 14670,
+          "native": {
+            "single": 5028,
+            "multi": 18145
+          },
+          "dev_over_native": {
+            "single": 0.9932378679395386,
+            "multi": 0.8084871865527694
+          }
+        },
+        {
+          "name": "Ray Tracer",
+          "single": 3775,
+          "multi": 24273,
+          "native": {
+            "single": 3854,
+            "multi": 27320
+          },
+          "dev_over_native": {
+            "single": 0.9795018162947587,
+            "multi": 0.8884699853587116
+          }
+        },
+        {
+          "name": "Structure from Motion",
+          "single": 4129,
+          "multi": 19355,
+          "native": {
+            "single": 4106,
+            "multi": 22514
+          },
+          "dev_over_native": {
+            "single": 1.0056015586945932,
+            "multi": 0.859687305676468
+          }
+        }
+      ]
+    },
+    "session_metrics": {
+      "syscalls": 2822443,
+      "context_switches": 2660620,
+      "hardware_mapped_bytes": 0,
+      "guest_resident_bytes": 3571712,
+      "vm_checkpoint_groups": 66519,
+      "vm_checkpoint_spaces": 66519,
+      "backing_domain_checks": 373,
+      "backing_page_checks": 272,
+      "parallel_memory_us": 1730232,
+      "instruction_count": null
+    },
+    "execution_paths": {
+      "cohort_rounds": 1,
+      "cohort_stop_us": 143093,
+      "service_caller_wait_us": 0,
+      "service_requests": 0,
+      "serviced_syscalls": 0,
+      "syscalls": 2822443,
+      "vm_local_syscalls": 116908,
+      "worker_direct_syscalls": 6386,
+      "worker_fd_syscalls": 906,
+      "worker_file_syscalls": 6323,
+      "worker_futex_waits": 26623,
+      "worker_futex_wakes": 23688,
+      "worker_gpu_calls": 0,
+      "worker_gpu_waits": 0,
+      "worker_poll_syscalls": 19,
+      "worker_socket_syscalls": 31,
+      "worker_syscalls": 2822443,
+      "worker_task_resumes": 26298,
+      "worker_uring_syscalls": 0
+    },
+    "installed": {
+      "Trames": {
+        "version": "Trames 1.5.4 (stable) runtime 0416b41853c8c5af02130155416d8fa0683e75f1",
+        "runner_sha256": "70fd9c8eb955d61c561127a37bdc4511847659c449f838665b996d2d489551c9",
+        "signature_valid": true
+      },
+      "Trames Dev": {
+        "version": "Trames Dev 1.5.4 (dev) runtime 0416b41853c8c5af02130155416d8fa0683e75f1",
+        "runner_sha256": "640a0975ecc02ba0785b6f9ca9104363298371e1c315a54a4d65d742fe60042d",
+        "signature_valid": true
+      }
+    },
+    "stable_environment_states": {
+      "debian": "stopped",
+      "default": "stopped",
+      "docker": "stopped"
+    },
+    "installed_ipad_unchanged": true,
+    "interpretation": [
+      "Fixed installed Dev completed all 32 CPU workload announcements and uploaded a valid score.",
+      "The exact interleaving of the original two failures was not captured: the unfixed diagnostic builds also completed computation. Deterministic regressions establish bugs in the old idle protocol; a successful measured run alone is not proof of a sole historical cause or all-race coverage.",
+      "CPU scores across Linux Preview/macOS include different binaries, libraries and dispatch; not a pure HVF overhead or Firefox UI comparison.",
+      "The original failed and upload-failed attempts remain retained; no earlier successful score substitutes for this acceptance."
+    ]
   }
 }
