@@ -2227,9 +2227,28 @@ not establish a broad steady-state gain. See the
 mechanisms, original output checks, limits and release acceptance.
 
 
-The final 1.5.5 runtime is `1600e29`. Process wait events keep their leader's
+The process-lifecycle follow-up uses runtime `1600e29`. Process wait events keep their leader's
 identity across CLONE_THREAD. Exec explicitly retires old peer identities after
 replacement publication, and nested PID-namespace init consumes its own exited
 children after original victims complete. Outer parents retain wait rights.
 These are source lifecycle transactions, independent of retained task-body Drop;
 Docker's complete lifetime acceptance now stops in about one second.
+
+
+The final TCP follow-up (`0c17d40`) removes the aggregate 256 protocol-handle
+ceiling from bind/listen/accept/connect, dynamic wildcard configuration and
+gateway admission. Detached close/TIME_WAIT state keeps its original lifetime
+without preventing later short connections; unrelated live-FD and gateway
+budgets remain. A negative control fails on the 125th connection with ENOBUFS,
+while the fixed real-packet regression completes 384 and retains closing state.
+The Docker acceptance harness now exercises 512 requests with eight clients.
+
+
+Installed Mac Stable/Dev 1.5.5 now use `c082959`, including namespace-scoped
+ephemeral port rotation, original closing-port ownership and dynamically grown
+connection tracking. This completes the TCP dependencies found by stress rather
+than only removing the first handle ceiling. The uninstrumented disposable
+Docker copy passes 2,048 consecutive requests; installed original services pass
+512/512 with configuration/data preserved, Debian business healthy and no failed
+systemd units. Full local workflows and final interpreter conformance pass;
+see the [release acceptance](../validation/mac-docker-gpu-20261113.md#installed-release-acceptance).

@@ -1,6 +1,6 @@
 {
   "date": "2026-11-13",
-  "runtime_revision": "1600e29ff4d4fef725715089b962d38732aad4e7",
+  "runtime_revision": "c0829591f8652e55c3edb074f593f680efbb76b9",
   "version": "1.5.5",
   "boundary_probe": {
     "fixture_sha256": "ee30e41fde83e065f67f65215653a2394d84f4f7ac8722815b28ee7bb8accc09",
@@ -655,6 +655,84 @@
           "stderr": ""
         }
       ]
+    },
+    "tcp_close_capacity": {
+      "negative_control": {
+        "connection": 125,
+        "errno": 105
+      },
+      "fixed_sequential_connections": 384,
+      "dual_stack_listener_payloads": "passed",
+      "protocol_deadlines": "preserved",
+      "global_handle_ceiling": "removed; unrelated live-FD and gateway budgets unchanged",
+      "related_fixes": [
+        "closing endpoints retain their local port until original protocol retirement",
+        "randomize namespace ephemeral start once, advance and wrap while skipping occupied ports",
+        "connection tracking grows on demand; NAT/reverse lookup/zones/expiry retained"
+      ],
+      "translated_flows_per_family_test": 1024,
+      "network_unit_tests": 88,
+      "network_integration_tests": 11,
+      "uninstrumented_docker_http_batches": [
+        {
+          "requests": 1024,
+          "successes": 1024,
+          "clients": 8,
+          "seconds": 1.719315709
+        },
+        {
+          "requests": 1024,
+          "successes": 1024,
+          "clients": 8,
+          "seconds": 1.474130582999999
+        }
+      ]
+    },
+    "interpreter_followup": {
+      "initial_passed": 487,
+      "initial_failed": 1,
+      "ignored": 3,
+      "failed_case": "source_seccomp_trap_enters_original_arm64_frame_without_owner_return",
+      "isolated_retry": "passed without source changes",
+      "complete_final_run": {
+        "passed": 488,
+        "failed": 0,
+        "ignored": 3
+      }
+    },
+    "docker_embedded_lifecycle_final": {
+      "runtime_revision": "c0829591f8652e55c3edb074f593f680efbb76b9",
+      "checks": [
+        {
+          "check": "concurrent_http",
+          "requests": 512,
+          "clients": 8,
+          "seconds": 0.7143500829999994,
+          "failures": [],
+          "passed": true
+        },
+        {
+          "check": "daemon_restart",
+          "passed": true
+        },
+        {
+          "check": "environment_restart",
+          "passed": true
+        },
+        {
+          "check": "unsuccessful_host_exit",
+          "passed": true
+        },
+        {
+          "check": "login_agent_bootstrap",
+          "passed": true
+        }
+      ],
+      "normal_stop_seconds": [
+        1.0018496250000055,
+        0.9833268329999996,
+        0.9851465420000025
+      ]
     }
   },
   "final_geekbench": {
@@ -721,5 +799,34 @@
       "Particle Physics": 198792
     }
   },
-  "gpu_measurement_revision": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b"
+  "gpu_measurement_revision": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+  "installed_deployment": {
+    "passed": true,
+    "installed": {
+      "Trames": {
+        "version": "Trames 1.5.5 (stable) runtime c0829591f8652e55c3edb074f593f680efbb76b9",
+        "sha256": "8a0f74af36590913c960046f897dc701d15806f02c0eaa4c0e52721eefe25e73"
+      },
+      "Trames Dev": {
+        "version": "Trames Dev 1.5.5 (dev) runtime c0829591f8652e55c3edb074f593f680efbb76b9",
+        "sha256": "4b24f03679fff1638bb7c897ae87b8043dec6938c903772344b43262d6d30ea0"
+      }
+    },
+    "driver_linkage": "embedded",
+    "debian_http_18180": 200,
+    "original_business_container": "running / healthy",
+    "docker_original_port": 51858,
+    "docker_http_requests": 512,
+    "docker_http_clients": 8,
+    "docker_http_all_200": true,
+    "docker_http_p95_ms": 37.188542000002656,
+    "configurations_unchanged": true,
+    "states": {
+      "debian": "running / busy",
+      "default": "stopped",
+      "docker": "running / busy"
+    },
+    "failed_systemd_units": 0,
+    "notarized": false
+  }
 }

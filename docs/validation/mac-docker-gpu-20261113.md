@@ -1,7 +1,7 @@
 # Docker recovery and native GPU publication, 2026-11-13
 
-Final runtime `1600e29ff4d4fef725715089b962d38732aad4e7`; Mac 1.5.5. GPU measurements use
-`86dfa2c`; the follow-up changes only task retirement and FIFO wait classification.
+Final runtime `c0829591f8652e55c3edb074f593f680efbb76b9`; Mac 1.5.5. GPU measurements use
+`86dfa2c`; the follow-up changes task retirement, FIFO wait classification and TCP admission.
 Machine-readable evidence is in [the paired record](mac-docker-gpu-20261113.json).
 
 ## Docker regressions
@@ -29,7 +29,7 @@ nsfs descriptors, file/image uses and live CLONE_FS members retain their resourc
 The overlay conflict check remains enforced. Regression tests verify live pivot
 updates, retirement, late query writes, accepted OFD lifetime and remount recovery.
 
-The complete Docker harness passes default multiworker nginx, 64 requests with
+The final complete Docker harness passes default multiworker nginx, 512 requests with
 8 concurrent clients, named-volume contents, docker exec, daemon restart,
 environment restart, SIGKILL/launchd recovery and login-agent bootstrap. Earlier
 startup HTTP timeouts are retained as failed evidence. The final embedded-driver
@@ -61,6 +61,53 @@ embedded-driver Docker lifecycle passes with stop times 0.994/0.967/0.972 s.
 
 The prior FIFO signal test now checks actual hidden-FD cancellation/reuse and
 EINTR rather than the removed coordinator-owned pending_open field.
+
+## TCP churn acceptance follow-up
+
+Installed-service stress beyond the earlier 64-request harness uncovered a
+separate internal TCP handle ceiling. Detached closing/TIME_WAIT endpoints
+correctly outlive their guest FDs, but were counted together with new listeners
+and accepted endpoints against a fabric-wide limit of 256. nginx then reported
+accept4 ENOBUFS even with only eight concurrent HTTP clients. This was not CPU
+contention or missing readiness notification.
+
+Protocol handle allocation now grows on demand. Listener creation, replacement
+on accept, outgoing connection creation, dynamic wildcard address updates and
+native-gateway admission no longer consult that aggregate ceiling. Live-FD
+admission and unrelated gateway/network budgets are unchanged. TCP close states
+retain their original protocol deadlines; they are not discarded to free slots.
+No coordinator, polling bus or service thread is added, and admission no longer
+scans every stack socket just to count global capacity.
+
+The new real-packet regression fails on connection 125 with ENOBUFS against the
+old code and passes 384 sequential connections with the fix, retaining over 256
+protocol endpoints while no client FDs remain. A dual-stack listener regression
+also exceeds the old handle ceiling and verifies real IPv4/IPv6 payloads and
+namespace teardown. The real Docker harness now uses 512 requests / eight
+clients rather than 64.
+
+Uninstrumented 2,048-request testing then exposed two additional dependencies:
+connection tracking stopped admitting at 512 retained records, and choosing a
+fresh random ephemeral port on every connect reused tuples whose remote peer was
+still in TIME_WAIT. Temporary packet diagnostics identify new SYNs matching those
+old peer tuples; the corresponding nginx request is never logged. These diagnostics
+are removed from production. The original close-state quota fix alone is therefore
+retained as a failed Docker run rather than presented as complete acceptance.
+
+Connection tracking now grows on demand, retaining NAT identity, reverse lookup,
+zone separation and original close/expiry deletion. Tests verify 1,024 translated
+flows per family, actual rewritten reply checksums, expiry and final index cleanup;
+the original implementation fails this test at its ceiling. Closed guest FDs also
+retain local TCP port ownership while the original protocol endpoint is closing.
+Automatic port allocation uses one randomized namespace start and advances through
+the existing ephemeral range, skipping occupied ports and wrapping normally. This
+avoids early tuple reuse and the per-connect random-number call. Tests cover wrap,
+occupied ports, FD retirement and eight-connection bursts with real payloads.
+
+With these admission/lifetime fixes and no packet/syscall instrumentation,
+two successive 1,024-request batches with eight clients pass 2,048/2,048, in
+1.719 s and 1.474 s. This is a local Docker functional/stress check, not a native
+network throughput comparison. Installed-service acceptance follows below.
 
 ## GPU boundary cost
 
@@ -108,7 +155,7 @@ The final pinned Dev 1.5.5 run scores [63,175](https://browser.geekbench.com/v6/
 in 65.10 s, with all eight workloads intact. Face Detection is 23,929; Particle
 Physics is 198,792. This confirms completion without demonstrating a broad
 steady-state shader speedup. No claim/access URLs are included in this record.
-Deployment verification follows after final lifecycle acceptance.
+Installed-service verification is recorded below.
 
 ## Local validation
 
@@ -123,3 +170,32 @@ FFI. An unrelated global backing-revision read test initially raced parallel tes
 its timing assertions now run in a subprocess, preserving production semantics.
 All failed diagnostic outputs remain in ignored build evidence, without adding
 normal-path checks or repeating unchanged CPU/graphics acceptance.
+
+## Installed release acceptance
+
+Both installed Mac Stable and Dev are 1.5.5, runtime `c0829591f8652e55c3edb074f593f680efbb76b9`,
+with the original verified embedded MoltenVK archive. Bundle signatures and both
+CLI symlinks are verified. The original standalone Docker and Debian services
+were stopped for installation and restored, preserving all environment settings,
+stores, volumes and autostart choices; the default Alpine environment stays
+stopped. Production stop times were 1.086 s for Docker and 1.755 s for Debian.
+
+The original Debian business container is running and healthy, HTTP 18180 returns
+200, and systemd reports zero failed units. The original Docker `web` container
+serves its original port 51858; 512/512 requests with eight clients return HTTP
+200 and the same body digest (P95 37.19 ms). This is functional service recovery,
+not a native network performance comparison.
+
+The final embedded-bundle acceptance additionally passes daemon restart, full
+environment restart, SIGKILL/launchd restart, login-agent bootstrap and original
+named-volume contents; all three normal fixture stops finish in 0.983–1.002 s.
+The final local workflows pass 7/7 macOS runtime steps, 7/7 ARM64 Linux runtime
+steps and 12/12 Mac product steps. Interpreter conformance passes 488 tests with
+three ignored; the earlier concurrent-run seccomp timing failure passes isolated
+and in the complete final run without production changes. iPad ARM64 FFI checks
+pass; installed iPad applications are unchanged.
+
+GPU measurements still use `86dfa2c`: the subsequent process and TCP fixes do
+not change the measured GPU path. The package is a local unnotarized build;
+old signed applications are retained for rollback. Disposable test services and
+the Linux CI instance are stopped.

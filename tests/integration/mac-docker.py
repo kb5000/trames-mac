@@ -105,9 +105,18 @@ def main():
                 t.command('docker exec trames-acceptance nginx -t && docker exec trames-acceptance ps -o pid,ppid,args', 'DEFAULT_WORKERS')
                 http()
                 began = time.monotonic()
+                def short_request(index):
+                    try:
+                        http_once()
+                        return None
+                    except Exception as error:
+                        return dict(index=index, error=str(error))
+
                 with ThreadPoolExecutor(max_workers=8) as clients:
-                    list(clients.map(lambda _: http_once(), range(64)))
-                records.append(dict(check='concurrent_http', requests=64, clients=8, seconds=time.monotonic() - began, passed=True))
+                    failures = [r for r in clients.map(short_request, range(512)) if r is not None]
+                records.append(dict(check='concurrent_http', requests=512, clients=8,
+                                    seconds=time.monotonic() - began, failures=failures, passed=not failures))
+                assert not failures, failures
                 t.command('systemctl restart docker', 'DOCKER_RESTART', 120)
             finally:
                 t.close()
@@ -139,7 +148,7 @@ def main():
             verify('login_agent_bootstrap')
         except Exception:
             diagnostic = subprocess.run([runner, '-e', 'docker', 'exec', '--', '/bin/sh', '-c',
-                'docker ps -a; systemctl list-jobs --no-pager; journalctl -u docker --no-pager -n 40'],
+                'docker ps -a; docker logs --tail 40 trames-acceptance; systemctl list-jobs --no-pager; journalctl -u docker --no-pager -n 40'],
                 env=env, capture_output=True, text=True, timeout=60)
             (args.output / 'failure-guest.stdout').write_text(diagnostic.stdout)
             (args.output / 'failure-guest.stderr').write_text(diagnostic.stderr)
