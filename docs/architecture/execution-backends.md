@@ -2181,3 +2181,28 @@ is recovered using the preserved signed formal 1.5.4 (`eb047dc`), with both orig
 containers running and the prior web endpoint returning HTTP 200. Dev retains
 `dfe6ff9`. Data, configuration and autostart choices are preserved. Current-main
 container startup remains an open release blocker; see the linked report.
+
+
+## Native coherent backing without shadow scans (2026-11-13)
+
+Runtime `619d14e` rounds only generic native coherent backing to complete owned
+host mapping granules, retaining exact guest bounds, native memory/image aliases,
+last-view ownership and actual-byte budgeting. Adoptable original pages directly
+back guest maps, including legal allocation tails. Dedicated/external contracts
+and the non-adoptable fallback remain. Async completion transfer accounting now
+includes its readback delta. No coordinator/service thread or instruction/write
+instrumentation is introduced.
+
+The same-session installed Dev Vulkan Geekbench score rises from 5,841 to 62,420
+(10.69x); whole invocation falls from 355.52 to 65.09 s. The complete fixed run
+has zero coherent scans/shadow transfers. A fresh native Metal reference scores
+94,426; that API/binary difference is not pure runtime overhead. The identical
+Vulkan control's legal 4 KiB-tail case falls from 2,410.37 to 16.93 ms versus
+14.91 ms native, with actual GPU output/timestamp checks. See the
+[complete follow-up](../validation/mac-gpu-overhead-20261113.md#implemented-original-shared-coherent-backing)
+and [exact evidence](../validation/mac-gpu-shared-backing-20261113.json) for all
+workloads, ownership/partial-map/iPad checks and measurement limits.
+
+Only Dev is installed from the new pin. Stable remains the recovered formal
+1.5.4 `eb047dc`, with both deployments running; the independent current-main
+runc startup blocker remains unresolved. Installed iPad apps are unchanged.

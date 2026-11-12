@@ -1,0 +1,743 @@
+{
+  "date": "2026-11-13",
+  "timezone": "Asia/Hong_Kong",
+  "status": "validated_and_installed_dev_only",
+  "runtime_revision": "619d14edf1df5e91a84197ad55330121a2dbec5e",
+  "mechanism": "Pad only generic native HOST_VISIBLE|HOST_COHERENT backing to complete owned host mapping granules; adopt original native pages without a shadow. Preserve exact guest size, binding/map limits, original buffer/image aliases and native ownership. Charge/release actual backing bytes. Dedicated/external allocation contracts unchanged.",
+  "async_accounting": "Merge the existing poll call transfer delta exactly once; no new guest instruction/write counters, barriers, polling bus or coordinator/service thread.",
+  "source": {
+    "runtime_commit": "619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "files": {
+      "crates/trames-session/src/gpu.rs": "7184c9e07da1db3e26bfc5e5294369ee78bca7651ed57b656752755fdba22fde",
+      "crates/trames-vulkan/src/backend.rs": "b10e3735e60c4adf296c4c5d45e8653c7a47c4593649fd788088b2b2a6f6c738",
+      "crates/trames-vulkan/src/backend/graphics/host_copy.rs": "c3d7bd0eb77a2d69baa20bc441110d14c1297b7d436b0859017302e706fed5b1",
+      "crates/trames-vulkan/src/backend/shared_memory.rs": "432444cb8798af7b564d43150cabd54a3be376cedbdb83c4accfd785bcae92d7",
+      "crates/trames-vulkan/src/context.rs": "a98b053601d047f96ebafdcc5ac3c31e65070bbf9cb6a046bca28b474fa65456"
+    },
+    "guest_oracle_sha256": "be6b7ca01aa4432073ebdf94eb9866479a1eee156e112174cc0b6d774fb6a3e8"
+  },
+  "guest_original_inputs_sha256": {
+    "/opt/geekbench/geekbench6": "73ceafda276e6cd03709b333899742d8812dc05e2ee9c3a32591009b70cfc0ff",
+    "/opt/geekbench/geekbench_aarch64": "2ab486aa545c2a62ad3debf53d6412d2eba0a189d6daf6dec213af2d89b247e5",
+    "/opt/geekbench/geekbench-workload.plar": "41dfde1c9ea9b682e986608ba0bb7ad9e12ecbe5b957b76b978928b3415cede5",
+    "/opt/geekbench/geekbench.plar": "892b4688411749dfabe9ef5290b643c7991365712501b894be9cfcb58429b527",
+    "/opt/geekbench-vulkan/libtrames_vulkan_icd.so": "410430a631f64d0770f7d8c708f2ee76a87bb67924d9daff25e9b59cd870240d",
+    "/opt/geekbench-vulkan/libvulkan.so.1": "1384294a60185c780fb324dfa87fc3367bdd6e4f71a8307a52c329ca2bcafe0a"
+  },
+  "native_moltenvk_archive_sha256": "ea0f84860b670b586e78327830c1e70bfe47a2b4655d385ec809c7b4faf9dbde",
+  "measurement": {
+    "stable_debian_and_docker_running": true,
+    "compiler_vm_stopped": true,
+    "no_concurrent_build_ci_profiler_or_window_capture": true,
+    "one_full_scored_sample_each": true,
+    "all_8_workloads_unchanged": true,
+    "public_scores_read_after_measurement": true
+  },
+  "before": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "same-session installed Mac Dev before allocation fix",
+    "runner_version": "Trames Dev 1.5.4 (dev) runtime dfe6ff9d97d9e2ee9e90b811736cfe892d08db98",
+    "runner_sha256": "f4dbce4ee8c0aa82b50106df8873fa8da5d38588f176bde06f9119c71a75a8c9",
+    "runtime_code_commit": "dfe6ff9d97d9e2ee9e90b811736cfe892d08db98",
+    "cpus": 12,
+    "memory_mib": "auto",
+    "metrics": true,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": true,
+    "command": [
+      "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+      "--storage",
+      "/Users/main/dev/trames/target/geekbench-20261028/store",
+      "--vulkan",
+      "--network",
+      "outbound",
+      "--cpus",
+      "12",
+      "--memory-mib",
+      "auto",
+      "--timeout",
+      "3600",
+      "--no-pty",
+      "--no-windows",
+      "--metrics",
+      "/bin/sh",
+      "-c",
+      "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+    ],
+    "start_unix": 1794509961.0931242,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971879"
+    ],
+    "seconds": 355.522472583,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 5841,
+    "workloads": {
+      "Background Blur": 2476,
+      "Face Detection": 2167,
+      "Horizon Detection": 1222,
+      "Edge Detection": 1230,
+      "Gaussian Blur": 1785,
+      "Feature Matching": 3812,
+      "Stereo Matching": 127142,
+      "Particle Physics": 194089
+    },
+    "score_source": "Public Geekbench result read through browser accessibility",
+    "transfer_metrics": {
+      "native": {
+        "calls": 256904,
+        "gpu_compiles": 1810,
+        "gpu_wait_us": 193086425,
+        "upload_bytes": 233590582,
+        "download_bytes": 1107842880,
+        "direct_bytes": 1107842880,
+        "buffered_bytes": 233590582
+      },
+      "shared": {
+        "maps": 238,
+        "mapped_bytes": 660504576
+      },
+      "coherent": {
+        "boundaries": 9856,
+        "ranges": 21936,
+        "upload_scanned_bytes": 187727094400,
+        "download_scanned_bytes": 4048805760
+      }
+    }
+  },
+  "after": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "same-session installed Mac Dev with original coherent native backing",
+    "runner_version": "Trames Dev 1.5.4 (dev) runtime 619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "runner_sha256": "035418f2705e1a7c185fa922abd43ac2d8e251c1253961aba6358b9f3be0de77",
+    "runtime_code_commit": "619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "cpus": 12,
+    "memory_mib": "auto",
+    "metrics": true,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": true,
+    "command": [
+      "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+      "--storage",
+      "/Users/main/dev/trames/target/geekbench-20261028/store",
+      "--vulkan",
+      "--network",
+      "outbound",
+      "--cpus",
+      "12",
+      "--memory-mib",
+      "auto",
+      "--timeout",
+      "3600",
+      "--no-pty",
+      "--no-windows",
+      "--metrics",
+      "/bin/sh",
+      "-c",
+      "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+    ],
+    "start_unix": 1794510682.214178,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971888"
+    ],
+    "seconds": 65.089237666,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 62420,
+    "workloads": {
+      "Background Blur": 31775,
+      "Face Detection": 23593,
+      "Horizon Detection": 74693,
+      "Edge Detection": 78707,
+      "Gaussian Blur": 68830,
+      "Feature Matching": 19310,
+      "Stereo Matching": 193717,
+      "Particle Physics": 203095
+    },
+    "score_source": "Public Geekbench result read through browser accessibility",
+    "transfer_metrics": {
+      "native": {
+        "calls": 257540,
+        "gpu_compiles": 1810,
+        "gpu_wait_us": 15618649,
+        "upload_bytes": 0,
+        "download_bytes": 0,
+        "direct_bytes": 0,
+        "buffered_bytes": 0
+      },
+      "shared": {
+        "maps": 874,
+        "mapped_bytes": 1768347456
+      },
+      "coherent": {
+        "boundaries": 14784,
+        "ranges": 0,
+        "upload_scanned_bytes": 0,
+        "download_scanned_bytes": 0
+      }
+    }
+  },
+  "native_metal_reference": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "native macOS Metal GPU",
+    "runner_version": "Geekbench 6.7.1 : https://www.geekbench.com/",
+    "runner_sha256": "f82d24a42623019d4c1b349636278409b271e4384ffbb1293d6072dd90a1895c",
+    "runtime_code_commit": null,
+    "cpus": "native",
+    "memory_mib": "native",
+    "metrics": false,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": true,
+    "command": [
+      "/Users/main/dev/trames/target/geekbench-20261028/mac/Geekbench 6.app/Contents/Resources/geekbench6",
+      "--gpu",
+      "Metal"
+    ],
+    "start_unix": 1794510790.838319,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971889"
+    ],
+    "seconds": 65.10233050000001,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 94426,
+    "workloads": {
+      "Background Blur": 49375,
+      "Face Detection": 72971,
+      "Horizon Detection": 82106,
+      "Edge Detection": 85962,
+      "Gaussian Blur": 140631,
+      "Feature Matching": 32105,
+      "Stereo Matching": 280977,
+      "Particle Physics": 195909
+    },
+    "score_source": "Public Geekbench result read through browser accessibility"
+  },
+  "comparison": {
+    "score_speedup": 10.68652627974662,
+    "whole_run_time_speedup": 5.4620776849059745,
+    "vulkan_over_native_metal_score": 0.6610467455997289,
+    "workloads": [
+      {
+        "name": "Background Blur",
+        "before": 2476,
+        "after": 31775,
+        "speedup": 12.833198707592892,
+        "native_metal": 49375,
+        "after_over_metal": 0.6435443037974684
+      },
+      {
+        "name": "Face Detection",
+        "before": 2167,
+        "after": 23593,
+        "speedup": 10.887401938163359,
+        "native_metal": 72971,
+        "after_over_metal": 0.32332022310232833
+      },
+      {
+        "name": "Horizon Detection",
+        "before": 1222,
+        "after": 74693,
+        "speedup": 61.12356792144026,
+        "native_metal": 82106,
+        "after_over_metal": 0.9097142717949968
+      },
+      {
+        "name": "Edge Detection",
+        "before": 1230,
+        "after": 78707,
+        "speedup": 63.989430894308946,
+        "native_metal": 85962,
+        "after_over_metal": 0.9156022428514925
+      },
+      {
+        "name": "Gaussian Blur",
+        "before": 1785,
+        "after": 68830,
+        "speedup": 38.56022408963585,
+        "native_metal": 140631,
+        "after_over_metal": 0.4894368951369186
+      },
+      {
+        "name": "Feature Matching",
+        "before": 3812,
+        "after": 19310,
+        "speedup": 5.065582371458552,
+        "native_metal": 32105,
+        "after_over_metal": 0.6014639464257904
+      },
+      {
+        "name": "Stereo Matching",
+        "before": 127142,
+        "after": 193717,
+        "speedup": 1.5236271255761276,
+        "native_metal": 280977,
+        "after_over_metal": 0.6894407727322877
+      },
+      {
+        "name": "Particle Physics",
+        "before": 194089,
+        "after": 203095,
+        "speedup": 1.0464013931752958,
+        "native_metal": 195909,
+        "after_over_metal": 1.0366802954432925
+      }
+    ],
+    "limitation": "Linux Preview Vulkan/MoltenVK versus macOS Metal includes binary, library, shader and API/backend differences; not pure runtime overhead. Same-source native Vulkan micro controls below address one specific path."
+  },
+  "same_api_micro": {
+    "method": {
+      "same_c_source": "tests/fixtures/vulkan-coherent-benchmark.c",
+      "fixture_sha256": "5d38de317abbb5d46640266e665c72097a909f84aa09dbec4779b5dbc09e43ec",
+      "native": "same embedded original MoltenVK archive, native Mach-O C binary",
+      "guest": "installed Mac Dev with glibc ICD, 12 CPUs, host-managed memory",
+      "repeats": 3,
+      "iterations_each": 100,
+      "buffer_bytes": 16777216,
+      "payload": "one CPU input word; native GPU fill writes last 4 KiB; input and every output word verified after each fence",
+      "gpu_time": "sum of original Vulkan query timestamps, converted with native timestampPeriod",
+      "loop_wall_time": "includes submits, fences, output checks and queries; excludes setup and teardown",
+      "stable_debian_and_docker_running": true,
+      "compiler_vm_stopped_during_measurement": true
+    },
+    "pre_fix_runtime": "b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+    "pre_fix_medians": [
+      {
+        "mode": "aligned-generic",
+        "native": {
+          "wall_ms": 27.243,
+          "gpu_ms": 0.660916
+        },
+        "guest": {
+          "wall_ms": 27.963917,
+          "gpu_ms": 1.053128
+        },
+        "guest_over_native": 1.0264624674228242
+      },
+      {
+        "mode": "tail-generic",
+        "native": {
+          "wall_ms": 16.538,
+          "gpu_ms": 0.604913
+        },
+        "guest": {
+          "wall_ms": 2410.365542,
+          "gpu_ms": 0.916954
+        },
+        "guest_over_native": 145.74710013302698
+      },
+      {
+        "mode": "native-dedicated",
+        "native": {
+          "wall_ms": 14.879,
+          "gpu_ms": 0.613712
+        },
+        "guest": {
+          "wall_ms": 35.57625,
+          "gpu_ms": 0.970258
+        },
+        "guest_over_native": 2.3910377041467843
+      }
+    ],
+    "final": {
+      "fixture_sha256": "5d38de317abbb5d46640266e665c72097a909f84aa09dbec4779b5dbc09e43ec",
+      "native_binary_sha256": "e1fd6850afa96483f944938a647a037e61d6977795d381e623f82b843a98e30f",
+      "guest_binary_sha256": "8fc20e0527f64fd51e0f3d65f8633067b4c890833c3db75415f523e84617d97c",
+      "runs": [
+        {
+          "repeat": 0,
+          "variant": "native",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 32.504,
+              "gpu_ms": 1.055662,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 17.962,
+              "gpu_ms": 1.004421,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 17.288,
+              "gpu_ms": 0.704249,
+              "output_ok": true
+            }
+          ]
+        },
+        {
+          "repeat": 0,
+          "variant": "guest",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 30.257875,
+              "gpu_ms": 1.381747,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 16.933708,
+              "gpu_ms": 1.279837,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 17.835917,
+              "gpu_ms": 0.560252,
+              "output_ok": true
+            }
+          ]
+        },
+        {
+          "repeat": 1,
+          "variant": "native",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 18.245,
+              "gpu_ms": 0.704496,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 14.91,
+              "gpu_ms": 0.601456,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 14.406,
+              "gpu_ms": 0.536877,
+              "output_ok": true
+            }
+          ]
+        },
+        {
+          "repeat": 1,
+          "variant": "guest",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 22.411208,
+              "gpu_ms": 0.737827,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 17.118292,
+              "gpu_ms": 0.66242,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 16.705875,
+              "gpu_ms": 0.588081,
+              "output_ok": true
+            }
+          ]
+        },
+        {
+          "repeat": 2,
+          "variant": "native",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 25.65,
+              "gpu_ms": 1.176622,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 14.283,
+              "gpu_ms": 0.544625,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 14.583,
+              "gpu_ms": 0.591416,
+              "output_ok": true
+            }
+          ]
+        },
+        {
+          "repeat": 2,
+          "variant": "guest",
+          "exit": 0,
+          "cases": [
+            {
+              "mode": "aligned-generic",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 26.789292,
+              "gpu_ms": 0.778874,
+              "output_ok": true
+            },
+            {
+              "mode": "tail-generic",
+              "allocation_bytes": 16781312,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 15.506625,
+              "gpu_ms": 0.591954,
+              "output_ok": true
+            },
+            {
+              "mode": "native-dedicated",
+              "allocation_bytes": 16777216,
+              "buffer_bytes": 16777216,
+              "iterations": 100,
+              "wall_ms": 15.267417,
+              "gpu_ms": 0.621549,
+              "output_ok": true
+            }
+          ]
+        }
+      ],
+      "medians": [
+        {
+          "mode": "aligned-generic",
+          "native": {
+            "wall_ms": 25.65,
+            "gpu_ms": 1.055662
+          },
+          "guest": {
+            "wall_ms": 26.789292,
+            "gpu_ms": 0.778874
+          },
+          "guest_over_native": 1.0444168421052633
+        },
+        {
+          "mode": "tail-generic",
+          "native": {
+            "wall_ms": 14.91,
+            "gpu_ms": 0.601456
+          },
+          "guest": {
+            "wall_ms": 16.933708,
+            "gpu_ms": 0.66242
+          },
+          "guest_over_native": 1.1357282360831655
+        },
+        {
+          "mode": "native-dedicated",
+          "native": {
+            "wall_ms": 14.583,
+            "gpu_ms": 0.591416
+          },
+          "guest": {
+            "wall_ms": 16.705875,
+            "gpu_ms": 0.588081
+          },
+          "guest_over_native": 1.145571898786258
+        }
+      ]
+    },
+    "limitation": "Three sequential repeats; same original C source/API and MoltenVK archive, different native/guest compilers, ABIs and libraries. Loop times include submits/fences/queries/output verification, exclude setup/teardown. Original GPU timestamps are not whole-process timing. Small noisy control does not establish all-workload native parity."
+  },
+  "validation": {
+    "native_vulkan": {
+      "passed": 80,
+      "failed": 0,
+      "ignored": 0,
+      "method": "79 unchanged/expanded native cases, followed by the one new async-poll test; passing unchanged cases reused"
+    },
+    "kernel": {
+      "passed": 487,
+      "failed": 0,
+      "ignored": 3,
+      "ignored_scope": "unchanged manual profiles"
+    },
+    "mac": {
+      "passed": 22,
+      "failed": 0,
+      "ignored": 26,
+      "ignored_scope": "existing native-device/manual cases"
+    },
+    "strict_clippy_vulkan_all_targets": true,
+    "strict_clippy_mac_all_targets": true,
+    "formatting_and_diff_check": true,
+    "ipad_arm64_ffi_check": true,
+    "paired_execution_boundaries": true,
+    "native_buffer_image_alias_and_original_device_memory": true,
+    "logical_map_and_bind_bounds_preserved": true,
+    "last_imported_view_owns_native_device_and_padded_budget": true,
+    "async_poll_readback_delta_test": true,
+    "vulkan12_complete_and_core12_output_oracles": [
+      {
+        "script": "mac-vulkan12-complete.py",
+        "exit": 0
+      },
+      {
+        "script": "mac-vulkan-core12.py",
+        "exit": 0
+      }
+    ],
+    "partial_mapping_oracles": {
+      "native": {
+        "exit": 0,
+        "stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1656585187953458,1656585188077083 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65 partial-and-tail-maps=ok"
+      },
+      "glibc": [
+        {
+          "abi": "glibc",
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true
+        },
+        {
+          "abi": "glibc",
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true
+        }
+      ],
+      "musl": [
+        {
+          "abi": "musl",
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true
+        },
+        {
+          "abi": "musl",
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true
+        }
+      ],
+      "initial_failure": "musl fixture first referenced the pre-batch-fix stored ICD and rejected the 165-command submit before the new mapping case; one attempted harness correction still selected that old manifest. Preserved failed logs. Both musl CPU counts pass with the current ICD privately imported and explicitly selected."
+    },
+    "unaffected_complete_cpu_network_and_cts_checks_reused": true
+  },
+  "installed_and_stable_health": {
+    "environment_states": {
+      "debian": "running / busy",
+      "default": "stopped",
+      "docker": "running / busy"
+    },
+    "containers": [
+      {
+        "environment": "debian",
+        "containers": "techo-preview-1: Up 31 minutes (healthy)"
+      },
+      {
+        "environment": "docker",
+        "containers": "web: Up 31 minutes"
+      }
+    ],
+    "installed": {
+      "stable": {
+        "version": "Trames 1.5.4 (stable) runtime eb047dc35351f8d9a623afd9325a6974adae47bb",
+        "signature_valid": true,
+        "runner_sha256": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
+      },
+      "dev": {
+        "version": "Trames Dev 1.5.4 (dev) runtime 619d14edf1df5e91a84197ad55330121a2dbec5e",
+        "signature_valid": true,
+        "runner_sha256": "035418f2705e1a7c185fa922abd43ac2d8e251c1253961aba6358b9f3be0de77"
+      }
+    },
+    "http_status": "200",
+    "disk_df": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk3s5   460Gi   278Gi   155Gi    65%    2.0M  1.6G    0%   /System/Volumes/Data"
+  },
+  "ipad_installed_apps_unchanged": true,
+  "stable_updated": false,
+  "outstanding_release_blocker": "Independent current-main runc startup / zombie namespace-overlay lifetime regression remains open. Stable stays on preserved signed formal 1.5.4 runtime eb047dc with existing deployments running.",
+  "remaining_performance_work": "Profile Face Detection, Gaussian Blur and other remaining gaps afresh; the old coherent-scanning attribution no longer describes this zero-shadow full run. Original API/backend/shader differences also need separation.",
+  "raw_evidence": "ignored target/gpu-shared-backing-20261113; no upload claim URLs included"
+}

@@ -1,5 +1,9 @@
 # GPU overhead attribution, 2026-11-13
 
+Follow-up: the allocation fix is implemented and validated below; the complete
+Vulkan score rises from 5,841 to 62,420. The initial investigation is retained
+as historical evidence.
+
 The measured bottleneck in Geekbench's slow image workloads is CPU shadow-memory
 synchronization. The working shared-mapping path can be close to an identical
 native Vulkan control. This investigation uses installed Dev runtime `b73f42b`;
@@ -148,3 +152,124 @@ on `dfe6ff9` for continued diagnosis; both installations verify their signatures
 The GPU research above remains pinned to its measured `b73f42b` binary; Vulkan
 code is unchanged by this independent metadata fix. The current-main startup
 regression is an outstanding release blocker, not a resolved issue.
+
+
+## Implemented: original shared coherent backing
+
+Runtime `619d14e` implements the first two recommendations above. Generic native
+coherent backing now owns complete host mapping granules, even when the guest's
+requested size ends with a 4 KiB tail. Only the native backing is rounded; the
+guest allocation size, binding bounds and mapped-byte bounds stay exact. The
+budget charges and reclaims the actual rounded bytes (less than one additional
+host granule per allocation). Native buffer/image aliases still refer to the
+original VkDeviceMemory; generic allocations are not falsely made dedicated or
+replaced by a buffer-only host-pointer import. Dedicated and external allocation
+contracts remain unchanged. Adoption still requires an aligned, fully owned
+original mapping; the existing fallback remains for other mappings.
+
+Imported views retain the original device and backing after logical handle
+release. Partial, offset, tail and remapped views use that same backing. Async
+completion now returns and merges its own transfer delta, so fallback readback
+is no longer omitted from statistics. No new coordinator, service thread, global
+pause, ordinary-memory barrier or guest instruction/write counter is added.
+
+### Complete same-session Geekbench results
+
+The original Geekbench 6.7.1 Linux AArch64 payload, workload archives, glibc
+loader and current guest ICD are unchanged. Installed pre-fix Dev (`dfe6ff9`),
+installed fixed Dev (`619d14e`), then original native Mac Metal are measured
+sequentially. Stable Debian and Docker remain running throughout all three.
+The compiler VM is stopped; no CI/build, sampling or window capture runs during
+scoring. Thermal state is nominal and low-power mode off before/after each run.
+
+- [Pre-fix Vulkan](https://browser.geekbench.com/v6/compute/6971879): **5,841**,
+  **355.52 s** whole invocation.
+- [Fixed Vulkan](https://browser.geekbench.com/v6/compute/6971888): **62,420**,
+  **65.09 s** whole invocation: **10.69x score**, **81.7% less invocation time**.
+- [Fresh native Metal reference](https://browser.geekbench.com/v6/compute/6971889):
+  **94,426**, **65.10 s** whole invocation.
+
+| Workload | Pre-fix Vulkan | Fixed Vulkan | Score gain | Native Metal | Fixed / Metal |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Background Blur | 2,476 | 31,775 | 12.8x | 49,375 | 64.4% |
+| Face Detection | 2,167 | 23,593 | 10.9x | 72,971 | 32.3% |
+| Horizon Detection | 1,222 | 74,693 | 61.1x | 82,106 | 91.0% |
+| Edge Detection | 1,230 | 78,707 | 64.0x | 85,962 | 91.6% |
+| Gaussian Blur | 1,785 | 68,830 | 38.6x | 140,631 | 48.9% |
+| Feature Matching | 3,812 | 19,310 | 5.1x | 32,105 | 60.1% |
+| Stereo Matching | 127,142 | 193,717 | 1.5x | 280,977 | 68.9% |
+| Particle Physics | 194,089 | 203,095 | 1.0x | 195,909 | 103.7% |
+
+There is one complete sample per configuration. All eight original workloads
+complete with exit zero and upload valid public results. Invocation durations
+include calibration, pauses and upload, and are not pure GPU execution time.
+Vulkan reaches 66.1% of this Metal score, but Linux Preview/macOS binaries,
+libraries, shaders and Vulkan/MoltenVK versus Metal differ. This is not a
+measurement of 33.9% Trames overhead; the same-API control below separates the
+specific memory-path improvement.
+
+The full fixed run records **zero upload/download scanned bytes and zero shadow
+transfer bytes**, versus the pre-fix 187.7 GB upload scan. Shared mappings rise
+from 238 to 874. The fixed run has 14,784 coherent boundaries and 1,810 compiles;
+zero scanning is not caused by removing the workload or its GPU calls. Pending
+call latency falls from 193.09 s to 15.62 s, but remains a latency/activity counter,
+not GPU device execution time. Pre-fix download counters undercount async poll
+readback; do not compare their numeric totals as if both runs used fixed
+accounting. The native async-poll regression explicitly verifies real readback.
+
+### Fresh same-API controls after the final Dev installation
+
+The original C fixture and both previously compiled native/guest binaries are
+unchanged. Three native/guest pairs run sequentially, with no concurrent compiler
+or profiler. Each loop verifies the CPU word and all 1,024 GPU output words after
+every fence. The table uses median wall time; fixed GPU time comes from original
+native timestamp queries. Setup and teardown are excluded.
+
+| Allocation | Earlier pre-fix Dev wall | Fixed Dev wall | Fresh native Vulkan wall | Fixed GPU time |
+| --- | ---: | ---: | ---: | ---: |
+| aligned-generic | 27.96 ms | 26.79 ms | 25.65 ms | 0.779 ms |
+| tail-generic | 2410.37 ms | 16.93 ms | 14.91 ms | 0.662 ms |
+| native-dedicated | 35.58 ms | 16.71 ms | 14.58 ms | 0.588 ms |
+
+The legal extra-tail case improves **142.3x** (2,410.37 to 16.93 ms), with native
+Vulkan at 14.91 ms. All three final controls have zero coherent scans/transfers
+and correct original GPU output. Fixed wall times are 1.04x, 1.14x and 1.15x the
+respective native controls. These small, noisy controls cover this path only;
+they do not establish universal native parity. The earlier pre-fix micro run used
+`b73f42b`, whose GPU code is unchanged by the `dfe6ff9` overlay metadata fix.
+
+### Validation and deployment boundary
+
+All 80 native Vulkan cases pass: the 79-case run is reused and the one new async
+poll test passes separately. The ownership regression covers generic original
+memory, a native linear-image alias, logical map/bind bounds despite padded
+backing, partial/tail remaps, logical handle destruction and final-view budget
+release. Actual native and glibc/musl guest GPU oracles pass at 1 and 12 CPUs,
+including the 165-command submission, intermediate timeline signals, and the new
+partial/tail mapping output checks. Multiview/descriptor/resolve and core-1.2
+output oracles also pass at both CPU counts; this is not complete CTS coverage.
+
+Strict Vulkan/Mac checks, 487 kernel integration cases (three unchanged manual
+profiles ignored), 22 Mac cases (26 existing ignored), formatting, exact paired
+runtime boundaries and iPad ARM64 FFI checks pass. The musl oracle initially
+selected an old stored ICD that rejected the existing 165-command batch; failed
+logs are preserved. Selecting the privately imported current ICD passes both
+CPU counts. No unaffected full CPU/network/CTS suite is repeated for record edits.
+
+Installed Mac Dev is updated to `619d14e`; both product repositories pin that
+same tested runtime. Installed iPad apps and the restored stable application are
+unchanged. Stable stays on formal 1.5.4 `eb047dc`: both original containers remain
+up, Debian's container is healthy, and the existing endpoint returns HTTP 200.
+The independent current-main runc startup regression above remains a release
+blocker. Available disk space after validation is about 155 GiB.
+
+Face Detection (32.3% of Metal), Gaussian Blur (48.9%) and the other remaining
+score gaps need fresh attribution. The previous shadow-scan bottleneck has been
+removed from this full run; API/backend/shader and command/compile costs must now
+be separated before selecting the next optimization.
+
+[Filtered exact evidence](mac-gpu-shared-backing-20261113.json) includes both
+runtime pins, binary/source hashes, all eight public scores, transfer counters,
+original GPU timestamps, validation scope and installed deployment health. Raw
+logs stay under ignored `target/gpu-shared-backing-20261113`; upload claim links
+are not published.
