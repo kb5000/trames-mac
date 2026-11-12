@@ -1,6 +1,6 @@
 # Docker recovery and native GPU publication, 2026-11-13
 
-Final runtime `3ee2b3a7da580378beb7ad878de8b1a52bb8cae3`; Mac 1.5.5. GPU measurements use
+Final runtime `1600e29ff4d4fef725715089b962d38732aad4e7`; Mac 1.5.5. GPU measurements use
 `86dfa2c`; the follow-up changes only task retirement and FIFO wait classification.
 Machine-readable evidence is in [the paired record](mac-docker-gpu-20261113.json).
 
@@ -32,8 +32,8 @@ updates, retirement, late query writes, accepted OFD lifetime and remount recove
 The complete Docker harness passes default multiworker nginx, 64 requests with
 8 concurrent clients, named-volume contents, docker exec, daemon restart,
 environment restart, SIGKILL/launchd recovery and login-agent bootstrap. Earlier
-startup HTTP timeouts are retained as failed evidence; final embedded-driver and
-installed-service verification are recorded separately below when completed.
+startup HTTP timeouts are retained as failed evidence. The final embedded-driver
+run passes all checks; installed-service verification is recorded below.
 
 Final shutdown acceptance found CLONE_THREAD incorrectly rebinding the shared
 process wait event to the newest worker's visibility. A parent wait then reaped
@@ -45,6 +45,20 @@ The new regression fails against the original code and passes with the fix,
 including eight joined threads and wait with a retained leader body. The same
 Docker fixture now stops normally in 0.978 s instead of about 60 s. The complete
 interpreter conformance run passes 488 tests with three explicitly ignored.
+Source exec now explicitly retires every replaced thread identity, postponing
+old leader retirement until the replacement is published. The source regression
+keeps both old leader and another peer body alive, including late CPU returns,
+1/4 CPU execution, RAM/disk images and successful/failed exec modes.
+
+The final full Docker run also exposed nginx workers in a dead nested PID
+namespace. Namespace init completion now consumes only its own exited/adopted
+children after all original victims finish, before publishing init's exit.
+Children whose real parent is outside the namespace retain their zombie and wait
+status. A negative control reproduces the leak; kernel regressions cover both
+child-first/init-first exit and the outer parent's wait rights. No process-table
+poller or coordinator cleanup is involved. All 75 kernel tests pass. The full
+embedded-driver Docker lifecycle passes with stop times 0.994/0.967/0.972 s.
+
 The prior FIFO signal test now checks actual hidden-FD cancellation/reuse and
 EINTR rather than the removed coordinator-owned pending_open field.
 

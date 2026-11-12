@@ -2225,3 +2225,11 @@ The controlled 256 MiB mapping/layout probe falls from 260.55 to 38.18 ms vs
 not establish a broad steady-state gain. See the
 [Docker/GPU validation record](../validation/mac-docker-gpu-20261113.md) for
 mechanisms, original output checks, limits and release acceptance.
+
+
+The final 1.5.5 runtime is `1600e29`. Process wait events keep their leader's
+identity across CLONE_THREAD. Exec explicitly retires old peer identities after
+replacement publication, and nested PID-namespace init consumes its own exited
+children after original victims complete. Outer parents retain wait rights.
+These are source lifecycle transactions, independent of retained task-body Drop;
+Docker's complete lifetime acceptance now stops in about one second.

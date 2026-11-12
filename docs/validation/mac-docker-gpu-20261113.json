@@ -1,6 +1,6 @@
 {
   "date": "2026-11-13",
-  "runtime_revision": "3ee2b3a7da580378beb7ad878de8b1a52bb8cae3",
+  "runtime_revision": "1600e29ff4d4fef725715089b962d38732aad4e7",
   "version": "1.5.5",
   "boundary_probe": {
     "fixture_sha256": "ee30e41fde83e065f67f65215653a2394d84f4f7ac8722815b28ee7bb8accc09",
@@ -507,7 +507,155 @@
       "ignored": 3
     },
     "thread_reap_negative_control": "original code fails new regression; fixed passes",
-    "docker_fixed_stop_seconds": 0.97793625
+    "docker_fixed_stop_seconds": 0.97793625,
+    "namespace_kernel_tests": 75,
+    "source_exec_negative_control": "retained old leader/peer remain visible before fix; all source exec cases pass after fix",
+    "namespace_reap_negative_control": "owned zombie remains present before fix; outer-parent rights tested after fix",
+    "docker_embedded_lifecycle_candidate": {
+      "records": [
+        {
+          "command": [
+            "env",
+            "import",
+            "docker",
+            "/Users/main/dev/trames/target/docker-gpu-20261113/systemd-docker-template"
+          ],
+          "code": 0,
+          "seconds": 21.013971583,
+          "stdout": "Imported docker; original store is unchanged\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "configure",
+            "docker",
+            "--init",
+            "systemd",
+            "--cpus",
+            "4",
+            "--network",
+            "full",
+            "--windows",
+            "off",
+            "--vulkan",
+            "off",
+            "--video",
+            "off",
+            "--audio",
+            "off"
+          ],
+          "code": 0,
+          "seconds": 0.013210957999998385,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "start",
+            "docker",
+            "--detach"
+          ],
+          "code": 0,
+          "seconds": 0.12490137500000031,
+          "stdout": "",
+          "stderr": "Started docker in background\n"
+        },
+        {
+          "check": "concurrent_http",
+          "requests": 64,
+          "clients": 8,
+          "seconds": 0.20045824999999695,
+          "passed": true
+        },
+        {
+          "check": "daemon_restart",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "seconds": 0.9943547919999958,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "start",
+            "docker",
+            "--detach"
+          ],
+          "code": 0,
+          "seconds": 0.15276795799999832,
+          "stdout": "",
+          "stderr": "Started docker in background\n"
+        },
+        {
+          "check": "environment_restart",
+          "passed": true
+        },
+        {
+          "check": "unsuccessful_host_exit",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "autostart",
+            "docker",
+            "on"
+          ],
+          "code": 0,
+          "seconds": 0.025953458000003593,
+          "stdout": "Enabled docker at Mac user login; env start docker --detach starts it now\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "seconds": 0.9672822500000038,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        },
+        {
+          "check": "login_agent_bootstrap",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "autostart",
+            "docker",
+            "off"
+          ],
+          "code": 0,
+          "seconds": 0.01582566700000143,
+          "stdout": "Disabled docker at login; current environment lifetime is unchanged\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "seconds": 0.9724095840000047,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        }
+      ]
+    }
   },
   "final_geekbench": {
     "date": "2026-11-13",
