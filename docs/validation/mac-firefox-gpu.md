@@ -1831,8 +1831,76 @@ assertion; this change does not claim to repair all existing test timing issues.
 HEVC and AV1 hardware decode are still unimplemented and unadvertised. Improving
 composition remains useful independently of codec work: local software AV1 is
 already near its source rate, while the real page loses frames at composition.
-The [VA-API architecture](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/vaapi.md)
+The [VA-API architecture](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md)
 records the stateless-VA to stateful-VideoToolbox bitstream boundary that the
 codec work must handle. Filtered counters are in the existing
 [Bilibili record](mac-bilibili-BV1FRHV68EUX.json); profiles, signed media URLs,
 account data and raw traces remain local.
+
+
+## HEVC and AV1 hardware decode (2026-11-12)
+
+Runtime `d242fa8`, the paired original-bitstream FFmpeg 7.1.1 overlay and shared VideoToolbox
+backend now decode HEVC Main and AV1 Profile 0, restricted to 8-bit 4:2:0 NV12.
+The launcher accepts `--video-ffmpeg INSTALL_PREFIX` with `--video-driver` and
+verifies the protocol, source-patch and installed-library hashes. Distribution
+libraries and browser codec preferences are preserved. The dedicated paired
+launch exposes the profiles for Gecko's VA capability probe; ordinary VA clients
+keep the existing H.264 interface unless they explicitly negotiate this protocol.
+See the [shared VA-API design](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vaapi.md#original-bitstream-hevc--av1-adapter-2026-11-12)
+for the pinned build recipe, ownership and compatibility boundary.
+
+Actual hardware decode is required and verified through the VideoToolbox session
+property, rather than inferred from a VA surface. Original HEVC parameter sets
+and AV1 sequence/frame/tile OBUs are retained. Ordinary AV1 show-existing frames
+reuse the retained surface, avoiding redundant native submissions and exports;
+KEY-reference display also maintains native reference state. No coordinator,
+service thread or decoded CPU-picture copy is added to Firefox playback.
+
+| Visible local Firefox interval | Accepted fps | Dropped / total | Callback gaps >100 ms |
+| --- | ---: | ---: | ---: |
+| AV1 1080p30 + AAC, 20 s | 29.98 | 0 / 600 | 0 |
+| HEVC 1080p60, 15 s, repeated 4 s clip | 59.14 | 13 / 901 | 0 |
+| Requested Bilibili AV1 1080p30, seek 10 s, 20 s | 24.07 | 120 / 603 | 42 |
+
+Both codecs report actual RDD hardware acceleration. Local AV1 callback P95 is
+41.58 ms, HEVC 41.28 ms; notification rate remains about 24.5 Hz and does not
+measure physical 60-Hz scanout. Repeated HEVC loops include seeks. The real page
+is buffered, focused and visible with no seek/wait event during its interval;
+callback P95 is 125 ms. Initial hardware trials were worse, at 9.90–10.44 fps.
+The reference-reuse fix and fresh process recover about 24 fps, but restart,
+focus, cache and ordering effects are not isolated. The previous 20.99 fps
+software interval was unfocused and is a historical reference, not a matched
+causal control. Complex-site composition/execution remains a performance limit.
+
+Independent completed-frame capacity checks run with the build VM and browser
+stopped. Three-run medians on the synthetic repeated-GOP 1200-frame clips:
+
+| Codec | Native FFmpeg 8.0 / VT sync | Guest FFmpeg 7.1.1 / VT sync, 1 CPU | Guest export, 1 CPU | Guest export, 12 CPUs |
+| --- | ---: | ---: | ---: | ---: |
+| HEVC 1080p30 | 735 fps | 2555 fps | 2546 fps | 2538 fps |
+| AV1 1080p30 | 720 fps | 1945 fps | 2007 fps | 1995 fps |
+
+Both sides verify actual hardware; different FFmpeg releases/frontends and
+submission scheduling make these capacity controls, not a normalized comparison
+of backend efficiency. Explicit CPU readback is slower: short-clip guest checks
+reach about 148–175 fps versus native 422–649 fps. Browser playback retains native
+planes and does not use that readback path.
+
+Exact frame hashes match independent stock software decode for HEVC 1080p30
+(60 frames), HEVC 1080p60 (240), AV1 1080p30 with hidden/reference reuse (240),
+and AV1 720p30 with 2×2 tiles (60). Invalid configurations, corrupt packets,
+callbacks and teardown pass three native lifecycle tests. H.264 multi-slice
+fork/SCM_RIGHTS/EGL GPU-pixel regression passes; an older constant-H.264 fixture
+fails equally on the published baseline and candidate. All 321 Linux units pass
+(one existing ignored case); affected strict lints and ARM64 iPad FFI compilation
+pass. Existing unchanged CPU/HVF/Vulkan acceptance is reused. The musl ioctl
+request normalization also fixes signed 32-bit DRM discovery commands without
+adding a new execution path.
+
+The filtered evidence is under `hardware_codecs_20261112` in the existing
+[Bilibili record](mac-bilibili-BV1FRHV68EUX.json). Raw browser/profile data and
+media URLs remain local. Main10/P010, arbitrary stateless VA clients, encoding,
+physical A/V sync and iPad hardware are outside this acceptance. Encoding needs
+an input-surface/output-packet and rate-control interface and follows separately.
+Only Mac Dev is updated; stable and installed iPad apps remain unchanged.

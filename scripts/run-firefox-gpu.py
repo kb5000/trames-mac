@@ -27,11 +27,13 @@ def main():
     parser.add_argument('--graphics-dir', type=Path, required=True, help='Fixed Mesa libEGL.so.1 and libgallium-25.1.9.so')
     parser.add_argument('--icd', type=Path, required=True, help='Linux libtrames_vulkan_icd.so')
     parser.add_argument('--loader', type=Path, required=True, help='Original Linux libvulkan.so.1')
-    parser.add_argument('--video-driver', type=Path, help='Enable the paired VideoToolbox VA-API driver (H.264)')
+    parser.add_argument('--video-driver', type=Path, help='Enable the paired VideoToolbox VA-API driver')
+    parser.add_argument('--video-ffmpeg', type=Path, help='Verified original-bitstream FFmpeg install directory; enables HEVC/AV1 hardware decoding')
     parser.add_argument('--video-policy',choices=['native','browser'],default='native',help='native seeds VA-API and keeps the verified hardware path during slow startup; existing preferences win')
     parser.add_argument('--audio-plugin', type=Path, help='Native ALSA PCM plugin; enables audio output')
     parser.add_argument('--audio-input', action='store_true', help='Also allow microphone capture through the audio plugin')
     parser.add_argument('--profile', default='/root/firefox-native-gpu')
+    parser.add_argument('--marionette-port', type=int, help='Enable localhost automation/system-access testing for this separate profile')
     parser.add_argument('--host-profile', type=Path, help='Dedicated Linux Firefox profile directory on the host; mounted at --profile')
     parser.add_argument('--cpus', type=int, default=os.cpu_count() or 1)
     parser.add_argument('--timeout', type=int, default=86400)
@@ -40,6 +42,10 @@ def main():
     args = parser.parse_args()
     if args.cpus < 1 or args.timeout < 1 or not args.profile.startswith('/'):
         parser.error('positive CPU count/timeout and absolute guest profile path required')
+    if args.marionette_port is not None and not 0 < args.marionette_port < 65536:
+        parser.error('--marionette-port must be between 1 and 65535')
+    if args.video_ffmpeg and not args.video_driver:
+        parser.error('--video-ffmpeg requires --video-driver')
     if args.audio_input and not args.audio_plugin:
         parser.error('--audio-input requires --audio-plugin')
     if not args.storage.is_dir():
@@ -49,6 +55,25 @@ def main():
              'libtrames_vulkan_icd.so': args.icd, 'libvulkan.so.1': args.loader}
     if args.video_driver:
         files['trames_drv_video.so'] = args.video_driver
+    if args.video_ffmpeg:
+        overlay = args.video_ffmpeg.resolve()
+        manifest = json.loads((overlay / 'manifest.json').read_text())
+        patch = root / 'runtime/patches/ffmpeg/0001-vaapi-original-bitstream-v1.patch'
+        if (manifest.get('bitstream_protocol') != 1 or manifest.get('libavcodec_major') != 61
+                or manifest.get('patch_sha256') != hashlib.sha256(patch.read_bytes()).hexdigest()):
+            parser.error('--video-ffmpeg does not match this runtime bitstream protocol/patch')
+        for name, expected in manifest['libraries'].items():
+            if (Path(name).name != name or not re.fullmatch(r'libav[a-z]+\.so\.[0-9.]+|libsw[a-z]+\.so\.[0-9.]+', name)):
+                parser.error('invalid FFmpeg library manifest name')
+            path = overlay / 'lib' / name
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+                parser.error('FFmpeg library hash mismatch: ' + name)
+            files[name] = path
+        for alias in sorted((overlay / 'lib').glob('*.so.*')):
+            if alias.is_symlink() and alias.resolve().parent == overlay / 'lib' and alias.resolve().name in manifest['libraries']:
+                files[alias.name] = alias
+        if not {'libavcodec.so.61', 'libavutil.so.59'} <= files.keys():
+            parser.error('FFmpeg overlay must contain libavcodec 61 and libavutil 59')
     if args.audio_plugin:
         files['libasound_module_pcm_trames.so'] = args.audio_plugin
     digest = hashlib.sha256()
@@ -84,6 +109,12 @@ def main():
         if args.video_driver:
             command += ['--video']
         setup = ['mkdir -p ' + quote(guest) + ' ' + quote(args.profile)]
+        if args.marionette_port:
+            preferences = ''.join('user_pref(' + json.dumps(k) + ', ' + json.dumps(v) + ');\n'
+                                  for k, v in {'marionette.port': args.marionette_port,
+                                               'remote.prefs.recommended': False,
+                                               'focusmanager.testmode': False}.items())
+            setup.append('printf %s ' + quote(preferences) + ' >>' + quote(args.profile + '/user.js'))
         for name, path in files.items():
             incoming = transfer + '/' + name
             command += ['--exec-file', incoming + '=' + str(path.resolve())]
@@ -95,6 +126,8 @@ def main():
             paths=[quote(args.profile+'/'+file) for file in ('user.js','prefs.js')]
             line=quote('user_pref(\"media.cubeb.backend\", \"alsa\");\n')
             setup.append('if ! grep -Eq '+pattern+' '+paths[0]+' 2>/dev/null && ! grep -Eq '+pattern+' '+paths[1]+' 2>/dev/null; then printf %s '+line+' >>'+paths[0]+'; fi')
+        if args.video_ffmpeg:
+            setup.append('export TRAMES_VIDEO_BITSTREAM_V1=1')
         if args.video_driver:
             setup.append('export LIBVA_DRIVER_NAME=trames LIBVA_DRIVERS_PATH=' + quote(guest) +
                          ' MOZ_DRM_DEVICE=/dev/dri/renderD128')
@@ -126,7 +159,8 @@ def main():
             # while silently sending Firefox to its software decoder.
             setup += ['printf "%s\\n" "$probe" | grep -q DRM_RENDERDEVICE',
                       'printf "%s\\n" "$probe" | grep -q /dev/dri/renderD128']
-        setup += ['exec firefox --no-remote --profile ' + quote(args.profile) + ' ' + quote(args.url)]
+        automation = ' --marionette --remote-allow-system-access' if args.marionette_port else ''
+        setup += ['exec firefox --no-remote' + automation + ' --profile ' + quote(args.profile) + ' ' + quote(args.url)]
         return subprocess.run(command + ['/bin/sh', '-ec', '; '.join(setup)]).returncode
 
 
