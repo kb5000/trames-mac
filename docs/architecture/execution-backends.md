@@ -2098,3 +2098,64 @@ proof that every historical failure had the same sole cause. All attempts and
 Both Mac Dev and the local stable app are signed and updated to this runtime.
 The stable Debian, Docker and default environments remain stopped; they were not
 started to verify installation. Installed iPad apps are unchanged.
+
+
+## Geekbench Vulkan GPU completion (2026-11-13)
+
+The original Geekbench 6.7.1 Linux/AArch64 Vulkan benchmark now completes on
+installed Mac Dev 1.5.4, runtime `b73f42b`. The isolated Alpine/glibc fixture uses
+an unmodified Ubuntu Vulkan loader, the current wire-20 ICD built against dynamic
+glibc, and `LC_ALL=C LANG=C`. The device is Apple M6 through the embedded original
+MoltenVK/Metal path. Geekbench binaries and workloads are unchanged.
+
+The first attempt failed during Background Blur: a diagnostic captured a single
+`VkSubmitInfo` with 165 command buffers, rejected by the guest's fixed 64-entry
+packing arrays. The host also imposed 64-record/per-array/aggregate checks.
+Legacy queue submission now shares Sync2's existing stack/spill arena and owned
+size-checked host readers. Small calls stay on the stack; large arrays follow
+the application's counts. Original submit boundaries, native ordering and one
+native queue submission are preserved. No coordinator/service thread, global
+lock, polling path or workload/submission splitting is added.
+
+All 78 native Vulkan regressions pass, none ignored. The expanded identical
+native/guest output oracle checks 165 command buffers, 165 submission boundaries,
+and 65 binary/nonzero timeline semaphore values. It passes directly on native
+MoltenVK and under glibc/musl guests at 1 and 12 CPUs. Strict Vulkan/Mac lints,
+22 Mac tests, ARM64 iPad FFI and formatting pass. The canonical musl guest ICD
+is rebuilt and source-manifest-verified for future packaging. Unaffected CPU,
+Linux, networking and execution-lifecycle checks are reused.
+
+| Geekbench 6.7.1 GPU | API | Score | Full CLI wall time |
+| --- | --- | ---: | ---: |
+| [Fixed Dev](https://browser.geekbench.com/v6/compute/6971838) | Vulkan | 5,876 | 355.30 s |
+| [Native host](https://browser.geekbench.com/v6/compute/6971818) | Metal | 94,256 | 65.06 s |
+
+| Workload | Dev Vulkan | Native Metal | Vulkan / Metal |
+| --- | ---: | ---: | ---: |
+| Background Blur | 2,478 | 45,644 | 5.4% |
+| Face Detection | 2,208 | 71,119 | 3.1% |
+| Horizon Detection | 1,213 | 83,974 | 1.4% |
+| Edge Detection | 1,244 | 86,193 | 1.4% |
+| Gaussian Blur | 1,779 | 138,953 | 1.3% |
+| Feature Matching | 3,842 | 31,917 | 12.0% |
+| Stereo Matching | 125,954 | 291,884 | 43.2% |
+| Particle Physics | 200,048 | 204,825 | 97.7% |
+
+This is one sample per API, including Linux Preview/macOS binary, library and
+Vulkan/MoltenVK versus Metal differences; it is not pure runtime overhead or a
+same-API native Vulkan comparison. The functional blocker is fixed, but image
+workload performance remains poor. The full Dev run records 187.7 GB of coherent
+upload scanning, 4.05 GB of download scanning, 1,810 pipeline compiles and 195.4 s
+of aggregate GPU waits. These counters do not provide exclusive time attribution.
+No profiler or window capture runs during scoring; performance analysis must
+separate these costs before assigning a cause.
+
+Both runs exit zero and upload valid public results. Thermal state is nominal
+and low-power mode off before/after. Compiler VM, stable environments, CI and
+other benchmarks are stopped during measurement. Installed Dev is updated;
+stable remains on `0416b41` with Debian, Docker and default environments stopped.
+Installed iPad apps are unchanged. The [filtered evidence](../validation/mac-geekbench-vulkan-20261113.json)
+retains the original rejection, error-only diagnostic, expanded correctness
+oracles, exact source/binary hashes, all eight scores and execution counters.
+Raw artifacts stay ignored under `target/geekbench-gpu-20261113`; upload claim
+links are not published.

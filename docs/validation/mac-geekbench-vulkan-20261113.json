@@ -1,0 +1,588 @@
+{
+  "date": "2026-11-13",
+  "timezone": "Asia/Hong_Kong",
+  "status": "completed_after_batch_fix",
+  "initial_attempt": {
+    "date": "2026-11-13",
+    "timezone": "Asia/Hong_Kong",
+    "runtime_revision": "0416b41853c8c5af02130155416d8fa0683e75f1",
+    "product": "installed Mac Dev 1.5.4",
+    "runtime_and_product_source_changed": false,
+    "official_linux_arm_vulkan_support": "https://www.geekbench.com/blog/2026/02/geekbench-66/",
+    "benchmark_version": "6.7.1",
+    "guest_original_binary_sha256": "2ab486aa545c2a62ad3debf53d6412d2eba0a189d6daf6dec213af2d89b247e5",
+    "inputs": {
+      "source_revision": "0416b41853c8c5af02130155416d8fa0683e75f1",
+      "guest_icd_source_files": {
+        "accelerator/vulkan/allocator.inc": "9fcd089fa8864a2f357d03293037ac89679cc0761bda40bc5c2fa15d79fd0f95",
+        "accelerator/vulkan/calls.S": "6b5a0aa9a39039b059d115b42330646e8eb30312ea9dd75c40a838887b3a08d8",
+        "accelerator/vulkan/compute-schema.inc": "531c225c138f5028e470a57a7a256cef46dda733dfd1b49b12747c88b61c940e",
+        "accelerator/vulkan/compute.inc": "d3550b700d293a8b70c4c2933183ca23646708cfd551e0c572a585eb2c33dc01",
+        "accelerator/vulkan/copy2.inc": "7a4883b0b5f2e147ac2a13ccd6b9dda23a3afd1949451d992ff5112d26033056",
+        "accelerator/vulkan/core12.inc": "81b4311c058d08ce3babfc3e9b4181d469fa60b2a139a27c201a2844266e5759",
+        "accelerator/vulkan/descriptor-batch.inc": "223179e32438db955db464d1a0fcf5e29d420796380da6fb2caa61134d2bbeea",
+        "accelerator/vulkan/dynamic.inc": "a2ea878b7c44610af5518829c27e0f5cfa579a79be2cf3768ea1061f988f6eb4",
+        "accelerator/vulkan/entrypoints.inc": "fe36ea52846dcdcf2ff03ce69b4f382c573a76cea2fb54dc153b93397febf1d9",
+        "accelerator/vulkan/extended.inc": "9478e3c68dc93444e227301d5862aae251a5c9ab6030733eb0c44ef77275b51b",
+        "accelerator/vulkan/external.inc": "f6cbdd747d05ffb4d8a44862aea6b34e9635cc99da51d8ec6e5f87601c7f4228",
+        "accelerator/vulkan/graphics.inc": "0cd45e505c7f935582069af596c5d94d199b96f8cba4c7c34a494405da78895b",
+        "accelerator/vulkan/host-copy.inc": "8bfd9c4fcbc9dee46c03b3059a1694d0b037635d25aa8000d1e2fcb3243480d6",
+        "accelerator/vulkan/icd.c": "268800e138694c934a5d3f73358605d501873c41379ae3af7e0007cd29bdc43d",
+        "accelerator/vulkan/queries.inc": "cde177e9eb4f9b1982e09aad39e2d264eb4fe0f85818bfc18ee5a32f4e9dd4aa",
+        "accelerator/vulkan/rendergraph.inc": "5b90ee6b4508fe3f9a8d12b68f23f05c518a8f4a0891717ce942c809afe4c735",
+        "accelerator/vulkan/sync.inc": "f1714fe95898d9426b601a5f756cab00bda166bca7226f66f85b37d68d3663c6",
+        "accelerator/vulkan/sync2.inc": "0a7eca00fdc05c0673b841486a9865b06bbd60d94ed23e8702859fbe52b1f708",
+        "accelerator/vulkan/templates.inc": "4cd6ce0bd6dd326ebfb383fe9bbee6c22a381234aa9279440f5fb4f4d802e337",
+        "accelerator/vulkan/wayland.inc": "f875c0654e3ce6d1c376e836a4338422ac7aed1f06926c45531d05451099ebf9",
+        "accelerator/vulkan/wsi.inc": "ca3fb3264a090ef7a9b14add6182344d9d71104556683d1e4f4fe3b3417f275e",
+        "accelerator/vulkan/zink.inc": "21bb0e66c12b5da3e5498f569f96e56c8b106637831babc2755bb7cf16f19931"
+      },
+      "files": {
+        "target/geekbench-gpu-20261113/libs/libtrames_vulkan_icd.so": "52ef6fead7733648f92de042d7e83913f5f2aab5adbc51bd50710c68f515bbb8",
+        "target/geekbench-gpu-20261113/libs/libvulkan.so.1": "1384294a60185c780fb324dfa87fc3367bdd6e4f71a8307a52c329ca2bcafe0a",
+        "target/geekbench-gpu-20261113/libs/trames.json": "e710776069e838e1398e1dc667ddbfea9dbe1db1992a6ab871dd8fc9ee5b63ab"
+      }
+    },
+    "setup": {
+      "fixture": "reused isolated Alpine/glibc benchmark store; no stable environment starts",
+      "guest_loader": "cached unmodified Ubuntu glibc libvulkan.so.1",
+      "guest_icd": "current unchanged source built against original dynamic glibc; same wire revision 20",
+      "locale": "LC_ALL=C LANG=C for this command; no environment locale configuration changed",
+      "enumerated_device": "Apple M6, Vulkan platform 0/device 0",
+      "path": "original Linux Geekbench -> distro Vulkan loader -> Trames ICD -> embedded MoltenVK 1.4.2 -> Apple M6 Metal",
+      "source_and_measurement_isolation": "Compiler VM stopped before either GPU measurement; no concurrent build, CI, second benchmark, sampler or window capture. Diagnostic build/replay follows native measurement."
+    },
+    "dev_vulkan": {
+      "run": {
+        "date": "2026-11-13",
+        "geekbench_version": "6.7.1",
+        "variant": "installed Mac Dev Vulkan GPU",
+        "runner_version": "Trames Dev 1.5.4 (dev) runtime 0416b41853c8c5af02130155416d8fa0683e75f1",
+        "runner_sha256": "640a0975ecc02ba0785b6f9ca9104363298371e1c315a54a4d65d742fe60042d",
+        "runtime_code_commit": "0416b41853c8c5af02130155416d8fa0683e75f1",
+        "cpus": 12,
+        "memory_mib": "auto",
+        "metrics": true,
+        "hvf_diagnostics": false,
+        "sampler": false,
+        "upload_authorized": true,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "host_logical_cpus": 12,
+        "host_memory_bytes": 25769803776,
+        "stable_environments_stopped": true,
+        "command": [
+          "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+          "--storage",
+          "/Users/main/dev/trames/target/geekbench-20261028/store",
+          "--vulkan",
+          "--network",
+          "outbound",
+          "--cpus",
+          "12",
+          "--memory-mib",
+          "auto",
+          "--timeout",
+          "3600",
+          "--no-pty",
+          "--no-windows",
+          "--metrics",
+          "/bin/sh",
+          "-c",
+          "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+        ],
+        "start_unix": 1794505575.918043,
+        "exit": 255,
+        "public_urls": [],
+        "seconds": 15.018244708,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        }
+      },
+      "score": null,
+      "failure": {
+        "workload": "Background Blur",
+        "api": "vkQueueSubmit",
+        "result": -8,
+        "result_name": "VK_ERROR_FEATURE_NOT_PRESENT",
+        "stage": "guest ICD rejects the submission before forwarding this call to the runtime"
+      },
+      "session_metrics": {
+        "syscalls": 2322,
+        "context_switches": 2848,
+        "hardware_mapped_bytes": 0,
+        "guest_resident_bytes": 3571712,
+        "vm_checkpoint_groups": 994,
+        "vm_checkpoint_spaces": 994,
+        "backing_domain_checks": 47689,
+        "backing_page_checks": 1951557,
+        "parallel_memory_us": 158986,
+        "instruction_count": null
+      },
+      "execution_paths": {
+        "cohort_rounds": 1,
+        "cohort_stop_us": 14,
+        "service_caller_wait_us": 0,
+        "service_requests": 0,
+        "serviced_syscalls": 0,
+        "syscalls": 2322,
+        "vm_local_syscalls": 1254,
+        "worker_direct_syscalls": 470,
+        "worker_fd_syscalls": 54,
+        "worker_file_syscalls": 469,
+        "worker_futex_waits": 1,
+        "worker_futex_wakes": 10,
+        "worker_gpu_calls": 70002,
+        "worker_gpu_waits": 1787,
+        "worker_poll_syscalls": 0,
+        "worker_socket_syscalls": 0,
+        "worker_syscalls": 2322,
+        "worker_task_resumes": 1806,
+        "worker_uring_syscalls": 0
+      }
+    },
+    "diagnostic": {
+      "exit": 255,
+      "seconds": 12.569810958,
+      "observation": "trames-gpu-diagnostic: submit=0/1 commands=0+165 waits=0+0 signals=0+0 exceeds 64",
+      "code_scope": "isolated copy adds error-only logging to existing submit count guards; not a scored performance sample; installed app unchanged",
+      "icd_sha256": "47ea4df91d795c0fdc6556a7d0de145ef9af1255cb9a8bb41f29cf8671f97d67",
+      "upstream_submission_count": 1,
+      "command_buffer_count": 165,
+      "wait_semaphore_count": 0,
+      "signal_semaphore_count": 0
+    },
+    "blocker": {
+      "guest_source": "accelerator/vulkan/icd.c:vkQueueSubmit",
+      "guest_limit": "64 command buffers/waits/signals across a call; 64 VkSubmitInfo records",
+      "host_source": "runtime/crates/trames-vulkan/src/backend.rs:Backend::submit",
+      "host_limit": "corresponding 64 record/per-record/aggregate checks",
+      "required_scope": "Replace fixed packing/receiver limits with size-proportional owned storage while retaining original submission boundaries and driver ordering. Do not alter the Geekbench workload or split a Vulkan submission into semantically different calls."
+    },
+    "native_metal": {
+      "run": {
+        "date": "2026-11-13",
+        "geekbench_version": "6.7.1",
+        "variant": "native macOS Metal GPU",
+        "runner_version": "Geekbench 6.7.1 : https://www.geekbench.com/",
+        "runner_sha256": "f82d24a42623019d4c1b349636278409b271e4384ffbb1293d6072dd90a1895c",
+        "runtime_code_commit": null,
+        "cpus": "native",
+        "memory_mib": "native",
+        "metrics": false,
+        "hvf_diagnostics": false,
+        "sampler": false,
+        "upload_authorized": true,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "host_logical_cpus": 12,
+        "host_memory_bytes": 25769803776,
+        "stable_environments_stopped": true,
+        "command": [
+          "/Users/main/dev/trames/target/geekbench-20261028/mac/Geekbench 6.app/Contents/Resources/geekbench6",
+          "--gpu",
+          "Metal"
+        ],
+        "start_unix": 1794505619.374773,
+        "exit": 0,
+        "public_urls": [
+          "https://browser.geekbench.com/v6/compute/6971818"
+        ],
+        "seconds": 65.060146667,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        }
+      },
+      "scores": {
+        "source": "https://browser.geekbench.com/v6/compute/6971818",
+        "api": "Metal",
+        "score": 94256,
+        "read_method": "Public result verified in the in-app browser after both measurement processes ended.",
+        "workloads": [
+          {
+            "name": "Background Blur",
+            "score": 45644,
+            "throughput": "188.9 images/sec"
+          },
+          {
+            "name": "Face Detection",
+            "score": 71119,
+            "throughput": "232.2 images/sec"
+          },
+          {
+            "name": "Horizon Detection",
+            "score": 83974,
+            "throughput": "2.61 Gpixels/sec"
+          },
+          {
+            "name": "Edge Detection",
+            "score": 86193,
+            "throughput": "3.20 Gpixels/sec"
+          },
+          {
+            "name": "Gaussian Blur",
+            "score": 138953,
+            "throughput": "6.05 Gpixels/sec"
+          },
+          {
+            "name": "Feature Matching",
+            "score": 31917,
+            "throughput": "1.26 Gpixels/sec"
+          },
+          {
+            "name": "Stereo Matching",
+            "score": 291884,
+            "throughput": "277.5 Gpixels/sec"
+          },
+          {
+            "name": "Particle Physics",
+            "score": 204825,
+            "throughput": "9014.5 FPS"
+          }
+        ]
+      }
+    },
+    "comparison": {
+      "dev_over_native": null,
+      "interpretation": "No valid Dev total or component score: the Vulkan run stopped during its first workload. Native Metal is an API-labelled host reference, not a same-API Vulkan control."
+    },
+    "stable_environment_states": {
+      "debian": "stopped",
+      "default": "stopped",
+      "docker": "stopped"
+    },
+    "installed_dev_runner_sha256": "640a0975ecc02ba0785b6f9ca9104363298371e1c315a54a4d65d742fe60042d",
+    "installed_stable_runner_sha256": "70fd9c8eb955d61c561127a37bdc4511847659c449f838665b996d2d489551c9",
+    "installed_apps_changed_this_task": false,
+    "ipad_unchanged": true,
+    "artifacts": "target/geekbench-gpu-20261113 (ignored; raw upload claim links stay private)"
+  },
+  "fix": {
+    "runtime_revision": "b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+    "source": {
+      "runtime_revision": "b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+      "source_sha256": {
+        "runtime/crates/trames-vulkan/src/backend.rs": "b599122a76337adb99efe888b8ac8e58cfc00c8356f3f01d381a2f596cd945c6",
+        "accelerator/vulkan/allocator.inc": "9fcd089fa8864a2f357d03293037ac89679cc0761bda40bc5c2fa15d79fd0f95",
+        "accelerator/vulkan/calls.S": "6b5a0aa9a39039b059d115b42330646e8eb30312ea9dd75c40a838887b3a08d8",
+        "accelerator/vulkan/compute-schema.inc": "531c225c138f5028e470a57a7a256cef46dda733dfd1b49b12747c88b61c940e",
+        "accelerator/vulkan/compute.inc": "d3550b700d293a8b70c4c2933183ca23646708cfd551e0c572a585eb2c33dc01",
+        "accelerator/vulkan/copy2.inc": "7a4883b0b5f2e147ac2a13ccd6b9dda23a3afd1949451d992ff5112d26033056",
+        "accelerator/vulkan/core12.inc": "81b4311c058d08ce3babfc3e9b4181d469fa60b2a139a27c201a2844266e5759",
+        "accelerator/vulkan/descriptor-batch.inc": "223179e32438db955db464d1a0fcf5e29d420796380da6fb2caa61134d2bbeea",
+        "accelerator/vulkan/dynamic.inc": "a2ea878b7c44610af5518829c27e0f5cfa579a79be2cf3768ea1061f988f6eb4",
+        "accelerator/vulkan/entrypoints.inc": "9a5896696389e6190bebc79d36c7fb0eb3728b73544d1c97712fa1b1f16ee861",
+        "accelerator/vulkan/extended.inc": "9478e3c68dc93444e227301d5862aae251a5c9ab6030733eb0c44ef77275b51b",
+        "accelerator/vulkan/external.inc": "f6cbdd747d05ffb4d8a44862aea6b34e9635cc99da51d8ec6e5f87601c7f4228",
+        "accelerator/vulkan/graphics.inc": "0cd45e505c7f935582069af596c5d94d199b96f8cba4c7c34a494405da78895b",
+        "accelerator/vulkan/host-copy.inc": "8bfd9c4fcbc9dee46c03b3059a1694d0b037635d25aa8000d1e2fcb3243480d6",
+        "accelerator/vulkan/icd.c": "333d7c3b22e980cccf39414d1f8b165f46afc2df2d2bb8477fec51d024acecc9",
+        "accelerator/vulkan/queries.inc": "cde177e9eb4f9b1982e09aad39e2d264eb4fe0f85818bfc18ee5a32f4e9dd4aa",
+        "accelerator/vulkan/rendergraph.inc": "5b90ee6b4508fe3f9a8d12b68f23f05c518a8f4a0891717ce942c809afe4c735",
+        "accelerator/vulkan/sync.inc": "f1714fe95898d9426b601a5f756cab00bda166bca7226f66f85b37d68d3663c6",
+        "accelerator/vulkan/sync2.inc": "7d8a2fa9ed7d06a5a73c5f34a9c8000a2820700bb8b33db9bda87b519182170d",
+        "accelerator/vulkan/templates.inc": "4cd6ce0bd6dd326ebfb383fe9bbee6c22a381234aa9279440f5fb4f4d802e337",
+        "accelerator/vulkan/wayland.inc": "f875c0654e3ce6d1c376e836a4338422ac7aed1f06926c45531d05451099ebf9",
+        "accelerator/vulkan/wsi.inc": "ca3fb3264a090ef7a9b14add6182344d9d71104556683d1e4f4fe3b3417f275e",
+        "accelerator/vulkan/zink.inc": "21bb0e66c12b5da3e5498f569f96e56c8b106637831babc2755bb7cf16f19931",
+        "tests/fixtures/vulkan-sync2.c": "a86b8e14397cb6129cd821aa7058d8a4bcd6a4f9a11ac4478ebd115ae48d0de6"
+      }
+    },
+    "mechanism": [
+      "Legacy QueueSubmit shares the existing Sync2 call-owned stack/spill arena. Records, commands and binary/timeline semaphore arrays follow the original counts; there is no fixed 64-entry packing quota. Common small calls stay on the stack.",
+      "The host legacy decoder uses existing size-checked owned range readers, as Sync2 already does. Its fixed 64-record/per-array/aggregate checks are removed. Original VkSubmitInfo boundaries, one native queue submission and semaphore ordering are retained.",
+      "No worker/coordinator/service thread, global lock, polling path, workload alteration or submission splitting is introduced. Wire revision and operations remain compatible."
+    ],
+    "validation": {
+      "native_vulkan_cases": 78,
+      "native_vulkan_ignored": 0,
+      "strict_vulkan_and_mac_clippy": true,
+      "mac_product_tests": 22,
+      "mac_product_existing_ignored": 26,
+      "ipad_arm64_ffi": true,
+      "runtime_formatting": true,
+      "oracle_native_stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1652222806717250,1652222806870625 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65",
+      "guest_oracles": [
+        {
+          "libc": "glibc",
+          "cpus": 1,
+          "exit": 0,
+          "stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1652265122037583,1652265122360708 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65\n"
+        },
+        {
+          "libc": "glibc",
+          "cpus": 12,
+          "exit": 0,
+          "stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1652265203664833,1652265203802958 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65\n"
+        },
+        {
+          "libc": "musl",
+          "cpus": 1,
+          "exit": 0,
+          "stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1652265529514916,1652265529636041 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65\n"
+        },
+        {
+          "libc": "musl",
+          "cpus": 12,
+          "exit": 0,
+          "stdout": "sync2-ok: storage64=64 pixels=64 events=2 timestamps=1652265853920500,1652265854057583 submit-boundaries=2 future-wait=ok arena-spill=65 legacy-none=ok host-chain=12 legacy-commands=165 legacy-boundaries=165 binary-and-timeline-semaphores=65\n"
+        }
+      ],
+      "oracle_scope": "Actual GPU output for 165 command buffers in one submit; 165 VkSubmitInfo boundaries; 65 binary and 65 nonzero timeline values across dependent submit records, plus the existing full Sync2 output oracle.",
+      "canonical_musl_guest_source_manifest_verified": true,
+      "unaffected_cpu_linux_network_coordinator_checks_reused": true
+    },
+    "artifacts_sha256": {
+      "target/local-ci/io/geekbench-gpu-20261113/fixed-glibc-icd.so": "410430a631f64d0770f7d8c708f2ee76a87bb67924d9daff25e9b59cd870240d",
+      "target/local-ci/io/geekbench-gpu-20261113/fixed-musl-icd.so": "08b63af2c35b0c1ea1b6c8ca736c8e8d93a37e313fcd68c46c5b5de9f2b29835",
+      "target/local-ci/io/geekbench-gpu-20261113/vulkan-sync2-glibc": "9e5d7093bb89cd9d3f01b159b0f267ba149e0613e23c55f8be459596d190de52",
+      "target/local-ci/io/geekbench-gpu-20261113/vulkan-sync2-musl": "83e31fdd0c65807910666612cbf218ab8d571c1f645e4f56a884c49069cfd706"
+    },
+    "benchmark": {
+      "run": {
+        "date": "2026-11-13",
+        "geekbench_version": "6.7.1",
+        "variant": "installed Mac Dev Vulkan GPU",
+        "runner_version": "Trames Dev 1.5.4 (dev) runtime b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+        "runner_sha256": "533e2822dd821795b8858dd7deb9d3cf97719eeff9f9d5b6c1eb6ec030e98aef",
+        "runtime_code_commit": "b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+        "cpus": 12,
+        "memory_mib": "auto",
+        "metrics": true,
+        "hvf_diagnostics": false,
+        "sampler": false,
+        "upload_authorized": true,
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "host_logical_cpus": 12,
+        "host_memory_bytes": 25769803776,
+        "stable_environments_stopped": true,
+        "command": [
+          "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+          "--storage",
+          "/Users/main/dev/trames/target/geekbench-20261028/store",
+          "--vulkan",
+          "--network",
+          "outbound",
+          "--cpus",
+          "12",
+          "--memory-mib",
+          "auto",
+          "--timeout",
+          "3600",
+          "--no-pty",
+          "--no-windows",
+          "--metrics",
+          "/bin/sh",
+          "-c",
+          "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+        ],
+        "start_unix": 1794506347.1731682,
+        "exit": 0,
+        "public_urls": [
+          "https://browser.geekbench.com/v6/compute/6971838"
+        ],
+        "seconds": 355.296934792,
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        }
+      },
+      "scores": {
+        "source": "https://browser.geekbench.com/v6/compute/6971838",
+        "api": "Vulkan",
+        "score": 5876,
+        "read_method": "Public result verified in the in-app browser after measurement ended.",
+        "workloads": [
+          {
+            "name": "Background Blur",
+            "score": 2478,
+            "throughput": "10.3 images/sec"
+          },
+          {
+            "name": "Face Detection",
+            "score": 2208,
+            "throughput": "7.21 images/sec"
+          },
+          {
+            "name": "Horizon Detection",
+            "score": 1213,
+            "throughput": "37.8 Mpixels/sec"
+          },
+          {
+            "name": "Edge Detection",
+            "score": 1244,
+            "throughput": "46.1 Mpixels/sec"
+          },
+          {
+            "name": "Gaussian Blur",
+            "score": 1779,
+            "throughput": "77.5 Mpixels/sec"
+          },
+          {
+            "name": "Feature Matching",
+            "score": 3842,
+            "throughput": "151.5 Mpixels/sec"
+          },
+          {
+            "name": "Stereo Matching",
+            "score": 125954,
+            "throughput": "119.7 Gpixels/sec"
+          },
+          {
+            "name": "Particle Physics",
+            "score": 200048,
+            "throughput": "8804.3 FPS"
+          }
+        ]
+      },
+      "progress": [
+        "Started installed Mac Dev Geekbench; PID 80229",
+        "0.0 Vulkan GPU ",
+        "5.0 Vulkan GPU Running Background Blur",
+        "20.0 Vulkan GPU Running Face Detection",
+        "40.0 Vulkan GPU Running Horizon Detection",
+        "170.1 Vulkan GPU Running Edge Detection",
+        "275.2 Vulkan GPU Running Gaussian Blur",
+        "320.3 Vulkan GPU Running Feature Matching",
+        "340.3 Vulkan GPU Running Stereo Matching",
+        "345.3 Vulkan GPU Running Particle Physics",
+        "Finished exit 0 public results ['https://browser.geekbench.com/v6/compute/6971838']"
+      ],
+      "session_metrics": {
+        "syscalls": 7072,
+        "context_switches": 10102,
+        "hardware_mapped_bytes": 0,
+        "guest_resident_bytes": 3571712,
+        "vm_checkpoint_groups": 3194,
+        "vm_checkpoint_spaces": 3194,
+        "backing_domain_checks": 165289,
+        "backing_page_checks": 22975631,
+        "parallel_memory_us": 1849875,
+        "instruction_count": null
+      },
+      "execution_paths": {
+        "cohort_rounds": 1,
+        "cohort_stop_us": 17866,
+        "service_caller_wait_us": 0,
+        "service_requests": 0,
+        "serviced_syscalls": 0,
+        "syscalls": 7072,
+        "vm_local_syscalls": 4037,
+        "worker_direct_syscalls": 683,
+        "worker_fd_syscalls": 75,
+        "worker_file_syscalls": 633,
+        "worker_futex_waits": 9,
+        "worker_futex_wakes": 14,
+        "worker_gpu_calls": 256904,
+        "worker_gpu_waits": 6778,
+        "worker_poll_syscalls": 18,
+        "worker_socket_syscalls": 31,
+        "worker_syscalls": 7072,
+        "worker_task_resumes": 6852,
+        "worker_uring_syscalls": 0
+      },
+      "transfer_metric_lines": [
+        "trames mac native: calls=256904 gpu_compiles=1810 gpu_wait_us=195404564 upload_bytes=233590582 download_bytes=1107842880 direct_bytes=1107842880 buffered_bytes=233590582",
+        "trames mac shared GPU: maps=238 mapped_bytes=660504576",
+        "trames mac coherent: boundaries=9856 ranges=21936 upload_scanned_bytes=187727094400 download_scanned_bytes=4048805760"
+      ]
+    },
+    "comparison": {
+      "reference": "https://browser.geekbench.com/v6/compute/6971818",
+      "reference_api": "Metal",
+      "reference_score": 94256,
+      "vulkan_over_metal": 0.062340858937362076,
+      "workloads": [
+        {
+          "name": "Background Blur",
+          "score": 2478,
+          "throughput": "10.3 images/sec",
+          "native_metal_score": 45644,
+          "vulkan_over_metal": 0.05428972044518447
+        },
+        {
+          "name": "Face Detection",
+          "score": 2208,
+          "throughput": "7.21 images/sec",
+          "native_metal_score": 71119,
+          "vulkan_over_metal": 0.031046555772718965
+        },
+        {
+          "name": "Horizon Detection",
+          "score": 1213,
+          "throughput": "37.8 Mpixels/sec",
+          "native_metal_score": 83974,
+          "vulkan_over_metal": 0.014444947245576012
+        },
+        {
+          "name": "Edge Detection",
+          "score": 1244,
+          "throughput": "46.1 Mpixels/sec",
+          "native_metal_score": 86193,
+          "vulkan_over_metal": 0.014432726555520749
+        },
+        {
+          "name": "Gaussian Blur",
+          "score": 1779,
+          "throughput": "77.5 Mpixels/sec",
+          "native_metal_score": 138953,
+          "vulkan_over_metal": 0.012802890185890193
+        },
+        {
+          "name": "Feature Matching",
+          "score": 3842,
+          "throughput": "151.5 Mpixels/sec",
+          "native_metal_score": 31917,
+          "vulkan_over_metal": 0.12037472193501896
+        },
+        {
+          "name": "Stereo Matching",
+          "score": 125954,
+          "throughput": "119.7 Gpixels/sec",
+          "native_metal_score": 291884,
+          "vulkan_over_metal": 0.4315207411163339
+        },
+        {
+          "name": "Particle Physics",
+          "score": 200048,
+          "throughput": "8804.3 FPS",
+          "native_metal_score": 204825,
+          "vulkan_over_metal": 0.9766776516538509
+        }
+      ],
+      "interpretation": "Linux Preview/Vulkan-on-MoltenVK versus original macOS Metal; one sample per API. This includes API/backend/library/binary differences and is not a pure userspace runtime overhead measurement. No same-API native Geekbench Vulkan control is available in the cached macOS CLI."
+    },
+    "performance_observations": [
+      "All eight unchanged GPU workloads complete and upload. Particle Physics reaches about 97.7% of the Metal reference; image workload scores remain much lower.",
+      "The full run records 187727094400 coherent upload-scanned bytes, 4048805760 coherent download-scanned bytes, 1810 pipeline compiles and 195404564 aggregate GPU-wait microseconds. These are activity counters, not an exclusive wall-time attribution; no profiler runs during scoring.",
+      "The queue batch fix restores compatibility. It does not establish that image/GPU submission performance is close to native."
+    ],
+    "installed": {
+      "Trames": {
+        "version": "Trames 1.5.4 (stable) runtime 0416b41853c8c5af02130155416d8fa0683e75f1",
+        "runner_sha256": "70fd9c8eb955d61c561127a37bdc4511847659c449f838665b996d2d489551c9",
+        "signature_valid": true
+      },
+      "Trames Dev": {
+        "version": "Trames Dev 1.5.4 (dev) runtime b73f42b5db13398a8a88a5eed9680d9f6ac4bb49",
+        "runner_sha256": "533e2822dd821795b8858dd7deb9d3cf97719eeff9f9d5b6c1eb6ec030e98aef",
+        "signature_valid": true
+      }
+    },
+    "stable_environment_states": {
+      "debian": "stopped",
+      "default": "stopped",
+      "docker": "stopped"
+    },
+    "stable_app_and_installed_ipad_unchanged": true
+  }
+}
