@@ -2277,7 +2277,8 @@ the four supported EDS3 features (depth-clamp enable, polygon mode,
 sample-locations enable and line-rasterization mode), native host image copy,
 copy-commands2 and format-feature-flags2. Sample locations and line rasterization
 have their own original native dependencies. API 1.2 remains advertised;
-**synchronization2 is not exposed or implemented**. Depth-clip enable lacks its
+At wire revision 19, synchronization2 was not exposed or implemented; its
+implementation is recorded below. Depth-clip enable lacks its
 base extension; tessellation pipelines remain absent even though the original
 patch-control-point command is available.
 
@@ -2349,3 +2350,72 @@ Stable retains its exact previous SHA; installed iPad apps are unchanged.
 Existing source/build/store/VM caches are reused; the VM is stopped. About
 160.0 GiB remains free, above the 140 GiB floor
 and within this round's 8 GiB growth budget. Raw logs remain ignored locally.
+
+
+## Original synchronization2 and intermediate timeline readiness (2026-11-13)
+
+Shared runtime `0fd9a28` and paired guest wire 20 expose
+`VK_KHR_synchronization2` when the original driver supports it. All six core/KHR
+command pairs reach native synchronization2 directly, preserving 64-bit masks,
+each submit boundary, timeline values, device-only events, generic layouts and
+MemoryBarrier2 subpass overrides. API 1.2 remains advertised; this is not a full
+Vulkan 1.3 or conformance claim.
+
+Combined scoped original CTS acceptance reports **11,890 Pass,
+19,493 NotSupported and zero Fail, ResourceError, DeviceLost, Crash or
+Timeout** over 31,383 cases. It preserves all 15,542 previous baseline cases and
+adds 15,841 selected Sync2 cases from an 81,617-case inventory. Basic, smoke,
+NONE-stage, layout, timeline, internally synchronized queues, implicit and
+nonshared signal-order groups are included in full; operation pairs and
+cross-instance cases use the exact recorded selection. Sync2 contributes
+4,821 Pass / 11,020 NotSupported. Original executable,
+loader, data and QPA statuses are unchanged, with no manual overrides or waivers.
+The [filtered record](mac-vulkan-cts.json) keeps every result, prior baselines,
+selection rules and diagnostic failures, including the interrupted first pass.
+
+The first diagnostic exposed legacy NONE-stage compatibility, ignored
+pipeline/queue-family fields and 1D framebuffer views. These dependencies are
+fixed in their common ingress. It also exposed a scheduling deadlock: a host
+step waiting for an intermediate timeline value must wake before it can signal
+the GPU, while the final submission fence depends on that host signal. A
+cancelable notification on the original exported Metal shared event now wakes
+the existing scheduler at the requested value. It carries weak readiness only,
+without guest memory, an execution slot or backend borrows. Headless sessions
+also enable the internal Metal-object export needed for timeline scheduling.
+Callbacks use the existing system dispatch pool, with no new coordinator,
+resource-service thread or polling bus. The native driver/archive is unchanged.
+
+Submit2 shares the legacy resource/coherence ownership transaction. Narrow-stage
+timeline signals do not retire an entire command graph; native fence authority
+remains until full completion. Rejected batches do not commit binary semaphore
+state. All 48 original diagnostic failures pass as a set and in the complete
+selection. That complete run finished with four remaining failures: a legacy
+64-element host-wait limit rejected CTS waits on 100 semaphores. The limit is
+removed across guest, native polling and scheduler paths; the native regression
+also covers 100-element ready-any/all waits. All 11,021 affected wait/semaphore/
+fence cases are rerun together. The remaining 20,362 passing results are reused.
+The aggregate above is scoped acceptance across these runs, not a second complete
+31,383-case run; original counts, failures, build fingerprints and each result
+origin are retained. Raw reports and QPA files remain in the ignored target
+directory. The same C oracle verifies actual SSBO compute, image pixels,
+events, timestamps, future signals, arena spill and twelve GPU/host alternating
+steps, both directly on the original driver and with one/twelve guest CPUs.
+
+All 78 shared Vulkan tests pass, including fourteen native GPU cases and
+notification/cancellation without a submission fence. Strict Vulkan/graphics
+and Mac lints, 22 Mac tests, iPad ARM64 FFI compilation, paired artifact/source/
+recipe checks and execution/completion boundaries pass. Existing one/twelve-CPU
+Vulkan 1.2 and core shader output oracles pass. Firefox 151.0.3 reports WebRender
+with hardware/OpenGL compositing available; warmup and two 512-draw trials return
+`[64,128,191,255]`, no GL errors and no context loss. This checks rendering,
+without claiming webpage/video performance or proving Firefox selects Sync2.
+Unchanged CPU/Linux/network/HVF checks are reused. Full CTS/WSI and physical iPad
+GPU acceptance remain unrun.
+
+The signed Mac Dev 1.5.4 app is updated with the paired runtime. Its installed
+original CTS triangle reports successful rendering. The wire-20 guest ICD is
+built and tested in the isolated graphics store. Stable retains its exact prior
+runner SHA and installed iPad apps are unchanged. Existing CTS/build/store/VM
+caches are reused, the compiler VM is stopped, and 158.7 GiB remains free,
+above the 140 GiB floor and within this round's 6 GiB growth budget. Raw logs
+remain in the ignored target tree.
