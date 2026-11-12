@@ -1861,14 +1861,19 @@ service thread or decoded CPU-picture copy is added to Firefox playback.
 | --- | ---: | ---: | ---: |
 | AV1 1080p30 + AAC, 20 s | 29.98 | 0 / 600 | 0 |
 | HEVC 1080p60, 15 s, repeated 4 s clip | 59.14 | 13 / 901 | 0 |
-| Requested Bilibili AV1 1080p30, seek 10 s, 20 s | 24.07 | 120 / 603 | 42 |
+| Bilibili candidate AV1 1080p30, seek 10 s, 20 s | 24.07 | 120 / 603 | 42 |
+| Bilibili installed Dev, same interval | 29.77 | 4 / 600 | 0 |
+| Bilibili installed Dev, repeated interval | 28.99 | 20 / 600 | 4 |
 
 Both codecs report actual RDD hardware acceleration. Local AV1 callback P95 is
 41.58 ms, HEVC 41.28 ms; notification rate remains about 24.5 Hz and does not
-measure physical 60-Hz scanout. Repeated HEVC loops include seeks. The real page
-is buffered, focused and visible with no seek/wait event during its interval;
-callback P95 is 125 ms. Initial hardware trials were worse, at 9.90–10.44 fps.
-The reference-reuse fix and fresh process recover about 24 fps, but restart,
+measure physical 60-Hz scanout. Repeated HEVC loops include seeks. The real-page intervals
+are buffered, focused and visible with no seek/wait event during measurement.
+Candidate callback P95 is 125 ms; both installed runs reach 51 ms. Repeat
+preparation resumes playback while seeking so the site can refill its MSE buffer;
+waiting while paused initially leaves only metadata and no buffer. Initial hardware trials were worse, at 9.90–10.44 fps.
+The reference-reuse fix and fresh process recover about 24 fps; final installed
+quiet intervals reach 28.99–29.77 fps, but restart,
 focus, cache and ordering effects are not isolated. The previous 20.99 fps
 software interval was unfocused and is a historical reference, not a matched
 causal control. Complex-site composition/execution remains a performance limit.

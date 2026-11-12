@@ -2210,7 +2210,8 @@
       "The previous 20.99 fps software AV1 interval is historical and unfocused; it is not a matched control for the focused hardware interval.",
       "Native FFmpeg 8.0 and guest FFmpeg 7.1.1 use different parser and scheduling paths; both verify actual hardware decoding. Their throughput is a capacity control, not a normalized backend-speed comparison.",
       "Sync/export throughput uses repeated synthetic GOPs (1200 frames). Download checks use the short 60/240 frame originals, one run each.",
-      "Main10/P010, arbitrary VA clients, encoding, physical A/V sync and iPad hardware playback are not validated."
+      "Main10/P010, arbitrary VA clients, encoding, physical A/V sync and iPad hardware playback are not validated.",
+      "Installed Dev same-position 20 s intervals reach 29.77 and 28.99 accepted fps (4 and 20 dropped frames of 600). Both are focused/visible, buffered and contain no seek/wait event. Initial preparation of the repeat waited on paused MSE loading; resuming playback during seek restored the buffer. This is a quiet warmed acceptance, not a guarantee of equally fast startup or arbitrary sites."
     ],
     "runtime_revision": "d242fa8637b974b2431f8dc8bd8551f7134d1b87",
     "installed_dev": {
@@ -2218,6 +2219,68 @@
       "version": "Trames Dev 1.5.4 (dev) runtime d242fa8637b974b2431f8dc8bd8551f7134d1b87",
       "codesign_strict": true,
       "stable_runner_sha256_unchanged": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
+    },
+    "bilibili_installed": {
+      "accepted_fps": 29.77469151221462,
+      "callback_fps": 23.729829644801917,
+      "dropped_frames": 4,
+      "total_frames": 600,
+      "frame_gaps": {
+        "count": 476,
+        "p50_ms": 34,
+        "p95_ms": 51,
+        "p99_ms": 84,
+        "max_ms": 100,
+        "over_50_ms": 52,
+        "over_100_ms": 0
+      },
+      "media_speed": 0.9998417844831894,
+      "elapsed_browser": 20.017,
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 30.000173568725586
+      },
+      "visible": true,
+      "focused": true,
+      "media_interval": [
+        15.067981,
+        35.081814
+      ],
+      "playback_events": []
+    },
+    "bilibili_installed_repeat": {
+      "accepted_fps": 28.986955869858562,
+      "callback_fps": 23.889249837573093,
+      "dropped_frames": 20,
+      "total_frames": 600,
+      "frame_gaps": {
+        "count": 478,
+        "p50_ms": 35,
+        "p95_ms": 51,
+        "p99_ms": 100,
+        "max_ms": 117,
+        "over_50_ms": 69,
+        "over_100_ms": 4
+      },
+      "media_speed": 0.9988294267579587,
+      "elapsed_browser": 20.009,
+      "decoder": {
+        "name": "ffmpeg video decoder (RDD remote)",
+        "hardware": true,
+        "width": 1920,
+        "height": 1080,
+        "fps": 30.000211715698242
+      },
+      "visible": true,
+      "focused": true,
+      "media_interval": [
+        15.232154,
+        35.217732
+      ],
+      "playback_events": []
     }
   }
 }
