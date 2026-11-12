@@ -2035,6 +2035,8 @@ installed iPad apps remain unchanged.
 
 ## Original Vulkan CTS diagnostic (2026-11-12)
 
+This is the initial baseline. The [fix and rerun record](#cts-object-lifetime-and-creation-fixes-2026-11-12) below supersedes its production status.
+
 The first stock Khronos CTS run finds significant general API compatibility gaps.
 Selected GPU output fixtures do not establish general Vulkan 1.2 compatibility.
 The driver remains experimental; these results are not a full CTS pass or a
@@ -2115,3 +2117,85 @@ raw test logs occupy about 1.7 MiB with images/shader-source logging disabled.
 The [filtered CTS record](mac-vulkan-cts.json) contains per-case outcomes, input
 hashes, independent reproductions and scope. Production sources and installed
 apps are unchanged by this run. Harness-only preflight failures are excluded.
+
+
+## CTS object lifetime and creation fixes (2026-11-12)
+
+Shared runtime `28eb94c` and guest wire revision 17 fix the original-object and
+creation-state classes found by the initial diagnostic. The same unmodified
+`vulkan-cts-1.4.7.0` executable, data, loader and 1,601 unique case identities run
+through the actual signed Mac product, with no test patches, status substitutions,
+portability waivers or capability override.
+
+| Original cases | Initial Pass | Initial Fail / ResourceError / Crash | Final Pass | Final NotSupported | Final failures |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Info (23) | 18 | 1 / 2 / 0 | 20 | 3 | 0 |
+| Descriptor indexing (115) | 14 | 100 / 0 / 0 | 114 | 1 | 0 |
+| Basic synchronization (29) | 16 | 3 / 0 / 0 | 19 | 10 | 0 |
+| Multiview (838) | 0 | 838 / 0 / 0 | 466 | 372 | 0 |
+| API/lifetimes (596) | 204 | 151 / 52 / 3 | 446 | 150 | 0 |
+| Total (1,601) | 252 | 1,093 / 54 / 3 | **1,065** | **536** | **0** |
+
+Final ResourceError, Crash and Timeout counts are also zero. NotSupported is
+kept separate from Pass. The larger unsupported count appears after device
+creation succeeds and the original CTS reaches its actual prerequisites: 250
+cases require dynamic rendering, 72 require geometry shaders, 66 require an
+exclusive compute/transfer family, 46 require native portability events, 40
+require private data, plus the remaining documented optional features/limits.
+This does not establish complete Vulkan 1.2/CTS conformance. Full mustpass,
+WSI/video CTS, physical iPad CTS and an original-native-Mac CTS control remain
+unrun.
+
+The fixes cover whole ownership/ingress boundaries:
+
+- Multiple original instances/devices have unique domains inside the existing
+  exclusive Context, with original pending-job cancellation, completion,
+  authenticated imports and teardown. Instance surfaces retain their original
+  native owners through swapchain use; cached device capabilities are removed
+  on surface destruction. No coordinator, service thread or new context lock.
+- Every created family/index retains its original native queue. Immutable guest
+  queue wrappers allocate at device creation, outside locks; queue lookup cannot
+  allocate or invoke a callback. Buffers/images retain the requested native
+  sharing mode and family list, including FD image recreation. Ordinary queue
+  ownership barriers pass to Vulkan; only the existing Metal texture adapter
+  elides foreign ownership indices.
+- Unknown `pNext` records are skipped header-only and known records are found
+  anywhere in the chain, following the Vulkan
+  [extension-chain rules](https://docs.vulkan.org/spec/latest/chapters/fundamentals.html).
+  Primary command buffers ignore inheritance pointers. Valid optimization and
+  derivative hints, pipeline arrays/specialization, shader visibility masks,
+  no-fragment depth pipelines, ignored depth-only blend state and negative
+  sampler `minLod` are accepted. Meaningful unsupported features still reject.
+- Guest allocation callbacks own persistent frontend metadata/dispatch records,
+  run on the original caller outside metadata locks, and roll back on failure.
+  No guest callback/pointer enters a host compiler. Native feature-dependent
+  limits and precise-query flags agree with the executable profile. Native
+  pipeline-cache control, compile-required/early-return flags and cache external
+  synchronization use the generated paired feature schema.
+
+The final main run disables per-call tracing and retains the original diagnostic
+60/30-second watchdog. A separate traced run times out while recording many
+secondary-buffer draws. That same case passes in 0.829 seconds with tracing off
+and the unmodified CTS default 300/30-second watchdog; the complete final main
+run then passes it too. The trace timeout and default-limit reproduction remain
+in the [filtered record](mac-vulkan-cts.json), without rewriting the main QPA.
+
+All 71 shared Vulkan tests pass, including seven actual native ownership,
+queue, fence and image-lifetime cases. Both 1/12-CPU native output oracles pass,
+covering descriptor indexing, multiview, resolves, secondary buffers, subpasses,
+linear images, YCbCr and core shader output. Firefox 151.0.3 uses WebRender with
+hardware/OpenGL compositing available; warmup and two 512-draw WebGL trials
+return the exact expected pixel, no GL error and no context loss. This is a
+rendering regression check, not a new page/video performance comparison.
+Strict affected Vulkan/Mac lints, Mac product tests, artifact/source/recipe hash
+gates, project/completion boundaries and iPad ARM64 FFI compilation pass.
+Unchanged CPU/kernel/network/HVF hardware checks are reused.
+
+Both products pin the same runtime. The signed **Mac Dev 1.5.4** app is installed
+and its original CTS triangle renders successfully. The stable runner retains
+its exact earlier SHA; installed iPad apps are unchanged. The existing source,
+Release CTS build, private store and VM are reused. Generated high-volume traces
+are losslessly compressed, saving about 629 MiB; about 164 GiB remains free,
+above the 140 GiB floor and within the original 15 GiB total-growth budget. The
+build VM is stopped. Raw data stays in the ignored local target tree; online
+records contain only filtered diagnostics and source/build hashes.
