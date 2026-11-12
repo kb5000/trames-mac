@@ -205,6 +205,7 @@ struct AddressSpace {
     used: u64,
     publications: BTreeMap<usize, u64>,
     private_writable: usize,
+    write_epochs: BTreeMap<usize, (usize, Arc<std::sync::atomic::AtomicU64>)>,
 }
 impl AddressSpace {
     fn remove_page(&mut self, va: u64) -> Option<Page> {
@@ -222,9 +223,29 @@ impl AddressSpace {
         old: Option<trames_memory::HardwareWriteFrame>,
         new: Option<trames_memory::HardwareWriteFrame>,
     ) {
-        self.private_writable -= usize::from(old.is_some_and(|write| !write.needs_publication()));
-        self.private_writable += usize::from(new.is_some_and(|write| !write.needs_publication()));
-        if let Some((word, bit)) = old.and_then(|write| write.publication_word()) {
+        self.private_writable -=
+            usize::from(old.as_ref().is_some_and(|write| !write.needs_publication()));
+        self.private_writable +=
+            usize::from(new.as_ref().is_some_and(|write| !write.needs_publication()));
+        if let Some(epoch) = old.as_ref().and_then(|write| write.publication_epoch()) {
+            let key = Arc::as_ptr(epoch) as usize;
+            let entry = self
+                .write_epochs
+                .get_mut(&key)
+                .expect("tracked write epoch");
+            entry.0 -= 1;
+            if entry.0 == 0 {
+                self.write_epochs.remove(&key);
+            }
+        }
+        if let Some(epoch) = new.as_ref().and_then(|write| write.publication_epoch()) {
+            let key = Arc::as_ptr(epoch) as usize;
+            self.write_epochs
+                .entry(key)
+                .or_insert_with(|| (0, epoch.clone()))
+                .0 += 1;
+        }
+        if let Some((word, bit)) = old.as_ref().and_then(|write| write.publication_word()) {
             let bits = self
                 .publications
                 .get_mut(&word)
@@ -234,7 +255,7 @@ impl AddressSpace {
                 self.publications.remove(&word);
             }
         }
-        if let Some((word, bit)) = new.and_then(|write| write.publication_word()) {
+        if let Some((word, bit)) = new.as_ref().and_then(|write| write.publication_word()) {
             *self.publications.entry(word).or_default() |= bit;
         }
     }
@@ -312,6 +333,7 @@ impl Executor {
                     version: None,
                     used: 0,
                     publications: BTreeMap::new(),
+                    write_epochs: BTreeMap::new(),
                     private_writable: 0,
                 },
             )]),
@@ -427,6 +449,7 @@ impl Executor {
                     version: None,
                     used: 0,
                     publications: BTreeMap::new(),
+                    write_epochs: BTreeMap::new(),
                     private_writable: 0,
                 }
             };
@@ -574,14 +597,14 @@ impl Executor {
                 {
                     self.machine.publish_code(page.gpa)?;
                 }
-                let previous = page.write;
+                let previous = page.write.take();
                 page.write = if info.writable {
                     Some(memory.hardware_write_frame(va)?)
                 } else {
                     None
                 };
                 page.info = info;
-                let write = page.write;
+                let write = page.write.clone();
                 space.track_write(previous, write);
             }
             #[cfg(feature = "diagnostics")]
@@ -607,8 +630,16 @@ impl Executor {
         // Conservative hardware dirty publication is once per joined epoch,
         // rather than a page walk at every short syscall in that epoch.
         if space.version != Some(version) {
-            if space.private_writable != 0 || !space.blocks.is_empty() {
+            if space.private_writable != 0
+                || !space.blocks.is_empty()
+                || !space.write_epochs.is_empty()
+            {
                 memory.mark_hardware_private_writes();
+            }
+            // Canonical imported data shares the original allocation epoch used
+            // by software reservations. Keep page hooks for code and writeback.
+            for (_, epoch) in space.write_epochs.values() {
+                epoch.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             }
             for (&word, &bits) in &space.publications {
                 memory.mark_hardware_write_word(word, bits)?;
@@ -827,7 +858,7 @@ impl Executor {
                 gpa: storage.physical_address(),
                 storage: Arc::downgrade(storage),
                 info,
-                write,
+                write: write.clone(),
             },
         );
         if old.is_none() {

@@ -1879,3 +1879,71 @@ fn live_vcpus_preserve_dirty_bytes_during_concurrent_pressure_reclamation() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn imported_data_epochs_coalesce_live_pages_but_code_and_retirement_keep_original_rules() {
+    use std::alloc::{alloc_zeroed, dealloc, Layout};
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    struct Allocation {
+        pointer: usize,
+        layout: Layout,
+        drops: Arc<AtomicUsize>,
+    }
+    impl Drop for Allocation {
+        fn drop(&mut self) {
+            unsafe { dealloc(self.pointer as *mut u8, self.layout) };
+            self.drops.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let granule = trames_memory::host_mapping_granule();
+    let layout = Layout::from_size_align(granule, granule).unwrap();
+    let pointer = unsafe { alloc_zeroed(layout) };
+    assert!(!pointer.is_null());
+    let drops = Arc::new(AtomicUsize::new(0));
+    let epoch = Arc::new(AtomicU64::new(0));
+    let owner = Allocation {
+        pointer: pointer as usize,
+        layout,
+        drops: drops.clone(),
+    };
+    let mapping = unsafe { trames_memory::SharedMapping::from_allocation(pointer, granule, owner) }
+        .with_external_revision(epoch.clone());
+    let mut memory = memory();
+    memory
+        .import_mapping(0x20000, granule as u64, mapping)
+        .unwrap();
+    memory.write_array(0x20000, 15u64.to_le_bytes()).unwrap();
+    let mut executor = Executor::new().unwrap();
+    for _ in 0..8 {
+        svc(&mut executor, &mut state(), &mut memory);
+    }
+    assert_eq!(u64::from_le_bytes(memory.read_array(0x20000).unwrap()), 23);
+    assert!(epoch.load(Ordering::Relaxed) >= 8);
+    assert!(executor.spaces.values().all(|s| s.publications.is_empty()));
+    assert!(executor.spaces.values().any(|s| s.write_epochs.len() == 1));
+    memory
+        .protect(
+            0x20000,
+            PAGE_SIZE,
+            Permissions {
+                execute: true,
+                ..Permissions::RW
+            },
+        )
+        .unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    assert!(executor.spaces.values().any(|s| !s.publications.is_empty()));
+    memory.unmap(0x20000, granule as u64).unwrap();
+    memory
+        .map(0x20000, granule as u64, Permissions::RW)
+        .unwrap();
+    memory.write_array(0x20000, 100u64.to_le_bytes()).unwrap();
+    svc(&mut executor, &mut state(), &mut memory);
+    assert_eq!(u64::from_le_bytes(memory.read_array(0x20000).unwrap()), 101);
+    assert!(executor
+        .spaces
+        .values()
+        .all(|s| s.write_epochs.is_empty() && s.publications.is_empty()));
+    assert_eq!(drops.load(Ordering::Relaxed), 1);
+}

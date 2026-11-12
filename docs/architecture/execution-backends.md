@@ -2206,3 +2206,22 @@ workloads, ownership/partial-map/iPad checks and measurement limits.
 Only Dev is installed from the new pin. Stable remains the recovered formal
 1.5.4 `eb047dc`, with both deployments running; the independent current-main
 runc startup blocker remains unresolved. Installed iPad apps are unchanged.
+
+
+## Original FIFO lifetime and allocation publication (2026-11-13)
+
+Runtime `86dfa2c` completes blocking FIFO rendezvous on the original endpoint for
+ordinary/file-work/io_uring opens; pending opens release executor slots and own
+exact cancellation cleanup. Exited fs_struct membership releases cwd/root use;
+pivot_root and later query writes cannot recreate leases for retired tasks.
+This fixes runc exec.fifo EBADF and Docker overlay remount failure without a
+coordinator or weakened overlay exclusivity.
+
+Canonical non-executable imported data publishes its existing allocation epoch
+once per joined hardware boundary. Writable mapping membership is retired on
+unmap/protection changes; executable and file-backed hooks stay page-based.
+The controlled 256 MiB mapping/layout probe falls from 260.55 to 38.18 ms vs
+32.14 ms same-API native Vulkan. Final Geekbench Vulkan is 63,175; the score does
+not establish a broad steady-state gain. See the
+[Docker/GPU validation record](../validation/mac-docker-gpu-20261113.md) for
+mechanisms, original output checks, limits and release acceptance.

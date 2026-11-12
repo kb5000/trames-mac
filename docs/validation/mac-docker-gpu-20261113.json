@@ -1,0 +1,570 @@
+{
+  "date": "2026-11-13",
+  "runtime_revision": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+  "version": "1.5.5",
+  "boundary_probe": {
+    "fixture_sha256": "ee30e41fde83e065f67f65215653a2394d84f4f7ac8722815b28ee7bb8accc09",
+    "native_binary_sha256": "ddf335c905e25fbda87d2eb23fd9977d90f40c80283f27259c09f0604b0e5530",
+    "guest_binary_sha256": "9d2f8dc0f537a228fbe12c6cf1fa45b7ceef2926a57a594442d9528dfb4cffba",
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "guest_page_bytes": 4096,
+    "native_page_bytes": 16384,
+    "runs": [
+      {
+        "repeat": 0,
+        "variant": "native",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 33.717,
+            "gpu_ms": 1.01517,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 0,
+        "variant": "before",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 275.473083,
+            "gpu_ms": 0.704953,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 0,
+        "variant": "after",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 38.178917,
+            "gpu_ms": 0.707249,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "variant": "native",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 32.139,
+            "gpu_ms": 0.809789,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "variant": "before",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 258.199458,
+            "gpu_ms": 0.709659,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 1,
+        "variant": "after",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 34.58075,
+            "gpu_ms": 0.736702,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "variant": "native",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 29.066,
+            "gpu_ms": 0.678709,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "variant": "before",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 260.552292,
+            "gpu_ms": 1.009504,
+            "output_ok": true
+          }
+        ]
+      },
+      {
+        "repeat": 2,
+        "variant": "after",
+        "exit": 0,
+        "cases": [
+          {
+            "mode": "aligned-generic",
+            "allocation_bytes": 268435456,
+            "buffer_bytes": 268435456,
+            "iterations": 100,
+            "wall_ms": 41.081083,
+            "gpu_ms": 1.034074,
+            "output_ok": true
+          }
+        ]
+      }
+    ],
+    "medians": {
+      "native": {
+        "wall_ms": 32.139,
+        "gpu_ms": 0.809789
+      },
+      "before": {
+        "wall_ms": 260.552292,
+        "gpu_ms": 0.709659
+      },
+      "after": {
+        "wall_ms": 38.178917,
+        "gpu_ms": 0.736702
+      }
+    },
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "runners": {
+      "before": {
+        "version": "Trames Dev 1.5.4 (dev) runtime 619d14edf1df5e91a84197ad55330121a2dbec5e",
+        "sha256": "035418f2705e1a7c185fa922abd43ac2d8e251c1253961aba6358b9f3be0de77"
+      },
+      "after": {
+        "version": "Trames Dev 1.5.5 (dev) runtime 86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+        "sha256": "d75eb0b5cb40ec6a152bb1ee22c51b574cf1e272cb2ec37d1ca5803f6773dccc"
+      }
+    }
+  },
+  "fresh_geekbench_before": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "installed Dev baseline before allocation-level hardware publication",
+    "runner_version": "Trames Dev 1.5.4 (dev) runtime 619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "runner_sha256": "035418f2705e1a7c185fa922abd43ac2d8e251c1253961aba6358b9f3be0de77",
+    "runtime_code_commit": "619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "cpus": 12,
+    "memory_mib": "auto",
+    "metrics": true,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": false,
+    "stable_debian_running_docker_stopped": true,
+    "command": [
+      "/Users/main/Applications/Trames Dev.app/Contents/MacOS/trames-mac-run",
+      "--storage",
+      "/Users/main/dev/trames/target/geekbench-20261028/store",
+      "--vulkan",
+      "--network",
+      "outbound",
+      "--cpus",
+      "12",
+      "--memory-mib",
+      "auto",
+      "--timeout",
+      "3600",
+      "--no-pty",
+      "--no-windows",
+      "--metrics",
+      "/bin/sh",
+      "-c",
+      "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+    ],
+    "start_unix": 1794513198.007705,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971922"
+    ],
+    "seconds": 65.101079333,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 60704,
+    "workloads": {
+      "Background Blur": 32218,
+      "Face Detection": 24046,
+      "Horizon Detection": 75202,
+      "Edge Detection": 79496,
+      "Gaussian Blur": 69536,
+      "Feature Matching": 19487,
+      "Stereo Matching": 195688,
+      "Particle Physics": 150152
+    }
+  },
+  "initial_geekbench_candidate": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "candidate allocation-level hardware write publication; dirty source, not final pin",
+    "runner_version": "Trames Dev 1.5.4 (dev) runtime 619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "runner_sha256": "a9a4e19e13e5f21a28129f37bba865544c8ac485e97a68d82ec877739d1d54c7",
+    "runtime_code_commit": "619d14edf1df5e91a84197ad55330121a2dbec5e",
+    "cpus": 12,
+    "memory_mib": "auto",
+    "metrics": true,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": false,
+    "stable_debian_running_docker_stopped": true,
+    "command": [
+      "/Users/main/dev/trames-mac/target/release/Trames Dev.app/Contents/MacOS/trames-mac-run",
+      "--storage",
+      "/Users/main/dev/trames/target/geekbench-20261028/store",
+      "--vulkan",
+      "--network",
+      "outbound",
+      "--cpus",
+      "12",
+      "--memory-mib",
+      "auto",
+      "--timeout",
+      "3600",
+      "--no-pty",
+      "--no-windows",
+      "--metrics",
+      "/bin/sh",
+      "-c",
+      "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+    ],
+    "start_unix": 1794513263.195604,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971923"
+    ],
+    "seconds": 65.105818625,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 62719,
+    "workloads": {
+      "Background Blur": 30653,
+      "Face Detection": 23997,
+      "Horizon Detection": 75791,
+      "Edge Detection": 78557,
+      "Gaussian Blur": 69973,
+      "Feature Matching": 19918,
+      "Stereo Matching": 197272,
+      "Particle Physics": 198850
+    }
+  },
+  "worker_stack_samples": [
+    {
+      "phase": "background-blur",
+      "worker_samples": 2202,
+      "inclusive_worker_samples": {
+        "commit_parallel_state": 19,
+        "mark_hardware_write_word": 8,
+        "import_mapping": 3,
+        "reclaim_unused": 18
+      }
+    },
+    {
+      "phase": "face-detection",
+      "worker_samples": 2088,
+      "inclusive_worker_samples": {
+        "commit_parallel_state": 231,
+        "mark_hardware_write_word": 140,
+        "import_mapping": 17,
+        "reclaim_unused": 56
+      }
+    },
+    {
+      "phase": "gaussian-blur",
+      "worker_samples": 2328,
+      "inclusive_worker_samples": {
+        "commit_parallel_state": 0,
+        "mark_hardware_write_word": 0,
+        "import_mapping": 4,
+        "reclaim_unused": 1
+      }
+    },
+    {
+      "phase": "feature-matching",
+      "worker_samples": 2244,
+      "inclusive_worker_samples": {
+        "commit_parallel_state": 0,
+        "mark_hardware_write_word": 0,
+        "import_mapping": 0,
+        "reclaim_unused": 3
+      }
+    }
+  ],
+  "validation": {
+    "runtime_macos_workflow": "7/7 passed",
+    "runtime_linux_arm64_workflow": "7/7 passed",
+    "mac_product_workflow": "12/12 passed",
+    "native_hardware_tests": {
+      "mac": 26,
+      "hvf": 55
+    },
+    "ipad_arm64_ffi": "passed",
+    "docker_external_driver_lifecycle": {
+      "records": [
+        {
+          "command": [
+            "env",
+            "import",
+            "docker",
+            "/Users/main/dev/trames/target/docker-gpu-20261113/systemd-docker-template"
+          ],
+          "code": 0,
+          "stdout": "Imported docker; original store is unchanged\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "configure",
+            "docker",
+            "--init",
+            "systemd",
+            "--cpus",
+            "4",
+            "--network",
+            "full",
+            "--windows",
+            "off",
+            "--vulkan",
+            "off",
+            "--video",
+            "off",
+            "--audio",
+            "off"
+          ],
+          "code": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "start",
+            "docker",
+            "--detach"
+          ],
+          "code": 0,
+          "stdout": "",
+          "stderr": "Started docker in background\n"
+        },
+        {
+          "check": "concurrent_http",
+          "requests": 64,
+          "clients": 8,
+          "seconds": 0.09671187500000045,
+          "passed": true
+        },
+        {
+          "check": "daemon_restart",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "start",
+            "docker",
+            "--detach"
+          ],
+          "code": 0,
+          "stdout": "",
+          "stderr": "Started docker in background\n"
+        },
+        {
+          "check": "environment_restart",
+          "passed": true
+        },
+        {
+          "check": "unsuccessful_host_exit",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "autostart",
+            "docker",
+            "on"
+          ],
+          "code": 0,
+          "stdout": "Enabled docker at Mac user login; env start docker --detach starts it now\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        },
+        {
+          "check": "login_agent_bootstrap",
+          "passed": true
+        },
+        {
+          "command": [
+            "env",
+            "autostart",
+            "docker",
+            "off"
+          ],
+          "code": 0,
+          "stdout": "Disabled docker at login; current environment lifetime is unchanged\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "env",
+            "stop",
+            "docker"
+          ],
+          "code": 0,
+          "stdout": "Stopped docker\n",
+          "stderr": ""
+        }
+      ]
+    }
+  },
+  "final_geekbench": {
+    "date": "2026-11-13",
+    "geekbench_version": "6.7.1",
+    "variant": "final pinned Dev 1.5.5 allocation-level hardware write publication",
+    "runner_version": "Trames Dev 1.5.5 (dev) runtime 86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+    "runner_sha256": "d75eb0b5cb40ec6a152bb1ee22c51b574cf1e272cb2ec37d1ca5803f6773dccc",
+    "runtime_code_commit": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+    "cpus": 12,
+    "memory_mib": "auto",
+    "metrics": true,
+    "hvf_diagnostics": false,
+    "sampler": false,
+    "upload_authorized": true,
+    "power_before": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "host_logical_cpus": 12,
+    "host_memory_bytes": 25769803776,
+    "stable_environments_stopped": false,
+    "stable_debian_and_docker_running": false,
+    "stable_debian_running_docker_stopped": true,
+    "command": [
+      "/Users/main/dev/trames-mac/target/release/Trames Dev.app/Contents/MacOS/trames-mac-run",
+      "--storage",
+      "/Users/main/dev/trames/target/geekbench-20261028/store",
+      "--vulkan",
+      "--network",
+      "outbound",
+      "--cpus",
+      "12",
+      "--memory-mib",
+      "auto",
+      "--timeout",
+      "3600",
+      "--no-pty",
+      "--no-windows",
+      "--metrics",
+      "/bin/sh",
+      "-c",
+      "cd /opt/geekbench && LC_ALL=C LANG=C LD_LIBRARY_PATH=/opt/geekbench-vulkan:/lib VK_DRIVER_FILES=/opt/geekbench-vulkan/trames.json VK_ICD_FILENAMES=/opt/geekbench-vulkan/trames.json ./geekbench6 --gpu Vulkan --gpu-platform-id 0 --gpu-device-id 0"
+    ],
+    "start_unix": 1794516504.933003,
+    "exit": 0,
+    "public_urls": [
+      "https://browser.geekbench.com/v6/compute/6971970"
+    ],
+    "seconds": 65.095914333,
+    "power_after": {
+      "thermal_state": 0,
+      "low_power": false
+    },
+    "score": 63175,
+    "workloads": {
+      "Background Blur": 32671,
+      "Face Detection": 23929,
+      "Horizon Detection": 76956,
+      "Edge Detection": 77923,
+      "Gaussian Blur": 70684,
+      "Feature Matching": 19621,
+      "Stereo Matching": 196293,
+      "Particle Physics": 198792
+    }
+  }
+}
