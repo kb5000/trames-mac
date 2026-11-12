@@ -2199,3 +2199,72 @@ are losslessly compressed, saving about 629 MiB; about 164 GiB remains free,
 above the 140 GiB floor and within the original 15 GiB total-growth budget. The
 build VM is stopped. Raw data stays in the ignored local target tree; online
 records contain only filtered diagnostics and source/build hashes.
+
+
+## Dynamic rendering and native memory budget (2026-11-12)
+
+Shared runtime `50223c7` and paired guest ICD wire revision 18 expose
+`VK_KHR_dynamic_rendering` and `VK_EXT_memory_budget` when supported by the
+original native driver. Vulkan API 1.2 remains advertised. No synchronization2,
+dynamic-rendering local read, full Vulkan 1.3 or complete CTS claim is added.
+
+Dynamic rendering forwards original native scopes and pipeline format metadata,
+including primary/self-contained secondary buffers, inherited secondary scopes,
+multiview, resolves and suspend/resume. Attachment views keep their original
+images/allocations alive through command completion/cancellation. No emulated
+render-pass/framebuffer objects, coordinator, resource service thread, additional
+lock or GPU wait is introduced. Owned format arrays cross asynchronous compile;
+guest pointers do not. Ignored rasterizer-discard/depth-only state stays ignored.
+
+Memory-properties2 queries obtain base properties and native heap budget/usage
+in one original-driver call. Usage remains a process/heap estimate, including
+native allocations, rather than a fabricated Trames counter or total guest CPU
+residency. Existing explicit session limits remain; host-managed sessions do not
+add a cap. This API enables clients to make memory decisions; it does not itself
+perform eviction or guarantee immediate driver-cache reclamation.
+
+The same unchanged `vulkan-cts-1.4.7.0` executable, loader and data run through the
+actual signed Mac product. Original QPA statuses are retained without waivers or
+substitutions; unsupported results are separate from passes.
+
+| Selection | Before Pass / NotSupported | Final Pass / NotSupported | Final Fail / ResourceError / Crash / Timeout |
+| --- | ---: | ---: | ---: |
+| Original 1,601 cases | 1,065 / 536 | 1,292 / 309 | 0 / 0 / 0 / 0 |
+| Additional 1,704 dynamic-rendering cases | — | 696 / 1,008 | 0 / 0 / 0 / 0 |
+| Combined 3,305 cases | — | **1,988 / 1,317** | **0 / 0 / 0 / 0** |
+
+Both memory-budget cases pass. The additional selection includes all 240 primary
+basic cases and all 608 partial-secondary suballocation cases, plus selected
+formats, allocation modes, four-sample depth/stencil resolves, multiview clears
+and deterministic random cases. It is not the entire 29,209-case dynamic-rendering
+inventory. Native resolve modes/formats, geometry, maintenance10, local read and
+other absent prerequisites continue returning NotSupported.
+
+The first expanded run recorded 87 guest aborts: 21 self-contained rendering
+scopes in secondary buffers and 66 low-resolution-Z empty source-stage barriers.
+The former is core dynamic-rendering behavior and now reaches the original
+native secondary buffer. The selected low-resolution-Z tests emit an empty
+legacy barrier source-stage mask without requiring synchronization2. Barrier
+ingress preserves that native value; queue waits still reject zero. This is a
+recorded upstream prerequisite caveat, not synchronization2 support. The full
+same-case rerun finishes without errors under the unchanged diagnostic 60/30 s
+watchdog and with per-call tracing disabled. See the
+[filtered record](mac-vulkan-cts.json) for every result and the preserved baseline.
+
+All 73 shared Vulkan tests pass, including nine original native GPU cases. New
+tests cover primary/secondary scope submission and original-driver budget/usage
+before and after allocation. The one/twelve-CPU GPU output oracles pass. Firefox
+151.0.3 reports WebRender with hardware/OpenGL compositing available; warmup and
+two 512-draw trials return `[64,128,191,255]`, no GL errors and no context loss.
+This is a rendering regression, not a page/video performance comparison.
+Strict Vulkan/Mac lints, 22 Mac product tests, execution/completion boundaries,
+paired artifact/source/recipe hashes and iPad ARM64 FFI compilation pass.
+Unchanged CPU/Linux/network/HVF hardware checks are reused. Full mustpass, WSI
+CTS, an original-native-Mac CTS control and physical iPad GPU CTS remain unrun.
+
+The signed Mac Dev 1.5.4 app is updated and the installed original CTS triangle
+renders successfully. Stable retains its earlier exact runner SHA; installed
+iPad apps are unchanged. Both product source pins share runtime `50223c7`.
+Existing CTS/VM/store/build caches are reused, the build VM is stopped, and about
+163 GiB remains free above the 140 GiB floor. This round stays inside its 8 GiB
+additional-growth budget. Raw artifacts remain in the ignored local target tree.
