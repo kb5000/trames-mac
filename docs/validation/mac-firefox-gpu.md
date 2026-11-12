@@ -1909,3 +1909,63 @@ media URLs remain local. Main10/P010, arbitrary stateless VA clients, encoding,
 physical A/V sync and iPad hardware are outside this acceptance. Encoding needs
 an input-surface/output-packet and rate-control interface and follows separately.
 Only Mac Dev is updated; stable and installed iPad apps remain unchanged.
+
+
+## Remaining dropped-frame diagnosis (2026-11-12)
+
+The installed hardware-decoding build loses frames at compositor selection, not
+in the decoder or media sink. The same Firefox process, AV1 stream, 1920×1080
+video and display size are measured after seeking to 10 seconds, with a five-second
+warmup followed by a quiet twenty-second interval. A temporary visibility rule
+hides surrounding page rendering while leaving the video in its original box;
+it changes neither the video element/decoder nor browser preferences and does
+not disable the page's JavaScript. Removing that rule restores the full page.
+
+| Quiet same-process interval | Accepted fps | Dropped / total | Frame-callback gap P95 / max |
+| --- | ---: | ---: | ---: |
+| Full page | 29.13 | 18 / 602 | 58 / 150 ms |
+| Surrounding rendering hidden | 30.01 | 0 / 601 | 51 / 67 ms |
+| Full page restored | 29.58 | 9 / 601 | 52 / 117 ms |
+
+All intervals remain buffered, visible and focused, with no seek/wait event in
+the measurement. Separate diagnostic frame-stat snapshots show zero decoded and
+sink drops in all three cases, with compositor deltas of 21, 1 and 13. Those
+snapshots also span the warmup and boundary calls; they must not be equated to
+the quiet twenty-second playback-quality deltas in the table. Counter meaning
+follows Mozilla's [FrameStatistics implementation](https://github.com/mozilla-firefox/firefox/blob/main/dom/media/FrameStatistics.h).
+
+The page's animation clock runs at about 58.2–59.9 Hz, while video callback
+notifications arrive at about 23.1–24.2 Hz. The video-only interval accepts every
+frame despite that notification rate, so it does not establish a 24-Hz output
+cap. The callback API is not a physical scanout measurement; see Mozilla's
+[requestVideoFrameCallback documentation](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback).
+A separate short metadata probe has a large presented-frame-counter discontinuity
+and is excluded from rate calculations.
+
+A separate Gecko Profiler capture at a 2 ms interval finds WebRender renderer
+composition has a low median but substantial tails: in its central 9.23 seconds,
+434 compositions have median 3.43 ms, P95 24.47 ms and maximum 92.70 ms; eleven
+exceed the 33.3 ms budget of a 30 fps video. These are instrumented diagnostics,
+not quiet benchmark frame rates. Of 1211 inclusive samples inside
+`RenderThread::UpdateAndRender`, 515 contain the Vulkan NativeCall entry and 179
+contain Zink swapchain acquisition/buffer-age queries. These overlap and include
+waits; they are not CPU percentages. The captured sample rows have no usable
+thread CPU deltas. No profiler settings remain active after capture.
+
+A separate six-second host sample finds AppKit's main thread waiting for events
+in 1103/1114 observations. Leading active runtime stacks include
+`mark_hardware_write_word`, snapshot publication and HVF mapping metadata. This
+supports investigating repeated page-state publication and rendering NativeCall
+work, alongside swapchain availability/synchronization. It does not establish
+that a particular metadata function accounts for a known percentage of dropped
+frames, and native GPU shader execution time has not been separately measured.
+
+The isolated rendering comparison makes the remaining priority concrete:
+reduce the full-page renderer's long-tail submission/synchronization cost rather
+than changing codec choice. It does not isolate danmaku from other page drawing,
+script scheduling or GPU work, nor does it justify disabling page features in
+the product. The page is restored and paused. No production code, installed app,
+or preferences changed in this diagnostic. Filtered data is under
+`drop_diagnosis_20261112` in the existing
+[Bilibili record](mac-bilibili-BV1FRHV68EUX.json); raw profiles, addresses, page
+strings and media URLs remain in ignored local output.

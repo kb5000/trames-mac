@@ -2282,5 +2282,206 @@
       ],
       "playback_events": []
     }
+  },
+  "drop_diagnosis_20261112": {
+    "date": "2026-11-12",
+    "runtime": "d242fa8637b974b2431f8dc8bd8551f7134d1b87",
+    "runner_sha256": "d5cb14b064eff45066a237465f0d421d72ce7c4a0afaea17abef0160dc681c21",
+    "method": "Same installed app, Firefox process/profile, AV1 1920x1080, video dimensions, seek to 10 s, 5 s warmup / 20 s quiet interval. Temporary visibility CSS suppresses surrounding rendering without moving/replacing the video or disabling page JavaScript; restore in finally.",
+    "quiet_intervals": [
+      {
+        "accepted_fps": 29.13299411353886,
+        "callback_fps": 23.096877182480295,
+        "dropped_frames": 18,
+        "total_frames": 602,
+        "frame_gaps": {
+          "count": 463,
+          "p50_ms": 41,
+          "p95_ms": 58,
+          "p99_ms": 117,
+          "max_ms": 150,
+          "over_50_ms": 62,
+          "over_100_ms": 5
+        },
+        "elapsed_browser": 20.046,
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 29.99994468688965
+        },
+        "playback_events": [],
+        "case": "baseline",
+        "media_interval": [
+          14.921791,
+          34.938752
+        ],
+        "size": [
+          1920,
+          1080
+        ],
+        "visible": true,
+        "focused": true,
+        "buffered_before": [
+          [
+            5.01551,
+            85
+          ]
+        ],
+        "raf": {
+          "hz": 58.216102963184674,
+          "p95_ms": 25,
+          "max_ms": 67
+        },
+        "timer": {
+          "p95_ms": 22,
+          "max_ms": 48
+        },
+        "stage_deltas_including_warmup": {
+          "droppedCompositorFrames": 21,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      },
+      {
+        "accepted_fps": 30.010985718565866,
+        "callback_fps": 24.168580844901626,
+        "dropped_frames": 0,
+        "total_frames": 601,
+        "frame_gaps": {
+          "count": 484,
+          "p50_ms": 35,
+          "p95_ms": 51,
+          "p99_ms": 53,
+          "max_ms": 67,
+          "over_50_ms": 40,
+          "over_100_ms": 0
+        },
+        "elapsed_browser": 20.026,
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.000194549560547
+        },
+        "playback_events": [],
+        "case": "video-only",
+        "media_interval": [
+          15.001405,
+          35.016371
+        ],
+        "size": [
+          1920,
+          1080
+        ],
+        "visible": true,
+        "focused": true,
+        "buffered_before": [
+          [
+            5.01551,
+            85
+          ]
+        ],
+        "raf": {
+          "hz": 59.87216618396085,
+          "p95_ms": 18,
+          "max_ms": 39
+        },
+        "timer": {
+          "p95_ms": 23,
+          "max_ms": 44
+        },
+        "stage_deltas_including_warmup": {
+          "droppedCompositorFrames": 1,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      },
+      {
+        "accepted_fps": 29.582250649610234,
+        "callback_fps": 23.785728562862282,
+        "dropped_frames": 9,
+        "total_frames": 601,
+        "frame_gaps": {
+          "count": 476,
+          "p50_ms": 35,
+          "p95_ms": 52,
+          "p99_ms": 81,
+          "max_ms": 117,
+          "over_50_ms": 68,
+          "over_100_ms": 2
+        },
+        "elapsed_browser": 20.012,
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.000219345092773
+        },
+        "playback_events": [],
+        "case": "page-restored",
+        "media_interval": [
+          15.38424,
+          35.381609
+        ],
+        "size": [
+          1920,
+          1080
+        ],
+        "visible": true,
+        "focused": true,
+        "buffered_before": [
+          [
+            5.01551,
+            110
+          ]
+        ],
+        "raf": {
+          "hz": 58.86468119128523,
+          "p95_ms": 19,
+          "max_ms": 85
+        },
+        "timer": {
+          "p95_ms": 22,
+          "max_ms": 52
+        },
+        "stage_deltas_including_warmup": {
+          "droppedCompositorFrames": 13,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      }
+    ],
+    "profiled_renderer": {
+      "window": "Separate 2 ms Gecko stackwalk capture; central interval excludes first/last 2 s. Instrumented timing is diagnostic, not quiet benchmark FPS.",
+      "central_wall_ms": 9232.182541999966,
+      "composites": 434,
+      "p50_ms": 3.4315209998749197,
+      "p95_ms": 24.466083000414073,
+      "max_ms": 92.69545800052583,
+      "over_16_7_ms": 36,
+      "over_33_3_ms": 11,
+      "render_thread_samples_inclusive": 1211,
+      "native_call_samples_within_render": 515,
+      "zink_acquire_samples_within_render": 179,
+      "sample_limits": "Inclusive, overlapping wall-clock stack samples, not CPU percentages. threadCPUDelta is absent in the collected sample rows; no CPU-time shares are inferred."
+    },
+    "host_sample": {
+      "separate_duration_seconds": 6,
+      "period_ms": 2,
+      "main_thread_samples": 1114,
+      "main_thread_event_wait_samples": 1103,
+      "hot_active_metadata": "View::mark_hardware_write_word; page-state publication/snapshot and HVF mapping metadata also appear. Counts across all threads include waits and do not establish a critical-path percentage."
+    },
+    "conclusion": "Observed losses occur at compositor deadline selection. Rendering the surrounding page adds enough tail latency to lose some video frames despite an adequate decoder and buffered input. NativeCall work, swapchain acquisition and shared-page metadata are measured optimization candidates; GPU shader time is not separately measured.",
+    "limits": [
+      "Stage deltas span the warmup and diagnostic boundary calls as well as the quiet 20 s interval, so they do not equal the quiet playback-quality delta. All three captures show zero decoded/sink drops.",
+      "Visibility CSS isolates surrounding rendering; it does not isolate danmaku, page script, draw-call count, native scheduling and GPU execution from one another. Ordered same-process runs are not a randomized estimate.",
+      "Video-only accepts 601/601 frames while requestVideoFrameCallback runs at about 24.17 Hz. Callback frequency is not evidence of a 24-Hz output limit or physical scanout cadence. A separate short metadata probe includes a large frame-counter discontinuity and is excluded from frame-rate calculations.",
+      "No production code or settings changed in this diagnostic. The temporary CSS is removed and playback paused. Native GPU execution timing and causality of individual metadata functions require a separate targeted experiment."
+    ]
   }
 }
