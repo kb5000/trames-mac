@@ -1,6 +1,7 @@
 # Docker recovery and native GPU publication, 2026-11-13
 
-Runtime `86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b`; Mac 1.5.5.
+Final runtime `3ee2b3a7da580378beb7ad878de8b1a52bb8cae3`; Mac 1.5.5. GPU measurements use
+`86dfa2c`; the follow-up changes only task retirement and FIFO wait classification.
 Machine-readable evidence is in [the paired record](mac-docker-gpu-20261113.json).
 
 ## Docker regressions
@@ -33,6 +34,19 @@ The complete Docker harness passes default multiworker nginx, 64 requests with
 environment restart, SIGKILL/launchd recovery and login-agent bootstrap. Earlier
 startup HTTP timeouts are retained as failed evidence; final embedded-driver and
 installed-service verification are recorded separately below when completed.
+
+Final shutdown acceptance found CLONE_THREAD incorrectly rebinding the shared
+process wait event to the newest worker's visibility. A parent wait then reaped
+that thread's identity while leaving the leader PID visible as a zombie.
+Systemd's shutdown kill loop kept observing these already-waited processes.
+Only a new process binds its wait-event reap target; threads retain the leader's
+original target. Nonleader exec still publishes its actual replacement leader.
+The new regression fails against the original code and passes with the fix,
+including eight joined threads and wait with a retained leader body. The same
+Docker fixture now stops normally in 0.978 s instead of about 60 s. The complete
+interpreter conformance run passes 488 tests with three explicitly ignored.
+The prior FIFO signal test now checks actual hidden-FD cancellation/reuse and
+EINTR rather than the removed coordinator-owned pending_open field.
 
 ## GPU boundary cost
 

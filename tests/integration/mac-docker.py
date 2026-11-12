@@ -40,9 +40,15 @@ def main():
         env = dict(os.environ, TRAMES_HOME=str(home))
 
         def run(*command):
+            began = time.monotonic()
             p = subprocess.run([runner, *command], env=env, capture_output=True, text=True, timeout=120)
-            records.append(dict(command=command, code=p.returncode, stdout=p.stdout, stderr=p.stderr))
+            seconds = time.monotonic() - began
+            records.append(dict(command=command, code=p.returncode, seconds=seconds, stdout=p.stdout, stderr=p.stderr))
             assert p.returncode == 0, records[-1]
+            if command[:2] == ('env', 'stop'):
+                # This fixture has no slow shutdown job. A stale reaped PID
+                # made systemd-shutdown wait its entire 60-second kill period.
+                assert seconds < 30, ('fixture shutdown did not finish promptly', records[-1])
             return p
 
         def terminal(name):
@@ -131,6 +137,13 @@ def main():
             run('env', 'stop', 'docker')
             subprocess.run(['/bin/launchctl', 'bootstrap', f'gui/{os.getuid()}', str(agent)], capture_output=True, check=True)
             verify('login_agent_bootstrap')
+        except Exception:
+            diagnostic = subprocess.run([runner, '-e', 'docker', 'exec', '--', '/bin/sh', '-c',
+                'docker ps -a; systemctl list-jobs --no-pager; journalctl -u docker --no-pager -n 40'],
+                env=env, capture_output=True, text=True, timeout=60)
+            (args.output / 'failure-guest.stdout').write_text(diagnostic.stdout)
+            (args.output / 'failure-guest.stderr').write_text(diagnostic.stderr)
+            raise
         finally:
             run('env', 'autostart', 'docker', 'off')
             run('env', 'stop', 'docker')

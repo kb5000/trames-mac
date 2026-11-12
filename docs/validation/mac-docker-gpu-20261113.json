@@ -1,6 +1,6 @@
 {
   "date": "2026-11-13",
-  "runtime_revision": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b",
+  "runtime_revision": "3ee2b3a7da580378beb7ad878de8b1a52bb8cae3",
   "version": "1.5.5",
   "boundary_probe": {
     "fixture_sha256": "ee30e41fde83e065f67f65215653a2394d84f4f7ac8722815b28ee7bb8accc09",
@@ -501,7 +501,13 @@
           "stderr": ""
         }
       ]
-    }
+    },
+    "interpreter_kernel_conformance": {
+      "passed": 488,
+      "ignored": 3
+    },
+    "thread_reap_negative_control": "original code fails new regression; fixed passes",
+    "docker_fixed_stop_seconds": 0.97793625
   },
   "final_geekbench": {
     "date": "2026-11-13",
@@ -566,5 +572,6 @@
       "Stereo Matching": 196293,
       "Particle Physics": 198792
     }
-  }
+  },
+  "gpu_measurement_revision": "86dfa2cbdcdb7dfd8f552ee92237c505b0f3068b"
 }
