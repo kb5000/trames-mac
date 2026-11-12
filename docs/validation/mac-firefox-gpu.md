@@ -2031,3 +2031,87 @@ Filtered artifacts and exact hashes are under `wsi_acquisition_20261112` in the
 existing [Bilibili record](mac-bilibili-BV1FRHV68EUX.json). Raw profiler/profile
 contents and media URLs remain local. Only Mac Dev is updated; stable and
 installed iPad apps remain unchanged.
+
+
+## Original Vulkan CTS diagnostic (2026-11-12)
+
+The first stock Khronos CTS run finds significant general API compatibility gaps.
+Selected GPU output fixtures do not establish general Vulkan 1.2 compatibility.
+The driver remains experimental; these results are not a full CTS pass or a
+conformance submission.
+
+The official `vulkan-cts-1.4.7.0` source archive and its pinned dependency commits
+are built as ARM64-musl `deqp-vk`, Release `-O2 -DNDEBUG -g0`, four compile jobs.
+No CTS source patch, capability override or waiver is applied. Only that target
+is built, without Git histories or Validation Layers. Vulkan Video tests are
+disabled and no video samples are downloaded. The existing build VM is stopped
+before execution; the dedicated Firefox test process is closed. The installed
+Dev runner and paired ICD remain at runtime `c5f52491abaacac918fcf17c34d5950b877b9a45`.
+
+The first batch selects complete mustpass info, descriptor-indexing, multiview
+and basic-synchronization groups, plus complete API smoke, object-management and
+command-buffer groups. Each case is accounted once, including across aborted CTS
+sessions. A fresh runner resumes remaining cases after ResourceError or crash.
+Original QPA, stdout/stderr and exact source/binary hashes remain available.
+
+| Group | Cases | Pass | Fail | ResourceError | Crash | NotSupported |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Info | 23 | 18 | 1 | 2 | 0 | 2 |
+| Descriptor indexing | 115 | 14 | 100 | 0 | 0 | 1 |
+| Basic synchronization | 29 | 16 | 3 | 0 | 0 | 10 |
+| Multiview | 838 | 0 | 838 | 0 | 0 | 0 |
+| API lifecycle | 596 | 204 | 151 | 52 | 3 | 186 |
+| Total | 1601 | 252 | 1093 | 54 | 3 | 199 |
+
+Pass includes two informational cases whose original messages say `Not validated`.
+NotSupported, ResourceError and Crash are preserved, not counted as passes. The
+60-second diagnostic case watchdog produces no timeouts. No full mustpass, WSI,
+video, memory-exhaustion, physical iPad or original-native-Mac CTS claim is made.
+
+Confirmed and localized findings:
+
+- `bad_inheritance_info_random` and `bad_inheritance_info_random_cont` fault in
+  guest memory. The guest frontend reads `pInheritanceInfo` unconditionally,
+  although it must be ignored for primary command buffers, as specified by
+  [VkCommandBufferBeginInfo](https://docs.vulkan.org/refpages/latest/refpages/source/VkCommandBufferBeginInfo.html).
+  `record_query_precise_w_flag` aborts after `vkCmdBeginQuery` rejects its flags.
+  All three crashes reproduce independently with one case per process; no host
+  crash is observed.
+- All 54 ResourceError messages name `createInstance` and
+  `VK_ERROR_OUT_OF_HOST_MEMORY`. The backend explicitly returns that error when
+  an instance already exists. Multiple live instances need original-object
+  ownership; these outcomes do not establish real host-memory exhaustion.
+- `info.device_properties` fails because `largePoints` is false while the
+  forwarded `pointSizeGranularity` remains 0.125. Feature-dependent limits need
+  to agree with the implemented feature profile.
+- 100 descriptor-indexing cases fail at graphics-pipeline creation. Separate
+  traces localize `descriptor_indexing.combined_image_sampler` and
+  `api.smoke.triangle` to the compound guard at guest `graphics.inc:101`, before
+  the native graphics compiler call. Which individual member causes rejection
+  remains to be isolated; shader output correctness is not evaluated there.
+- All 838 multiview cases fail at device creation with
+  `VK_ERROR_FEATURE_NOT_PRESENT`. The exact rejected creation state still needs
+  isolation. This is not evidence that 838 independent multiview rendering
+  algorithms are wrong. Queue/device creation, permitted state combinations and
+  instance/device ownership need broader acceptance before deeper rendering CTS.
+
+Reproduce with [mac-vulkan-cts.py](../../tests/integration/mac-vulkan-cts.py).
+Create a new disposable store using the cached Alpine rootfs and put an explicit
+ownership marker **beside** the store, at `<store>.cts-owner.json`, containing
+`{"purpose":"isolated-vulkan-cts"}`. The storage format rejects unrelated files
+inside its directory. Pass `--runner`, `--store`, `--cts`, `--data` (the original
+`external/vulkancts/data`), `--libs` (paired ICD/loader and musl runtime libraries),
+`--caselist` and a fresh `--output` directory. CTS assets are imported once into
+private guest storage; subsequent shards reuse them. `--cpus 12 --batch-size 32
+--timeout 1200 --minimum-free-gib 140` matches this run. The harness records each
+original outcome and returns nonzero for failures; a nonzero exit is not a reason
+to discard its JSON/QPA results. `TRAMES_VULKAN_TRACE=1` enables separate diagnostic
+runs and is not used for the main counts.
+
+The local build guard checks host free space every ten seconds, stopping at
+15 GiB net growth or below 140 GiB free. Only one Release build is retained.
+The completed build/run adds about 4.6 GiB overall, with about 166 GiB still free;
+raw test logs occupy about 1.7 MiB with images/shader-source logging disabled.
+The [filtered CTS record](mac-vulkan-cts.json) contains per-case outcomes, input
+hashes, independent reproductions and scope. Production sources and installed
+apps are unchanged by this run. Harness-only preflight failures are excluded.
