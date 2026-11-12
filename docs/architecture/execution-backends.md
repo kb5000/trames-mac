@@ -2019,3 +2019,35 @@ and guest/native-driver artifacts are reused; physical iPad testing is skipped.
 The exact measured static-MoltenVK Dev package is installed; stable/business
 sessions are unchanged. See [the shared inventory](../../runtime/docs/architecture/coordination-boundaries.md)
 and [complete stage 52 source, measurements and limits](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/worker-scheduling-20261106.json).
+
+
+## Dev 1.5.4 Geekbench retest and stable refresh (2026-11-13)
+
+The installed Mac Dev runner uses runtime `0fd9a28` (product code `edcce3c`).
+The stable Debian, Docker and default environments were stopped first. The local
+stable application was then rebuilt/installed as 1.5.4 with the same runtime,
+its signature verified, and all three environments left stopped. Existing
+login-autostart preferences and persistent environment data are preserved.
+No environment was started to verify the stable upgrade.
+
+The unchanged original Geekbench 6.7.1 Linux AArch64 Preview and retained
+Alpine/glibc benchmark fixture ran twice through installed Dev, with 12 CPUs,
+host-managed auto memory (24 GiB reported), no PTY/windows and aggregate metrics.
+No tracing, sampling, build, CI or other benchmark ran concurrently. Both
+attempts exited 1 near the multi-core Asset Compression/Object Detection
+transition with `all virtual processes are blocked without an event source`.
+Both completed all single-core workload announcements, but neither completed the
+benchmark or produced a valid aggregate single/multi score or public result.
+The first failure and identical-binary retry are both retained; no old score is
+substituted. Whether this is a false idle decision or a lost guest wake remains
+unresolved. Production sources and runtime pins were not modified for the run.
+
+The original macOS 6.7.1 control ran sequentially between the Dev attempts and
+completed in 235.25 seconds: **4,459 single / 20,451 multi**.
+[Public native result](https://browser.geekbench.com/v6/cpu/19465807).
+Thermal state was nominal and low-power mode off before/after all attempts;
+idle sleep was prevented. The public result was read after measurements ended.
+There is no current Dev/native performance ratio because Dev did not finish.
+[Filtered evidence](../validation/mac-geekbench.json) retains all 16 native
+components, both failed attempts, execution metrics and stable upgrade hashes.
+Raw logs remain in the ignored `target/geekbench-dev-20261113` directory.

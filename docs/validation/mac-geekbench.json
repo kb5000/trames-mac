@@ -19732,5 +19732,275 @@
       "Platform OS, binaries, libraries, ISA dispatch and scheduling differ; this is not pure HVF overhead, Firefox UI performance, or an iPad measurement."
     ],
     "validation_scope": "Measurement and documentation only. No production sources, runtime pins, installed applications or stable sessions changed; unchanged prior CI results reused."
+  },
+  "dev_1_5_4_retest_2026_11_13": {
+    "date": "2026-11-13",
+    "timezone": "Asia/Hong_Kong",
+    "code_mac": "edcce3c796f832541e7c33fe0f9badb7d7969ac9",
+    "runtime_revision": "0fd9a285e802159b3d9e448b76debe853444e31b",
+    "benchmark": {
+      "version": "6.7.1",
+      "guest": "Original Linux AArch64 Preview in the reused isolated Alpine/glibc benchmark store; installed Dev runner, not a Debian preset.",
+      "guest_binary_sha256": "2ab486aa545c2a62ad3debf53d6412d2eba0a189d6daf6dec213af2d89b247e5",
+      "native_binary_sha256": "f82d24a42623019d4c1b349636278409b271e4384ffbb1293d6072dd90a1895c",
+      "read_method": "Verified the public native result in the in-app browser after all measurements ended; no browser capture during runs."
+    },
+    "method": {
+      "cpus": 12,
+      "memory": "host-managed auto; 24 GiB reported",
+      "metrics": true,
+      "tracing": false,
+      "sampler": false,
+      "hvf_diagnostics": false,
+      "order": [
+        "dev initial (failed)",
+        "native (completed)",
+        "identical dev retry (failed)"
+      ],
+      "concurrent_builds_ci_or_benchmarks": false,
+      "stable_environments_stopped": true,
+      "upload_authorized": true,
+      "idle_sleep_prevented": true,
+      "power": "AC; thermal state 0 and low power off before/after all attempts"
+    },
+    "dev_attempts": [
+      {
+        "attempt": "initial",
+        "start_unix": 1794502304.934175,
+        "seconds": 190.192067917,
+        "exit": 1,
+        "public_urls": [],
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "runner_version": "Trames Dev 1.5.4 (dev) runtime 0fd9a285e802159b3d9e448b76debe853444e31b",
+        "runner_sha256": "4850bf703d3926a3cb1aae8a442ced183ee769845cb81781da97f4fca9cae868",
+        "last_announced_workload": "Running Object Detection",
+        "error": "all virtual processes are blocked without an event source",
+        "single": null,
+        "multi": null,
+        "session_metrics": {
+          "syscalls": 1153839,
+          "context_switches": 1045303,
+          "hardware_mapped_bytes": 0,
+          "guest_resident_bytes": 3551232,
+          "vm_checkpoint_groups": 56914,
+          "vm_checkpoint_spaces": 56914,
+          "backing_domain_checks": 353,
+          "backing_page_checks": 243,
+          "parallel_memory_us": 1255118,
+          "instruction_count": null
+        },
+        "execution_paths": {
+          "cohort_rounds": 1,
+          "cohort_stop_us": 22,
+          "service_caller_wait_us": 0,
+          "service_requests": 0,
+          "serviced_syscalls": 0,
+          "syscalls": 1153839,
+          "vm_local_syscalls": 97563,
+          "worker_direct_syscalls": 6096,
+          "worker_fd_syscalls": 874,
+          "worker_file_syscalls": 6083,
+          "worker_futex_waits": 19265,
+          "worker_futex_wakes": 20997,
+          "worker_gpu_calls": 0,
+          "worker_gpu_waits": 0,
+          "worker_poll_syscalls": 0,
+          "worker_socket_syscalls": 0,
+          "worker_syscalls": 1153839,
+          "worker_task_resumes": 19057,
+          "worker_uring_syscalls": 0
+        },
+        "workload_announcements": 25
+      },
+      {
+        "attempt": "retry",
+        "start_unix": 1794502750.239868,
+        "seconds": 190.224072041,
+        "exit": 1,
+        "public_urls": [],
+        "power_before": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "power_after": {
+          "thermal_state": 0,
+          "low_power": false
+        },
+        "runner_version": "Trames Dev 1.5.4 (dev) runtime 0fd9a285e802159b3d9e448b76debe853444e31b",
+        "runner_sha256": "4850bf703d3926a3cb1aae8a442ced183ee769845cb81781da97f4fca9cae868",
+        "last_announced_workload": "Running Object Detection",
+        "error": "all virtual processes are blocked without an event source",
+        "single": null,
+        "multi": null,
+        "session_metrics": {
+          "syscalls": 1271490,
+          "context_switches": 1146432,
+          "hardware_mapped_bytes": 0,
+          "guest_resident_bytes": 3551232,
+          "vm_checkpoint_groups": 57060,
+          "vm_checkpoint_spaces": 57060,
+          "backing_domain_checks": 315,
+          "backing_page_checks": 243,
+          "parallel_memory_us": 1333823,
+          "instruction_count": null
+        },
+        "execution_paths": {
+          "cohort_rounds": 1,
+          "cohort_stop_us": 16,
+          "service_caller_wait_us": 0,
+          "service_requests": 0,
+          "serviced_syscalls": 0,
+          "syscalls": 1271490,
+          "vm_local_syscalls": 98747,
+          "worker_direct_syscalls": 6096,
+          "worker_fd_syscalls": 874,
+          "worker_file_syscalls": 6083,
+          "worker_futex_waits": 19077,
+          "worker_futex_wakes": 21146,
+          "worker_gpu_calls": 0,
+          "worker_gpu_waits": 0,
+          "worker_poll_syscalls": 0,
+          "worker_socket_syscalls": 0,
+          "worker_syscalls": 1271490,
+          "worker_task_resumes": 19091,
+          "worker_uring_syscalls": 0
+        },
+        "workload_announcements": 25
+      }
+    ],
+    "native": {
+      "source": "https://browser.geekbench.com/v6/cpu/19465807",
+      "single": 4459,
+      "multi": 20451,
+      "workloads": [
+        {
+          "name": "File Compression",
+          "single": 3690,
+          "multi": 14558
+        },
+        {
+          "name": "Navigation",
+          "single": 3823,
+          "multi": 21129
+        },
+        {
+          "name": "HTML5 Browser",
+          "single": 4676,
+          "multi": 23880
+        },
+        {
+          "name": "PDF Renderer",
+          "single": 4070,
+          "multi": 21182
+        },
+        {
+          "name": "Photo Library",
+          "single": 3833,
+          "multi": 24649
+        },
+        {
+          "name": "Clang",
+          "single": 5105,
+          "multi": 33385
+        },
+        {
+          "name": "Text Processing",
+          "single": 4256,
+          "multi": 5726
+        },
+        {
+          "name": "Asset Compression",
+          "single": 3833,
+          "multi": 26812
+        },
+        {
+          "name": "Object Detection",
+          "single": 6505,
+          "multi": 17954
+        },
+        {
+          "name": "Background Blur",
+          "single": 4445,
+          "multi": 20832
+        },
+        {
+          "name": "Horizon Detection",
+          "single": 4847,
+          "multi": 26681
+        },
+        {
+          "name": "Object Remover",
+          "single": 5567,
+          "multi": 22541
+        },
+        {
+          "name": "HDR",
+          "single": 5065,
+          "multi": 24481
+        },
+        {
+          "name": "Photo Filter",
+          "single": 5028,
+          "multi": 18145
+        },
+        {
+          "name": "Ray Tracer",
+          "single": 3854,
+          "multi": 27320
+        },
+        {
+          "name": "Structure from Motion",
+          "single": 4106,
+          "multi": 22514
+        }
+      ],
+      "start_unix": 1794502495.1970198,
+      "seconds": 235.253734458,
+      "exit": 0,
+      "public_urls": [
+        "https://browser.geekbench.com/v6/cpu/19465807"
+      ],
+      "power_before": {
+        "thermal_state": 0,
+        "low_power": false
+      },
+      "power_after": {
+        "thermal_state": 0,
+        "low_power": false
+      }
+    },
+    "stable_upgrade": {
+      "before": {
+        "version": "Trames 1.5.4 (stable) runtime eb047dc35351f8d9a623afd9325a6974adae47bb",
+        "runner_sha256": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
+      },
+      "after": {
+        "version": "Trames 1.5.4 (stable) runtime 0fd9a285e802159b3d9e448b76debe853444e31b",
+        "runner_sha256": "64dc4f775f0efa1b39736e57ef1e589796b392fdafb6a0e706fbe9e92c1156f7",
+        "signature_valid": true
+      },
+      "environment_states": {
+        "debian": "stopped",
+        "default": "stopped",
+        "docker": "stopped"
+      },
+      "existing_autostart_preferences_preserved": true,
+      "environments_not_restarted_after_install": true
+    },
+    "interpretation": [
+      "Neither Dev attempt completed; there is no valid current Dev single/multi score or ratio to native.",
+      "Both stopped near the multi-core Asset Compression/Object Detection transition with RuntimeError::Deadlock; the last announcement is not proof of the exact failing instruction.",
+      "This is an execution/liveness failure, not evidence that the CPU benchmark is slow. Whether the idle detector is wrong or the guest actually lost progress is unresolved.",
+      "Source code and runtime pins were not changed for this measurement. Stable is upgraded locally and remains stopped.",
+      "The previous successful Dev result remains historical evidence only, not a substitute for this failed run."
+    ],
+    "validation_scope": "Measurement/documentation and requested local stable application upgrade only; existing code checks reused, no production source changes."
   }
 }
