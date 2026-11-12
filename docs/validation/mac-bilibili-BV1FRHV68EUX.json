@@ -2483,5 +2483,241 @@
       "Video-only accepts 601/601 frames while requestVideoFrameCallback runs at about 24.17 Hz. Callback frequency is not evidence of a 24-Hz output limit or physical scanout cadence. A separate short metadata probe includes a large frame-counter discontinuity and is excluded from frame-rate calculations.",
       "No production code or settings changed in this diagnostic. The temporary CSS is removed and playback paused. Native GPU execution timing and causality of individual metadata functions require a separate targeted experiment."
     ]
+  },
+  "wsi_acquisition_20261112": {
+    "date": "2026-11-12",
+    "scope": "Bilibili public BV1FRHV68EUX, full page, AV1 1920x1080 at 30 fps, seek 10 s, warm 5 s then quiet 20 s, visible and focused. Fresh same-profile processes in candidate/baseline/candidate order; no profiler, build or build VM during quiet intervals. Two baseline intervals in one process. Cache/order effects are not eliminated. Playback-quality counts are accepted frames, not physical scanout.",
+    "mechanism": [
+      "One resumable acquire operation 251, optional bridge bit 4; original resource readiness and native completion wake the existing task.",
+      "Host-ready acquisition binary semaphore/fence without empty native submission or unrelated coherent readback.",
+      "Original surface lifetime atomic on hot path, one surface metadata clone on cold query."
+    ],
+    "candidate_before_pin_runner_sha256": "3824c47338356e323cd8c94d8bc4d580f94ecba29bec408f5424429077bc0c5f",
+    "baseline_runner_sha256": "d5cb14b064eff45066a237465f0d421d72ce7c4a0afaea17abef0160dc681c21",
+    "guest_icd_sha256": "03910ba9b30a57f4cf4a2585f150aa041388ccba723c30bc8d280469720e2f34",
+    "stage_counter_scope": "Separate privileged snapshots include warmup and boundary calls; they are not the quiet 20-second quality deltas.",
+    "cases": [
+      {
+        "label": "candidate-first",
+        "accepted_fps": 29.76279650436954,
+        "total_frames": 600,
+        "dropped_frames": 4,
+        "callback_gaps": {
+          "count": 480,
+          "p50_ms": 35,
+          "p95_ms": 51,
+          "p99_ms": 83,
+          "max_ms": 101,
+          "over_50_ms": 46,
+          "over_100_ms": 1
+        },
+        "media_speed": 1.0000390511860175,
+        "playback_events": [],
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.00019645690918
+        },
+        "diagnostic_stage_delta": {
+          "droppedCompositorFrames": 6,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      },
+      {
+        "label": "baseline-first",
+        "accepted_fps": 29.376498800959236,
+        "total_frames": 600,
+        "dropped_frames": 12,
+        "callback_gaps": {
+          "count": 485,
+          "p50_ms": 34.080000000001746,
+          "p95_ms": 50.4800000000032,
+          "p99_ms": 66.11999999999898,
+          "max_ms": 66.80000000000291,
+          "over_50_ms": 157,
+          "over_100_ms": 0
+        },
+        "media_speed": 1.0001431854516385,
+        "playback_events": [],
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.00023651123047
+        },
+        "diagnostic_stage_delta": {
+          "droppedCompositorFrames": 29,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      },
+      {
+        "label": "baseline-repeat",
+        "accepted_fps": 29.70247603833866,
+        "total_frames": 601,
+        "dropped_frames": 6,
+        "callback_gaps": {
+          "count": 486,
+          "p50_ms": 33.84000000001106,
+          "p95_ms": 50.55999999999767,
+          "p99_ms": 50.919999999998254,
+          "max_ms": 83.61999999999534,
+          "over_50_ms": 119,
+          "over_100_ms": 0
+        },
+        "media_speed": 0.9996975339456868,
+        "playback_events": [],
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.0001163482666
+        },
+        "diagnostic_stage_delta": {
+          "droppedCompositorFrames": 9,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      },
+      {
+        "label": "candidate-second",
+        "accepted_fps": 29.81571193127903,
+        "total_frames": 600,
+        "dropped_frames": 3,
+        "callback_gaps": {
+          "count": 484,
+          "p50_ms": 34,
+          "p95_ms": 51,
+          "p99_ms": 67,
+          "max_ms": 100,
+          "over_50_ms": 26,
+          "over_100_ms": 0
+        },
+        "media_speed": 0.9995081656095492,
+        "playback_events": [],
+        "decoder": {
+          "name": "ffmpeg video decoder (RDD remote)",
+          "hardware": true,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30.000276565551758
+        },
+        "diagnostic_stage_delta": {
+          "droppedCompositorFrames": 16,
+          "droppedDecodedFrames": 0,
+          "droppedSinkFrames": 0
+        }
+      }
+    ],
+    "webgl": [
+      {
+        "batches": 64,
+        "draws": 512,
+        "elapsed_ms": 747,
+        "gpu_work_ms": 407,
+        "pixel": [
+          64,
+          128,
+          191,
+          255
+        ],
+        "pixel_ok": true,
+        "gl_error": 0,
+        "context_lost": false,
+        "renderer": "Generic Renderer",
+        "trial": 0,
+        "warmup": true,
+        "host_ms": 832.433917
+      },
+      {
+        "batches": 64,
+        "draws": 512,
+        "elapsed_ms": 541,
+        "gpu_work_ms": 271,
+        "pixel": [
+          64,
+          128,
+          191,
+          255
+        ],
+        "pixel_ok": true,
+        "gl_error": 0,
+        "context_lost": false,
+        "renderer": "Generic Renderer",
+        "trial": 1,
+        "warmup": false,
+        "host_ms": 574.5853329999999
+      },
+      {
+        "batches": 64,
+        "draws": 512,
+        "elapsed_ms": 530,
+        "gpu_work_ms": 258,
+        "pixel": [
+          64,
+          128,
+          191,
+          255
+        ],
+        "pixel_ok": true,
+        "gl_error": 0,
+        "context_lost": false,
+        "renderer": "Generic Renderer",
+        "trial": 2,
+        "warmup": false,
+        "host_ms": 545.9084169999996
+      }
+    ],
+    "native_vulkan12": {
+      "passed": true,
+      "scope": "native multiview, descriptor indexing, depth/stencil resolve, subpasses, secondary commands, events, linear images and YCbCr output oracles; not complete CTS",
+      "runner_sha256": "3824c47338356e323cd8c94d8bc4d580f94ecba29bec408f5424429077bc0c5f",
+      "inputs": {
+        "libtrames_vulkan_icd.so": "03910ba9b30a57f4cf4a2585f150aa041388ccba723c30bc8d280469720e2f34",
+        "vulkan12-complete": "1ff4752971ae77203812ed9446ae3d8f9ced54ae69be0493a2e01b4e5c024155",
+        "vulkan12-index.comp.spv": "a24ffc837e6b21f530bdc450cf882900dbc0902ed24e3c069055d888331b6bfa",
+        "vulkan12-views.vert.spv": "6f8198437f63e1d052907a1f93f540e5b189d7f9435d889ee3f757de2c523c7e",
+        "vulkan12-views.frag.spv": "1d26cee8c5e85090fa7f08a16b0dcafbf6658ce453b31807516e8fb8e0d13841",
+        "vulkan12-input.frag.spv": "002b31ed4c0fb4edf3fdcfc5f8fff744ca01ffcc77cd697a1679867132390021",
+        "vulkan12-ycbcr.comp.spv": "acdaa502f89e984b8ff29fd605641375f0303a5f16792c35098723d510613df0",
+        "vulkan12-atomic64.comp.spv": "108d3a749ac544a3658ac8ecee306de6d522e4983197c20472d99c5e5a42048a",
+        "vulkan12-multiview.frag.spv": "7d7591b1853360ede51edcf033676d619457fadef42987f9264cace25534e462",
+        "libvulkan.so.1": "382419ec9f138dd2a980fc988482a72b643c32901599b568a27fe7742946c752",
+        "icd.json": "5621e4207c5400a1a5163c5c76ce957bb1e5a366d3a654365e19e116271e04d3"
+      },
+      "teardown_metric_scope": "Metal currentAllocatedSize before MTLDevice release; includes native driver/autoreleased resources, not a Vulkan live-object count",
+      "cases": [
+        {
+          "cpus": 1,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        },
+        {
+          "cpus": 12,
+          "exit_code": 0,
+          "passed": true,
+          "metal_current_allocated_mib_at_physical_teardown": 1
+        }
+      ],
+      "cleanup_exit": 0
+    },
+    "checks": {
+      "native_acquisition_cases": 5,
+      "vulkan_units": 63,
+      "wayland_units": 23,
+      "ipad_arm64_ffi_compile": true,
+      "physical_ipad_tested": false
+    },
+    "remaining": "Residual full-page compositor drops remain. No claim of complete smoothness or GPU shader-time attribution. Stable and installed iPad apps unchanged.",
+    "runtime_revision": "c5f52491abaacac918fcf17c34d5950b877b9a45",
+    "guest_product_revision": "beb58b088432f2b7ab9d9b3e550c49a2cc0d37eb",
+    "final_dev_runner_sha256": "17ef85588b02499a377b4338f2a7af77786a240f07a8a679bb9efede8e6c15cc",
+    "stable_runner_unchanged_sha256": "8fc21435034e8c041632e2e50419da9d2123bf790aedb0a1499286fc8367e614"
   }
 }

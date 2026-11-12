@@ -1969,3 +1969,65 @@ or preferences changed in this diagnostic. Filtered data is under
 `drop_diagnosis_20261112` in the existing
 [Bilibili record](mac-bilibili-BV1FRHV68EUX.json); raw profiles, addresses, page
 strings and media URLs remain in ignored local output.
+
+
+## Event-driven swapchain acquisition (2026-11-12)
+
+The complete Wayland image-acquisition path now parks the original task on
+resource readiness instead of retrying a NativeCall every 1 ms. Guest ICD wire
+revision 16 negotiates optional bridge bit 4 and operation 251. The original
+surface budget wakes on final UI release, surface destruction and swapchain
+retirement; native completion also wakes the task so completed producer leases
+can be collected. The same absolute timeout and original sync/output resources
+survive the wait. No coordinator, polling bus or service thread is added.
+Hosts without the native completion adapter do not advertise this optional path.
+
+An available image already proves native producer and UI completion. Acquisition
+uses a host-ready binary semaphore/fence, eliminating the empty GPU submission
+and private bookkeeping fence previously needed just to signal availability.
+Submit/present consume the host binary signal once, preserving subsequent native
+signals, timeline values and multiple submit batches. Host fence completion
+skips unrelated mapped-buffer readback and notifies after the context unlocks.
+Hot acquire/present use the original surface lifetime; cold queries clone only
+one surface's metadata instead of the complete compositor snapshot.
+
+Quiet measurements retain the complete Bilibili page, AV1 1920×1080 at 30 fps,
+12 CPUs, the same dedicated profile, display size and browser settings. Each
+interval seeks to 10 s, warms for 5 s and measures for 20 s. The build VM,
+profiler and compiler are stopped during these intervals. Run order is new
+process, old process (two intervals), new process. The new ICD also runs against
+the old host, negotiating its legacy path, which checks backward compatibility.
+
+| Interval | Accepted fps | Dropped / total |
+| --- | ---: | ---: |
+| New, first process | 29.76 | 4 / 600 |
+| Old, first interval | 29.38 | 12 / 600 |
+| Old, repeated interval | 29.70 | 6 / 601 |
+| New, second process | 29.82 | 3 / 600 |
+
+All four intervals remain buffered without seek/wait events and media speed is
+approximately 1.0. Separate diagnostic snapshots show zero decoder/sink drops;
+their compositor deltas are 6/29/9/16 in table order and include warmup/boundary
+calls, not just the quiet interval. Callback-gap P95 remains approximately
+50–51 ms. The shorter runs suggest fewer drops, but cache, fresh-process and
+ordering effects remain; this is not a statistical causal estimate or a physical
+scanout measurement. Residual full-page compositor drops are still present.
+
+Three actual Firefox WebGL pixel trials (one warmup, two measured, 512 draws
+each) return [64,128,191,255], no GL errors and no context loss. Native Vulkan
+1.2 output oracles pass at both one and twelve CPUs, including descriptor
+indexing, multiview, depth/stencil resolve, secondary commands, events, linear
+images and YCbCr. This is the existing selected-feature oracle, not complete CTS.
+Five new actual native image/fence cases cover timeout, cancellation, original
+sync-object lifetime, retirement, output faults, native producer release and
+notification after unlock. They also check host-binary/native-binary reuse across
+submit batches and host-binary/timeline wait-value alignment. No empty native
+acquisition submission is retained. All 63 Vulkan and 23 Wayland unit tests pass;
+affected strict lints and physical-ARM64 iPad FFI compilation pass. Unchanged
+CPU/HVF/network acceptance is reused. The shared implementation remains iPad
+compatible; physical iPad GPU acceptance is separate.
+
+Filtered artifacts and exact hashes are under `wsi_acquisition_20261112` in the
+existing [Bilibili record](mac-bilibili-BV1FRHV68EUX.json). Raw profiler/profile
+contents and media URLs remain local. Only Mac Dev is updated; stable and
+installed iPad apps remain unchanged.
