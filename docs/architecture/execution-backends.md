@@ -2159,3 +2159,25 @@ retains the original rejection, error-only diagnostic, expanded correctness
 oracles, exact source/binary hashes, all eight scores and execution counters.
 Raw artifacts stay ignored under `target/geekbench-gpu-20261113`; upload claim
 links are not published.
+
+
+## GPU mapping cliff and stable recovery (2026-11-13)
+
+[Same-API measurements and stack attribution](../validation/mac-gpu-overhead-20261113.md)
+identify shadow coherent-memory synchronization as the dominant sampled worker
+path in the slow Geekbench image phases (76.3–93.2% of that worker's sampled
+stacks, not whole-run exclusive time). A legal 4 KiB allocation tail changes a
+100-submit Dev Vulkan control from 27.96 ms to 2,410.37 ms, while GPU timestamp
+time remains around 1 ms. The same native Vulkan control has no such cliff.
+Async poll-side readback is missing from aggregate transfer counters, and pending
+call latency includes CPU readback; earlier `gpu_wait_us` is not pure GPU time.
+Generic native backing ownership/alignment is the first proposed optimization;
+no GPU memory-policy change or new scored Geekbench result is claimed here.
+
+Restoring stable also exposes an independent current-main runc/zombie-overlay
+startup regression. The deterministic metadata-only overlay occupancy bug is
+fixed in `dfe6ff9`, but does not resolve the whole startup failure. Stable service
+is recovered using the preserved signed formal 1.5.4 (`eb047dc`), with both original
+containers running and the prior web endpoint returning HTTP 200. Dev retains
+`dfe6ff9`. Data, configuration and autostart choices are preserved. Current-main
+container startup remains an open release blocker; see the linked report.
