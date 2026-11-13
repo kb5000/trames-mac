@@ -277,6 +277,7 @@ pub struct Command {
     filesystem: bool,
     network: trames_vfs::NetworkMode,
     trace: bool,
+    android_init: bool,
     metrics: bool,
     timeout: u64,
     limit: usize,
@@ -290,6 +291,7 @@ pub struct Command {
     pty: bool,
     init: super::systemd::Init,
     console: Option<std::path::PathBuf>,
+    exec_socket: Option<std::path::PathBuf>,
     terminal_command: Vec<String>,
     argv: Vec<String>,
 }
@@ -309,6 +311,7 @@ impl Command {
         let mut arguments = arguments.peekable();
         let mut init = super::systemd::Init::Shell;
         let mut console = None;
+        let mut exec_socket = None;
         let mut rootfs = None;
         let mut storage = None;
         let mut imports = Vec::new();
@@ -316,6 +319,7 @@ impl Command {
         let mut filesystem = false;
         let mut network = trames_vfs::NetworkMode::Full;
         let mut trace = false;
+        let mut android_init = false;
         let mut metrics = false;
         let mut timeout = 0;
         let mut limit = MemoryLimits::host_managed().total;
@@ -332,6 +336,11 @@ impl Command {
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
+                "--exec-socket" => {
+                    exec_socket = Some(std::path::PathBuf::from(
+                        arguments.next().ok_or("missing exec socket")?,
+                    ));
+                }
                 "--console-socket" => {
                     console = Some(std::path::PathBuf::from(
                         arguments.next().ok_or("missing console socket")?,
@@ -404,13 +413,14 @@ impl Command {
                     audio_input = true;
                 }
                 "--trace" => trace = true,
+                "--android-init" => android_init = true,
                 "--metrics" => metrics = true,
                 "--pty" => pty = true,
                 "--no-pty" => pty = false,
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--exec-socket PATH] [--android-init] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -441,6 +451,7 @@ impl Command {
         Ok(Some(Self {
             terminal_command: default_command.to_vec(),
             console,
+            exec_socket,
             init,
             rootfs,
             storage,
@@ -449,6 +460,7 @@ impl Command {
             filesystem,
             network,
             trace,
+            android_init,
             metrics,
             timeout,
             limit,
@@ -471,6 +483,7 @@ pub fn run(
     let Command {
         terminal_command,
         console,
+        exec_socket,
         init,
         rootfs,
         storage,
@@ -479,6 +492,7 @@ pub fn run(
         filesystem,
         network,
         trace,
+        android_init,
         metrics,
         timeout,
         limit,
@@ -532,22 +546,8 @@ pub fn run(
     }
     // Use the runtime's existing host-resolver endpoint, as the iPad and CLI
     // products do. Never replace a resolver file configured by the guest user.
-    if !filesystem
-        && vfs
-            .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
-            .is_err_and(|e| e.0 == 2)
-    {
-        if vfs
-            .stat_at(trames_vfs::AT_FDCWD, b"/etc")
-            .is_err_and(|e| e.0 == 2)
-        {
-            vfs.mkdir_at(trames_vfs::AT_FDCWD, b"/etc", 0o755)?;
-        }
-        vfs.import_reader(
-            b"/etc/resolv.conf",
-            &mut &b"nameserver 169.254.0.53\n"[..],
-            false,
-        )?;
+    if !filesystem {
+        trames_distro::install_resolver(&mut vfs, b"nameserver 169.254.0.53\n")?;
     }
     for import in imports {
         let (guest, host) = import.split_once('=').ok_or("import must be GUEST=HOST")?;
@@ -566,6 +566,12 @@ pub fn run(
     if filesystem {
         super::files::run(&mut vfs, &argv)?;
         return Ok(0);
+    }
+    if android_init {
+        if init != super::systemd::Init::Shell || console.is_some() {
+            return Err("experimental Android init requires a standalone session".into());
+        }
+        trames_distro::android::prepare(&mut vfs)?;
     }
     let init = if init == super::systemd::Init::Systemd {
         Some(super::systemd::prepare(&mut vfs)?)
@@ -605,6 +611,9 @@ pub fn run(
         "LANG=C.UTF-8".into(),
         "TERM=xterm-256color".into(),
     ];
+    if android_init {
+        envp = trames_distro::android::environment();
+    }
     if server.is_some() {
         envp.extend([
             "XDG_RUNTIME_DIR=/run/user/0".into(),
@@ -635,8 +644,9 @@ pub fn run(
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
         source: None,
-        exec: console
+        exec: exec_socket
             .as_deref()
+            .or(console.as_deref())
             .map(|path| super::exec::Server::bind(path, envp.clone()))
             .transpose()?,
         terminals,
@@ -663,6 +673,16 @@ pub fn run(
     let terminal = RawTerminal::enter(pty)?;
     let result = runtime.run(&mut output, u64::MAX);
     drop(terminal);
+    if trace {
+        if let Ok(log) = runtime.linux.vfs.syslog(3, 1024 * 1024) {
+            if !log.is_empty() {
+                eprintln!(
+                    "trames guest kernel log:\n{}",
+                    String::from_utf8_lossy(&log)
+                );
+            }
+        }
+    }
     if metrics {
         eprintln!(
             "trames mac parallel: peak={} chunks={} cpu_time_us={}",
