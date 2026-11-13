@@ -540,7 +540,11 @@ pub fn run(
         trames_vfs::Vfs::default()
     };
     if !filesystem {
-        vfs.configure_network(network)?;
+        if android_init {
+            vfs.configure_managed_uplink(network)?;
+        } else {
+            vfs.configure_network(network)?;
+        }
     }
     if let Some(archive) = &rootfs {
         if vfs.capacity().nodes_used <= 3 {
@@ -655,7 +659,11 @@ pub fn run(
     runtime.linux.trace = trace;
     // A browser's guest threads are scheduler jobs, not host threads. Keep
     // enough task slots for normal multiprocess pages without reserving RAM.
-    runtime.linux.task_limit = 1024;
+    runtime.linux.task_limit = if android_init {
+        trames_distro::android::TASK_LIMIT
+    } else {
+        1024
+    };
     runtime.cpu_count = cpus;
     trames_hvf::set_resident_limit(resident_limit);
     runtime.profile_syscalls = metrics;
