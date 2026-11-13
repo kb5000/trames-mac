@@ -18,7 +18,11 @@ mod files;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod host_memory;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod interop;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod lifecycle;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+mod networks;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod packages;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]

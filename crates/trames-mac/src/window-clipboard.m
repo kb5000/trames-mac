@@ -110,3 +110,33 @@ void trames_clipboard_changed(void *pointer){
     TramesClipboard *clipboard=(__bridge TramesClipboard *)pointer;
     dispatch_async(dispatch_get_main_queue(),^{[clipboard cancelExports];});
 }
+
+// Host-owned pointers only. Device and Wayland controls use the same native
+// pasteboard; these bounded text operations require no proxy/resource thread.
+intptr_t trames_control_clipboard_read(void *board,uint8_t *bytes,size_t capacity){
+    @autoreleasepool {
+        NSPasteboard *pasteboard=board?(__bridge NSPasteboard *)board:NSPasteboard.generalPasteboard;
+        NSString *text=[pasteboard stringForType:NSPasteboardTypeString]?:@"";
+        if(text.length>capacity)return -90;
+        NSData *data=[text dataUsingEncoding:NSUTF8StringEncoding];
+        if(data.length>capacity)return -90;
+        if(data.length)memcpy(bytes,data.bytes,data.length);
+        return (intptr_t)data.length;
+    }
+}
+intptr_t trames_control_clipboard_write(void *board,const uint8_t *bytes,size_t length){
+    @autoreleasepool {
+        NSPasteboard *pasteboard=board?(__bridge NSPasteboard *)board:NSPasteboard.generalPasteboard;
+        NSString *text=[[NSString alloc]initWithBytes:bytes length:length encoding:NSUTF8StringEncoding];if(!text)return -22;
+        [pasteboard clearContents];return [pasteboard setString:text forType:NSPasteboardTypeString]?0:-5;
+    }
+}
+
+intptr_t trames_control_open_url(const uint8_t *bytes,size_t length){
+    @autoreleasepool {
+        NSString *text=[[NSString alloc]initWithBytes:bytes length:length encoding:NSUTF8StringEncoding];
+        NSURL *url=text?[NSURL URLWithString:text]:nil;
+        if(!url||![@[@"http",@"https"] containsObject:url.scheme.lowercaseString]||!url.host.length)return -22;
+        return [NSWorkspace.sharedWorkspace openURL:url]?1:0;
+    }
+}

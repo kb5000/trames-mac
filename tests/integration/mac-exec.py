@@ -47,22 +47,23 @@ def main():
             assert not (home / 'registry').exists(), 'help/completion must not initialize a registry'
             run('-e', 'missing', 'exec', '--', 'true', code=1)
             assert not (home / 'registry/environments/missing').exists()
-            assert run('config', '--global', 'get', 'defaults.vulkan').stdout == b'true\n'
-            run('config', '--global', 'set', 'defaults.distro', 'debian')
-            run('config', '--global', 'unset', 'defaults.distro')
-            assert run('config', '--global', 'get', 'defaults.distro').stdout == b'alpine\n'
-            run('env', 'create', 'lab', '--archive', str(a.alpine.resolve()), '--windows', 'off', '--network', 'off')
-            run('config', '--global', 'set', 'default-environment', 'lab')
-            run('config', 'set', 'cpus', 'all', 'memory', '4GiB')
-            assert run('config', 'get', 'memory').stdout == b'4096\n'
-            run('config', 'unset', 'memory')
-            before = (home / 'registry/environments/lab/config.json').read_bytes()
-            run('config', 'set', 'cpus', '0', code=1)
-            assert (home / 'registry/environments/lab/config.json').read_bytes() == before
+            assert run('config', '--global', 'get', 'defaults.components.vulkan').stdout == b'true\n'
+            run('config', '--global', 'set', 'defaults.image.distribution', 'debian')
+            run('config','--global','set','defaults.image.distribution','alpine')
+            assert run('config', '--global', 'get', 'defaults.image.distribution').stdout == b'alpine\n'
+            run('env', 'create', 'lab', '--archive', str(a.alpine.resolve()), '--vulkan','false','--network','none')
+            run('config', '--global', 'set', 'default_environment', 'lab')
+            run('config', 'set','resources.cpus','all','resources.memory','4GiB')
+            assert run('config', 'get','resources.memory').stdout == b'4GiB\n'
+            run('config','set','resources.memory','auto')
+            profile = Path(run('-e','lab','config','path').stdout.decode().strip())
+            before = profile.read_bytes()
+            run('config', 'set','resources.cpus','0', code=1)
+            assert profile.read_bytes() == before
             assert run('env', 'ls', '-q').stdout == b'lab\n'
             assert run('env', 'ls').stdout.startswith(b'NAME')
             rows = json.loads(run('env', 'list', '--json').stdout)
-            assert rows[0]['config']['vulkan'] and rows[0]['config']['memory_mib'] == 'auto'
+            assert not rows[0]['config']['components']['vulkan'] and rows[0]['config']['resources']['memory'] == 'auto'
             for _ in range(2):
                 assert run('env', 'start', 'lab').stdout == b''
             assert execute('--', 'sh', '-c', 'echo out; echo err >&2; exit 7', code=7).stdout == b'out\n'

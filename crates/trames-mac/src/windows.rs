@@ -174,17 +174,19 @@ impl Bridge {
             wake.notify();
         }
     }
-    pub fn attach(&self, server: Server) {
-        // SAFETY: native UI is alive before this guest bootstrap and owns the
-        // provider until shutdown; the returned reference is independently owned.
-        let clipboard = unsafe { trames_ui_clipboard_ref(self.native as *mut _) };
-        if clipboard.is_null() {
-            self.fail("cannot create native clipboard provider");
-            return;
-        }
-        if let Err(error) = server.attach_clipboard(Arc::new(Clipboard(clipboard as usize))) {
-            self.fail(error);
-            return;
+    pub fn attach(&self, server: Server, clipboard_enabled: bool) {
+        if clipboard_enabled {
+            // SAFETY: native UI is alive before this guest bootstrap and owns the
+            // provider until shutdown; the returned reference is independently owned.
+            let clipboard = unsafe { trames_ui_clipboard_ref(self.native as *mut _) };
+            if clipboard.is_null() {
+                self.fail("cannot create native clipboard provider");
+                return;
+            }
+            if let Err(error) = server.attach_clipboard(Arc::new(Clipboard(clipboard as usize))) {
+                self.fail(error);
+                return;
+            }
         }
         let target: Arc<dyn IoWake> = self.wake.clone();
         let signal = IoSignal::new(0, Arc::downgrade(&target));

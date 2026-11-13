@@ -43,12 +43,12 @@ def main():
         run('env', 'create', 'invalid', '--init', 'systemd', ok=False)
         assert not (home / 'environments/invalid').exists()
         if args.prepared_store:
-            run('env', 'import', 'debian', str(args.prepared_store.resolve()))
+            run('env','import-store', 'debian', str(args.prepared_store.resolve()))
             run('env', 'setup', 'debian', '--init', 'systemd')
         else:
             run('env', 'create', 'debian', '--distro', 'debian', '--packages', 'minimal', '--init', 'systemd',
                 '--archive', str(args.debian.resolve()))
-        assert json.loads((home / 'environments/debian/config.json').read_text())['init'] == 'systemd'
+        assert json.loads(run('-e','debian','config','show','--json').stdout)['boot']['mode'] == 'systemd'
         run('debug', 'env-run', 'debian', '--no-windows', '/bin/true', ok=False)
         assert 'MAINTENANCE' in run('debug', 'env-run', 'debian', '--init', 'shell', '--no-windows',
                                      '--no-pty', '/bin/echo', 'MAINTENANCE').stdout
@@ -71,7 +71,7 @@ TimeoutStopSec=3s
         encoded_service = base64.b64encode(service.encode()).decode()
         encoded_notify = base64.b64encode(notify.encode()).decode()
         for cpus in (1, 4):
-            run('env', 'configure', 'debian', '--cpus', str(cpus), '--windows', 'off')
+            run('env', 'configure', 'debian', '--cpus', str(cpus), '--vulkan','false')
             master, slave = pty.openpty()
             original = termios.tcgetattr(slave)
             child = subprocess.Popen([runner, '-e', 'debian', 'shell'], env=env,
@@ -151,7 +151,7 @@ TimeoutStopSec=3s
         # Mode changes preserve the guest disk; backups retain the selected init.
         run('env', 'backup', 'debian', str(home / 'systemd.tar.gz'))
         run('env', 'restore', 'restored', str(home / 'systemd.tar.gz'))
-        assert json.loads((home / 'environments/restored/config.json').read_text())['init'] == 'systemd'
+        assert json.loads(run('-e','restored','config','show','--json').stdout)['boot']['mode'] == 'systemd'
         identity = run('debug', 'env-run', 'debian', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
         clone_identity = run('debug', 'env-run', 'restored', '--init', 'shell', '--no-windows', '--no-pty', '/bin/cat', '/etc/machine-id').stdout.strip()
         assert len(identity) == 32 and len(clone_identity) == 32 and identity != clone_identity

@@ -45,3 +45,8 @@ typedef void (*trames_text_fn)(const void *,const struct trames_text_edit *);
 void trames_clipboard_release(void *pointer);
 void trames_clipboard_transfer(void *pointer,int fd,uint32_t to_guest);
 void trames_clipboard_changed(void *pointer);
+
+intptr_t trames_control_clipboard_read(void *board,uint8_t *bytes,size_t capacity);
+intptr_t trames_control_clipboard_write(void *board,const uint8_t *bytes,size_t length);
+
+intptr_t trames_control_open_url(const uint8_t *bytes,size_t length);

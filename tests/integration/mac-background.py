@@ -101,11 +101,11 @@ def main():
             return result
 
         run('env', 'create', 'lab', '--archive', str(args.alpine.resolve()))
-        run('env', 'configure', 'lab', '--cpus', '4', '--windows', 'off', '--network', 'off')
+        run('env', 'configure', 'lab', '--cpus', '4', '--vulkan', 'false', '--network', 'none')
         # Exercise shell argv quoting through the real launcher, not a mirrored parser.
         welcome = "WELCOME quoted ' $ % \\\nsecond line"
         argv = ['/bin/sh', '-c', 'printf "%s\\n" "$1"; exec /bin/sh -il', 'launcher', welcome]
-        run('env', 'configure', 'lab', '--command', json.dumps(argv))
+        run('-e','lab','config','set','session.shell',json.dumps(argv))
         clients = []
         try:
             starters = [subprocess.Popen([runner, 'env', 'start', 'lab', '--detach'], env=env,

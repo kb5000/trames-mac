@@ -3,12 +3,13 @@ _trames() {
     local -a environments
     case "$words[CURRENT-1]" in
         -e|--environment) environments=("${(@f)$($words[1] env ls -q 2>/dev/null)}"); _describe environment environments ;;
-        env) _values command ls create start stop restart enable disable setup status terminal packages configure import-store backup restore check delete doctor ;;
-        config) _values command get set unset list edit path --global ;;
+        env) _values command ls create start stop restart enable disable setup status terminal packages configure import-store backup restore rename remove grant share doctor ;;
+        network) _values command ls create inspect remove ;;
+        config) _values command get set show list edit path validate --global ;;
         session) _values command ls attach ;;
         apk) _values command install launch list ;;
         completion) _values shell bash zsh fish ;;
-        *) _values command shell exec env config session apk gui completion --environment --help --version ;;
+        *) _values command shell exec env config network session apk gui completion --environment --help --version ;;
     esac
 }
 if [[ $ZSH_EVAL_CONTEXT == *:file ]]; then

@@ -37,25 +37,25 @@ def main():
             return r
 
         expected_version = run('--version').stdout.splitlines()[0]
-        assert json.loads(run('config', '--global', 'show').stdout)['defaults']['distribution'] == 'alpine'
-        run('config', '--global', 'set', 'defaults.cpus', '2', 'defaults.windows', 'false', 'defaults.network', 'off', 'default-environment', 'mine')
+        assert json.loads(run('config', '--global', 'show','--json').stdout)['defaults']['image']['distribution'] == 'alpine'
+        run('config', '--global', 'set', 'defaults.resources.cpus', '2', 'defaults.display.windows', 'false', 'defaults.network.mode', 'none', 'defaults.components.vulkan','false','defaults.components.thunking','false')
         # Invalid changes leave the last valid global file byte-for-byte intact.
         config_path = Path(run('config', '--global', 'path').stdout.strip())
         before = config_path.read_bytes()
-        run('config', '--global', 'set', 'defaults.cpus', '0', ok=False)
+        run('config', '--global', 'set', 'defaults.resources.cpus', '0', ok=False)
         assert config_path.read_bytes() == before
         run('env', 'create', 'builtin', '--archive', str(a.alpine.resolve()))
-        builtin = json.loads(run('env', 'config', 'builtin').stdout)
-        assert builtin['cpus'] == 2 and not builtin['windows'] and builtin['command'] == ['/bin/sh', '-l']
+        builtin = json.loads(run('-e','builtin','config','show','--json').stdout)
+        assert builtin['resources']['cpus'] == 2 and not builtin['display']['windows'] and builtin['session']['shell'] == ['/bin/sh', '-l']
         run('env', 'configure', 'builtin', '--', '/bin/sh', '-ec', 'echo CONFIGURED_COMMAND')
         assert 'CONFIGURED_COMMAND' in run('debug', 'env-run', 'builtin', '--no-pty').stdout
         assert 'OVERRIDE' in run('debug', 'env-run', 'builtin', '--no-pty', '/bin/echo', 'OVERRIDE').stdout
-        run('config', '--global', 'set', 'default-environment', 'builtin')
+        run('config', '--global', 'set', 'default_environment', 'builtin')
         # Explicit env default reaches the same selected environment.
-        assert run('config', '--global', 'get', 'default-environment').stdout.strip() == 'builtin'
+        assert run('config', '--global', 'get', 'default_environment').stdout.strip() == 'builtin'
         assert 'Usage: trames' in run().stdout
-        run('config', '--global', 'set', 'defaults.cpus', '1')
-        assert json.loads(run('env', 'config', 'builtin').stdout)['cpus'] == 2
+        run('config', '--global', 'set', 'defaults.resources.cpus', '1')
+        assert json.loads(run('-e','builtin','config','show','--json').stdout)['resources']['cpus'] == 2
 
         directory = base / 'my rootfs'
         (directory / 'usr/bin').mkdir(parents=True)
@@ -154,7 +154,7 @@ def main():
         run('env', 'backup', 'dir', str(backup))
         run('env', 'restore', 'restored', str(backup))
         assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'restored', '--no-pty').stdout
-        run('env', 'import', 'imported-custom', str(base / 'registry/environments/dir/store'))
+        run('env', 'import-store', 'imported-custom', str(base / 'registry/environments' / json.loads(run('-e','dir','config','show','--json').stdout)['environment']['uuid'] / 'store'))
         run('env', 'configure', 'imported-custom', '--', '/usr/bin/check')
         assert 'SCRIPT_ENTRYPOINT' in run('debug', 'env-run', 'imported-custom', '--no-pty').stdout
 

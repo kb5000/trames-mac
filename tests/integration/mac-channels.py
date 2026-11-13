@@ -36,7 +36,7 @@ def main():
         env.pop('TRAMES_HOME', None)
         path = subprocess.check_output([str(app / 'Contents/MacOS/trames-mac-run'), 'config', '--global', 'path'], env=env, text=True).strip()
         expected = 'Trames Dev' if channel == 'dev' else 'Trames'
-        assert Path(path).parts[-2:] == (expected, 'cli.json'), path
+        assert Path(path).parts[-2:] == (expected, 'config.toml'), path
         rows.append(dict(channel=channel, bundle_id=info['CFBundleIdentifier'], default_config=path))
     with tempfile.TemporaryDirectory(prefix='trames-channels-') as temp:
         base = Path(temp)
@@ -58,7 +58,7 @@ def main():
             for channel in ('stable', 'dev'):
                 exe, scoped = str(installed[channel]), homes[channel]
                 subprocess.run([exe, 'env', 'create', 'same-name', '--archive', str(a.alpine.resolve()),
-                                '--cpus', '1', '--windows', 'off'], env=scoped, check=True,
+                                '--cpus', '1', '--vulkan', 'false'], env=scoped, check=True,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
                 out_path = base / (channel + '.stdout')
                 out, err = out_path.open('w'), (base / (channel + '.stderr')).open('w')

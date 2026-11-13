@@ -97,7 +97,7 @@ pkg-config --version
             assert expected in result.stdout
         run('env', 'configure', 'daily', '--network', 'off')
         assert 'already installed' in run('env', 'packages', 'daily', 'development').stdout
-        run('env', 'check', 'daily')
+        run('-e','daily','config','validate')
     record = dict(runner_sha256=hashlib.sha256(a.runner.read_bytes()).hexdigest(), cases=rows)
     (a.output / 'results.json').write_text(json.dumps(record, indent=2)+'\n')
     print(f'{len(rows)} operations passed', flush=True)

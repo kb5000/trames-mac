@@ -9,6 +9,7 @@ type Runtime = trames_session::Runtime<trames_hvf::kernel::Cpu>;
 
 struct Output {
     source: Option<std::sync::Arc<dyn trames_vfs::ConsoleIo>>,
+    interop: Option<super::interop::Host>,
     exec: Option<super::exec::Server>,
     init: Option<super::systemd::Monitor>,
     console: Option<super::console::Console>,
@@ -103,9 +104,15 @@ impl GuestOutput for Output {
         if let Some(bridge) = &self.bridge {
             bridge.bind_host(wake.clone());
         }
+        if let Some(interop) = &mut self.interop {
+            interop.bind(wake.clone());
+        }
         self.host_wake = Some(wake);
     }
     fn host_interest(&mut self, wait: &mut trames_linux::HostWait) -> io::Result<()> {
+        if let Some(interop) = &self.interop {
+            interop.interest(wait)?;
+        }
         super::lifecycle::interest(wait)?;
         trames_hvf::pressure_interest(wait)?;
         if let Some(request) = &mut self.pressure {
@@ -129,6 +136,9 @@ impl GuestOutput for Output {
         Ok(())
     }
     fn poll_host(&mut self, vfs: &trames_vfs::Vfs) -> io::Result<trames_linux::HostState> {
+        if let Some(interop) = &mut self.interop {
+            interop.poll(vfs)?;
+        }
         self.observe_pressure()?;
         self.poll_init()?;
         if let Some(exec) = &mut self.exec {
@@ -276,6 +286,10 @@ pub struct Command {
     mounts: Vec<(String, bool)>,
     filesystem: bool,
     network: trames_vfs::NetworkMode,
+    link: Option<std::path::PathBuf>,
+    link_id: u8,
+    link_nat: bool,
+    publish: Vec<String>,
     trace: bool,
     android_init: bool,
     metrics: bool,
@@ -286,12 +300,14 @@ pub struct Command {
     pub windows: bool,
     vulkan: bool,
     video: bool,
+    cwd: Option<String>,
     audio: bool,
     audio_input: bool,
     pty: bool,
     init: super::systemd::Init,
     console: Option<std::path::PathBuf>,
     exec_socket: Option<std::path::PathBuf>,
+    host_profile: Option<std::path::PathBuf>,
     terminal_command: Vec<String>,
     argv: Vec<String>,
 }
@@ -309,6 +325,7 @@ impl Command {
         default_command: &[String],
     ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
         let mut arguments = arguments.peekable();
+        let mut host_profile = None;
         let mut init = super::systemd::Init::Shell;
         let mut console = None;
         let mut exec_socket = None;
@@ -318,6 +335,10 @@ impl Command {
         let mut mounts = Vec::new();
         let mut filesystem = false;
         let mut network = trames_vfs::NetworkMode::Full;
+        let mut link = None;
+        let mut link_id = 2u8;
+        let mut link_nat = true;
+        let mut publish = vec![];
         let mut trace = false;
         let mut android_init = false;
         let mut metrics = false;
@@ -325,17 +346,22 @@ impl Command {
         let mut limit = MemoryLimits::host_managed().total;
         let mut cpus = std::thread::available_parallelism()
             .map_or(1, usize::from)
-            .min(8)
             .min(trames_hvf::max_parallel_cpus());
         let mut resident_limit = None;
         let mut windows = true;
         let mut vulkan = false;
         let mut video = false;
+        let mut cwd = None;
         let mut audio = false;
         let mut audio_input = false;
         let mut pty = pty;
         while arguments.peek().is_some_and(|a| a.starts_with("--")) {
             match arguments.next().unwrap().as_str() {
+                "--host-profile" => {
+                    host_profile = Some(std::path::PathBuf::from(
+                        arguments.next().ok_or("missing host profile")?,
+                    ))
+                }
                 "--exec-socket" => {
                     exec_socket = Some(std::path::PathBuf::from(
                         arguments.next().ok_or("missing exec socket")?,
@@ -363,12 +389,25 @@ impl Command {
                     filesystem = true;
                     windows = false;
                 }
+                "--network-link" => {
+                    link = Some(std::path::PathBuf::from(
+                        arguments.next().ok_or("missing network link")?,
+                    ))
+                }
+                "--network-id" => {
+                    link_id = arguments.next().ok_or("missing network id")?.parse()?
+                }
+                "--network-nat" => {
+                    link_nat = arguments.next().ok_or("missing NAT choice")?.parse()?
+                }
+                "--publish" => publish.push(arguments.next().ok_or("missing publication")?),
                 "--network" => {
                     network = match arguments.next().as_deref() {
                         Some("off") => trames_vfs::NetworkMode::Off,
                         Some("loopback") => trames_vfs::NetworkMode::Loopback,
                         Some("outbound") => trames_vfs::NetworkMode::Outbound,
-                        Some("full") => trames_vfs::NetworkMode::Full,
+                        Some("full" | "host") => trames_vfs::NetworkMode::Full,
+                        Some("none") => trames_vfs::NetworkMode::Off,
                         _ => return Err("invalid network mode".into()),
                     }
                 }
@@ -406,6 +445,7 @@ impl Command {
                 }
                 "--no-windows" => windows = false,
                 "--vulkan" => vulkan = true,
+                "--cwd" => cwd = Some(arguments.next().ok_or("missing cwd")?),
                 "--video" => video = true,
                 "--audio" => audio = true,
                 "--audio-input" => {
@@ -458,6 +498,7 @@ impl Command {
             pty = true;
         }
         Ok(Some(Self {
+            host_profile,
             terminal_command: default_command.to_vec(),
             console,
             exec_socket,
@@ -468,6 +509,10 @@ impl Command {
             mounts,
             filesystem,
             network,
+            link,
+            link_id,
+            link_nat,
+            publish,
             trace,
             android_init,
             metrics,
@@ -478,6 +523,7 @@ impl Command {
             windows,
             vulkan,
             video,
+            cwd,
             audio,
             audio_input,
             pty,
@@ -490,6 +536,7 @@ pub fn run(
     command: Command,
 ) -> Result<u8, Box<dyn std::error::Error>> {
     let Command {
+        host_profile,
         terminal_command,
         console,
         exec_socket,
@@ -500,6 +547,10 @@ pub fn run(
         mounts,
         filesystem,
         network,
+        link,
+        link_id,
+        link_nat,
+        publish,
         trace,
         android_init,
         metrics,
@@ -510,12 +561,13 @@ pub fn run(
         windows,
         vulkan,
         video,
+        cwd,
         audio,
         audio_input,
         pty,
         mut argv,
     } = command;
-    let launcher = trames_distro::terminals::launcher(&terminal_command);
+    let launcher = trames_distro::terminals::launcher_at(&terminal_command, cwd.as_deref());
     if console.is_some() && init == super::systemd::Init::Shell {
         argv = vec!["/bin/sh".into(), "-c".into(), launcher.clone()];
     }
@@ -523,6 +575,9 @@ pub fn run(
         .first()
         .ok_or("an ELF program or --rootfs is required; use --help")?;
     let options = RuntimeOptions {
+        pure_accelerator: false,
+        native_bsearch: false,
+        native_allocator: false,
         vulkan_accelerator: vulkan,
         video_accelerator: video,
         audio_output: audio,
@@ -531,7 +586,6 @@ pub fn run(
             per_process: limit,
             total: limit,
         },
-        ..Default::default()
     };
     options.memory_limits.validate()?;
     let mut vfs = if let Some(directory) = &storage {
@@ -540,8 +594,34 @@ pub fn run(
         trames_vfs::Vfs::default()
     };
     if !filesystem {
-        if android_init {
-            vfs.configure_managed_uplink(network)?;
+        if let Some(directory) = link {
+            let fabric = trames_net::Fabric::new()?;
+            fabric.attach(&directory, link_id, link_nat)?;
+            for p in publish {
+                let f: Vec<_> = p.split(',').collect();
+                if f.len() != 3 {
+                    return Err("invalid publication".into());
+                }
+                let host: std::net::SocketAddr = f[1].parse()?;
+                let guest = std::net::SocketAddr::new(
+                    if host.is_ipv4() {
+                        std::net::Ipv4Addr::new(10, 0, 0, link_id).into()
+                    } else {
+                        std::net::Ipv6Addr::new(0xfd00, 0, 0, 0, 0, 0, 0, link_id as u16).into()
+                    },
+                    f[2].parse()?,
+                );
+                fabric.publish(
+                    host,
+                    guest,
+                    match f[0] {
+                        "tcp" => 1,
+                        "udp" => 2,
+                        _ => return Err("invalid published protocol".into()),
+                    },
+                )?;
+            }
+            vfs.configure_virtual_network(&fabric, link_id, network)?;
         } else {
             vfs.configure_network(network)?;
         }
@@ -556,6 +636,25 @@ pub fn run(
                 super::rootfs::install(std::path::Path::new(archive), &mut vfs, None)?;
             }
         }
+    }
+    let interop = if let Some(path) = host_profile {
+        let config = super::environments::load(&path)?;
+        let grant = super::environments::grants(&path, &config)?;
+        let host = super::interop::Host::new(super::environments::root()?, config, grant)?;
+        vfs.attach_bridge(host.broker());
+        Some(host)
+    } else {
+        None
+    };
+    if interop.is_some() {
+        trames_distro::environment::install_cli_for(
+            &mut vfs,
+            if android_init {
+                trames_distro::boot::Target::Android
+            } else {
+                trames_distro::boot::Target::Linux
+            },
+        )?;
     }
     // Use the runtime's existing host-resolver endpoint, as the iPad and CLI
     // products do. Never replace a resolver file configured by the guest user.
@@ -628,7 +727,10 @@ pub fn run(
         None
     };
     if let (Some(bridge), Some(server)) = (&bridge, &server) {
-        bridge.attach(server.clone());
+        bridge.attach(
+            server.clone(),
+            interop.as_ref().is_none_or(|host| host.clipboard()),
+        );
     }
     let mut envp = vec![
         "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".into(),
@@ -655,6 +757,11 @@ pub fn run(
             super::systemd::file(&mut vfs, b"/run/systemd/system/console-getty.service.d/60-wayland.conf", b"[Service]\nEnvironment=XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-0 GDK_BACKEND=wayland\n")?;
         }
     }
+    if init.is_none() && !android_init {
+        if let Some(cwd) = &cwd {
+            vfs.chdir(cwd.as_bytes())?;
+        }
+    }
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
     // A browser's guest threads are scheduler jobs, not host threads. Keep
@@ -672,6 +779,7 @@ pub fn run(
     }
     let _signals = super::lifecycle::Signals::install()?;
     let mut output = Output {
+        interop,
         source: None,
         exec: exec_socket
             .as_deref()
@@ -910,6 +1018,7 @@ mod tests {
         let before = trames_hvf::paging_stats();
         assert!(before.mapped_bytes > 0);
         let mut output = Output {
+            interop: None,
             source: None,
             exec: None,
             console: None,
@@ -3518,6 +3627,7 @@ mod tests {
             runtime.profile_syscalls = true;
             let mut output = Live {
                 output: Output {
+                    interop: None,
                     source: Some(std::sync::Arc::new(trames_vfs::CapturedConsole::default())),
                     exec: None,
                     init: None,

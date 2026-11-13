@@ -53,11 +53,13 @@ fn plist(root: &Path, name: &str) -> Result<String> {
 fn readiness_socket(root: &Path, name: &str) -> Result<std::path::PathBuf> {
     let path = environments::console_socket(root, name)?;
     let c = environments::load(&environments::directory(root, name)?)?;
-    Ok(if c.target == trames_distro::boot::Target::Android {
-        super::exec::path(&path)
-    } else {
-        path
-    })
+    Ok(
+        if c.environment.kind == trames_distro::boot::Target::Android {
+            super::exec::path(&path)
+        } else {
+            path
+        },
+    )
 }
 fn console_ready(path: &Path) -> bool {
     UnixStream::connect(path).is_ok()
@@ -86,11 +88,17 @@ fn ensure_dirs(root: &Path) -> Result<()> {
     Ok(())
 }
 pub fn registered(root: &Path, name: &str) -> bool {
+    let Ok(identity) = environments::identity(root, name) else {
+        return false;
+    };
+    let name = identity.as_str();
     root.join("services")
         .join(format!("{name}.plist"))
         .is_file()
 }
 pub fn start(root: &Path, name: &str) -> Result<()> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     environments::load(&environments::directory(root, name)?)?;
     // Management only: serialize concurrent starts of this environment. This
     // file is distinct from the guest owner's lifetime lock, and is never
@@ -158,13 +166,15 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
     .into())
 }
 pub fn serve(root: &Path, name: &str) -> Result<u8> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     let path = environments::console_socket(root, name)?;
     let c = environments::load(&environments::directory(root, name)?)?;
     environments::start(
         root,
         name,
         &[
-            if c.target == trames_distro::boot::Target::Android {
+            if c.environment.kind == trames_distro::boot::Target::Android {
                 "--exec-socket"
             } else {
                 "--console-socket"
@@ -175,6 +185,8 @@ pub fn serve(root: &Path, name: &str) -> Result<u8> {
     )
 }
 pub fn attach(root: &Path, name: &str, args: &[String]) -> Result<u8> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     environments::load(&environments::directory(root, name)?)?;
     let id = match args {
         [] => 0,
@@ -185,6 +197,8 @@ pub fn attach(root: &Path, name: &str, args: &[String]) -> Result<u8> {
     Ok(0)
 }
 pub fn autostart(root: &Path, name: &str, value: &str) -> Result<()> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     environments::load(&environments::directory(root, name)?)?;
     let path = agent(root, name)?;
     match value {
@@ -207,12 +221,16 @@ pub fn autostart(root: &Path, name: &str, value: &str) -> Result<()> {
     Ok(())
 }
 pub fn unload(root: &Path, name: &str) -> Result<()> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     if loaded(root, name) {
         ctl(&["bootout", &target(root, name)])?;
     }
     Ok(())
 }
 pub fn status(root: &Path, name: &str) -> Result<()> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     environments::load(&environments::directory(root, name)?)?;
     println!(
         "{}",
@@ -221,6 +239,8 @@ pub fn status(root: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 pub fn remove(root: &Path, name: &str) -> Result<()> {
+    let identity = environments::identity(root, name)?;
+    let name = identity.as_str();
     if registered(root, name) {
         unload(root, name)?;
     }

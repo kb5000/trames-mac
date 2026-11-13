@@ -55,9 +55,13 @@ def main():
             err.close()
             return child
 
+        def config(name):
+            return json.loads(run('-e',name,'config','show','--json').stdout)
+        def directory(name):
+            return home / 'environments' / config(name)['environment']['uuid']
         for distro, archive in [('alpine', a.alpine), ('debian', a.debian)]:
             run('env', 'create', distro, '--distro', distro, '--archive', str(archive.resolve()), '--packages', 'minimal')
-            run('env', 'configure', distro, '--cpus', '2', '--windows', 'off')
+            run('env', 'configure', distro, '--cpus', '2', '--vulkan', 'false')
             start(distro, 'echo persistent > /root/check; sync; uname -m; cat /etc/resolv.conf; cat /etc/os-release')
             assert '169.254.0.53' in rows[-1]['stdout']
             assert 'persistent' in start(distro, 'cat /root/check').stdout
@@ -68,17 +72,17 @@ def main():
         run('env', 'create', 'failed', '--archive', str(bad), ok=False)
         assert not (home / 'environments/failed').exists()
         # Existing stores can be copied into the registry without changing them.
-        run('env', 'import', 'imported', str(home / 'environments/alpine/store'))
+        run('env', 'import-store', 'imported', str(directory('alpine') / 'store'))
         assert 'persistent' in start('imported', 'cat /root/check').stdout
         shared = home / 'shared'
         shared.mkdir()
-        run('env', 'configure', 'alpine', '--mount', '/work=' + str(shared))
+        run('env','share','alpine','work',str(shared),'/work','rw')
         start('alpine', 'echo shared > /work/hello')
         assert (shared / 'hello').read_text().strip() == 'shared'
         child = spawn('alpine', 'echo saved > /root/stop-check; sync; echo READY; sleep 300')
         try:
             run('env', 'backup', 'alpine', str(home / 'busy.tar.gz'), ok=False)
-            run('env', 'delete', 'alpine', '--yes', ok=False)
+            run('env', 'remove', 'alpine', '--yes', ok=False)
             run('debug', 'env-run', 'alpine', '--no-windows', '/bin/true', ok=False)
             run('env', 'stop', 'alpine')
             child.wait(timeout=20)
@@ -92,8 +96,9 @@ def main():
         run('env', 'backup', 'alpine', str(archive), ok=False)
         run('env', 'restore', 'restored', str(archive))
         assert 'persistent' in start('restored', 'cat /root/check').stdout
-        config = json.loads((home / 'environments/restored/config.json').read_text())
-        assert config['mounts'] == []
+        restored_config = config('restored')
+        assert restored_config['mounts'] == []
+        assert not (directory('restored') / 'grants.toml').exists()
         corrupted = home / 'corrupt.tar.gz'
         payload = bytearray(archive.read_bytes())
         payload[-5] ^= 0xff
@@ -133,14 +138,12 @@ def main():
             assert child.returncode == 143
         os.close(slave)
         os.close(master)
-        run('env', 'check', 'alpine')
-        run('env', 'delete', 'restored', '--yes')
+        run('-e','alpine','config','validate')
+        run('env', 'remove', 'restored', '--yes')
         assert (shared / 'hello').exists()
         # A future configuration fails without replacing the current data.
-        future = home / 'environments/debian/config.json'
-        conf = json.loads(future.read_text())
-        conf['schema'] = 999
-        future.write_text(json.dumps(conf))
+        future = directory('debian') / 'env.toml'
+        future.write_text(future.read_text().replace('version = 1','version = 999',1))
         run('debug', 'env-run', 'debian', '--no-windows', '/bin/true', ok=False)
         assert any(x['state'] == 'needs attention' for x in json.loads(run('env', 'ls', '--json').stdout))
         if a.soak_seconds:

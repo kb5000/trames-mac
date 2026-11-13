@@ -16,305 +16,131 @@ use std::{
 };
 use trames_vfs::{DiskOptions, Vfs};
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Mount {
-    pub guest: String,
-    pub host: String,
-    pub readonly: bool,
-}
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Config {
-    pub schema: u32,
-    #[serde(default)]
-    pub target: trames_distro::boot::Target,
-    pub distribution: String,
-    #[serde(default)]
-    pub init: super::systemd::Init,
-    pub source_sha256: String,
-    #[serde(default = "shell_command")]
-    pub command: Vec<String>,
-    pub cpus: usize,
-    pub memory_mib: String,
-    pub network: String,
-    pub windows: bool,
-    pub vulkan: bool,
-    pub video: bool,
-    #[serde(default)]
-    pub audio: bool,
-    #[serde(default)]
-    pub audio_input: bool,
-    pub mounts: Vec<Mount>,
-}
-fn shell_command() -> Vec<String> {
-    vec!["/bin/sh".into(), "-l".into()]
-}
-impl Config {
-    fn new(distribution: &str) -> Self {
-        Self {
-            schema: 1,
-            target: if distribution == "android" {
-                trames_distro::boot::Target::Android
-            } else {
-                trames_distro::boot::Target::Linux
-            },
-            distribution: distribution.into(),
-            init: super::systemd::Init::Shell,
-            source_sha256: catalog(distribution)
-                .map_or("custom-rootfs", |c| c.1)
-                .into(),
-            command: if distribution == "android" {
-                trames_distro::android::command()
-            } else {
-                shell_command()
-            },
-            cpus: std::thread::available_parallelism()
-                .map_or(1, usize::from)
-                .min(trames_hvf::max_parallel_cpus()),
-            memory_mib: "auto".into(),
-            network: if distribution == "android" {
-                "off"
-            } else {
-                "full"
-            }
-            .into(),
-            windows: true,
-            vulkan: true,
-            video: false,
-            audio: false,
-            audio_input: false,
-            mounts: vec![],
-        }
-    }
-    fn validate(&self) -> Result<()> {
-        if self.schema != 1 {
-            return Err(
-                "unsupported environment configuration version; use a matching Trames release"
-                    .into(),
-            );
-        }
-        if !["alpine", "debian", "custom", "android"].contains(&self.distribution.as_str()) {
-            return Err("unknown distribution".into());
-        }
-        if (self.target == trames_distro::boot::Target::Android) != (self.distribution == "android")
-        {
-            return Err(
-                "target and image type differ; create a separate Linux or Android environment"
-                    .into(),
-            );
-        }
-        if self.target == trames_distro::boot::Target::Android
-            && (self.init != super::systemd::Init::Shell
-                || self.command != trames_distro::android::command()
-                || !self.vulkan
-                || !self.windows)
-        {
-            return Err(
-                "Android boots its own init and requires Vulkan and windows; use exec for an Android shell"
-                    .into(),
-            );
-        }
-        if self.command.is_empty()
-            || !self.command[0].starts_with('/')
-            || self.command.iter().any(|a| a.contains('\0'))
-        {
-            return Err(
-                "command must be a nonempty argument array beginning with an absolute Linux path"
-                    .into(),
-            );
-        }
-        if self.init == super::systemd::Init::Systemd && self.distribution == "alpine" {
-            return Err(
-                "systemd requires Debian or a custom rootfs with systemd installed; Alpine uses shell".into(),
-            );
-        }
-        if self.cpus == 0 || self.cpus > trames_hvf::max_parallel_cpus() {
-            return Err("invalid CPU count".into());
-        }
-        if self.memory_mib != "auto"
-            && self
-                .memory_mib
-                .parse::<u64>()
-                .ok()
-                .filter(|n| *n > 0 && *n <= usize::MAX as u64 / (1 << 20))
-                .is_none()
-        {
-            return Err("invalid memory size".into());
-        }
-        if !["off", "loopback", "outbound", "full"].contains(&self.network.as_str()) {
-            return Err("invalid network mode".into());
-        }
-        for m in &self.mounts {
-            if !Path::new(&m.host).is_absolute()
-                || !m.guest.starts_with('/')
-                || m.guest.split('/').any(|s| s == ".." || s == ".")
-            {
-                return Err("mounts require absolute paths without dot components".into());
-            }
-        }
-        Ok(())
-    }
-}
+use trames_distro::environment as model;
+pub use trames_distro::environment::Manifest as Config;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct Instance {
+    name: String,
+    uuid: String,
+    distribution: String,
+    sha256: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 struct CliConfig {
-    schema: u32,
+    version: u32,
     default_environment: String,
     defaults: Config,
 }
 impl Default for CliConfig {
     fn default() -> Self {
         Self {
-            schema: 1,
+            version: 1,
             default_environment: "default".into(),
-            defaults: Config::new("alpine"),
+            defaults: Config::default(),
         }
     }
 }
 fn load_cli(r: &Path) -> Result<CliConfig> {
-    let file = match File::open(r.join("cli.json")) {
-        Ok(f) => f,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(CliConfig::default()),
-        Err(e) => return Err(e.into()),
-    };
-    let c: CliConfig = serde_json::from_reader(file.take(65537))?;
-    validate_cli(&c)?;
-    Ok(c)
-}
-fn validate_cli(c: &CliConfig) -> Result<()> {
-    if c.schema != 1 {
-        return Err("unsupported CLI configuration version".into());
+    let p = r.join("config.toml");
+    if !p.exists() {
+        return Ok(CliConfig::default());
+    }
+    let c: CliConfig = model::decode(&fs::read_to_string(p)?)?;
+    if c.version != 1 {
+        return Err("unsupported CLI config version".into());
     }
     name(&c.default_environment)?;
-    catalog(&c.defaults.distribution)?;
-    c.defaults.validate()
+    validate(&c.defaults)?;
+    Ok(c)
 }
 pub fn default_environment(r: &Path) -> Result<String> {
     Ok(load_cli(r)?.default_environment)
 }
-fn config_key(key: &str) -> &str {
-    match key {
-        "memory" | "memory-mib" => "memory_mib",
-        "audio-input" => "audio_input",
-        "distro" => "distribution",
-        _ => key,
-    }
+fn cpus(c: &Config) -> Result<usize> {
+    c.resources.cpus.resolve(
+        std::thread::available_parallelism()
+            .map_or(1, usize::from)
+            .min(trames_hvf::max_parallel_cpus()),
+    )
 }
-fn memory(value: &str) -> Result<String> {
-    if value == "auto" {
-        return Ok(value.into());
-    }
-    let split = value
-        .find(|c: char| !c.is_ascii_digit())
-        .unwrap_or(value.len());
-    let number: u64 = value[..split].parse()?;
-    let bytes = match &value[split..] {
-        "" | "MiB" | "M" => number.checked_mul(1 << 20),
-        "GiB" | "G" => number.checked_mul(1 << 30),
-        "KiB" | "K" => number.checked_mul(1 << 10),
-        "B" => Some(number),
-        "MB" => number.checked_mul(1_000_000),
-        "GB" => number.checked_mul(1_000_000_000),
-        _ => return Err("memory must be auto or a size such as 4GiB / 4096MiB".into()),
-    }
-    .ok_or("memory size overflow")?;
-    if bytes == 0 {
-        return Err("memory must be positive".into());
-    }
-    Ok(bytes.div_ceil(1 << 20).to_string())
+fn memory(c: &Config) -> Result<String> {
+    Ok(model::memory_mib(
+        c.resources
+            .memory_limit
+            .as_deref()
+            .unwrap_or(&c.resources.memory),
+    )?
+    .map_or("auto".into(), |n| n.to_string()))
 }
-fn set_config(c: &mut Config, key: &str, value: &str) -> Result<()> {
-    let key = config_key(key);
-    let mut json = serde_json::to_value(&*c)?;
-    let field = json.get(key).ok_or("unknown configuration key")?;
-    if ![
-        "command",
-        "cpus",
-        "memory_mib",
-        "network",
-        "init",
-        "windows",
-        "vulkan",
-        "video",
-        "audio",
-        "audio_input",
-        "mounts",
-    ]
-    .contains(&key)
-    {
-        return Err("this environment identity field is read-only".into());
+fn backend(c: &Config) -> Result<String> {
+    Ok(match c.network.mode {
+        model::NetworkMode::Host => "full",
+        model::NetworkMode::None => "off",
+        model::NetworkMode::Bridge => "outbound",
     }
-    json[key] = if key == "memory_mib" {
-        serde_json::Value::String(memory(value)?)
-    } else if key == "cpus" && matches!(value, "all" | "auto") {
-        serde_json::json!(Config::new("alpine").cpus)
-    } else if field.is_boolean() {
-        serde_json::json!(match value {
-            "true" | "on" => true,
-            "false" | "off" => false,
-            _ => return Err("expected true or false".into()),
-        })
-    } else if field.is_string() {
-        serde_json::Value::String(value.into())
-    } else {
-        serde_json::from_str(value)?
-    };
-    *c = serde_json::from_value(json)?;
+    .into())
+}
+fn validate(c: &Config) -> Result<()> {
+    c.validate()?;
+    // Pure-function thunks accelerate the interpreter; HVF runs these instructions natively.
+    c.components.thunking.resolve(false)?;
+    cpus(c)?;
+    if c.image.distribution == "alpine" && c.boot.mode == model::Init::Systemd {
+        return Err("Alpine does not include systemd".into());
+    }
     Ok(())
 }
-fn read_value(value: &serde_json::Value) {
-    match value {
-        serde_json::Value::String(s) => println!("{s}"),
-        _ => println!("{value}"),
+fn set_config(c: &mut Config, key: &str, value: &str) -> Result<()> {
+    if key == "environment.name" || key == "environment.uuid" {
+        return Err("use env rename/clone to change registered identity".into());
     }
+    let mut json = serde_json::to_value(&*c)?;
+    let parts: Vec<_> = key.split('.').collect();
+    let mut slot = &mut json;
+    for p in &parts[..parts.len() - 1] {
+        slot = slot.get_mut(*p).ok_or("unknown configuration table")?;
+    }
+    let field = slot
+        .get_mut(parts[parts.len() - 1])
+        .ok_or("unknown configuration field")?;
+    *field =
+        serde_json::from_str(value).unwrap_or_else(|_| serde_json::Value::String(value.into()));
+    let candidate: Config = serde_json::from_value(json)?;
+    *c = candidate;
+    Ok(())
 }
-fn setting_value<'a>(
-    document: &'a serde_json::Value,
-    key: &str,
-    global: bool,
-) -> Result<&'a serde_json::Value> {
-    let (parent, key) = if global {
-        if key == "default-environment" || key == "default_environment" {
-            (document, "default_environment")
-        } else {
-            (
-                &document["defaults"],
-                config_key(
-                    key.strip_prefix("defaults.")
-                        .ok_or("global settings use defaults.KEY or default-environment")?,
-                ),
-            )
-        }
-    } else {
-        (document, config_key(key))
-    };
-    parent
-        .get(key)
-        .ok_or_else(|| "unknown configuration key".into())
+fn metadata_lock(r: &Path) -> Result<File> {
+    let guard = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(r.join("locks/.metadata"))?;
+    guard.lock()?;
+    Ok(guard)
 }
-/// Settings never open guest storage, install packages or start the environment.
-/// This metadata lock is independent of the running store owner's lifetime lock.
 pub fn settings(selected: Option<&str>, args: &[String]) -> Result<u8> {
-    let mut args = args.to_vec();
-    let global = args.iter().any(|a| a == "--global");
-    args.retain(|a| a != "--global");
-    let json = args.iter().any(|a| a == "--json");
-    args.retain(|a| a != "--json");
-    let op = args.first().map(String::as_str).unwrap_or("list");
     let r = root()?;
+    let _metadata = metadata_lock(&r)?;
     let mut cli = load_cli(&r)?;
-    let n = selected.unwrap_or(&cli.default_environment).to_owned();
-    let dir = directory(&r, &n)?;
+    let global = args.iter().any(|s| s == "--global");
+    let args: Vec<_> = args
+        .iter()
+        .filter(|s| s.as_str() != "--global")
+        .map(String::as_str)
+        .collect();
+    let op = args.first().copied().unwrap_or("show");
+    let dir = directory(&r, selected.unwrap_or(&cli.default_environment))?;
     let path = if global {
-        r.join("cli.json")
+        r.join("config.toml")
     } else {
-        dir.join("config.json")
+        dir.join("env.toml")
     };
     if op == "path" {
-        if args.len() != 1 {
-            return Err("usage: config path".into());
-        }
         println!("{}", path.display());
         return Ok(0);
     }
@@ -323,90 +149,52 @@ pub fn settings(selected: Option<&str>, args: &[String]) -> Result<u8> {
     } else {
         load(&dir)?
     };
-    let document = if global {
-        serde_json::to_value(&cli)?
-    } else {
-        serde_json::to_value(&c)?
-    };
     match op {
-        "get" if args.len() == 2 => read_value(setting_value(&document, &args[1], global)?),
-        "list" | "show" if args.len() == 1 => {
-            if json || op == "show" { println!("{}", serde_json::to_string_pretty(&document)?); }
-            else {
-                if global { println!("default-environment\t{}", cli.default_environment); }
-                for (key,value) in serde_json::to_value(&c)?.as_object().unwrap() {
-                    if ["schema","source_sha256"].contains(&key.as_str()) { continue; }
-                    let key = match key.as_str() { "memory_mib" => "memory", "audio_input" => "audio-input", key => key };
-                    print!("{}{key}\t", if global {"defaults."} else {""}); read_value(value);
-                }
-            }
+        "show"|"list" if args.len()<=2=>{
+            let value=if global{serde_json::to_value(&cli)?}else{serde_json::to_value(&c)?};
+            if args.contains(&"--json"){println!("{}",serde_json::to_string_pretty(&value)?)}else if global {print!("{}",model::encode(&cli)?)}else{print!("{}",model::encode(&c)?)}
         }
-        "set" | "unset" | "edit" | "reset" => {
-            let guard = OpenOptions::new().read(true).write(true).create(true).truncate(false).mode(0o600)
-                .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC).open(r.join("locks").join(if global { ".cli-config".into() } else { format!(".config-{n}") }))?;
-            guard.try_lock().map_err(|_| "settings are being changed; retry")?;
-            // Reload after obtaining the metadata lock, without opening the store.
-            cli = load_cli(&r)?;
-            c = if global { cli.defaults.clone() } else { load(&dir)? };
-            match op {
-                "set" if args.len() >= 3 && args.len()%2 == 1 => {
-                    for pair in args[1..].chunks_exact(2) {
-                        if global && pair[0] == "default-environment" { cli.default_environment=pair[1].clone(); }
-                        else {
-                            let key = if global { pair[0].strip_prefix("defaults.").ok_or("global settings use defaults.KEY or default-environment")? } else { &pair[0] };
-                            if global && matches!(key, "distro" | "distribution") {
-                                c.distribution=pair[1].clone(); c.source_sha256=catalog(&c.distribution)?.1.into();
-                            } else { set_config(&mut c, key, &pair[1])?; }
-                        }
-                    }
-                }
-                "unset" if args.len() == 2 => {
-                    if global && args[1] == "default-environment" { cli.default_environment=CliConfig::default().default_environment; }
-                    else if global && matches!(args[1].as_str(),"defaults.distro"|"defaults.distribution") {
-                        c.distribution="alpine".into(); c.source_sha256=catalog("alpine")?.1.into();
-                    } else {
-                        let key = if global { args[1].strip_prefix("defaults.").ok_or("global settings use defaults.KEY")? } else { &args[1] };
-                        let defaults = if global { Config::new(&c.distribution) } else { cli.defaults.clone() };
-                        let value = serde_json::to_value(&defaults)?;
-                        let value = value.get(config_key(key)).ok_or("unknown configuration key")?;
-                        let text = value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string());
-                        set_config(&mut c, key, &text)?;
-                    }
-                }
-                "reset" if global && args.len() == 1 => { cli=CliConfig::default(); c=cli.defaults.clone(); }
-                "edit" if args.len() == 1 => {
-                    let temp = r.join(format!(".config-edit-{}.json",std::process::id()));
-                    let document = if global { cli.defaults=c.clone(); serde_json::to_vec_pretty(&cli)? } else { serde_json::to_vec_pretty(&c)? };
-                    atomic_write(&temp,&document)?;
-                    let result = (|| -> Result<()> {
-                        let editor=std::env::var("VISUAL").or_else(|_|std::env::var("EDITOR")).unwrap_or_else(|_|"vi".into());
-                        let status=Command::new("/bin/sh").arg("-c").arg(format!("exec {editor} \"$1\"" )).arg("trames-editor").arg(&temp).status()?;
-                        if !status.success() { return Err("editor exited unsuccessfully; configuration was preserved".into()); }
-                        let file=File::open(&temp)?.take(65537);
-                        if global { cli=serde_json::from_reader(file)?; c=cli.defaults.clone(); }
-                        else { c=serde_json::from_reader(file)?; }
-                        Ok(())
-                    })();
-                    let _=fs::remove_file(temp); result?;
-                }
-                _ => return Err("usage: config [--global] set KEY VALUE | unset KEY | edit | get KEY | list [--json] | path".into()),
+        "validate" if args.len()==1=>{validate(&c)?;println!("Valid environment configuration");}
+        "get" if args.len()==2=>{let v=if global{serde_json::to_value(&cli)?}else{serde_json::to_value(&c)?};let mut p=&v;for key in args[1].split('.') {p=p.get(key).ok_or("unknown configuration field")?;}if let Some(text)=p.as_str(){println!("{text}")}else{println!("{p}")}}
+        "set" if args.len()>=3&&args.len()%2==1=>{
+            for pair in args[1..].chunks_exact(2) {
+                if global&&pair[0]=="default_environment"{name(pair[1])?;load(&directory(&r,pair[1])?)?;cli.default_environment=pair[1].into();}
+                else{let key=if global{pair[0].strip_prefix("defaults.").ok_or("global environment keys use defaults.TABLE.FIELD")?}else{pair[0]};set_config(&mut c,key,pair[1])?;}
             }
-            c.validate()?;
-            if global { cli.defaults=c; validate_cli(&cli)?; atomic_write(&path,&serde_json::to_vec_pretty(&cli)?)?; eprintln!("Saved global defaults; applies to new environments."); }
-            else { save(&dir,&c)?; eprintln!("Saved {n}; changes apply after an environment restart."); }
+            validate(&c)?;
+            if global{cli.defaults=c;atomic_write(&path,model::encode(&cli)?.as_bytes())?;}else{save(&dir,&c)?;}
         }
-        _ => return Err("usage: config [--global] get KEY | set KEY VALUE | unset KEY | list [--json] | edit | path".into()),
+        "edit" if args.len()==1=>{
+            let temp=r.join(format!(".edit-{}.toml",std::process::id()));
+            atomic_write(&temp,if global{model::encode(&cli)?}else{model::encode(&c)?}.as_bytes())?;
+            let result=(||->Result<()>{
+                let editor=std::env::var("EDITOR").unwrap_or("vi".into());
+                if !Command::new(editor).arg(&temp).status()?.success(){return Err("editor failed".into());}
+                let text=fs::read_to_string(&temp)?;
+                if global{let value:CliConfig=model::decode(&text)?;if value.version!=1{return Err("unsupported CLI config version".into());}name(&value.default_environment)?;validate(&value.defaults)?;atomic_write(&path,model::encode(&value)?.as_bytes())?;}
+                else{save(&dir,&Config::parse(&text)?)?;}Ok(())
+            })();let _=fs::remove_file(temp);result?;
+        }
+        _=>return Err("usage: config show [--json] | path | validate | get KEY | set KEY VALUE [KEY VALUE...] | edit".into())
+    }
+    Ok(0)
+}
+pub fn shutdown() -> Result<u8> {
+    let r = root()?;
+    let mut names = vec![];
+    for entry in fs::read_dir(r.join("environments"))? {
+        let path = entry?.path().join("instance.toml");
+        if path.is_file() {
+            let instance: Instance = model::decode(&fs::read_to_string(path)?)?;
+            names.push(instance.name);
+        }
+    }
+    for n in names {
+        stop(&r, &n)?;
     }
     Ok(0)
 }
 pub fn listing(args: &[String]) -> Result<u8> {
-    if args.len() > 1
-        || args
-            .first()
-            .is_some_and(|a| !["--json", "-q", "--quiet"].contains(&a.as_str()))
-    {
-        return Err("usage: env ls [--json|-q]".into());
-    }
     list(
         &root()?,
         args.first().map(String::as_str).unwrap_or("table"),
@@ -414,22 +202,16 @@ pub fn listing(args: &[String]) -> Result<u8> {
     Ok(0)
 }
 pub fn setup(args: &[String]) -> Result<u8> {
-    if args.len() != 3 || args[1] != "--init" || args[2] != "systemd" {
-        return Err("usage: env setup NAME --init systemd".into());
-    }
+    let n = args.first().ok_or("environment required")?;
     let r = root()?;
-    let n = &args[0];
-    let _lock = lock(&r, n)?;
+    let _guard = lock(&r, n)?;
     let dir = directory(&r, n)?;
     let mut c = load(&dir)?;
-    c.init = super::systemd::Init::Systemd;
-    c.validate()?;
+    c.boot.mode = model::Init::Systemd;
     provision_init(&dir.join("store"), &c)?;
     save(&dir, &c)?;
-    eprintln!("Prepared systemd for {n}; start or restart the environment to use it.");
     Ok(0)
 }
-
 fn catalog(d: &str) -> Result<(&'static str, &'static str)> {
     match d {
         "alpine" => Ok((trames_distro::ALPINE_URL, trames_distro::ALPINE_SHA256)),
@@ -482,7 +264,17 @@ fn name(n: &str) -> Result<()> {
 }
 pub(super) fn directory(r: &Path, n: &str) -> Result<PathBuf> {
     name(n)?;
-    Ok(r.join("environments").join(n))
+    for entry in fs::read_dir(r.join("environments"))? {
+        let path = entry?.path();
+        let file = path.join("instance.toml");
+        if file.is_file() {
+            let i: Instance = model::decode(&fs::read_to_string(file)?)?;
+            if i.name == n || i.uuid == n {
+                return Ok(path);
+            }
+        }
+    }
+    Ok(r.join("environments").join(format!(".missing-{n}")))
 }
 fn lock(r: &Path, n: &str) -> Result<File> {
     name(n)?;
@@ -493,18 +285,115 @@ fn lock(r: &Path, n: &str) -> Result<File> {
         .truncate(false)
         .mode(0o600)
         .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-        .open(r.join("locks").join(n))?;
+        .open(
+            r.join("locks").join(
+                directory(r, n)?
+                    .file_name()
+                    .ok_or("invalid environment directory")?,
+            ),
+        )?;
     file.try_lock()
         .map_err(|_| "environment is running or another management operation is in progress")?;
     Ok(file)
 }
 pub(super) fn load(dir: &Path) -> Result<Config> {
-    if !fs::symlink_metadata(dir)?.is_dir() {
-        return Err("environment must be a real directory".into());
+    let i: Instance = model::decode(&fs::read_to_string(dir.join("instance.toml"))?)?;
+    let path = if dir.join("env.toml").is_file() {
+        dir.join("env.toml")
+    } else {
+        dir.join("effective.toml")
+    };
+    let mut c = if path.is_file() {
+        Config::parse(&fs::read_to_string(path)?)?
+    } else {
+        Config::new(&i.distribution)
+    };
+    if !c.environment.uuid.is_empty() && c.environment.uuid != i.uuid {
+        return Err("configuration UUID differs from registered environment".into());
     }
-    let c: Config = serde_json::from_reader(File::open(dir.join("config.json"))?.take(65537))?;
-    c.validate()?;
+    c.environment.name = i.name;
+    c.environment.uuid = i.uuid;
+    c.image.sha256 = i.sha256;
+    validate(&c)?;
     Ok(c)
+}
+pub(super) fn grants(dir: &Path, c: &Config) -> Result<model::Grant> {
+    let path = dir.join("grants.toml");
+    if !path.exists() {
+        return Ok(Default::default());
+    }
+    let auth: model::Authorization = model::decode(&fs::read_to_string(path)?)?;
+    Ok(auth.for_environment(&c.environment.uuid)?.clone())
+}
+fn grant(r: &Path, n: &str, args: &[String]) -> Result<()> {
+    let _guard = metadata_lock(r)?;
+    let dir = directory(r, n)?;
+    let c = load(&dir)?;
+    let mut g = grants(&dir, &c)?;
+    match args
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .as_slice()
+    {
+        [] | ["show"] => {
+            print!("{}", model::encode(&g)?);
+            return Ok(());
+        }
+        ["share", alias, host, mode] => {
+            name(alias)?;
+            let host = fs::canonicalize(host)?;
+            if !host.is_dir() {
+                return Err("share must be a directory".into());
+            }
+            let readonly = match *mode {
+                "ro" => true,
+                "rw" => false,
+                _ => return Err("share mode must be ro or rw".into()),
+            };
+            g.shares.insert(
+                (*alias).into(),
+                model::Share {
+                    host: host.to_str().ok_or("share path is not UTF-8")?.into(),
+                    readonly,
+                },
+            );
+        }
+        ["unshare", alias] => {
+            g.shares.remove(*alias);
+        }
+        [cap, value] => {
+            let enabled = match *value {
+                "on" => true,
+                "off" => false,
+                _ => return Err("grant value must be on or off".into()),
+            };
+            *match *cap {
+                "host-ui" => &mut g.host_ui,
+                "clipboard" => &mut g.clipboard,
+                "host-cli" => &mut g.host_cli,
+                "host-exec" => &mut g.host_exec,
+                "files" => &mut g.files,
+                "ports" => &mut g.ports,
+                "mounts" => &mut g.mounts,
+                _ => return Err("unknown host capability".into()),
+            } = enabled;
+        }
+        _ => return Err(
+            "usage: env grant NAME [CAPABILITY on|off | share ALIAS HOST ro|rw | unshare ALIAS]"
+                .into(),
+        ),
+    }
+    atomic_write(
+        &dir.join("grants.toml"),
+        model::encode(&model::Authorization {
+            environment_uuid: c.environment.uuid,
+            grant: g,
+        })?
+        .as_bytes(),
+    )?;
+    println!("Host grants saved; restart the environment to apply");
+    Ok(())
 }
 pub(super) fn atomic_write(p: &Path, data: &[u8]) -> Result<()> {
     let temp = p.with_extension(format!("tmp-{}", std::process::id()));
@@ -525,9 +414,43 @@ pub(super) fn atomic_write(p: &Path, data: &[u8]) -> Result<()> {
     }
     result
 }
+fn register(dir: &Path, c: &Config, explicit: bool) -> Result<()> {
+    validate(c)?;
+    let new_instance = !dir.join("instance.toml").exists();
+    let i = Instance {
+        name: c.environment.name.clone(),
+        uuid: c.environment.uuid.clone(),
+        distribution: c.image.distribution.clone(),
+        sha256: c.image.sha256.clone(),
+    };
+    if new_instance {
+        let grant = model::Authorization {
+            environment_uuid: c.environment.uuid.clone(),
+            grant: model::Grant {
+                clipboard: true,
+                ..Default::default()
+            },
+        };
+        atomic_write(&dir.join("grants.toml"), model::encode(&grant)?.as_bytes())?;
+    }
+    atomic_write(&dir.join("instance.toml"), model::encode(&i)?.as_bytes())?;
+    atomic_write(
+        &dir.join(if explicit {
+            "env.toml"
+        } else {
+            "effective.toml"
+        }),
+        model::encode(c)?.as_bytes(),
+    )
+}
 fn save(dir: &Path, c: &Config) -> Result<()> {
-    c.validate()?;
-    atomic_write(&dir.join("config.json"), &serde_json::to_vec_pretty(c)?)
+    if dir.join("instance.toml").is_file() {
+        let i: Instance = model::decode(&fs::read_to_string(dir.join("instance.toml"))?)?;
+        if i.uuid != c.environment.uuid || i.name != c.environment.name {
+            return Err("use env rename/clone to change registered identity".into());
+        }
+    }
+    register(dir, c, true)
 }
 fn digest(p: &Path) -> Result<String> {
     let mut hash = Sha256::new();
@@ -690,19 +613,29 @@ fn android_images(r: &Path, archive: &Path) -> Result<Option<PathBuf>> {
     }
     Ok(Some(cache))
 }
-fn create(
-    r: &Path,
-    n: &str,
-    mut c: Config,
-    archive: Option<&str>,
-    custom: Option<&str>,
-    expected: Option<&str>,
+struct Create<'a> {
+    archive: Option<&'a str>,
+    custom: Option<&'a str>,
+    expected: Option<&'a str>,
     packages: Option<super::packages::Profile>,
-) -> Result<()> {
+    explicit: bool,
+}
+fn create(r: &Path, n: &str, mut c: Config, options: Create<'_>) -> Result<()> {
+    let Create {
+        archive,
+        custom,
+        expected,
+        packages,
+        explicit,
+    } = options;
     let _lock = lock(r, n)?;
-    let dir = directory(r, n)?;
-    if dir.try_exists()? {
+    let existing = directory(r, n)?;
+    if existing.try_exists()? {
         return Err("environment already exists".into());
+    }
+    let dir = r.join("environments").join(&c.environment.uuid);
+    if dir.try_exists()? {
+        return Err("environment UUID already exists".into());
     }
     if custom.is_some() && archive.is_some() {
         return Err("choose --rootfs or --archive".into());
@@ -711,35 +644,35 @@ fn create(
         return Err("--sha256 requires --rootfs".into());
     }
     if custom.is_some() {
-        c.distribution = if c.target == trames_distro::boot::Target::Android {
+        c.image.distribution = if c.environment.kind == trames_distro::boot::Target::Android {
             "android"
         } else {
             "custom"
         }
         .into();
     }
-    if c.target == trames_distro::boot::Target::Android && custom.is_none() {
+    if c.environment.kind == trames_distro::boot::Target::Android && custom.is_none() {
         return Err(
             "Android is an optional download; supply --target android --rootfs PACKAGE.tar.gz"
                 .into(),
         );
     }
-    c.validate()?;
+    validate(&c)?;
     use super::packages::Profile;
-    let packages = packages.unwrap_or(if c.distribution == "debian" {
+    let packages = packages.unwrap_or(if c.image.distribution == "debian" {
         Profile::Standard
     } else {
         Profile::Minimal
     });
-    if c.distribution != "debian" && packages != Profile::Minimal {
+    if c.image.distribution != "debian" && packages != Profile::Minimal {
         return Err("package presets require the built-in Debian image; custom rootfs and Alpine preserve their own package setup".into());
     }
     let source = if custom.is_none() {
-        Some(source(r, &c.distribution, archive)?)
+        Some(source(r, &c.image.distribution, archive)?)
     } else {
         None
     };
-    let android_images = if c.target == trames_distro::boot::Target::Android {
+    let android_images = if c.environment.kind == trames_distro::boot::Target::Android {
         android_images(
             r,
             Path::new(custom.ok_or("Android adapter/rootfs archive required")?),
@@ -747,10 +680,10 @@ fn create(
     } else {
         None
     };
-    eprintln!("Importing {} rootfs…", c.distribution);
+    eprintln!("Importing {} rootfs…", c.image.distribution);
     let stage = staging(r, n)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
-    c.source_sha256 = vfs.populate_staged(|vfs| -> Result<String> {
+    c.image.sha256 = vfs.populate_staged(|vfs| -> Result<String> {
         if let Some(custom) = custom {
             if let Some(images) = &android_images {
                 return trames_distro::android_package::install(
@@ -763,7 +696,7 @@ fn create(
             return super::rootfs::install(Path::new(custom), vfs, expected);
         }
         let mut input = File::open(source.as_ref().unwrap())?;
-        match c.distribution.as_str() {
+        match c.image.distribution.as_str() {
             "alpine" => {
                 trames_distro::install_alpine(&mut input, vfs)?;
             }
@@ -772,9 +705,16 @@ fn create(
             }
             _ => unreachable!(),
         }
-        Ok(catalog(&c.distribution)?.1.into())
+        Ok(catalog(&c.image.distribution)?.1.into())
     })?;
-    if c.target == trames_distro::boot::Target::Linux {
+    if !explicit {
+        if let Some(mut embedded) = model::guest(&mut vfs, &c)? {
+            embedded.environment = c.environment.clone();
+            embedded.image = c.image.clone();
+            c = embedded;
+        }
+    }
+    if c.environment.kind == trames_distro::boot::Target::Linux {
         if custom.is_none()
             && vfs
                 .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
@@ -789,32 +729,36 @@ fn create(
             trames_distro::install_resolver(&mut vfs, b"nameserver 169.254.0.53\n")?;
         }
     }
-    if c.target == trames_distro::boot::Target::Android {
+    if c.environment.kind == trames_distro::boot::Target::Android {
         trames_distro::android::validate_image(&mut vfs)?;
     } else if custom.is_some() {
-        super::rootfs::validate_command(&mut vfs, &c.command)?;
+        super::rootfs::validate_command(&mut vfs, &c.session.shell)?;
     }
     vfs.sync()?;
     drop(vfs);
-    super::packages::install(&stage.0.join("store"), c.cpus, &c.network, packages)?;
+    super::packages::install(&stage.0.join("store"), cpus(&c)?, &backend(&c)?, packages)?;
     provision_init(&stage.0.join("store"), &c)?;
-    save(&stage.0, &c)?;
+    register(&stage.0, &c, explicit)?;
     publish(&stage.0, &dir)?;
-    println!("Created {n} ({})", c.distribution);
+    println!("Created {n} ({})", c.image.distribution);
     Ok(())
 }
 fn provision_init(store: &Path, c: &Config) -> Result<()> {
-    if c.init != super::systemd::Init::Systemd {
+    if c.boot.mode != model::Init::Systemd {
         return Ok(());
     }
-    if c.distribution == "custom" {
+    if c.image.distribution == "custom" {
         let vfs = Vfs::open_disk(store, DiskOptions::default())?;
         vfs.executable(b"/usr/lib/systemd/systemd")
             .map_err(|_| "custom systemd rootfs must already contain /usr/lib/systemd/systemd")?;
         Ok(())
     } else {
-        super::systemd::install(store, c.cpus, &c.network)
+        super::systemd::install(store, cpus(c)?, &backend(c)?)
     }
+}
+pub(super) fn identity(r: &Path, n: &str) -> Result<String> {
+    let i: Instance = model::decode(&fs::read_to_string(directory(r, n)?.join("instance.toml"))?)?;
+    Ok(i.uuid)
 }
 pub(super) fn socket(r: &Path, n: &str) -> Result<PathBuf> {
     let tmp = PathBuf::from(format!("/private/tmp/trames-{}", unsafe {
@@ -836,67 +780,103 @@ pub(super) fn console_socket(r: &Path, n: &str) -> Result<PathBuf> {
     Ok(socket(r, n)?.with_extension("console"))
 }
 pub(super) fn running(r: &Path, n: &str) -> bool {
+    if !directory(r, n).is_ok_and(|p| p.join("instance.toml").is_file()) {
+        return false;
+    }
     lock(r, n).is_err()
 }
 pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     let _lock = lock(r, n)?;
     let dir = directory(r, n)?;
-    let c = load(&dir)?;
+    let mut c = load(&dir)?;
+    if !dir.join("env.toml").is_file() {
+        let mut defaults = load_cli(r)?.defaults.using_image(&c.image.distribution);
+        defaults.environment = c.environment.clone();
+        defaults.image = c.image.clone();
+        c = defaults;
+        let mut vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
+        if let Some(mut embedded) = model::guest(&mut vfs, &c)? {
+            embedded.environment = c.environment.clone();
+            embedded.image = c.image.clone();
+            c = embedded;
+        }
+        drop(vfs);
+        atomic_write(&dir.join("effective.toml"), model::encode(&c)?.as_bytes())?;
+    }
     let _control = super::lifecycle::SessionControl::bind(&socket(r, n)?)?;
     let mut args = vec![
         "--storage".into(),
         dir.join("store").to_string_lossy().into_owned(),
         "--cpus".into(),
-        c.cpus.to_string(),
+        cpus(&c)?.to_string(),
         "--memory-mib".into(),
-        c.memory_mib,
+        memory(&c)?,
         "--network".into(),
-        c.network,
+        backend(&c)?,
     ];
-    if !c.windows {
+    if c.network.mode == model::NetworkMode::Bridge {
+        args.extend(super::networks::arguments(r, &c)?);
+    }
+    args.extend(["--host-profile".into(), dir.to_string_lossy().into_owned()]);
+    if !c.display.windows {
         args.push("--no-windows".into());
     }
-    if c.vulkan {
+    if c.components.vulkan.resolve(true)? {
         args.push("--vulkan".into());
     }
-    if c.audio {
+    args.extend(["--cwd".into(), c.session.cwd.clone()]);
+    if c.components.audio {
         args.push("--audio".into());
     }
-    if c.audio_input {
+    if c.components.audio_input {
         args.push("--audio-input".into());
     }
-    if c.video {
+    if c.components.vaapi.resolve(true)? {
         args.push("--video".into());
     }
-    for m in c.mounts {
+    let grant = grants(&dir, &c)?;
+    for m in &grant.mounts(&c)? {
+        let canonical = fs::canonicalize(m.host.as_ref().ok_or("missing mount source")?)?;
+        if !grant
+            .shares
+            .values()
+            .any(|share| canonical.starts_with(&share.host))
+        {
+            return Err("mount target resolves outside host grants".into());
+        }
         args.extend([
             if m.readonly { "--mount-ro" } else { "--mount" }.into(),
-            format!("{}={}", m.guest, m.host),
+            format!(
+                "{}={}",
+                m.target,
+                m.host.as_ref().ok_or("named share requires a host grant")?
+            ),
         ]);
     }
-    if c.target == trames_distro::boot::Target::Android {
+    if c.environment.kind == trames_distro::boot::Target::Android {
         args.extend(["--android-init".into(), "--no-pty".into()]);
     }
     // An explicit command is a maintenance session; require an explicit shell
     // override rather than silently bypassing this environment's init setting.
     args.extend([
         "--init".into(),
-        match c.init {
-            super::systemd::Init::Shell => "shell",
-            super::systemd::Init::Systemd => "systemd",
+        match c.boot.mode {
+            model::Init::Shell => "shell",
+            model::Init::Systemd => "systemd",
+            model::Init::Android => "shell",
         }
         .into(),
     ]);
     let extra = extra.strip_prefix(&["--".into()]).unwrap_or(extra);
     args.extend_from_slice(extra);
-    Ok(super::execute_with_default(args, &c.command)?)
+    Ok(super::execute_with_default(args, &c.command())?)
 }
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
 }
 fn terminal(r: &Path, n: &str) -> Result<()> {
     let c = load(&directory(r, n)?)?;
-    if c.target == trames_distro::boot::Target::Android {
+    if c.environment.kind == trames_distro::boot::Target::Android {
         return super::background::start(r, n);
     }
     let launchers = r.join("launchers");
@@ -922,7 +902,7 @@ fn terminal(r: &Path, n: &str) -> Result<()> {
     Ok(())
 }
 pub(super) fn stop(r: &Path, n: &str) -> Result<()> {
-    load(&directory(r, n)?)?;
+    identity(r, n)?;
     if super::background::registered(r, n) {
         super::background::unload(r, n)?;
     }
@@ -961,8 +941,8 @@ fn list(r: &Path, format: &str) -> Result<()> {
         }
         match load(&e.path()) {
             Ok(c) => rows.push(Row {
-                name: n.clone(),
-                distribution: c.distribution.clone(),
+                name: c.environment.name.clone(),
+                distribution: c.image.distribution.clone(),
                 state: if running(r, &n) {
                     "running / busy"
                 } else {
@@ -1041,17 +1021,19 @@ fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
         fs::copy(from, &to)?;
         File::open(to)?.sync_all()?;
     }
-    let mut c = Config::new(d);
-    c.source_sha256 = "imported-existing-store".into();
+    let mut c = load_cli(r)?.defaults.using_image(d);
+    c.environment.name = n.into();
+    c.environment.uuid = model::uuid()?;
+    c.image.sha256 = "imported-existing-store".into();
     save(&stage.0, &c)?;
     let mut copy = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
-    if c.target == trames_distro::boot::Target::Android {
+    if c.environment.kind == trames_distro::boot::Target::Android {
         trames_distro::android::validate_image(&mut copy)?;
     } else {
         super::systemd::renew_identity(&mut copy)?;
     }
     drop(copy);
-    publish(&stage.0, &dir)?;
+    publish(&stage.0, &r.join("environments").join(&c.environment.uuid))?;
     drop(vfs);
     println!("Imported {n}; original store is unchanged");
     Ok(())
@@ -1061,57 +1043,34 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
     let dir = directory(r, n)?;
     let mut c = load(&dir)?;
     apply_settings(&mut c, args)?;
-    if c.command != load(&dir)?.command {
+    if c.session.shell != load(&dir)?.session.shell {
         let mut vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
-        super::rootfs::validate_command(&mut vfs, &c.command)?;
+        super::rootfs::validate_command(&mut vfs, &c.session.shell)?;
     }
     save(&dir, &c)
 }
 fn apply_settings(c: &mut Config, settings: &[String]) -> Result<()> {
     let mut args = settings.iter();
-    while let Some(k) = args.next() {
-        if k == "--" {
-            c.command = args.cloned().collect();
+    while let Some(key) = args.next() {
+        if key == "--" {
+            c.session.shell = args.cloned().collect();
             break;
         }
-        if k == "--clear-mounts" {
-            c.mounts.clear();
-            continue;
-        }
-        let v = args.next().ok_or("configuration value missing")?;
-        let on = || match v.as_str() {
-            "on" => Ok(true),
-            "off" => Ok(false),
-            _ => Err("expected on or off"),
+        let value = args.next().ok_or("missing setting value")?;
+        let path = match key.as_str() {
+            "--cpus" => "resources.cpus",
+            "--memory" => "resources.memory",
+            "--network" => "network.mode",
+            "--bridge" => "network.bridge",
+            "--init" => "boot.mode",
+            "--vulkan" => "components.vulkan",
+            "--vaapi" => "components.vaapi",
+            "--thunking" => "components.thunking",
+            _ => return Err(format!("unknown create option {key}").into()),
         };
-        match k.as_str() {
-            "--command" => c.command = serde_json::from_str(v)?,
-            "--init" => c.init = super::systemd::Init::parse(v)?,
-            "--cpus" => c.cpus = v.parse()?,
-            "--memory-mib" => c.memory_mib = v.clone(),
-            "--network" => c.network = v.clone(),
-            "--windows" => c.windows = on()?,
-            "--vulkan" => c.vulkan = on()?,
-            "--video" => c.video = on()?,
-            "--audio" => c.audio = on()?,
-            "--audio-input" => c.audio_input = on()?,
-            "--mount" | "--mount-ro" => {
-                let (g, h) = v.split_once('=').ok_or("mount must be GUEST=HOST")?;
-                let host = fs::canonicalize(h)?;
-                if !host.is_dir() {
-                    return Err("mount source must be a directory".into());
-                }
-                c.mounts.push(Mount {
-                    guest: g.into(),
-                    host: host.to_string_lossy().into_owned(),
-                    readonly: k == "--mount-ro",
-                });
-            }
-            _ => return Err("unknown configuration setting".into()),
-        }
+        set_config(c, path, value)?;
     }
-    c.validate()?;
-    Ok(())
+    validate(c)
 }
 fn backup(r: &Path, n: &str, destination: &Path) -> Result<()> {
     let _lock = lock(r, n)?;
@@ -1132,11 +1091,16 @@ fn backup(r: &Path, n: &str, destination: &Path) -> Result<()> {
         let mut tar = tar::Builder::new(gzip);
         let mut inventory = BTreeMap::new();
         let mut paths = vec![
-            PathBuf::from("config.json"),
+            PathBuf::from("instance.toml"),
             PathBuf::from("store/manifest"),
         ];
         for e in fs::read_dir(dir.join("store/objects"))? {
             paths.push(PathBuf::from("store/objects").join(e?.file_name()));
+        }
+        for file in ["env.toml", "effective.toml"] {
+            if dir.join(file).is_file() {
+                paths.push(file.into());
+            }
         }
         paths.sort();
         for rel in paths {
@@ -1177,7 +1141,7 @@ fn backup_path(p: &Path) -> bool {
     let Some(s) = p.to_str() else {
         return false;
     };
-    s == "config.json"
+    matches!(s, "instance.toml" | "env.toml" | "effective.toml")
         || s == "store/manifest"
         || s.strip_prefix("store/objects/").is_some_and(|x| {
             x.len() == 20 && x.ends_with(".dat") && x[..16].bytes().all(|c| c.is_ascii_hexdigit())
@@ -1237,192 +1201,290 @@ fn restore(r: &Path, n: &str, archive: &Path) -> Result<()> {
     }
     let mut c = load(&stage.0)?;
     // A portable backup never grants new native paths to its recipient.
+    c.environment.name = n.into();
+    c.environment.uuid = model::uuid()?;
     c.mounts.clear();
-    save(&stage.0, &c)?;
+    register(&stage.0, &c, true)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
     super::systemd::renew_identity(&mut vfs)?;
     drop(vfs);
-    publish(&stage.0, &dir)?;
+    publish(&stage.0, &r.join("environments").join(&c.environment.uuid))?;
     println!("Restored {n}; shared directories must be selected again");
     Ok(())
 }
 pub fn dispatch(args: &[String]) -> Result<u8> {
     let r = root()?;
-    let op = args.first().map(String::as_str).unwrap_or("list");
-    if op == "default" {
-        return super::cli::dispatch(vec!["shell".into()]);
+    let op = args.first().map(String::as_str).unwrap_or("ls");
+    if op == "list" || op == "ls" {
+        return listing(&args[1..]);
     }
-    if op == "help" || op == "--help" {
-        return super::cli::dispatch(vec!["--help".into()]);
-    }
-    if op == "list" {
-        list(&r, "table")?;
+    if op == "create" {
+        let _metadata = metadata_lock(&r)?;
+        let positional = args.get(1).filter(|s| !s.starts_with('-'));
+        let mut c = load_cli(&r)?.defaults;
+        let (mut archive, mut custom, mut expected, mut profile, mut distro) =
+            (None, None, None, None, None);
+        let mut packages = None;
+        let mut settings = vec![];
+        let mut it = args[if positional.is_some() { 2 } else { 1 }..].iter();
+        while let Some(k) = it.next() {
+            if k == "--" {
+                settings.push(k.clone());
+                settings.extend(it.cloned());
+                break;
+            }
+            let v = it.next().ok_or("missing create value")?;
+            match k.as_str() {
+                "--config" => profile = Some(v),
+                "--distro" => distro = Some(v),
+                "--rootfs" => custom = Some(v.as_str()),
+                "--archive" => archive = Some(v.as_str()),
+                "--sha256" => expected = Some(v.as_str()),
+                "--packages" => packages = Some(super::packages::Profile::parse(v)?),
+                _ => settings.extend([k.clone(), v.clone()]),
+            }
+        }
+        if let Some(d) = distro {
+            c = c.using_image(d);
+        }
+        if let Some(path) = profile {
+            c = Config::parse(&fs::read_to_string(path)?)?;
+        }
+        if let Some(n) = positional {
+            c.environment.name = n.clone();
+        }
+        name(&c.environment.name)?;
+        if c.environment.uuid.is_empty() {
+            c.environment.uuid = model::uuid()?;
+        }
+        apply_settings(&mut c, &settings)?;
+        let source = c.image.source.clone();
+        let custom = custom.or(source.as_deref());
+        let sha = c.image.sha256.clone();
+        let expected = expected.or((!sha.is_empty()).then_some(sha.as_str()));
+        let n = c.environment.name.clone();
+        let explicit = profile.is_some() || !settings.is_empty();
+        create(
+            &r,
+            &n,
+            c,
+            Create {
+                archive,
+                custom,
+                expected,
+                packages,
+                explicit,
+            },
+        )?;
         return Ok(0);
     }
     if op == "doctor" {
         println!(
             "{}",
-            serde_json::json!({"version":env!("CARGO_PKG_VERSION"),"runtime":include_str!("../../../runtime-version.json"),"home":r,"channel":super::product::CHANNEL,"architecture":std::env::consts::ARCH,"cpus":trames_hvf::max_parallel_cpus(),"rootfs":[{"name":"alpine","version":trames_distro::ALPINE_VERSION,"sha256":trames_distro::ALPINE_SHA256},{"name":"debian","version":trames_distro::DEBIAN_VERSION,"sha256":trames_distro::DEBIAN_SHA256}]})
+            serde_json::json!({"registry":r,"runtime":include_str!("../../../runtime-version.json")})
         );
         return Ok(0);
     }
     let n = args.get(1).ok_or("environment name required")?;
     name(n)?;
     match op {
-        "create" => {
-            let mut c = load_cli(&r)?.defaults;
-            let mut archive = None;
-            let mut custom = None;
-            let mut expected = None;
-            let mut packages = None;
-            let mut settings = vec![];
-            let mut it = args[2..].iter();
-            while let Some(k) = it.next() {
-                if k == "--" {
-                    settings.push(k.clone());
-                    settings.extend(it.cloned());
-                    break;
-                }
-                let v = it.next().ok_or("missing create option value")?;
-                match k.as_str() {
-                    "--distro" => {
-                        catalog(v)?;
-                        c.distribution = v.clone();
-                        c.source_sha256 = catalog(v)?.1.into();
-                    }
-                    "--target" => c.target = trames_distro::boot::Target::parse(v)?,
-                    "--archive" => archive = Some(v.as_str()),
-                    "--rootfs" => custom = Some(v.as_str()),
-                    "--sha256" => expected = Some(v.as_str()),
-                    "--packages" => packages = Some(super::packages::Profile::parse(v)?),
-                    _ => {
-                        settings.extend([k.clone(), v.clone()]);
-                    }
-                }
+        "grant" => grant(&r, n, &args[2..])?,
+        "share" => {
+            let _metadata = metadata_lock(&r)?;
+            let dir = directory(&r, n)?;
+            let mut c = load(&dir)?;
+            let alias = args.get(2).ok_or("share alias required")?;
+            name(alias)?;
+            let host = fs::canonicalize(args.get(3).ok_or("host directory required")?)?;
+            if !host.is_dir() {
+                return Err("share must be a directory".into());
             }
-            if c.target == trames_distro::boot::Target::Android {
-                c.distribution = "android".into();
-                c.command = trames_distro::android::command();
-                c.network = "off".into();
-            } else if custom.is_some() {
-                c.distribution = "custom".into();
-            }
-            apply_settings(&mut c, &settings)?;
-            create(&r, n, c, archive, custom, expected, packages)?;
+            let target = args.get(4).ok_or("guest mount path required")?;
+            let readonly = match args.get(5).map(String::as_str).unwrap_or("rw") {
+                "ro" => true,
+                "rw" => false,
+                _ => return Err("expected ro or rw".into()),
+            };
+            let mut g = grants(&dir, &c)?;
+            g.shares.insert(
+                alias.clone(),
+                model::Share {
+                    host: host.to_str().ok_or("host path must be UTF-8")?.into(),
+                    readonly,
+                },
+            );
+            c.mounts.retain(|m| m.target != *target);
+            c.mounts.push(model::Mount {
+                target: target.clone(),
+                share: Some(alias.clone()),
+                host: None,
+                readonly,
+            });
+            validate(&c)?;
+            atomic_write(
+                &dir.join("grants.toml"),
+                model::encode(&model::Authorization {
+                    environment_uuid: c.environment.uuid.clone(),
+                    grant: g,
+                })?
+                .as_bytes(),
+            )?;
+            save(&dir, &c)?;
         }
         "packages" => {
-            if args.len() > 3 { return Err("usage: env packages NAME [standard|development]".into()); }
-            let profile = super::packages::Profile::parse(args.get(2).map(String::as_str).unwrap_or("standard"))?;
-            let _lock = lock(&r, n)?;
-            let dir = directory(&r, n)?;
-            let c = load(&dir)?;
-            if c.distribution != "debian" { return Err("package presets require the built-in Debian image".into()); }
-            super::packages::install(&dir.join("store"), c.cpus, &c.network, profile)?;
+            let _guard = lock(&r, n)?;
+            let c = load(&directory(&r, n)?)?;
+            if c.image.distribution != "debian" {
+                return Err("package presets require Debian".into());
+            }
+            super::packages::install(
+                &directory(&r, n)?.join("store"),
+                cpus(&c)?,
+                &backend(&c)?,
+                super::packages::Profile::parse(args.get(2).ok_or("package preset required")?)?,
+            )?;
         }
-        "config" | "show" => println!(
-            "{}",
-            serde_json::to_string_pretty(&load(&directory(&r, n)?)?)?
-        ),
-        "start" | "run" => return Err("use env start NAME to start in the background, shell to open a terminal, or exec -- COMMAND to run a command".into()),
-        "_serve" => {if args.len()!=2{return Err("invalid service invocation".into());}return super::background::serve(&r,n);},
-        "attach" => return super::background::attach(&r,n,&args[2..]),
-        "autostart" => super::background::autostart(&r,n,args.get(2).ok_or("expected on or off")?)?,
-        "status" => super::background::status(&r,n)?,
-        "import-store" | "import" => import(
-            &r,
-            n,
-            Path::new(args.get(2).ok_or("existing store path required")?),
-        )?,
+
+        "config" | "show" => println!("{}", model::encode(&load(&directory(&r, n)?)?)?),
+        "_serve" => return super::background::serve(&r, n),
+        "attach" => return super::background::attach(&r, n, &args[2..]),
+        "autostart" => super::background::autostart(&r, n, args.get(2).ok_or("expected on/off")?)?,
+        "status" => super::background::status(&r, n)?,
         "terminal" => terminal(&r, n)?,
         "stop" => stop(&r, n)?,
         "configure" => configure(&r, n, &args[2..])?,
-        "backup" => backup(&r, n, Path::new(args.get(2).ok_or("backup path required")?))?,
-        "restore" => restore(&r, n, Path::new(args.get(2).ok_or("backup path required")?))?,
-        "delete" => {
-            if args.get(2).map(String::as_str) != Some("--yes") {
-                return Err("delete requires --yes; create a backup first if needed".into());
+        "backup" | "export" => {
+            backup(&r, n, Path::new(args.get(2).ok_or("backup path required")?))?
+        }
+        "restore" => restore(&r, n, Path::new(args.get(2).ok_or("archive required")?))?,
+        "import-store" => import(&r, n, Path::new(args.get(2).ok_or("store path required")?))?,
+        "rename" => {
+            let _metadata = metadata_lock(&r)?;
+            let _guard = lock(&r, n)?;
+            let mut c = load(&directory(&r, n)?)?;
+            let new = args.get(2).ok_or("new name required")?;
+            name(new)?;
+            if directory(&r, new)?.exists() {
+                return Err("name already exists".into());
             }
-            let _lock = lock(&r, n)?;
-            let dir = directory(&r, n)?;
-            load(&dir)?;
-            super::background::remove(&r,n)?;
-            let vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
+            let path = directory(&r, n)?;
+            c.environment.name = new.clone();
+            let explicit = path.join("env.toml").is_file();
+            register(&path, &c, explicit)?;
+            let mut cli = load_cli(&r)?;
+            if cli.default_environment == *n {
+                cli.default_environment = new.clone();
+                atomic_write(&r.join("config.toml"), model::encode(&cli)?.as_bytes())?;
+            }
+        }
+        "remove" => {
+            if args.get(2).map(String::as_str) != Some("--yes") {
+                return Err("remove requires --yes".into());
+            }
+            let _guard = lock(&r, n)?;
+            let path = directory(&r, n)?;
+            super::background::remove(&r, n)?;
+            let vfs = Vfs::open_disk(path.join("store"), DiskOptions::default())?;
             let trash = staging(&r, n)?;
             fs::remove_dir(&trash.0)?;
-            fs::rename(&dir, &trash.0)?;
+            fs::rename(path, &trash.0)?;
             drop(vfs);
-            File::open(dir.parent().unwrap())?.sync_all()?;
         }
-        "check" => {
-            let _lock = lock(&r, n)?;
-            let dir = directory(&r, n)?;
-            load(&dir)?;
-            let vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
-            println!(
-                "Store opens successfully; {} inodes, {} logical bytes",
-                vfs.capacity().nodes_used,
-                vfs.capacity().used_bytes
-            );
-        }
-        _ => {
-            return Err(
-                "usage: env list|create|packages|start|stop|configure|backup|restore|delete|check|doctor"
-                    .into(),
-            )
-        }
+        _ => return Err(format!("unknown environment operation {op}").into()),
     }
     Ok(0)
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn management_names_and_backup_paths_are_confined() {
-        for n in ["../x", ".", "a/b", "", "-x;rm"] {
-            assert!(name(n).is_err());
+    struct Fixture(PathBuf);
+    impl Fixture {
+        fn new() -> Self {
+            let p = std::env::temp_dir().join(format!("trames-config-{}", model::uuid().unwrap()));
+            for d in [p.clone(), p.join("environments"), p.join("locks")] {
+                private_dir(&d).unwrap();
+            }
+            Self(p)
         }
-        assert!(name("debian-work").is_ok());
-        for p in [
-            "/store/manifest",
-            "store/../config.json",
-            "store/objects/x.dat",
-            "store/objects/0123456789abcdef.dat/other",
-        ] {
-            assert!(!backup_path(Path::new(p)));
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
         }
-        assert!(backup_path(Path::new("store/objects/0123456789abcdef.dat")));
     }
     #[test]
-    fn init_requires_compatible_image_and_old_configs_keep_shell() {
-        let mut old = serde_json::to_value(Config::new("debian")).unwrap();
-        old.as_object_mut().unwrap().remove("init");
-        old.as_object_mut().unwrap().remove("target");
-        let mut c: Config = serde_json::from_value(old).unwrap();
-        assert!(c.init == super::super::systemd::Init::Shell);
-        assert_eq!(c.target, trames_distro::boot::Target::Linux);
-        c.init = super::super::systemd::Init::Systemd;
-        assert!(c.validate().is_ok());
-        c.distribution = "alpine".into();
-        assert!(c.validate().is_err());
+    fn identity_survives_alias_changes_and_grants_are_not_portable() {
+        let f = Fixture::new();
+        let mut c = Config::new("debian");
+        c.environment.name = "work".into();
+        c.environment.uuid = model::uuid().unwrap();
+        let dir = f.0.join("environments").join(&c.environment.uuid);
+        private_dir(&dir).unwrap();
+        register(&dir, &c, true).unwrap();
+        assert_eq!(directory(&f.0, "work").unwrap(), dir);
+        assert_eq!(directory(&f.0, &c.environment.uuid).unwrap(), dir);
+        let original = socket(&f.0, "work").unwrap();
+        c.environment.name = "renamed".into();
+        register(&dir, &c, true).unwrap();
+        assert_eq!(socket(&f.0, "renamed").unwrap(), original);
+        let authorization = model::Authorization {
+            environment_uuid: c.environment.uuid.clone(),
+            grant: model::Grant {
+                host_exec: true,
+                ..Default::default()
+            },
+        };
+        atomic_write(
+            &dir.join("grants.toml"),
+            model::encode(&authorization).unwrap().as_bytes(),
+        )
+        .unwrap();
+        assert!(grants(&dir, &c).unwrap().host_exec);
+        c.environment.uuid = model::uuid().unwrap();
+        assert!(grants(&dir, &c).is_err());
+        assert!(!backup_path(Path::new("grants.toml")));
     }
     #[test]
-    fn android_owns_its_init_graphics_and_separate_identity() {
-        let mut c = Config::new("android");
-        assert!(c.validate().is_ok());
-        assert_eq!(c.command, trames_distro::android::command());
-        c.init = super::super::systemd::Init::Systemd;
-        assert!(c.validate().is_err());
-        c.init = super::super::systemd::Init::Shell;
-        c.target = trames_distro::boot::Target::Linux;
-        assert!(c.validate().is_err());
+    fn dotted_updates_validate_as_one_transaction_and_do_not_modify_identity() {
+        let mut c = Config::default();
+        set_config(&mut c, "network.mode", "bridge").unwrap();
+        assert!(validate(&c).is_err());
+        set_config(&mut c, "network.bridge", "private").unwrap();
+        validate(&c).unwrap();
+        assert!(set_config(&mut c, "environment.uuid", "another").is_err());
+        assert!(set_config(&mut c, "resources.typo", "4").is_err());
+        let text = model::encode(&c).unwrap();
+        assert!(text.contains("[resources]"));
+        assert_eq!(
+            Config::parse(&text).unwrap().network.bridge.as_deref(),
+            Some("private")
+        );
     }
     #[test]
-    fn future_config_and_invalid_limits_are_rejected() {
-        let mut c = Config::new("alpine");
-        c.schema = 2;
-        assert!(c.validate().is_err());
-        c.schema = 1;
-        c.memory_mib = "18446744073709551615".into();
-        assert!(c.validate().is_err());
+    fn config_is_toml_only_and_preserves_explicit_profile_precedence() {
+        let f = Fixture::new();
+        atomic_write(
+            &f.0.join("cli.json"),
+            b"{\"default_environment\":\"legacy\"}",
+        )
+        .unwrap();
+        assert_eq!(load_cli(&f.0).unwrap().default_environment, "default");
+        let mut c = Config::default();
+        c.environment.name = "work".into();
+        c.environment.uuid = model::uuid().unwrap();
+        let dir = f.0.join("environments").join(&c.environment.uuid);
+        private_dir(&dir).unwrap();
+        register(&dir, &c, false).unwrap();
+        c.resources.cpus = model::CpuCount::Count(1);
+        save(&dir, &c).unwrap();
+        let mut cache = c.clone();
+        cache.resources.cpus = model::CpuCount::Count(2);
+        atomic_write(
+            &dir.join("effective.toml"),
+            model::encode(&cache).unwrap().as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(load(&dir).unwrap().resources.cpus.resolve(12).unwrap(), 1);
     }
 }

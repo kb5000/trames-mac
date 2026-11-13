@@ -2,7 +2,7 @@
 //! User-facing CLI. Parsing, help, config and completion never start a runtime.
 use super::environments::{self as env, Result};
 use std::io::IsTerminal;
-const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --target android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  config get|set|unset|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
+const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --distro android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  network ls|create|inspect|remove  Trames networks\n  config get|set|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set resources.memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
 pub fn dispatch(args: Vec<String>) -> Result<u8> {
     let (selected, args) = selection(args)?;
     let op = args.first().map(String::as_str).unwrap_or("");
@@ -48,6 +48,24 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
     if op == "env" {
         return environments(&args[1..], selected.as_deref());
     }
+    if op == "network" {
+        return super::networks::dispatch(&args[1..]);
+    }
+    if op == "--shutdown" {
+        return env::shutdown();
+    }
+    if op == "--list" {
+        return env::listing(&args[1..]);
+    }
+    if op == "--terminate" {
+        let r = env::root()?;
+        let n = args
+            .get(1)
+            .or(selected.as_ref())
+            .ok_or("environment required")?;
+        env::stop(&r, n)?;
+        return Ok(0);
+    }
     if op == "config" {
         return env::settings(selected.as_deref(), &args[1..]);
     }
@@ -87,7 +105,7 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
                 return Err("usage: trames [-e NAME] shell".into());
             }
             super::background::start(&r, &n)?;
-            if config.target == trames_distro::boot::Target::Android {
+            if config.environment.kind == trames_distro::boot::Target::Android {
                 if op.is_empty() {
                     return Ok(0);
                 }
@@ -113,7 +131,7 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
         }
         "apk" => android_apps(&r, &n, &config, &args[1..]),
         "session" => {
-            if config.target == trames_distro::boot::Target::Android {
+            if config.environment.kind == trames_distro::boot::Target::Android {
                 return Err("open an Android terminal with shell or exec -t".into());
             }
             let socket = env::console_socket(&r, &n)?;
@@ -212,7 +230,7 @@ fn android_apps(
     config: &env::Config,
     args: &[String],
 ) -> Result<u8> {
-    if config.target != trames_distro::boot::Target::Android {
+    if config.environment.kind != trames_distro::boot::Target::Android {
         return Err("apk commands require an Android environment".into());
     }
     let mut request = super::exec::Request {
@@ -342,7 +360,11 @@ fn environments(args: &[String], selected: Option<&str>) -> Result<u8> {
             }
         }
         let n = name.unwrap_or(env::default_environment(&r)?);
-        env::load(&env::directory(&r, &n)?)?;
+        if op == "stop" {
+            env::identity(&r, &n)?;
+        } else {
+            env::load(&env::directory(&r, &n)?)?;
+        }
         match op {
             "start" => super::background::start(&r, &n)?,
             "stop" => env::stop(&r, &n)?,

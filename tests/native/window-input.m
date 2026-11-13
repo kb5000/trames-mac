@@ -96,6 +96,18 @@ int main(void){@autoreleasepool {
     hostText=[hostText stringByPaddingToLength:17*1024*1024 withString:@"x" startingAtIndex:0];
     // A private real NSPasteboard keeps all user clipboard formats untouched.
     NSPasteboard *board=[NSPasteboard pasteboardWithUniqueName];[board setString:hostText forType:NSPasteboardTypeString];
+    NSString *controlText=@"device 剪贴板 🧪";[board clearContents];[board setString:controlText forType:NSPasteboardTypeString];
+    uint8_t controlBytes[4096];NSData *expectedControl=[controlText dataUsingEncoding:NSUTF8StringEncoding];
+    intptr_t controlCount=trames_control_clipboard_read((__bridge void *)board,controlBytes,sizeof controlBytes);
+    NSCAssert(controlCount==(intptr_t)expectedControl.length && memcmp(controlBytes,expectedControl.bytes,expectedControl.length)==0,@"device clipboard shares native Unicode content");
+    NSCAssert(trames_control_clipboard_read((__bridge void *)board,controlBytes,1)==-90,@"device read is bounded");
+    const uint8_t fileURL[]="file:///etc/passwd";NSCAssert(trames_control_open_url(fileURL,sizeof(fileURL)-1)==-22,@"UI control cannot open local files");
+    const uint8_t invalidUTF8[]={0xff};
+    NSCAssert(trames_control_clipboard_write((__bridge void *)board,invalidUTF8,1)==-22,@"invalid text leaves clipboard intact");
+    NSCAssert([[board stringForType:NSPasteboardTypeString] isEqual:controlText],@"failed write preserves existing content");
+    NSCAssert(trames_control_clipboard_write((__bridge void *)board,expectedControl.bytes,expectedControl.length)==0,@"device clipboard write uses shared backend");
+
+    [board clearContents];[board setString:hostText forType:NSPasteboardTypeString];
     TramesClipboard *clipboard=[[TramesClipboard alloc]initWithPasteboard:board];[clipboard checkForChanges];
     ClipboardObserver *observer=[ClipboardObserver new];observer.clipboard=clipboard;observer.board=board;
     [clipboard addObserver:observer forKeyPath:@"lastChange" options:0 context:NULL];
