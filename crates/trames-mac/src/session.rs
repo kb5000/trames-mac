@@ -567,6 +567,9 @@ pub fn run(
         super::files::run(&mut vfs, &argv)?;
         return Ok(0);
     }
+    if trace {
+        vfs.retain_kernel_log_bursts();
+    }
     if android_init {
         if init != super::systemd::Init::Shell || console.is_some() {
             return Err("experimental Android init requires a standalone session".into());
@@ -597,8 +600,17 @@ pub fn run(
     } else {
         None
     };
+    let wayland_directory = if android_init {
+        "/run/trames-wayland"
+    } else {
+        "/run/user/0"
+    };
     let server = if windows {
-        Some(vfs.enable_wayland(b"/run/user/0")?)
+        let server = vfs.enable_wayland(wayland_directory.as_bytes())?;
+        if android_init {
+            trames_distro::android::display(&mut vfs, wayland_directory.as_bytes())?;
+        }
+        Some(server)
     } else {
         None
     };
@@ -616,7 +628,7 @@ pub fn run(
     }
     if server.is_some() {
         envp.extend([
-            "XDG_RUNTIME_DIR=/run/user/0".into(),
+            format!("XDG_RUNTIME_DIR={wayland_directory}"),
             "WAYLAND_DISPLAY=wayland-0".into(),
             "GDK_BACKEND=wayland".into(),
         ]);

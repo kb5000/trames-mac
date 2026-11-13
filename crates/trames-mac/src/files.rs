@@ -5,7 +5,7 @@ use std::{
     io::{self, Read, Write},
     os::unix::{
         ffi::{OsStrExt, OsStringExt},
-        fs::OpenOptionsExt,
+        fs::{OpenOptionsExt, PermissionsExt},
     },
     path::Path,
 };
@@ -155,7 +155,12 @@ fn put(vfs: &mut Vfs, host: &Path, guest: &[u8], replace: bool) -> Result<()> {
             format!(".trames-upload-{}-{stamp}-{nonce}", std::process::id()).as_bytes(),
         );
         let mut source = fs::File::open(host)?;
-        let fd = vfs.open_at(AT_FDCWD, &temporary, 0xc1, 0o644)?;
+        let fd = vfs.open_at(
+            AT_FDCWD,
+            &temporary,
+            0xc1,
+            meta.permissions().mode() & 0o777,
+        )?;
         let result: Result<()> = (|| {
             let mut buffer = vec![0; 64 * 1024];
             loop {

@@ -25,6 +25,15 @@ trames gui
 ```
 
 See [environments, installation, backup and release workflow](docs/guides/environments.md).
+
+An experimental ARM64 Android 13 desktop also runs using the original Waydroid
+system/vendor images, Launcher and APKs. It shares the Linux userspace kernel,
+Binder and native Vulkan/Gralloc resources with iPad; Mac supplies only the
+hardware CPU executor and presenter. Native mouse/keyboard and the original
+Calendar have been tested. This is not an Android environment catalog entry;
+external storage, networking, audio and general APK compatibility remain
+unaccepted. See the [Android build, launch and validation guide](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/android-bringup.md).
+
 For source builds:
 
 ```sh
