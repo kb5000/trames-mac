@@ -620,3 +620,33 @@ and wall-clock adjustment behavior remains outside this change.
 
 See the [shared display lifecycle design](https://github.com/kb5000/trames-runtime/blob/main/docs/architecture/display-lifecycle.md)
 and [paired platform validation](https://github.com/kb5000/trames-ipad/blob/main/docs/validation/display-lifecycle-20261104.json).
+
+
+## Optional Android adapters
+
+Android is a separate experimental target. Import the small Trames ARM64
+adapter archive; first installation obtains the pinned official Waydroid
+Android 13 system/vendor ZIPs directly from upstream and verifies their sizes
+and SHA-256 hashes. The adapter contains only Vulkan/Gralloc frontends, the
+64-bit audio-service launcher, graphics properties and provenance. Matching
+source exports are distributed separately. No Android image or APK is bundled
+into the Mac application or adapter download.
+
+```sh
+trames env create android --target android --rootfs Trames-Android-13-arm64-adapters.tar.gz
+trames env start android
+trames -e android apk install /path/to/application.apk
+trames -e android apk launch com.example.application
+```
+
+Wait for first boot/user unlock before launching applications. ZIPs are cached
+under `TRAMES_HOME/cache/android`; `TRAMES_ANDROID_IMAGE_CACHE` can point at an
+existing directory of the exact pinned ZIPs for offline installation. Each
+environment keeps its own writable store. Image conversion runs only during
+installation, without root, filesystem mounting or a Linux VM. Old full Android
+rootfs archives remain supported. Guest networking stays off until explicitly
+configured; downloading installation inputs does not enable guest networking.
+Host audio and physical iPad Android acceptance remain pending.
+
+The [shared Android architecture record](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/android-bringup.md#small-adapter-package-and-upstream-composition)
+describes the component contract and current compatibility boundaries.

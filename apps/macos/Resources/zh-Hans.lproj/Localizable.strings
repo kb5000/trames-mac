@@ -104,7 +104,7 @@
 "New Environment" = "新建环境";
 "Choose Linux or import the optional Android package. Debian can include daily tools and systemd services." = "选择 Linux，或导入可选 Android 包。Debian 可安装日常工具和 systemd 服务。";
 "Android 13 — optional package…" = "Android 13 — 可选安装包…";
-"Choose a Trames Android ARM64 package (tar.gz)." = "选择 Trames Android ARM64 安装包（tar.gz）。";
+"Choose a Trames Android ARM64 adapter package (tar.gz). Initial installation downloads official Waydroid images." = "选择 Trames Android ARM64 适配包（tar.gz）。首次安装会下载官方 Waydroid 镜像。";
 "Importing Android…" = "正在导入 Android…";
 "Install APK…" = "安装 APK…";
 "Choose an Android environment first." = "请先选择 Android 环境。";

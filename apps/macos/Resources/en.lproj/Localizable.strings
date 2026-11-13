@@ -104,7 +104,7 @@
 "New Environment" = "New Environment";
 "Choose Linux or import the optional Android package. Debian can include daily tools and systemd services." = "Choose Linux or import the optional Android package. Debian can include daily tools and systemd services.";
 "Android 13 — optional package…" = "Android 13 — optional package…";
-"Choose a Trames Android ARM64 package (tar.gz)." = "Choose a Trames Android ARM64 package (tar.gz).";
+"Choose a Trames Android ARM64 adapter package (tar.gz). Initial installation downloads official Waydroid images." = "Choose a Trames Android ARM64 adapter package (tar.gz). Initial installation downloads official Waydroid images.";
 "Importing Android…" = "Importing Android…";
 "Install APK…" = "Install APK…";
 "Choose an Android environment first." = "Choose an Android environment first.";

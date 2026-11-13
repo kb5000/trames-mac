@@ -631,6 +631,65 @@ fn publish(stage: &Path, dir: &Path) -> Result<()> {
     File::open(dir.parent().unwrap())?.sync_all()?;
     Ok(())
 }
+/// Cold optional-image download; execution workers never use this path.
+fn android_images(r: &Path, archive: &Path) -> Result<Option<PathBuf>> {
+    let Some(plan) = trames_distro::android_package::plan(archive)? else {
+        return Ok(None);
+    };
+    let cache = std::env::var_os("TRAMES_ANDROID_IMAGE_CACHE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| r.join("cache/android"));
+    private_dir(&cache)?;
+    for image in plan.images {
+        let path = cache.join(&image.filename);
+        if path.is_file() && path.metadata()?.len() == image.size && digest(&path)? == image.sha256
+        {
+            continue;
+        }
+        eprintln!(
+            "Downloading Android {} ({} bytes)…",
+            image.image_name, image.size
+        );
+        let temp = cache.join(format!("{}.{}.part", image.filename, std::process::id()));
+        let result = (|| -> Result<()> {
+            let status = Command::new("/usr/bin/curl")
+                .args([
+                    "--fail",
+                    "--location",
+                    "--proto",
+                    "=https",
+                    "--proto-redir",
+                    "=https",
+                    "--retry",
+                    "2",
+                    "--connect-timeout",
+                    "20",
+                    "--max-time",
+                    "1800",
+                    "--max-filesize",
+                ])
+                .arg(image.size.to_string())
+                .arg("--output")
+                .arg(&temp)
+                .arg(&image.url)
+                .status()?;
+            if !status.success()
+                || temp.metadata()?.len() != image.size
+                || digest(&temp)? != image.sha256
+            {
+                return Err("Android upstream download failed size/SHA-256 verification".into());
+            }
+            File::open(&temp)?.sync_all()?;
+            fs::rename(&temp, &path)?;
+            Ok(())
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&temp);
+        }
+        result?;
+    }
+    Ok(Some(cache))
+}
 fn create(
     r: &Path,
     n: &str,
@@ -680,11 +739,27 @@ fn create(
     } else {
         None
     };
+    let android_images = if c.target == trames_distro::boot::Target::Android {
+        android_images(
+            r,
+            Path::new(custom.ok_or("Android adapter/rootfs archive required")?),
+        )?
+    } else {
+        None
+    };
     eprintln!("Importing {} rootfs…", c.distribution);
     let stage = staging(r, n)?;
     let mut vfs = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
     c.source_sha256 = vfs.populate_staged(|vfs| -> Result<String> {
         if let Some(custom) = custom {
+            if let Some(images) = &android_images {
+                return trames_distro::android_package::install(
+                    Path::new(custom),
+                    images,
+                    vfs,
+                    expected,
+                );
+            }
             return super::rootfs::install(Path::new(custom), vfs, expected);
         }
         let mut input = File::open(source.as_ref().unwrap())?;
