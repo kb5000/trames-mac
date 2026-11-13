@@ -414,6 +414,11 @@ impl Command {
                 }
                 "--trace" => trace = true,
                 "--android-init" => android_init = true,
+                "--target" => {
+                    android_init = trames_distro::boot::Target::parse(
+                        &arguments.next().ok_or("missing target")?,
+                    )? == trames_distro::boot::Target::Android
+                }
                 "--metrics" => metrics = true,
                 "--pty" => pty = true,
                 "--no-pty" => pty = false,
@@ -428,6 +433,10 @@ impl Command {
             }
         }
         let mut argv: Vec<String> = arguments.collect();
+        if android_init && argv.is_empty() && !filesystem {
+            argv = trames_distro::android::command();
+            pty = false;
+        }
         if init == super::systemd::Init::Systemd {
             if filesystem || !argv.is_empty() {
                 return Err(

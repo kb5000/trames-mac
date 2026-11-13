@@ -27,6 +27,8 @@ pub struct Mount {
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub schema: u32,
+    #[serde(default)]
+    pub target: trames_distro::boot::Target,
     pub distribution: String,
     #[serde(default)]
     pub init: super::systemd::Init,
@@ -52,17 +54,31 @@ impl Config {
     fn new(distribution: &str) -> Self {
         Self {
             schema: 1,
+            target: if distribution == "android" {
+                trames_distro::boot::Target::Android
+            } else {
+                trames_distro::boot::Target::Linux
+            },
             distribution: distribution.into(),
             init: super::systemd::Init::Shell,
             source_sha256: catalog(distribution)
                 .map_or("custom-rootfs", |c| c.1)
                 .into(),
-            command: shell_command(),
+            command: if distribution == "android" {
+                trames_distro::android::command()
+            } else {
+                shell_command()
+            },
             cpus: std::thread::available_parallelism()
                 .map_or(1, usize::from)
                 .min(trames_hvf::max_parallel_cpus()),
             memory_mib: "auto".into(),
-            network: "full".into(),
+            network: if distribution == "android" {
+                "off"
+            } else {
+                "full"
+            }
+            .into(),
             windows: true,
             vulkan: true,
             video: false,
@@ -78,8 +94,26 @@ impl Config {
                     .into(),
             );
         }
-        if !["alpine", "debian", "custom"].contains(&self.distribution.as_str()) {
+        if !["alpine", "debian", "custom", "android"].contains(&self.distribution.as_str()) {
             return Err("unknown distribution".into());
+        }
+        if (self.target == trames_distro::boot::Target::Android) != (self.distribution == "android")
+        {
+            return Err(
+                "target and image type differ; create a separate Linux or Android environment"
+                    .into(),
+            );
+        }
+        if self.target == trames_distro::boot::Target::Android
+            && (self.init != super::systemd::Init::Shell
+                || self.command != trames_distro::android::command()
+                || !self.vulkan
+                || !self.windows)
+        {
+            return Err(
+                "Android boots its own init and requires Vulkan and windows; use exec for an Android shell"
+                    .into(),
+            );
         }
         if self.command.is_empty()
             || !self.command[0].starts_with('/')
@@ -618,7 +652,18 @@ fn create(
         return Err("--sha256 requires --rootfs".into());
     }
     if custom.is_some() {
-        c.distribution = "custom".into();
+        c.distribution = if c.target == trames_distro::boot::Target::Android {
+            "android"
+        } else {
+            "custom"
+        }
+        .into();
+    }
+    if c.target == trames_distro::boot::Target::Android && custom.is_none() {
+        return Err(
+            "Android is an optional download; supply --target android --rootfs PACKAGE.tar.gz"
+                .into(),
+        );
     }
     c.validate()?;
     use super::packages::Profile;
@@ -654,25 +699,24 @@ fn create(
         }
         Ok(catalog(&c.distribution)?.1.into())
     })?;
-    // Built-in images carry their builder's resolver. Custom images preserve
-    // supplied DNS; a missing file receives the existing managed endpoint.
-    if custom.is_none()
-        && vfs
-            .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
-            .is_ok()
-    {
-        vfs.import_reader_replace(b"/etc/resolv.conf", &mut &b"nameserver 169.254.0.53\n"[..])?;
-    } else if vfs
-        .stat_at_flags(trames_vfs::AT_FDCWD, b"/etc/resolv.conf", true)
-        .is_err_and(|e| e.0 == 2)
-    {
-        vfs.import_reader(
-            b"/etc/resolv.conf",
-            &mut &b"nameserver 169.254.0.53\n"[..],
-            false,
-        )?;
+    if c.target == trames_distro::boot::Target::Linux {
+        if custom.is_none()
+            && vfs
+                .stat_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf")
+                .is_ok()
+        {
+            let fd = vfs.open_at(trames_vfs::AT_FDCWD, b"/etc/resolv.conf", 0x201, 0)?;
+            let result = vfs.write(fd, b"nameserver 169.254.0.53\n");
+            let closed = vfs.close(fd);
+            result?;
+            closed?;
+        } else {
+            trames_distro::install_resolver(&mut vfs, b"nameserver 169.254.0.53\n")?;
+        }
     }
-    if custom.is_some() {
+    if c.target == trames_distro::boot::Target::Android {
+        trames_distro::android::validate_image(&mut vfs)?;
+    } else if custom.is_some() {
         super::rootfs::validate_command(&mut vfs, &c.command)?;
     }
     vfs.sync()?;
@@ -755,6 +799,9 @@ pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
             format!("{}={}", m.guest, m.host),
         ]);
     }
+    if c.target == trames_distro::boot::Target::Android {
+        args.extend(["--android-init".into(), "--no-pty".into()]);
+    }
     // An explicit command is a maintenance session; require an explicit shell
     // override rather than silently bypassing this environment's init setting.
     args.extend([
@@ -773,7 +820,10 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
 }
 fn terminal(r: &Path, n: &str) -> Result<()> {
-    load(&directory(r, n)?)?;
+    let c = load(&directory(r, n)?)?;
+    if c.target == trames_distro::boot::Target::Android {
+        return super::background::start(r, n);
+    }
     let launchers = r.join("launchers");
     private_dir(&launchers)?;
     let path = launchers.join(format!("{n}.command"));
@@ -883,7 +933,9 @@ fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
         return Err("select an existing Trames store containing manifest and objects".into());
     }
     let vfs = Vfs::open_disk(&source, DiskOptions::default())?;
-    let d = if vfs
+    let d = if vfs.executable(b"/system/bin/init").is_ok() {
+        "android"
+    } else if vfs
         .stat_at(trames_vfs::AT_FDCWD, b"/etc/debian_version")
         .is_ok()
     {
@@ -918,7 +970,11 @@ fn import(r: &Path, n: &str, source: &Path) -> Result<()> {
     c.source_sha256 = "imported-existing-store".into();
     save(&stage.0, &c)?;
     let mut copy = Vfs::open_disk(stage.0.join("store"), DiskOptions::default())?;
-    super::systemd::renew_identity(&mut copy)?;
+    if c.target == trames_distro::boot::Target::Android {
+        trames_distro::android::validate_image(&mut copy)?;
+    } else {
+        super::systemd::renew_identity(&mut copy)?;
+    }
     drop(copy);
     publish(&stage.0, &dir)?;
     drop(vfs);
@@ -1159,6 +1215,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
                         c.distribution = v.clone();
                         c.source_sha256 = catalog(v)?.1.into();
                     }
+                    "--target" => c.target = trames_distro::boot::Target::parse(v)?,
                     "--archive" => archive = Some(v.as_str()),
                     "--rootfs" => custom = Some(v.as_str()),
                     "--sha256" => expected = Some(v.as_str()),
@@ -1168,7 +1225,11 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
                     }
                 }
             }
-            if custom.is_some() {
+            if c.target == trames_distro::boot::Target::Android {
+                c.distribution = "android".into();
+                c.command = trames_distro::android::command();
+                c.network = "off".into();
+            } else if custom.is_some() {
                 c.distribution = "custom".into();
             }
             apply_settings(&mut c, &settings)?;
@@ -1260,11 +1321,24 @@ mod tests {
     fn init_requires_compatible_image_and_old_configs_keep_shell() {
         let mut old = serde_json::to_value(Config::new("debian")).unwrap();
         old.as_object_mut().unwrap().remove("init");
+        old.as_object_mut().unwrap().remove("target");
         let mut c: Config = serde_json::from_value(old).unwrap();
         assert!(c.init == super::super::systemd::Init::Shell);
+        assert_eq!(c.target, trames_distro::boot::Target::Linux);
         c.init = super::super::systemd::Init::Systemd;
         assert!(c.validate().is_ok());
         c.distribution = "alpine".into();
+        assert!(c.validate().is_err());
+    }
+    #[test]
+    fn android_owns_its_init_graphics_and_separate_identity() {
+        let mut c = Config::new("android");
+        assert!(c.validate().is_ok());
+        assert_eq!(c.command, trames_distro::android::command());
+        c.init = super::super::systemd::Init::Systemd;
+        assert!(c.validate().is_err());
+        c.init = super::super::systemd::Init::Shell;
+        c.target = trames_distro::boot::Target::Linux;
         assert!(c.validate().is_err());
     }
     #[test]

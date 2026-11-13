@@ -46,10 +46,19 @@ fn xml(s: &str) -> Result<String> {
 fn plist(root: &Path, name: &str) -> Result<String> {
     let exe = std::env::current_exe()?;
     let error = root.join("logs").join(format!("{name}.log"));
-    Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n<key>Label</key><string>{}</string>\n<key>ProgramArguments</key><array><string>{}</string><string>env</string><string>_serve</string><string>{}</string></array>\n<key>EnvironmentVariables</key><dict><key>TRAMES_HOME</key><string>{}</string></dict>\n<key>RunAtLoad</key><true/>\n<key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>\n<key>ThrottleInterval</key><integer>5</integer>\n<key>ExitTimeOut</key><integer>90</integer>\n<key>Umask</key><integer>63</integer>\n<key>StandardOutPath</key><string>{}</string>\n<key>StandardErrorPath</key><string>{}</string>\n</dict></plist>\n",xml(&label(root,name))?,xml(exe.to_str().ok_or("executable path is not UTF-8")?)?,xml(name)?,xml(root.to_str().ok_or("registry path is not UTF-8")?)?,xml(error.to_str().ok_or("log path is not UTF-8")?)?,xml(error.to_str().unwrap())?))
+    Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n<key>Label</key><string>{}</string>\n<key>ProgramArguments</key><array><string>{}</string><string>env</string><string>_serve</string><string>{}</string></array>\n<key>EnvironmentVariables</key><dict><key>TRAMES_HOME</key><string>{}</string></dict>\n<key>RunAtLoad</key><true/>\n<key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>\n<key>ThrottleInterval</key><integer>5</integer>\n<key>ExitTimeOut</key><integer>90</integer>\n<key>Umask</key><integer>63</integer>\n<key>SoftResourceLimits</key><dict><key>NumberOfFiles</key><integer>65536</integer></dict>\n<key>StandardOutPath</key><string>{}</string>\n<key>StandardErrorPath</key><string>{}</string>\n</dict></plist>\n",xml(&label(root,name))?,xml(exe.to_str().ok_or("executable path is not UTF-8")?)?,xml(name)?,xml(root.to_str().ok_or("registry path is not UTF-8")?)?,xml(error.to_str().ok_or("log path is not UTF-8")?)?,xml(error.to_str().unwrap())?))
 }
 // Socket pathnames survive a server exit. A live listener, rather than a stale
 // inode, is the readiness boundary for management clients; no guest is created.
+fn readiness_socket(root: &Path, name: &str) -> Result<std::path::PathBuf> {
+    let path = environments::console_socket(root, name)?;
+    let c = environments::load(&environments::directory(root, name)?)?;
+    Ok(if c.target == trames_distro::boot::Target::Android {
+        super::exec::path(&path)
+    } else {
+        path
+    })
+}
 fn console_ready(path: &Path) -> bool {
     UnixStream::connect(path).is_ok()
 }
@@ -96,7 +105,7 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
         .open(root.join("locks").join(format!(".background-{name}")))?;
     guard.lock()?;
     if environments::running(root, name) {
-        if console_ready(&environments::console_socket(root, name)?) {
+        if console_ready(&readiness_socket(root, name)?) {
             return Ok(());
         }
         if !loaded(root, name) {
@@ -118,6 +127,12 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
     if autostart.is_file() {
         environments::atomic_write(&autostart, text.as_bytes())?;
     }
+    // A stopped job retains its original executable path and resource limits
+    // inside launchd. Re-register it so an updated bundle/plist actually takes
+    // effect; never replace an already running environment during start.
+    if !environments::running(root, name) && loaded(root, name) {
+        unload(root, name)?;
+    }
     if !loaded(root, name) {
         ctl(&[
             "bootstrap",
@@ -129,9 +144,7 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
     }
     let until = Instant::now() + Duration::from_secs(60);
     while Instant::now() < until {
-        if environments::running(root, name)
-            && console_ready(&environments::console_socket(root, name)?)
-        {
+        if environments::running(root, name) && console_ready(&readiness_socket(root, name)?) {
             eprintln!("Started {name} in background");
             return Ok(());
         }
@@ -146,11 +159,17 @@ pub fn start(root: &Path, name: &str) -> Result<()> {
 }
 pub fn serve(root: &Path, name: &str) -> Result<u8> {
     let path = environments::console_socket(root, name)?;
+    let c = environments::load(&environments::directory(root, name)?)?;
     environments::start(
         root,
         name,
         &[
-            "--console-socket".into(),
+            if c.target == trames_distro::boot::Target::Android {
+                "--exec-socket"
+            } else {
+                "--console-socket"
+            }
+            .into(),
             path.to_string_lossy().into_owned(),
         ],
     )
@@ -247,6 +266,7 @@ mod tests {
         assert!(xml("bad\0path").is_err());
         let text = plist(a, "docker").unwrap();
         assert!(text.contains("<string>_serve</string>"));
+        assert!(text.contains("<key>NumberOfFiles</key><integer>65536</integer>"));
         assert!(text.contains("<key>ExitTimeOut</key><integer>90</integer>"));
         assert!(!text.contains("/bin/sh"));
     }

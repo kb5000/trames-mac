@@ -438,6 +438,36 @@ fn queue(outgoing: &mut VecDeque<u8>, kind: u8, bytes: &[u8]) {
     outgoing.extend(bytes);
 }
 pub fn run(console: &Path, request: Request) -> io::Result<u8> {
+    run_input(console, request, io::stdin())
+}
+pub fn run_input(console: &Path, request: Request, input: impl Read + AsRawFd) -> io::Result<u8> {
+    run_streams(
+        console,
+        request,
+        input,
+        &mut io::stdout(),
+        &mut io::stderr(),
+    )
+}
+pub fn capture(console: &Path, request: Request) -> io::Result<(u8, Vec<u8>, Vec<u8>)> {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let code = run_streams(
+        console,
+        request,
+        fs::File::open("/dev/null")?,
+        &mut stdout,
+        &mut stderr,
+    )?;
+    Ok((code, stdout, stderr))
+}
+fn run_streams(
+    console: &Path,
+    request: Request,
+    mut input: impl Read + AsRawFd,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+) -> io::Result<u8> {
     let mut socket = UnixStream::connect(path(console)).map_err(|e| io::Error::new(e.kind(), format!("exec service unavailable ({e}); restart this environment to load the updated runtime")))?;
     socket.set_write_timeout(Some(Duration::from_secs(30)))?;
     let bytes = serde_json::to_vec(&request)?;
@@ -484,7 +514,7 @@ pub fn run(console: &Path, request: Request) -> io::Result<u8> {
             },
             libc::pollfd {
                 fd: if input_open && outgoing.len() < LIMIT {
-                    0
+                    input.as_raw_fd()
                 } else {
                     -1
                 },
@@ -543,12 +573,12 @@ pub fn run(console: &Path, request: Request) -> io::Result<u8> {
                 }
                 match kind {
                     1 => {
-                        io::stdout().write_all(&incoming[5..5 + n])?;
-                        io::stdout().flush()?;
+                        stdout.write_all(&incoming[5..5 + n])?;
+                        stdout.flush()?;
                     }
                     2 => {
-                        io::stderr().write_all(&incoming[5..5 + n])?;
-                        io::stderr().flush()?;
+                        stderr.write_all(&incoming[5..5 + n])?;
+                        stderr.flush()?;
                     }
                     4 => eprintln!("trames: {}", String::from_utf8_lossy(&incoming[5..5 + n])),
                     3 if n == 4 => {
@@ -569,7 +599,7 @@ pub fn run(console: &Path, request: Request) -> io::Result<u8> {
             }
         }
         if fds[1].revents != 0 {
-            let n = io::stdin().read(&mut bytes)?;
+            let n = input.read(&mut bytes)?;
             queue(&mut outgoing, if n == 0 { 1 } else { 0 }, &bytes[..n]);
             if n == 0 {
                 input_open = false;

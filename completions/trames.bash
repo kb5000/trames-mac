@@ -6,8 +6,9 @@ _trames() {
         env) COMPREPLY=( $(compgen -W 'ls create start stop restart enable disable setup status terminal packages configure import-store backup restore check delete doctor' -- "$current") ) ;;
         config) COMPREPLY=( $(compgen -W 'get set unset list edit path --global' -- "$current") ) ;;
         session) COMPREPLY=( $(compgen -W 'ls attach' -- "$current") ) ;;
+        apk) COMPREPLY=( $(compgen -W 'install launch list' -- "$current") ) ;;
         completion) COMPREPLY=( $(compgen -W 'bash zsh fish' -- "$current") ) ;;
-        *) COMPREPLY=( $(compgen -W 'shell exec env config session gui completion --environment --help --version' -- "$current") ) ;;
+        *) COMPREPLY=( $(compgen -W 'shell exec env config session apk gui completion --environment --help --version' -- "$current") ) ;;
     esac
 }
 complete -F _trames trames trames-dev

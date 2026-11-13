@@ -1,5 +1,8 @@
 # Trames Mac
 
+Android is available as an **experimental optional target**: import a Trames Android ARM64 package with `trames env create android --target android --rootfs PACKAGE.tar.gz`, then use `trames env start android` and `trames -e android apk install FILE.apk`. Linux remains the default. The original Android 13 desktop and APK installation run through the shared userspace kernel and native Vulkan path; Android app networking, emulated external storage and Geekbench CPU/GPU runs remain incomplete. See the [Android bring-up and acceptance record](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/android-bringup.md#optional-product-target-and-apk-installation).
+
+
 Apple Silicon hardware execution product for the shared
 [Trames Linux userspace runtime](https://github.com/kb5000/trames-runtime).
 ARM64 user instructions execute through Hypervisor.framework and a small EL1

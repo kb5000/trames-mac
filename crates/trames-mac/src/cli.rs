@@ -2,7 +2,7 @@
 //! User-facing CLI. Parsing, help, config and completion never start a runtime.
 use super::environments::{self as env, Result};
 use std::io::IsTerminal;
-const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  config get|set|unset|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
+const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --target android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  config get|set|unset|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
 pub fn dispatch(args: Vec<String>) -> Result<u8> {
     let (selected, args) = selection(args)?;
     let op = args.first().map(String::as_str).unwrap_or("");
@@ -75,18 +75,34 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
     {
         return super::execute(args).map_err(Into::into);
     }
-    if !matches!(op, "" | "shell" | "exec" | "--" | "session") {
+    if !matches!(op, "" | "shell" | "exec" | "--" | "session" | "apk") {
         return Err(format!("unknown command '{op}'; use trames --help").into());
     }
     let r = env::root()?;
     let n = selected.unwrap_or(env::default_environment(&r)?);
-    env::load(&env::directory(&r, &n)?).map_err(|e| format!("environment '{n}' is unavailable: {e}. Create it with `trames env create {n}`, or select an existing one with -e"))?;
+    let config = env::load(&env::directory(&r, &n)?).map_err(|e| format!("environment '{n}' is unavailable: {e}. Create it with `trames env create {n}`, or select an existing one with -e"))?;
     match op {
         "" | "shell" => {
             if args.len() > 1 {
                 return Err("usage: trames [-e NAME] shell".into());
             }
             super::background::start(&r, &n)?;
+            if config.target == trames_distro::boot::Target::Android {
+                if op.is_empty() {
+                    return Ok(0);
+                }
+                return super::exec::run(
+                    &env::console_socket(&r, &n)?,
+                    super::exec::Request {
+                        argv: vec!["/system/bin/sh".into(), "-i".into()],
+                        environment: vec!["TERM=xterm-256color".into()],
+                        cwd: Some("/".into()),
+                        tty: true,
+                        size: super::session::window_size(),
+                    },
+                )
+                .map_err(Into::into);
+            }
             super::console::attach(&env::console_socket(&r, &n)?, 0)?;
             Ok(0)
         }
@@ -95,7 +111,11 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
             super::background::start(&r, &n)?;
             Ok(super::exec::run(&env::console_socket(&r, &n)?, request)?)
         }
+        "apk" => android_apps(&r, &n, &config, &args[1..]),
         "session" => {
+            if config.target == trames_distro::boot::Target::Android {
+                return Err("open an Android terminal with shell or exec -t".into());
+            }
             let socket = env::console_socket(&r, &n)?;
             match args.get(1).map(String::as_str).unwrap_or("ls") {
                 "ls" | "list" => {
@@ -186,6 +206,119 @@ fn parse_exec(args: &[String], literal: bool) -> Result<super::exec::Request> {
     r.size = r.tty.then(super::session::window_size).flatten();
     Ok(r)
 }
+fn android_apps(
+    root: &std::path::Path,
+    name: &str,
+    config: &env::Config,
+    args: &[String],
+) -> Result<u8> {
+    if config.target != trames_distro::boot::Target::Android {
+        return Err("apk commands require an Android environment".into());
+    }
+    let mut request = super::exec::Request {
+        cwd: Some("/".into()),
+        ..Default::default()
+    };
+    let input = match args
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .as_slice()
+    {
+        ["install", path] => {
+            let file = std::fs::File::open(path)?;
+            let metadata = file.metadata()?;
+            if !metadata.is_file() || metadata.len() == 0 {
+                return Err("select a regular APK file".into());
+            }
+            request.argv = vec![
+                "/system/bin/cmd".into(),
+                "-w".into(),
+                "package".into(),
+                "install".into(),
+                "-r".into(),
+                "-S".into(),
+                metadata.len().to_string(),
+            ];
+            Some(file)
+        }
+        ["launch", package] => {
+            use std::io::Write;
+            super::background::start(root, name)?;
+            let console = env::console_socket(root, name)?;
+            let component = if package.contains('/') {
+                (*package).to_owned()
+            } else {
+                request.argv = vec![
+                    "/system/bin/cmd".into(),
+                    "-w".into(),
+                    "package".into(),
+                    "resolve-activity".into(),
+                    "--brief".into(),
+                    (*package).into(),
+                ];
+                let (code, output, error) = super::exec::capture(&console, request)?;
+                std::io::stderr().write_all(&error)?;
+                if code != 0 {
+                    return Ok(code);
+                }
+                String::from_utf8(output)?.lines().rev().find(|line| line.starts_with(&format!("{package}/")))
+                    .ok_or("Android has no available launch activity for this package; wait for user unlock or supply PACKAGE/ACTIVITY")?.to_owned()
+            };
+            let request = super::exec::Request {
+                argv: vec![
+                    "/system/bin/am".into(),
+                    "start".into(),
+                    "-W".into(),
+                    "-n".into(),
+                    component,
+                ],
+                cwd: Some("/".into()),
+                ..Default::default()
+            };
+            let (code, output, error) = super::exec::capture(&console, request)?;
+            std::io::stdout().write_all(&output)?;
+            std::io::stderr().write_all(&error)?;
+            // Android am can report an error while returning zero. Preserve its
+            // real text and make launch failure visible to shell scripts.
+            return Ok(
+                if code == 0
+                    && [output, error]
+                        .iter()
+                        .any(|b| String::from_utf8_lossy(b).contains("Error:"))
+                {
+                    1
+                } else {
+                    code
+                },
+            );
+        }
+        ["list"] => {
+            request.argv = vec![
+                "/system/bin/cmd".into(),
+                "-w".into(),
+                "package".into(),
+                "list".into(),
+                "packages".into(),
+                "-3".into(),
+            ];
+            None
+        }
+        _ => {
+            return Err(
+                "usage: trames -e NAME apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list"
+                    .into(),
+            )
+        }
+    };
+    super::background::start(root, name)?;
+    let console = env::console_socket(root, name)?;
+    match input {
+        Some(file) => super::exec::run_input(&console, request, file).map_err(Into::into),
+        None => super::exec::run(&console, request).map_err(Into::into),
+    }
+}
+
 fn environments(args: &[String], selected: Option<&str>) -> Result<u8> {
     let op = args.first().map(String::as_str).unwrap_or("ls");
     if matches!(op, "--help" | "-h" | "help") {
