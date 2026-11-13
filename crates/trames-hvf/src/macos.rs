@@ -380,9 +380,9 @@ impl Executor {
         self.wait.take()
     }
     fn flags(info: HardwarePageInfo) -> Result<u32, Error> {
-        if !info.permissions.read && (info.permissions.write || info.permissions.execute) {
+        if !info.permissions.read && info.permissions.write {
             return Err(Error::Unsupported(
-                "hardware execute/write-only page representation",
+                "hardware write-only page representation",
             ));
         }
         Ok(u32::from(info.permissions.read)

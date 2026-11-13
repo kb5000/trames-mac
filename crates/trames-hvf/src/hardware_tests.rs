@@ -1947,3 +1947,61 @@ fn imported_data_epochs_coalesce_live_pages_but_code_and_retirement_keep_origina
         .all(|s| s.write_epochs.is_empty() && s.publications.is_empty()));
     assert_eq!(drops.load(Ordering::Relaxed), 1);
 }
+
+#[test]
+#[ignore = "requires Hypervisor entitlement and Apple Silicon"]
+fn execute_only_pages_run_instructions_but_deny_guest_data_loads() {
+    let mut executor = Executor::new().unwrap();
+    let mut memory = Memory::default();
+    memory.map(0x10000, PAGE_SIZE, Permissions::RW).unwrap();
+    for (i, word) in [0xd28000e0u32, 0xd4000001].into_iter().enumerate() {
+        memory
+            .write_array(0x10000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    let execute_only = Permissions {
+        read: false,
+        write: false,
+        execute: true,
+    };
+    memory.protect(0x10000, PAGE_SIZE, execute_only).unwrap();
+    let mut current = state();
+    svc(&mut executor, &mut current, &mut memory);
+    assert_eq!(current.registers[0], 7);
+    assert!(matches!(
+        memory.read_array::<4>(0x10000),
+        Err(MemoryError::Permission {
+            access: Access::Read,
+            ..
+        })
+    ));
+    memory.map(0x20000, PAGE_SIZE, Permissions::RW).unwrap();
+    for (i, word) in [0xf9400001u32, 0xd4000001].into_iter().enumerate() {
+        memory
+            .write_array(0x20000 + i as u64 * 4, word.to_le_bytes())
+            .unwrap();
+    }
+    memory.protect(0x20000, PAGE_SIZE, Permissions::RX).unwrap();
+    current.pc = 0x20000;
+    current.registers[0] = 0x10000;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        assert!(Instant::now() < deadline);
+        match executor.run(&mut current, &mut memory, Duration::from_millis(2)) {
+            Err(Error::Memory(MemoryError::Permission {
+                access: Access::Read,
+                ..
+            })) => break,
+            Ok(exit) => assert_eq!(exit.reason, ExitReason::Yield),
+            other => panic!("unexpected execute-only read result: {other:?}"),
+        }
+    }
+    memory.protect(0x10000, PAGE_SIZE, Permissions::RX).unwrap();
+    current.pc = 0x20000;
+    svc(&mut executor, &mut current, &mut memory);
+    assert_eq!(current.registers[1] as u32, 0xd28000e0);
+    memory.protect(0x10000, PAGE_SIZE, execute_only).unwrap();
+    current.pc = 0x10000;
+    svc(&mut executor, &mut current, &mut memory);
+    assert_eq!(current.registers[0], 7);
+}

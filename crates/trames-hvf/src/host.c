@@ -340,7 +340,9 @@ int trames_hvf_page(struct host *h, uint64_t va, uint64_t gpa, unsigned flags) {
     uint64_t *p=leaf(h,va,flags!=0);
     if (!p) return flags ? -1 : 0;
     // flags: read=1, write=2, execute=4, EL1-only=8.
-    uint64_t ap=(flags&8) ? 0 : (flags&2) ? 1 : 3;
+    // EL0 execute-only uses AP=10: EL1 read-only, EL0 data inaccessible.
+    // UXN remains clear below; guest instruction fetch is independent of AP.
+    uint64_t ap=(flags&8) ? 0 : (flags&2) ? 1 : (flags&1) ? 3 : 2;
     uint64_t descriptor=(gpa&ADDRESS_MASK)|3|(UINT64_C(1)<<11)|(UINT64_C(1)<<10)|(UINT64_C(3)<<8)|(ap<<6);
     if (!(flags&4) || !(flags&8)) descriptor|=UINT64_C(1)<<53;
     if (!(flags&4) || (flags&8)) descriptor|=UINT64_C(1)<<54;
