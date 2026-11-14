@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-14",
+  "application_version": "1.5.5",
+  "runtime_revision": "bbf217ecb9f8183ad8df4346709027d9ce143fac",
+  "channels": {
+    "dev": {
+      "installed": true,
+      "runner_sha256": "83bcc3c38a2511488491960b2801b0628f029952ff373ea4e24900e672f1ccbc"
+    },
+    "stable": {
+      "installed": true,
+      "runner_sha256": "d89605cec4581aefb0d301feae8e7266efdab5af9c0eb76d5c80eaf1af788c83"
+    }
+  },
+  "dns_regression": {
+    "before": {
+      "raw_udp_cases": 6,
+      "socket_timeout_ms": 2000,
+      "observed_latency_ms": [
+        2002,
+        2001,
+        2001,
+        2001,
+        2002,
+        2001
+      ],
+      "result": "Valid answers were observed only after the full socket timeout. Stable Debian curl DNS resolution timed out and APT repeatedly retried."
+    },
+    "after": {
+      "same_glibc_python_udp_cases": 6,
+      "installed_dev_latency_ms": [
+        3.7,
+        0.5,
+        0.4,
+        0.4,
+        0.4,
+        0.3
+      ],
+      "installed_stable_latency_ms": [
+        4.3,
+        0.9,
+        0.6,
+        0.4,
+        0.4,
+        0.4
+      ],
+      "cases": "Connected/unconnected UDP, sendto/send/sendmsg, with and without IP_RECVERR; both original resolver aliases.",
+      "glibc_getent": {
+        "successful_lookups": 20,
+        "wall_seconds_including_session_startup": 0.418
+      },
+      "dev_apt": {
+        "download_megabytes": 115,
+        "download_seconds": 20,
+        "source": "Original official Debian repositories, direct networking."
+      }
+    },
+    "cause": "Retained waits watched the BSD socket, while DNS results waited in a separate channel for a guest tick. Completion was not an event source.",
+    "repair": "Existing resolver workers publish to the original DNS endpoint and signal its native notification socket. Lazy source admission uses original socket revisions and publication. The native legacy wait uses the same event instead of a 2 ms tick. EOF, malformed stream framing, returned buffer capacity and separate read/write edge epochs signal the same endpoint.",
+    "additional_workers_or_coordinators": 0
+  },
+  "validation": {
+    "shared_network": {
+      "passed": 100,
+      "ignored": 0
+    },
+    "shared_linux": {
+      "passed": 327,
+      "ignored": 1
+    },
+    "shared_vfs": {
+      "passed": 625,
+      "ignored": 1
+    },
+    "strict_clippy": "affected net/VFS targets passed",
+    "ipad_aarch64_ffi": "compile check passed; this round does not reinstall iPad apps",
+    "execution_and_completion_boundaries": "passed"
+  },
+  "environments": {
+    "desktop_checks": {
+      "dev/default": {
+        "passed": true,
+        "exit_code": 0
+      },
+      "dev/debian": {
+        "passed": true,
+        "exit_code": 0
+      },
+      "stable/default": {
+        "passed": true,
+        "exit_code": 0
+      },
+      "stable/debian": {
+        "passed": true,
+        "exit_code": 0
+      }
+    },
+    "checks": [
+      "machine-id is 32 hex characters plus newline",
+      "Noto CJK font selection",
+      "real D-Bus ListNames reply",
+      "EGL/Vulkan/VA-API dynamic linking without missing libraries",
+      "all requested packages installed; Debian dpkg audit empty",
+      "threads-max 65536, allocated only on demand"
+    ],
+    "packages": {
+      "dev/default": [],
+      "dev/debian": [
+        "at-spi2-core 2.56.2-1+deb13u2 installed",
+        "dbus-x11 1.16.2-2 installed",
+        "fonts-noto-cjk 1:20240730+repack1-1 installed",
+        "libegl-mesa0 25.0.7-2+deb13u1 installed",
+        "libegl1 1.7.0-1+b2 installed",
+        "libgl1-mesa-dri 25.0.7-2+deb13u1 installed",
+        "libva2 2.22.0-3 installed",
+        "libvulkan1 1.4.309.0-1 installed"
+      ],
+      "stable/default": [],
+      "stable/debian": [
+        "at-spi2-core 2.56.2-1+deb13u2 installed",
+        "dbus-x11 1.16.2-2 installed",
+        "fonts-noto-cjk 1:20240730+repack1-1 installed",
+        "libegl-mesa0 25.0.7-2+deb13u1 installed",
+        "libegl1 1.7.0-1+b2 installed",
+        "libgl1-mesa-dri 25.0.7-2+deb13u1 installed",
+        "libva2 2.22.0-3 installed",
+        "libvulkan1 1.4.309.0-1 installed"
+      ]
+    },
+    "dev_setup": "The default Dev registry was empty. Created independent Alpine and Debian environments from existing verified cached rootfs; Python is a Dev Debian diagnostic tool.",
+    "headless_docker": "Desktop packages omitted; upgraded common runtime, kept its existing configuration and data."
+  },
+  "services": {
+    "debian_docker_active": true,
+    "debian_existing_containers_restored": 1,
+    "debian_container_health": "healthy",
+    "independent_docker_active": true,
+    "independent_existing_containers_restored": 1,
+    "independent_published_http_status": 200,
+    "dns_inside_existing_web_container": "passed"
+  },
+  "deployment_observations": [
+    "Stable Debian first launch hit the existing 60-second readiness timeout; the immediate retry succeeded. Root cause was not established. Docker/Alpine subsequent starts succeeded; no forced kill was used.",
+    "Explicit container start overlapped automatic restoration during Docker initialization once; the original container was running on the subsequent check.",
+    "The final runtime restarted all three Stable Linux environments successfully on the first start attempt. Deployment verification waits for actual systemd/Docker API and container health rather than assuming console readiness means all services started."
+  ],
+  "scope_limits": [
+    "Verifies Linux runtime dependencies and DNS completion, not Firefox rendering or GPU/video decoding acceptance. Distro loaders and musl/glibc native adapters remain separate paired components.",
+    "No DNS proxy, hosts override, persistent resolver modification or full Linux-kernel VM was used. No OS-distribution upgrade or Firefox installation was performed."
+  ],
+  "final_deployment": {
+    "debian": {
+      "initial_start_exit": 0,
+      "container_recovery": "healthy after waiting for systemd/Docker readiness"
+    },
+    "docker": {
+      "initial_start_exit": 0,
+      "restart_seconds": 6.739
+    },
+    "default": {
+      "initial_start_exit": 0,
+      "restart_seconds": 0.381
+    }
+  }
+}

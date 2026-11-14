@@ -109,6 +109,40 @@ registries, services and stores; `TRAMES_HOME` provides an explicitly isolated
 registry for testing. Existing stores can receive separately authored new TOML
 profiles without being re-imported or migrated by the application.
 
+## Linux desktop dependencies
+
+Desktop applications use their environment's own D-Bus, fonts and graphics
+loader packages. Install the optional desktop prerequisites explicitly inside
+the selected Linux environment:
+
+```sh
+# Alpine
+apk update
+apk add ca-certificates dbus-x11 at-spi2-core fontconfig font-dejavu \
+  font-noto-cjk mesa-egl mesa-gles mesa-dri-gallium vulkan-loader libva
+dbus-uuidgen --ensure=/etc/machine-id
+
+# Debian
+apt-get update
+apt-get install -y --no-install-recommends ca-certificates dbus-x11 \
+  at-spi2-core fontconfig fonts-dejavu-core fonts-noto-cjk libegl1 \
+  libegl-mesa0 libgles2 libgl1-mesa-dri libvulkan1 libva2
+```
+
+Refresh the font cache with `fc-cache -f`. If no session bus is running, use
+`dbus-run-session -- firefox`. `fc-match :lang=zh-cn` checks CJK font discovery;
+`dbus-run-session -- dbus-send --session --print-reply \
+--dest=org.freedesktop.DBus / org.freedesktop.DBus.ListNames` checks actual bus
+communication. The shared startup helper seeds a missing Linux machine identity
+while preserving an existing identity.
+
+Distro loaders are separate from Trames' native ICD, paired patched Mesa and
+VideoToolbox adapters. Keep those adapters paired with their build manifests;
+musl binaries and glibc adapters are not interchangeable. See the
+[Firefox graphics guide](../validation/mac-firefox-gpu.md) for the opt-in native
+stack and the [dependency validation record](../validation/mac-linux-dependencies-20261114.json)
+for this deployment. Headless Docker environments need no desktop packages.
+
 ## Persistent Docker services
 
 Create a Debian systemd environment with networking enabled. A headless service
@@ -121,6 +155,10 @@ trames -e docker config set display.windows false interop.clipboard.enabled fals
 trames env start docker
 trames -e docker shell
 ```
+
+`env start` reports that the console is available. Systemd and enabled daemons
+finish startup separately; automated deployment checks should await the specific
+daemon API and container health.
 
 Inside Linux, install Debian's original packages and enable the daemon:
 
