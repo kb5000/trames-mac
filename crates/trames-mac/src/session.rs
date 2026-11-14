@@ -679,6 +679,9 @@ pub fn run(
         super::files::run(&mut vfs, &argv)?;
         return Ok(0);
     }
+    if !android_init {
+        trames_distro::systemd::ensure_machine_identity(&mut vfs)?;
+    }
     if trace {
         vfs.retain_kernel_log_bursts();
     }
