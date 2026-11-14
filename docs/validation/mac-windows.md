@@ -665,3 +665,22 @@ source/binary hashes and scope. The [fixture](../../tests/fixtures/syscall-conte
 can be built with a static AArch64 musl toolchain and run through `--exec-file`
 with `--no-pty --metrics --cpus 4 --memory-mib 4096`. Raw logs, process identifiers,
 addresses and web contents remain private.
+
+
+## Repeated native focus and popup clicks (2026-11-14)
+
+The shared Wayland seat now preserves the active popup tree when AppKit repeats
+activation of its containing toplevel. The Mac mouse path emits that activation
+before button events, and a popup overlay becoming key can emit it too. Treating
+each notification as a focus departure dismissed menus before clients received
+their full click. Real toplevel switches and focus loss still close menus and
+release input. The change adds no native service or coordinator.
+
+The regression failed before the fix; all 24 seat/compositor unit tests and six
+original C-client cases pass afterward, including popup press/release across
+repeated focus and subsequent outside-click dismissal. Strict Clippy and iOS FFI
+compilation pass. Isolated Debian Firefox Settings and certificate rendering also
+work through ordinary WebDriver controls, but that is separate evidence from
+native mouse input. This run's real-presentation test was blocked by hidden
+windows (occlusion 8192); direct owner mouse confirmation remains pending.
+Details: [Firefox dialog acceptance](mac-firefox-dialogs-20261114.json).

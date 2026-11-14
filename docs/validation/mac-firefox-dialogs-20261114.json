@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-14",
+  "application_version": "1.5.5",
+  "runtime_revision": "a9cecbe",
+  "production_fix_commit": "20edd57",
+  "symptom": "Owner reports Settings secondary controls and certificate dialogs appear to do nothing while the browser remains responsive.",
+  "confirmed_defect": "The AppKit mouse path repeats native toplevel focus before button events. The common seat dismissed grabbed popup trees on every Focus, including activation of the same containing toplevel. A menu could disappear before its complete click reached Firefox.",
+  "repair": "Treat repeated activation of the focused containing toplevel as idempotent. Preserve popup surface focus, modifier keys and implicit pointer grabs. Real toplevel changes and native focus loss retain dismissal and held-button release.",
+  "new_workers_or_coordinators": 0,
+  "security_settings_changed": false,
+  "validation": {
+    "regression_before": "Failed: duplicate native focus replaced nested popup focus with root and dismissed its popup chain.",
+    "wayland_unit_tests": {
+      "passed": 24,
+      "failed": 0
+    },
+    "original_c_client_tests": {
+      "passed": 6,
+      "failed": 0,
+      "reused_unchanged_c_fixtures": true,
+      "new_wire_assertions": "The original libwayland client receives popup press and release across repeated containing-toplevel Focus, then receives popup_done only after an outside click."
+    },
+    "strict_clippy": "passed, including all test targets",
+    "ios_ffi_compile": "passed against production fix; final follow-up commit changes the wire regression only",
+    "browser_engine_checks": {
+      "package": "Debian Firefox ESR 153.7.0",
+      "profile": "isolated test profile; owner profile untouched",
+      "settings_page": "renders",
+      "connection_security_button": "navigates to #connectionSecurity with ordinary WebDriver click",
+      "manage_certificates_button": "opens chrome://pippki/content/certManager.xhtml with ordinary WebDriver click",
+      "certificate_manager": "renders built-in authorities in an in-tab subdialog",
+      "scope_note": "These engine checks also worked before the input fix and do not prove native mouse delivery."
+    },
+    "native_presenter_check": {
+      "console_modes_passed": 2,
+      "real_presentation": "not passed in this run: both created windows were reported hidden (occlusion 8192); guest timed out waiting for real callbacks. No fake presentation acknowledgement or occlusion bypass was used."
+    },
+    "manual_native_mouse_confirmation": "pending owner confirmation in the Dev menu test window"
+  },
+  "deployment": {
+    "stable_debian": "updated; recorded Techo container automatically restored running healthy",
+    "dev_debian": "production fix active; final artifact additionally includes the test-only follow-up commit",
+    "other_stable_environments": "not restarted",
+    "stable_runner_sha256": "bef20d4a4967db2eaea1187220df6db3b0fcb4f49c16a2ca2498620ed123a825",
+    "dev_runner_sha256": "b488279035b3f8c782f5043b66d0b9641335a0e5f0a3c502e9f09610b02b1555",
+    "stable_docker": "unrelated web container remains running",
+    "stable_session_bus": "D-Bus round trip passed after restart"
+  }
+}
