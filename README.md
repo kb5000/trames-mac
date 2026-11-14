@@ -141,6 +141,13 @@ SDK/CPU-only CI builds explicitly use `TRAMES_VULKAN_LINKAGE=external`; their
 archives are labelled `external-vulkan` and require a configured host library.
 Production packaging requires the embedded driver.
 
+Mac and iPad share the public-API Vulkan compatibility path. Native Metal
+limitations are not bypassed with private APIs. Depth clip/clamp now has focused
+color/depth regression coverage on both platforms; logic operations and arbitrary
+sampler border colors are still incomplete. Mechanisms, costs, acceptance and
+replacement criteria are tracked in the shared
+[Vulkan equivalence registry](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/vulkan-equivalence.md).
+
 Native Vulkan compute and offscreen graphics are enabled for new environments,
 independently of windows. Set `config set windows false` for a headless compute
 environment; `--no-windows --vulkan` remains available to the low-level runner. The guest needs the shared Trames ICD and normal Vulkan loader; the host
