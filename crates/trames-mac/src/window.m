@@ -79,10 +79,12 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property BOOL seen,dirty,updating,closing,pendingResize,buttonDown;
 @property uint32_t interactionSerial,dragEdges;
 @property NSPoint dragMouse;
-@property NSRect dragFrame;
+@property NSRect dragFrame,popupBounds;
+@property BOOL hasPopupBounds;
 - (void)drag;
 - (void)syncSize;
 - (void)syncScale;
+- (void)syncPopupBounds;
 - (BOOL)isVisible;
 - (void)emit:(uint32_t)kind x:(double)x y:(double)y a:(uint32_t)a b:(uint32_t)b c:(uint32_t)c;
 - (void)cancel;
@@ -210,6 +212,7 @@ static const uint16_t keys[128]={
 // delegate callbacks are deliberately suppressed while updating is true.
 - (void)syncSize {
     [self syncScale];
+    [self syncPopupBounds];
     NSSize size=self.canvas.bounds.size;
     uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
     self.hostW=w;self.hostH=h;
@@ -219,14 +222,24 @@ static const uint16_t keys[128]={
     if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac configure: id=%llu native=%ux%u guest=%ux%u\n",self.identifier,w,h,self.clientW,self.clientH);
     [self emit:6 x:0 y:0 a:w b:h c:0];
 }
-- (void)windowDidMove:(NSNotification *)notification{if(notification.object!=self.window)return;if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac window moved: id=%llu x=%.0f y=%.0f\n",self.identifier,self.window.frame.origin.x,self.window.frame.origin.y);}
+- (void)windowDidMove:(NSNotification *)notification{if(notification.object!=self.window)return;[self syncPopupBounds];if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac window moved: id=%llu x=%.0f y=%.0f\n",self.identifier,self.window.frame.origin.x,self.window.frame.origin.y);}
+- (void)syncPopupBounds {
+    NSScreen *screen=self.window.screen;if(!screen||!self.canvas)return;
+    // Positioners use parent-geometry logical units, not buffer pixels or the
+    // bootstrap virtual output. Convert the real available screen to that frame.
+    NSRect area=[self.canvas convertRect:[self.window convertRectFromScreen:screen.visibleFrame] fromView:nil];
+    area=NSIntegralRect(area);if(area.size.width<=0||area.size.height<=0)return;
+    if(self.hasPopupBounds&&NSEqualRects(area,self.popupBounds))return;
+    self.hasPopupBounds=YES;self.popupBounds=area;
+    [self emit:13 x:area.origin.x y:area.origin.y a:(uint32_t)area.size.width b:(uint32_t)area.size.height c:0];
+}
 - (void)syncScale {
     uint32_t scale=(uint32_t)MAX(1,MIN(4,llround(self.window.backingScaleFactor)));
     if(self.outputScale==scale)return;
     self.outputScale=scale;[self emit:11 x:0 y:0 a:scale b:0 c:0];
 }
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification{(void)notification;[self syncScale];self.dirty=YES;wake(self.ui.source);}
-- (void)windowDidChangeScreen:(NSNotification *)notification{(void)notification;[self syncScale];self.dirty=YES;wake(self.ui.source);}
+- (void)windowDidChangeScreen:(NSNotification *)notification{(void)notification;[self syncScale];[self syncPopupBounds];self.dirty=YES;wake(self.ui.source);}
 - (BOOL)isVisible {
     if(self.window.miniaturized)return NO;
     if(self.window.occlusionState&NSWindowOcclusionStateVisible)return YES;

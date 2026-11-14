@@ -1,49 +1,134 @@
 {
   "date": "2026-11-14",
   "application_version": "1.5.5",
-  "runtime_revision": "a9cecbe",
+  "runtime_revision": "2be592ec29ed8c62afea879f4d27a152bc922dab",
   "production_fix_commit": "20edd57",
   "symptom": "Owner reports Settings secondary controls and certificate dialogs appear to do nothing while the browser remains responsive.",
-  "confirmed_defect": "The AppKit mouse path repeats native toplevel focus before button events. The common seat dismissed grabbed popup trees on every Focus, including activation of the same containing toplevel. A menu could disappear before its complete click reached Firefox.",
-  "repair": "Treat repeated activation of the focused containing toplevel as idempotent. Preserve popup surface focus, modifier keys and implicit pointer grabs. Real toplevel changes and native focus loss retain dismissal and held-button release.",
+  "confirmed_defect": [
+    "Popup geometry used the stale 1024x768 bootstrap viewport after the native Firefox window became 1920x928. The requested menu at x=1576 was constrained to x=684 near the center.",
+    "A real mouse press on a non-grabbing Firefox panel changed keyboard focus from its main surface to the panel. Firefox destroyed the menu before button release, so Settings received no command."
+  ],
+  "repair": [
+    "Mac publishes its real available screen rectangle in each toplevel logical coordinate system on resize/move/screen changes. Popup creation and reposition transform that rectangle into each nested parent geometry.",
+    "Pointer hit testing and implicit grabs continue targeting the popup. Keyboard activation stays on the containing toplevel unless an explicit popup grab owns it. Repeated toplevel activation remains idempotent."
+  ],
   "new_workers_or_coordinators": 0,
   "security_settings_changed": false,
   "validation": {
-    "regression_before": "Failed: duplicate native focus replaced nested popup focus with root and dismissed its popup chain.",
     "wayland_unit_tests": {
-      "passed": 24,
+      "passed": 27,
       "failed": 0
     },
     "original_c_client_tests": {
       "passed": 6,
       "failed": 0,
-      "reused_unchanged_c_fixtures": true,
-      "new_wire_assertions": "The original libwayland client receives popup press and release across repeated containing-toplevel Focus, then receives popup_done only after an outside click."
+      "coverage": [
+        "Wide-window Firefox menu anchor and constraints",
+        "Reposition after native window workspace movement",
+        "Nested-parent coordinate translation",
+        "Non-grabbing popup receives complete pointer click without keyboard enter",
+        "Explicit popup grab and repeated native focus",
+        "Outside-click dismissal, retained scenes and text input"
+      ]
     },
-    "strict_clippy": "passed, including all test targets",
-    "ios_ffi_compile": "passed against production fix; final follow-up commit changes the wire regression only",
-    "browser_engine_checks": {
-      "package": "Debian Firefox ESR 153.7.0",
-      "profile": "isolated test profile; owner profile untouched",
-      "settings_page": "renders",
-      "connection_security_button": "navigates to #connectionSecurity with ordinary WebDriver click",
-      "manage_certificates_button": "opens chrome://pippki/content/certManager.xhtml with ordinary WebDriver click",
-      "certificate_manager": "renders built-in authorities in an in-tab subdialog",
-      "scope_note": "These engine checks also worked before the input fix and do not prove native mouse delivery."
+    "failed_before_keyboard_repair": "The real-trace regression moved focus from root 1 to non-grabbing popup 3 and failed; it passes after the keyboard activation rule.",
+    "actual_firefox_protocol": {
+      "parent_size": [
+        1920,
+        928
+      ],
+      "anchor_rect": [
+        1876,
+        52,
+        40,
+        24
+      ],
+      "menu_size": [
+        340,
+        681
+      ],
+      "before_configure": [
+        684,
+        76,
+        340,
+        681
+      ],
+      "after_configure": [
+        1576,
+        76,
+        340,
+        681
+      ],
+      "before_click": "wl_keyboard.leave(main), enter(panel), pointer.button(pressed), client xdg_popup.destroy before release",
+      "source": "Isolated Debian Firefox 153.7.0 Wayland client log; real owner mouse input."
     },
-    "native_presenter_check": {
-      "console_modes_passed": 2,
-      "real_presentation": "not passed in this run: both created windows were reported hidden (occlusion 8192); guest timed out waiting for real callbacks. No fake presentation acknowledgement or occlusion bypass was used."
+    "native_mouse_acceptance": {
+      "menu_position": "owner confirmed correct",
+      "hamburger_settings": "owner confirmed works",
+      "certificate_manager": "owner confirmed works"
     },
-    "manual_native_mouse_confirmation": "pending owner confirmation in the Dev menu test window"
+    "strict_shared_clippy": "passed, all targets",
+    "ios_ffi_compile": "passed",
+    "mac_builds": "Dev and Stable release builds and strict signature validation passed",
+    "execution_boundaries": "passed",
+    "presenter_test_note": "The earlier frame test could not present while its windows were occluded. That historical failure is retained in initial_focus_only_round; final acceptance uses the owner-observed real menu and certificate windows.",
+    "strict_mac_clippy": "passed, all targets"
   },
   "deployment": {
-    "stable_debian": "updated; recorded Techo container automatically restored running healthy",
-    "dev_debian": "production fix active; final artifact additionally includes the test-only follow-up commit",
+    "dev": "Both repairs installed and active; owner mouse acceptance passed.",
+    "stable_debian": "Both repairs installed; environment gracefully restarted; original Techo container restored running healthy.",
+    "stable_docker": "Unrelated web container remains running.",
+    "session_bus": "Stable round trip passed.",
     "other_stable_environments": "not restarted",
-    "stable_runner_sha256": "bef20d4a4967db2eaea1187220df6db3b0fcb4f49c16a2ca2498620ed123a825",
-    "dev_runner_sha256": "b488279035b3f8c782f5043b66d0b9641335a0e5f0a3c502e9f09610b02b1555",
-    "stable_docker": "unrelated web container remains running",
-    "stable_session_bus": "D-Bus round trip passed after restart"
-  }
+    "stable_runner_sha256": "fb4bd498f09465627d984f06e28bd4d84526154b551d1af97c6457d412e081e0",
+    "dev_runner_sha256": "ca3a583b7b2aafae4a21bf28b4f14e60d95bb364d94e07111453863c3885310d"
+  },
+  "initial_focus_only_round": {
+    "runtime_revision": "a9cecbe",
+    "confirmed_defect": "The AppKit mouse path repeats native toplevel focus before button events. The common seat dismissed grabbed popup trees on every Focus, including activation of the same containing toplevel. A menu could disappear before its complete click reached Firefox.",
+    "repair": "Treat repeated activation of the focused containing toplevel as idempotent. Preserve popup surface focus, modifier keys and implicit pointer grabs. Real toplevel changes and native focus loss retain dismissal and held-button release.",
+    "validation": {
+      "regression_before": "Failed: duplicate native focus replaced nested popup focus with root and dismissed its popup chain.",
+      "wayland_unit_tests": {
+        "passed": 24,
+        "failed": 0
+      },
+      "original_c_client_tests": {
+        "passed": 6,
+        "failed": 0,
+        "reused_unchanged_c_fixtures": true,
+        "new_wire_assertions": "The original libwayland client receives popup press and release across repeated containing-toplevel Focus, then receives popup_done only after an outside click."
+      },
+      "strict_clippy": "passed, including all test targets",
+      "ios_ffi_compile": "passed against production fix; final follow-up commit changes the wire regression only",
+      "browser_engine_checks": {
+        "package": "Debian Firefox ESR 153.7.0",
+        "profile": "isolated test profile; owner profile untouched",
+        "settings_page": "renders",
+        "connection_security_button": "navigates to #connectionSecurity with ordinary WebDriver click",
+        "manage_certificates_button": "opens chrome://pippki/content/certManager.xhtml with ordinary WebDriver click",
+        "certificate_manager": "renders built-in authorities in an in-tab subdialog",
+        "scope_note": "These engine checks also worked before the input fix and do not prove native mouse delivery."
+      },
+      "native_presenter_check": {
+        "console_modes_passed": 2,
+        "real_presentation": "not passed in this run: both created windows were reported hidden (occlusion 8192); guest timed out waiting for real callbacks. No fake presentation acknowledgement or occlusion bypass was used."
+      },
+      "manual_native_mouse_confirmation": "pending owner confirmation in the Dev menu test window"
+    }
+  },
+  "owner_feedback": [
+    {
+      "revision": "a9cecbe",
+      "result": "Hamburger menu still appeared in the center; clicking Settings closed it without opening Settings."
+    },
+    {
+      "revision": "f282903",
+      "result": "Owner confirmed correct placement, but Settings still did not open."
+    },
+    {
+      "revision": "2be592ec29ed8c62afea879f4d27a152bc922dab",
+      "result": "Owner confirmed both Settings and Manage certificates work with real mouse input."
+    }
+  ]
 }

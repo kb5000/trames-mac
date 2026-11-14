@@ -456,6 +456,7 @@ extern "C" fn event(
             }),
             11 => server.output_scale(window, a.clamp(1, 4) as i32),
             12 => server.clipboard_changed(),
+            13 => server.popup_bounds(window, x as i32, y as i32, a, b),
             6 => server.resize(window, a.clamp(1, 4096), b.clamp(1, 4096)),
             7 => server.close(window),
             8 => server.set_mode(

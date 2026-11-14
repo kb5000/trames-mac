@@ -684,3 +684,31 @@ work through ordinary WebDriver controls, but that is separate evidence from
 native mouse input. This run's real-presentation test was blocked by hidden
 windows (occlusion 8192); direct owner mouse confirmation remains pending.
 Details: [Firefox dialog acceptance](mac-firefox-dialogs-20261114.json).
+
+
+## Firefox hamburger follow-up: placement and keyboard focus (2026-11-14)
+
+The owner reproduced the remaining problem with the real hamburger menu, which
+appeared at the center and closed without opening Settings. The focus-only repair
+above was insufficient. The captured client requested an anchor at
+(1876,52,40,24) in its resized 1920x928 window, but the stale bootstrap viewport
+produced `xdg_popup.configure(684,76,340,681)`. The native presenter now supplies
+its actual available screen in each window's logical coordinates; shared popup
+creation and reposition translate those bounds into nested parent coordinates.
+The same client now receives `(1576,76,340,681)` under the hamburger button.
+
+The owner's next real click exposed an independent keyboard policy bug. Firefox
+uses a non-grabbing panel here. Our pointer press sent keyboard leave on the main
+surface and enter on the panel, and Firefox immediately destroyed it before the
+release. Pointer events now continue to the hit popup, while keyboard activation
+stays on its containing toplevel unless an explicit popup grab owns it. Ordinary
+native dialog toplevels still activate independently. No coordinator, service
+thread or security preference was added.
+
+The owner confirmed both Settings and Manage certificates now work with real
+mouse input. All 27 Wayland unit tests and six original C-client cases pass,
+including placement/reposition, no-grab keyboard preservation and complete click
+pairs. Shared strict Clippy, iOS FFI compile, Mac release builds and architecture
+guards pass. Dev and Stable are updated; the original Stable Techo container
+returned healthy. The detailed [acceptance record](mac-firefox-dialogs-20261114.json)
+preserves the earlier insufficient repair and the subsequent evidence.
