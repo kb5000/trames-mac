@@ -622,6 +622,8 @@ pub fn run(
                 )?;
             }
             vfs.configure_virtual_network(&fabric, link_id, network)?;
+        } else if android_init {
+            vfs.configure_managed_uplink(network)?;
         } else {
             vfs.configure_network(network)?;
         }

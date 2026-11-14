@@ -243,7 +243,7 @@ impl Bridge {
                     width,
                     height,
                     stride: 0,
-                    alpha: 0,
+                    alpha: u32::from(image.buffer.has_alpha()),
                     x: image.x,
                     y: image.y,
                     scale: image.scale,
