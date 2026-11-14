@@ -767,13 +767,8 @@ pub fn run(
     }
     let mut runtime = Runtime::load_with_options(&bytes, &argv, &envp, vfs, options)?;
     runtime.linux.trace = trace;
-    // A browser's guest threads are scheduler jobs, not host threads. Keep
-    // enough task slots for normal multiprocess pages without reserving RAM.
-    runtime.linux.task_limit = if android_init {
-        trames_distro::android::TASK_LIMIT
-    } else {
-        1024
-    };
+    // Linux and Android inherit the shared runtime's admission ceiling. Do not
+    // reinstate a smaller product-specific limit: jobs allocate only on demand.
     runtime.cpu_count = cpus;
     trames_hvf::set_resident_limit(resident_limit);
     runtime.profile_syscalls = metrics;

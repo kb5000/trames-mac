@@ -141,6 +141,12 @@ SDK/CPU-only CI builds explicitly use `TRAMES_VULKAN_LINKAGE=external`; their
 archives are labelled `external-vulkan` and require a configured host library.
 Production packaging requires the embedded driver.
 
+Linux and Android inherit the shared runtime's 65,536-task default. Admission
+counts live/reserved tasks; it does not preallocate memory or host threads.
+The Mac launcher no longer overrides Linux with a separate 1,024-task ceiling.
+Writable `kernel.threads-max` and manifest sysctl initialization remain follow-up
+work; existing embedding limits and cgroup controls continue to apply.
+
 Mac and iPad share the public-API Vulkan compatibility path. Native Metal
 limitations are not bypassed with private APIs. Depth clip/clamp now has focused
 color/depth regression coverage on both platforms; logic operations and arbitrary
