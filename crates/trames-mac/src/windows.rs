@@ -44,6 +44,7 @@ struct Window {
     max_width: u32,
     max_height: u32,
     mode: u32,
+    embedded_display: u32,
     title: *const c_char,
 }
 #[repr(C)]
@@ -158,6 +159,7 @@ struct Binding {
     _subscription: IoSubscription,
 }
 pub struct Bridge {
+    embedded_display: bool,
     native: usize,
     wake: Arc<Wake>,
     binding: Mutex<Option<Binding>>,
@@ -309,6 +311,7 @@ impl Bridge {
                     WindowMode::Minimized => 1,
                     WindowMode::Maximized => 2,
                 },
+                embedded_display: u32::from(self.embedded_display),
                 title: title.as_ptr(),
             };
             let frame = Box::into_raw(Box::new(Frame {
@@ -528,6 +531,7 @@ pub fn run(command: super::session::Command) -> Result<u8, String> {
     }
     let source = unsafe { trames_ui_source(native) };
     let bridge = Arc::new(Bridge {
+        embedded_display: command.android_init,
         native: native as usize,
         wake: Arc::new(Wake(source as usize)),
         binding: Mutex::new(None),

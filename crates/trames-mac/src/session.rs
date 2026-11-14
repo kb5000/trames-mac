@@ -291,7 +291,7 @@ pub struct Command {
     link_nat: bool,
     publish: Vec<String>,
     trace: bool,
-    android_init: bool,
+    pub(super) android_init: bool,
     metrics: bool,
     timeout: u64,
     limit: usize,

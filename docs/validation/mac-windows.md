@@ -712,3 +712,16 @@ pairs. Shared strict Clippy, iOS FFI compile, Mac release builds and architectur
 guards pass. Dev and Stable are updated; the original Stable Techo container
 returned healthy. The detailed [acceptance record](mac-firefox-dialogs-20261114.json)
 preserves the earlier insufficient repair and the subsequent evidence.
+
+## Android embedded-display resize follow-up (2026-11-15)
+
+Android's root and descendant planes stay clipped to the native content area,
+including landscape/portrait crossings. Linux descendant popup windows retain
+their existing out-of-parent behavior. Android alone coalesces intermediate
+native resize configurations for 150 ms on the existing main run loop, flushes
+at live-resize completion, and ignores stale guest size ACKs while a native size
+is pending. The Rust/Objective-C window record remains 64 bytes; the iPad frame
+ABI is unchanged. `tests/native/window-scene.sh` exercises the actual scene and
+resize code with Metal and is included in the Mac workflow (13/13 local steps
+passed). Shared adapter and Binder acceptance/limitations are recorded in
+[Android bring-up](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/android-bringup.md#desktop-resize-and-provider-lifetime-follow-up-2026-11-15).

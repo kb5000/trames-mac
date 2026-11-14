@@ -9,7 +9,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 struct image { uint32_t kind,root; void *address; size_t length; uint32_t offset,width,height,stride,alpha; int32_t x,y,scale; uint32_t transform,display_width,display_height; float source[4]; };
-struct window_info { uint64_t id,revision; uint32_t interaction_serial,interaction_edges; uint32_t width,height,min_width,min_height,max_width,max_height,mode; const char *title; };
+struct window_info { uint64_t id,revision; uint32_t interaction_serial,interaction_edges; uint32_t width,height,min_width,min_height,max_width,max_height,mode,embedded_display; const char *title; };
 _Static_assert(sizeof(struct image)==88,"Rust image layout");
 _Static_assert(sizeof(struct window_info)==64,"Rust window layout");
 struct uniform { vector_float2 origin,size,viewport; uint32_t offset,stride,width,height,alpha,transform; vector_float4 source; };
@@ -76,13 +76,16 @@ static void supersede_frames(NSMutableArray<TramesFrame *> *frames) {
 @property NSMutableArray<TramesFrame *> *frames;
 @property uint64_t identifier,lastRevision;
 @property uint32_t clientW,clientH,hostW,hostH,resizeW,resizeH,mode,outputScale;
-@property BOOL seen,dirty,updating,closing,pendingResize,buttonDown;
+@property BOOL seen,dirty,updating,closing,pendingResize,buttonDown,embeddedDisplay;
+@property NSTimer *resizeTimer;
+@property uint32_t queuedW,queuedH;
 @property uint32_t interactionSerial,dragEdges;
 @property NSPoint dragMouse;
 @property NSRect dragFrame,popupBounds;
 @property BOOL hasPopupBounds;
 - (void)drag;
 - (void)syncSize;
+- (void)publishSize;
 - (void)syncScale;
 - (void)syncPopupBounds;
 - (BOOL)isVisible;
@@ -211,8 +214,26 @@ static const uint16_t keys[128]={
 // Publish its resulting logical content size after that update as well; those
 // delegate callbacks are deliberately suppressed while updating is true.
 - (void)syncSize {
-    [self syncScale];
-    [self syncPopupBounds];
+    [self syncScale];[self syncPopupBounds];
+    NSSize size=self.canvas.bounds.size;
+    uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
+    if(self.embeddedDisplay && (w!=self.clientW || h!=self.clientH)) {
+        if(self.pendingResize && self.resizeW==w && self.resizeH==h)return;
+        if(self.resizeTimer && self.queuedW==w && self.queuedH==h)return;
+        [self.resizeTimer invalidate];self.queuedW=w;self.queuedH=h;
+        // Android reconstructs a physical display for a configure. Coalesce
+        // AppKit's animation samples rather than exposing transient mode IDs.
+        __weak TramesFamily *weak=self;
+        self.resizeTimer=[NSTimer timerWithTimeInterval:0.15 repeats:NO block:^(NSTimer *timer){(void)timer;TramesFamily *family=weak;family.resizeTimer=nil;[family publishSize];}];
+        [NSRunLoop.mainRunLoop addTimer:self.resizeTimer forMode:NSRunLoopCommonModes];return;
+    }
+    [self.resizeTimer invalidate];self.resizeTimer=nil;[self publishSize];
+}
+- (void)windowDidEndLiveResize:(NSNotification *)notification {
+    if(notification.object!=self.window || !self.embeddedDisplay)return;
+    [self.resizeTimer invalidate];self.resizeTimer=nil;[self publishSize];
+}
+- (void)publishSize {
     NSSize size=self.canvas.bounds.size;
     uint32_t w=(uint32_t)llround(size.width),h=(uint32_t)llround(size.height);
     self.hostW=w;self.hostH=h;
@@ -272,7 +293,7 @@ static const uint16_t keys[128]={
 }
 - (void)cancel{for(TramesFrame *frame in self.frames)[frame cancel];}
 - (void)dispose {
-    self.closing=YES;[self cancel];for(NSWindow *overlay in self.overlays.allValues){[self.window removeChildWindow:overlay];[overlay close];}
+    self.closing=YES;[self.resizeTimer invalidate];self.resizeTimer=nil;[self cancel];for(NSWindow *overlay in self.overlays.allValues){[self.window removeChildWindow:overlay];[overlay close];}
     [self.overlays removeAllObjects];[self.window close];
 }
 @end
@@ -407,7 +428,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         if(![ui startGraphics])return -1;
         NSNumber *key=@(info->id);TramesFamily *family=ui.windows[key];
         if(!family){
-            family=[TramesFamily new];family.textState=[TramesTextState new];family.ui=ui;family.identifier=info->id;family.lastRevision=UINT64_MAX;family.dirty=YES;
+            family=[TramesFamily new];family.textState=[TramesTextState new];family.ui=ui;family.identifier=info->id;family.embeddedDisplay=info->embedded_display!=0;family.lastRevision=UINT64_MAX;family.dirty=YES;
             family.overlays=[NSMutableDictionary new];family.frames=[NSMutableArray new];family.updating=YES;
             family.hostW=info->width;family.hostH=info->height;
             family.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,info->width,info->height) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];
@@ -426,7 +447,7 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
         if(!NSEqualSizes(family.window.contentMinSize,minimum))family.window.contentMinSize=minimum;
         if(!NSEqualSizes(family.window.contentMaxSize,maximum))family.window.contentMaxSize=maximum;
         if(family.pendingResize && family.hostW==info->width && family.hostH==info->height)family.pendingResize=NO;
-        if(!family.pendingResize && family.clientW && (family.clientW!=info->width||family.clientH!=info->height)){
+        if(!family.pendingResize && !family.resizeTimer && family.clientW && (family.clientW!=info->width||family.clientH!=info->height)){
             family.hostW=info->width;family.hostH=info->height;[family.window setContentSize:NSMakeSize(info->width,info->height)];family.dirty=YES;
         }
         family.clientW=info->width;family.clientH=info->height;
@@ -452,10 +473,11 @@ int trames_ui_window(void *pointer,const struct window_info *info,const struct i
             const struct image *image=&images[i];
             NSRect rect=NSMakeRect(image->x,image->y,image->display_width,image->display_height);
             if(NSContainsRect(root,rect))continue;
-            // The root SHM image can include CSD shadow outside xdg geometry.
-            // Clip that image to the native content rectangle: NSWindow already
-            // owns the outer shadow. Only descendant surfaces need child windows.
-            if(image->root && NSContainsRect(rect,root))continue;
+            // Root content stays inside its native window, including while an
+            // old landscape buffer crosses a newly portrait-shaped drawable.
+            // Android planes belong to a physical display and stay clipped too.
+            // Linux descendants can own out-of-window popup rectangles.
+            if(image->root || family.embeddedDisplay)continue;
             // Separate popup rectangles avoid one large transparent window
             // intercepting clicks in the empty space between disjoint surfaces.
             NSNumber *index=@(i);[visible addObject:index];NSWindow *overlay=family.overlays[index];
