@@ -253,6 +253,60 @@ Install the paired native ALSA plugin in that Linux environment and configure
 ALSA's default PCM to use it. Build it with the integration repository's
 `scripts/build-audio-guest.sh` on ARM64 Linux. The standard ALSA `plug` layer
 provides format conversion; no PulseAudio/PipeWire server is required.
+Build against the environment's libc: Alpine musl and Debian glibc binaries are
+not interchangeable. For Debian ARM64, install the glibc artifact as follows
+inside the guest (preserve any existing custom ALSA configuration):
+
+```sh
+install -D -m 644 OUT/libasound_module_pcm_trames.so \
+  /usr/lib/aarch64-linux-gnu/alsa-lib/libasound_module_pcm_trames.so
+install -m 644 OUT/asound-system.conf /etc/asound.conf
+```
+
+Use `asound-system.conf` here. The separate `asound.conf` is for
+`ALSA_CONFIG_PATH`; it includes `/usr/share/alsa/alsa.conf`, which already loads
+`/etc/asound.conf` and would therefore recurse if installed there verbatim.
+
+Debian Firefox ESR can default to PulseAudio even when ALSA is available. Set
+an overridable distribution default in `/etc/firefox-esr/trames-audio.js`:
+
+```js
+pref("media.cubeb.backend", "alsa");
+```
+
+This does not replace browser profiles, user audio preferences, or sandbox
+settings. Restart the environment after enabling host audio capabilities, then
+restart Firefox after installing its backend default. The first microphone open
+may return permission denied while macOS asks for permission; retry after allowing
+Trames. The current system input/output devices are used without changing them.
+Websites still require their normal Firefox microphone permission.
+
+Wayland accessibility also needs a guest session bus. For an individual browser,
+use `dbus-run-session -- firefox`. A root desktop in a systemd environment can
+instead enable this guest-only `/etc/systemd/system/trames-session-bus.service`:
+
+```ini
+[Unit]
+Description=Trames root desktop session D-Bus
+After=dbus.service
+
+[Service]
+Type=exec
+ExecStartPre=/usr/bin/mkdir -p /run/user/0
+ExecStart=/usr/bin/dbus-daemon --session --address=unix:path=/run/user/0/bus --nofork --nopidfile
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Run `systemctl daemon-reload` and
+`systemctl enable --now trames-session-bus.service`. GIO discovers the socket at
+`$XDG_RUNTIME_DIR/bus`. Keep the existing runtime directory and Wayland socket;
+do not mount a replacement tmpfs over them. This example is for the current root
+desktop only; other users need a separate runtime directory and session bus.
+The service being started is separate from a successful session-bus round trip.
+
 For the graphics test launcher, `--audio-plugin PATH` imports the plugin and
 an isolated ALSA configuration; add `--audio-input` to enable the microphone.
 The launcher preserves explicit existing cubeb preferences.

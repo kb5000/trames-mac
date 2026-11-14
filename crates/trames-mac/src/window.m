@@ -286,7 +286,12 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
         self.lifecycleObserved=YES;
     }
     if(NSApp)return YES;
-    [NSApplication sharedApplication];NSApp.delegate=self;[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApplication sharedApplication];NSApp.delegate=self;
+    // Wayland windows run in the CLI helper, not the Finder manager entry.
+    // Set the bundled icon explicitly before this helper enters the Dock.
+    NSImage *icon=[[NSImage alloc]initWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"Trames" withExtension:@"icns"]];
+    if(icon)NSApp.applicationIconImage=icon;
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *actions=[NSMenu new];
     NSMenuItem *quit=[[NSMenuItem alloc]initWithTitle:[NSString stringWithFormat:T(@"Quit %@"),([NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: @"Trames")] action:@selector(quit:) keyEquivalent:@"q"];quit.target=self;[actions addItem:quit];app.submenu=actions;
     NSMenuItem *editItem=[NSMenuItem new];[menu addItem:editItem];NSMenu *editing=[[NSMenu alloc]initWithTitle:T(@"Edit")];editItem.submenu=editing;

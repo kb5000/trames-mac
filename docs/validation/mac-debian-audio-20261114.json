@@ -1,0 +1,160 @@
+{
+  "date": "2026-11-14",
+  "scope": "Managed Debian Firefox native audio and explicit helper application icon",
+  "runtime_revision": "bbf217ecb9f8183ad8df4346709027d9ce143fac",
+  "application_version": "1.5.5",
+  "causes": [
+    "Both host audio capabilities were disabled in Stable Debian.",
+    "No matching glibc ALSA PCM plugin or default PCM configuration was installed.",
+    "Debian Firefox tried PulseAudio with no libpulse present; an overridable ALSA distribution default is required.",
+    "The system D-Bus was present, but there was no desktop session bus."
+  ],
+  "repairs": {
+    "guest_plugin": "Built on Debian ARM64 against libasound2 1.2.14 and glibc 2.41; not the Alpine musl binary.",
+    "alsa_configuration": "asound-system.conf excludes the distribution-default include to avoid /etc/asound.conf recursion.",
+    "firefox_default": "/etc/firefox-esr/trames-audio.js selects alsa; existing user preferences and sandbox remain unchanged.",
+    "host_flags": {
+      "audio": true,
+      "audio_input": true
+    },
+    "session_bus": "Stable root systemd service uses existing /run/user/0/bus; no runtime-directory remount. Dev shell test uses the standard guest daemon.",
+    "icon": "CLI-hosted Wayland windows set the same bundled application icon as Manager before Dock activation. Installer refreshes the installed LaunchServices path."
+  },
+  "channels": {
+    "dev": {
+      "firefox_version": "153.7.0esr-1~deb13u1",
+      "forced_profile_backend": false,
+      "backend": "alsa",
+      "web_audio": {
+        "state": "running",
+        "rate": 44100,
+        "latency": 0,
+        "finished": true
+      },
+      "web_microphone": {
+        "live_tracks": 1,
+        "rms": 0
+      },
+      "runner_sha256": "20f51f00d34949920cebceaa44039bf274f527eba85e6e31382944d35db50a6f",
+      "native_playback_and_clock": [
+        {
+          "args": [],
+          "code": 0,
+          "stdout": "{\"playback_frames\":144000,\"rate\":48000,\"channels\":2,\"elapsed\":3.067523,\"drain\":0}\n",
+          "stderr": "output opening\noutput open result 0\noutput configured\noutput submitted 24000 frames\noutput submitted 48000 frames\noutput submitted 72000 frames\noutput submitted 96000 frames\noutput submitted 120000 frames\noutput submitted 144000 frames\n"
+        },
+        {
+          "args": [
+            "--clock"
+          ],
+          "code": 0,
+          "stdout": "{\"clock_max_step_frames\":2353,\"clock_max_poll_gap\":0.050049,\"continuous_clock\":true}\n{\"playback_frames\":144000,\"rate\":48000,\"channels\":2,\"elapsed\":3.621296,\"drain\":0}\n",
+          "stderr": "output opening\noutput open result 0\noutput configured\noutput submitted 24000 frames\noutput submitted 48000 frames\noutput submitted 72000 frames\noutput submitted 96000 frames\noutput submitted 120000 frames\noutput submitted 144000 frames\n"
+        }
+      ],
+      "native_capture_duplex": [
+        {
+          "args": [
+            "--capture"
+          ],
+          "code": 0,
+          "stdout": "{\"capture_frames\":48000,\"elapsed\":1.043545,\"rms\":0.00000000,\"peak\":0.00000000}\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "--duplex"
+          ],
+          "code": 0,
+          "stdout": "{\"capture_frames\":48000,\"elapsed\":1.012524,\"rms\":0.00000000,\"peak\":0.00000000}\n{\"playback_frames\":144000,\"rate\":48000,\"channels\":2,\"elapsed\":3.067283,\"drain\":0}\n",
+          "stderr": "output opening\noutput open result 0\noutput configured\noutput submitted 24000 frames\noutput submitted 48000 frames\noutput submitted 72000 frames\noutput submitted 96000 frames\noutput submitted 120000 frames\noutput submitted 144000 frames\n"
+        }
+      ]
+    },
+    "stable": {
+      "firefox_version": "153.7.0esr-1~deb13u1",
+      "forced_profile_backend": false,
+      "backend": "alsa",
+      "web_audio": {
+        "state": "running",
+        "rate": 44100,
+        "latency": 0,
+        "finished": true
+      },
+      "web_microphone": {
+        "live_tracks": 1,
+        "rms": 0
+      },
+      "runner_sha256": "2b4c77f6500cea3fb58f590d83764b0ebf9ae1a2b34f8e63eec903615e04447e",
+      "native_checks": [
+        {
+          "args": [],
+          "code": 0,
+          "stdout": "{\"playback_frames\":144000,\"rate\":48000,\"channels\":2,\"elapsed\":3.065495,\"drain\":0}\n",
+          "stderr": "output opening\noutput open result 0\noutput configured\noutput submitted 24000 frames\noutput submitted 48000 frames\noutput submitted 72000 frames\noutput submitted 96000 frames\noutput submitted 120000 frames\noutput submitted 144000 frames\n"
+        },
+        {
+          "args": [
+            "--capture"
+          ],
+          "code": 0,
+          "stdout": "{\"capture_frames\":48000,\"elapsed\":1.033793,\"rms\":0.00000000,\"peak\":0.00000000}\n",
+          "stderr": ""
+        },
+        {
+          "args": [
+            "--duplex"
+          ],
+          "code": 0,
+          "stdout": "{\"capture_frames\":48000,\"elapsed\":1.028485,\"rms\":0.00000000,\"peak\":0.00000000}\n{\"playback_frames\":144000,\"rate\":48000,\"channels\":2,\"elapsed\":3.067459,\"drain\":0}\n",
+          "stderr": "output opening\noutput open result 0\noutput configured\noutput submitted 24000 frames\noutput submitted 48000 frames\noutput submitted 72000 frames\noutput submitted 96000 frames\noutput submitted 120000 frames\noutput submitted 144000 frames\n"
+        }
+      ]
+    }
+  },
+  "input_device": "Existing default Steam Streaming Microphone (virtual), retained at owner request.",
+  "output_device": "Existing default Mac mini speakers; system routing unchanged.",
+  "limitations": [
+    "Virtual microphone currently supplies silence; physical microphone signal was not tested.",
+    "The glxtest/graphics warnings remain separate from this audio repair.",
+    "Browser microphone permission was granted only for the controlled loopback origin in isolated test profiles.",
+    "Existing unrelated running environments were not restarted."
+  ],
+  "presenter_regression": {
+    "passed": true,
+    "rows": [
+      {
+        "name": "console-automatic",
+        "passed": true
+      },
+      {
+        "name": "console-disabled",
+        "passed": true
+      },
+      {
+        "name": "six-windows-three-cycles-real-frame-callbacks-cli-survives",
+        "passed": true
+      }
+    ],
+    "runner_sha256": "20f51f00d34949920cebceaa44039bf274f527eba85e6e31382944d35db50a6f",
+    "rootfs_sha256": "821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe",
+    "client_sha256": "13895bab1865f58d7297dc9fce1b13a462db0877af29b9a6cb16fbcc0a1d2ee0",
+    "libraries_sha256": "4f47394c30721e64709572615f140e11e8aaff3390063675f3e8191b617f9d07"
+  },
+  "business_after_restart": {
+    "stable_debian_techo": "running healthy",
+    "stable_docker_web": "running"
+  },
+  "artifacts": {
+    "libasound_module_pcm_trames.so": "fe13457d11dec8cd70db994b22fc9c8d7b336adb46c93c2e0d9e56e1ef280bd6",
+    "asound-system.conf": "1559368d434d42e6375078cd2a5d5caf81cf7b7956ad31204b19ca19c8825818",
+    "audio-native": "c5b398d1b315fa8363a1bbdad9c2d3379c179020589a3368b5fccc03d440239f"
+  },
+  "validation_notes": [
+    "Playback, capture, full duplex and real Firefox checks passed in both channels. Dev playback clock regression also passed.",
+    "Both Mac channel builds and strict code-signature checks passed; native-window regression passed all three cases.",
+    "Execution-boundary guard passed. Unchanged shared-kernel/CPU/GPU results were reused.",
+    "Dev shell boot has no persistent session bus service; the normal guest daemon was restarted after deployment. Use dbus-run-session for a browser after a shell-only environment restart.",
+    "Audio/backend changes are environment configuration and payload deployment, not changes to the shared native audio ABI."
+  ]
+}

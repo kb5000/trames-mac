@@ -99,5 +99,9 @@ for path in (registry/'launchers').glob('*.command'):
     path.write_text('#!/bin/sh\nexport TRAMES_HOME='+shlex.quote(str(registry))+'\nexec '+shlex.quote(str(app/'Contents/MacOS/trames-mac-run'))+' -e '+shlex.quote(name)+' shell\n')
     path.chmod(0o700)
 PYTHON
+# Register the installed path after the atomic replacement. Build/backup bundles
+# may share the identifier; Finder should resolve this installation's resources.
+lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+if [[ -x "$lsregister" ]]; then "$lsregister" -f "$dest"; fi
 install_path
 printf 'Installed %s\nCLI: %s/%s\nOpen %s.app for environment management.\n' "$dest" "$bin_dir" "$cli_name" "$product_name"
