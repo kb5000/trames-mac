@@ -1,0 +1,470 @@
+{
+  "date": "2026-11-15",
+  "runtime_revision": "0388a05e3191b18de3ad3183a7cf42270686c494",
+  "previous_runtime": "091dfae55520d00d9dfb0445ba0f024f98b664f3",
+  "scope": "buffered cached file I/O and explicit sync; not SSD throughput",
+  "changes": [
+    "cache the committed v4 manifest with a compact sorted inode/header index",
+    "patch only the original regular inode metadata header during full fsync",
+    "retain namespace rebuild, whole-manifest checksum/write, atomic replacement and full-flush protocol",
+    "restore cached header and checksum on pre-publication failure",
+    "no coordinator, service thread, ordinary I/O counter or added memory barrier"
+  ],
+  "comparison": [
+    {
+      "variant": "private",
+      "before_iops": 62.387522,
+      "after_iops": 75.464165,
+      "ratio": 1.2096035005205046,
+      "trials_iops": [
+        74.465961,
+        76.662008,
+        75.464165
+      ]
+    },
+    {
+      "variant": "shared",
+      "before_iops": 253.94921,
+      "after_iops": 253.796962,
+      "ratio": 0.999400478544509,
+      "trials_iops": [
+        255.246852,
+        253.597122,
+        253.796962
+      ]
+    },
+    {
+      "variant": "host",
+      "before_iops": 285.028983,
+      "after_iops": 278.744251,
+      "ratio": 0.9779505510848349,
+      "trials_iops": [
+        278.744251,
+        320.407755,
+        273.945211
+      ]
+    }
+  ],
+  "original_private_fsync_iops": 55.53336,
+  "parameters": {
+    "engine": "psync",
+    "depth": 1,
+    "runtime": 5,
+    "ramp_seconds": 1,
+    "repeats": 3,
+    "kb_base": 1000,
+    "single_file_mib": 256,
+    "parallel_file_mib": 64,
+    "jobs": [
+      1
+    ],
+    "clock": "clock_gettime",
+    "cases": [
+      "write-4k-fsync"
+    ]
+  },
+  "fio_version": "3.43",
+  "build_options": [
+    "--disable-native",
+    "--disable-shm"
+  ],
+  "binary_hashes": {
+    "native": "64844f80dbd6e526f7d4dc3e3c013c9e931fa8d94814647f0a2dd5291718fe18",
+    "guest": "b13a976619807575c0134da4ace3d613adc3f686986e0e1c4cbce979c73b2345",
+    "runner": "3f715d2fb2c36b35eaa226474c92e58d59b1bf07850b7bb6c925a4b8fa2e1e3e"
+  },
+  "records": [
+    {
+      "variant": "private",
+      "case": "write-4k-fsync",
+      "repeat": 1,
+      "mib_s": 0.2908821105957031,
+      "iops": 74.465961,
+      "latency_mean_us": 49.584260054,
+      "clat_p99_us": 130.56,
+      "sync": {
+        "total_ios": 373,
+        "lat_ns": {
+          "min": 10022416,
+          "max": 19864375,
+          "mean": 13368780.198391,
+          "stddev": 1224487.203426,
+          "N": 373,
+          "percentile": {
+            "50.000000": 13041664,
+            "95.000000": 15794176,
+            "99.000000": 17694720,
+            "99.900000": 19791872
+          }
+        }
+      },
+      "wall_seconds": 7.613613334000002,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 1527808
+    },
+    {
+      "variant": "shared",
+      "case": "write-4k-fsync",
+      "repeat": 1,
+      "mib_s": 0.9970579147338867,
+      "iops": 255.246852,
+      "latency_mean_us": 42.924222396,
+      "clat_p99_us": 62.72,
+      "sync": {
+        "total_ios": 1277,
+        "lat_ns": {
+          "min": 1893167,
+          "max": 7847583,
+          "mean": 3870921.386061,
+          "stddev": 380796.634132,
+          "N": 1277,
+          "percentile": {
+            "50.000000": 3948544,
+            "95.000000": 4014080,
+            "99.000000": 4227072,
+            "99.900000": 6062080
+          }
+        }
+      },
+      "wall_seconds": 7.509222542,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 5230592
+    },
+    {
+      "variant": "host",
+      "case": "write-4k-fsync",
+      "repeat": 1,
+      "mib_s": 1.0888442993164062,
+      "iops": 278.744251,
+      "latency_mean_us": 17.87517934,
+      "clat_p99_us": 32.128,
+      "sync": {
+        "total_ios": 1394,
+        "lat_ns": {
+          "min": 1950000,
+          "max": 7762000,
+          "mean": 3566195.839311,
+          "stddev": 526799.203643,
+          "N": 1394,
+          "percentile": {
+            "50.000000": 3948544,
+            "95.000000": 4014080,
+            "99.000000": 4079616,
+            "99.900000": 5996544
+          }
+        }
+      },
+      "wall_seconds": 7.126393916999998,
+      "usr_cpu": 0.2,
+      "sys_cpu": 2.26,
+      "io_bytes": 5709824
+    },
+    {
+      "variant": "private",
+      "case": "write-4k-fsync",
+      "repeat": 2,
+      "mib_s": 0.29946041107177734,
+      "iops": 76.662008,
+      "latency_mean_us": 46.582158854,
+      "clat_p99_us": 75.264,
+      "sync": {
+        "total_ios": 384,
+        "lat_ns": {
+          "min": 10820875,
+          "max": 16738542,
+          "mean": 12987469.958333,
+          "stddev": 808294.489065,
+          "N": 384,
+          "percentile": {
+            "50.000000": 12910592,
+            "95.000000": 13959168,
+            "99.000000": 14090240,
+            "99.900000": 16711680
+          }
+        }
+      },
+      "wall_seconds": 7.500966583,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 1572864
+    },
+    {
+      "variant": "shared",
+      "case": "write-4k-fsync",
+      "repeat": 2,
+      "mib_s": 0.9906129837036133,
+      "iops": 253.597122,
+      "latency_mean_us": 37.145877069,
+      "clat_p99_us": 82.432,
+      "sync": {
+        "total_ios": 1269,
+        "lat_ns": {
+          "min": 1889667,
+          "max": 7576209,
+          "mean": 3902101.439716,
+          "stddev": 278405.277039,
+          "N": 1269,
+          "percentile": {
+            "50.000000": 3948544,
+            "95.000000": 4014080,
+            "99.000000": 4046848,
+            "99.900000": 5996544
+          }
+        }
+      },
+      "wall_seconds": 7.477667292,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 5197824
+    },
+    {
+      "variant": "host",
+      "case": "write-4k-fsync",
+      "repeat": 2,
+      "mib_s": 1.2515926361083984,
+      "iops": 320.407755,
+      "latency_mean_us": 17.873362444999998,
+      "clat_p99_us": 60.16,
+      "sync": {
+        "total_ios": 1603,
+        "lat_ns": {
+          "min": 1913000,
+          "max": 6770000,
+          "mean": 3099764.81597,
+          "stddev": 385989.360898,
+          "N": 1603,
+          "percentile": {
+            "50.000000": 2998272,
+            "95.000000": 3981312,
+            "99.000000": 4014080,
+            "99.900000": 6062080
+          }
+        }
+      },
+      "wall_seconds": 7.133270584000002,
+      "usr_cpu": 0.219912,
+      "sys_cpu": 2.499,
+      "io_bytes": 6565888
+    },
+    {
+      "variant": "private",
+      "case": "write-4k-fsync",
+      "repeat": 3,
+      "mib_s": 0.2947816848754883,
+      "iops": 75.464165,
+      "latency_mean_us": 45.658415344,
+      "clat_p99_us": 69.12,
+      "sync": {
+        "total_ios": 378,
+        "lat_ns": {
+          "min": 9942125,
+          "max": 16002750,
+          "mean": 13197837.301587,
+          "stddev": 756675.053741,
+          "N": 378,
+          "percentile": {
+            "50.000000": 13041664,
+            "95.000000": 13959168,
+            "99.000000": 14090240,
+            "99.900000": 16056320
+          }
+        }
+      },
+      "wall_seconds": 7.639324791,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 1548288
+    },
+    {
+      "variant": "host",
+      "case": "write-4k-fsync",
+      "repeat": 3,
+      "mib_s": 1.0700979232788086,
+      "iops": 273.945211,
+      "latency_mean_us": 18.401459854000002,
+      "clat_p99_us": 61.184,
+      "sync": {
+        "total_ios": 1370,
+        "lat_ns": {
+          "min": 2028000,
+          "max": 7792000,
+          "mean": 3628427.007299,
+          "stddev": 500864.680524,
+          "N": 1370,
+          "percentile": {
+            "50.000000": 3948544,
+            "95.000000": 4014080,
+            "99.000000": 4046848,
+            "99.900000": 4079616
+          }
+        }
+      },
+      "wall_seconds": 7.341946374999992,
+      "usr_cpu": 0.18,
+      "sys_cpu": 2.22,
+      "io_bytes": 5611520
+    },
+    {
+      "variant": "shared",
+      "case": "write-4k-fsync",
+      "repeat": 3,
+      "mib_s": 0.99139404296875,
+      "iops": 253.796962,
+      "latency_mean_us": 37.600783465,
+      "clat_p99_us": 62.208,
+      "sync": {
+        "total_ios": 1270,
+        "lat_ns": {
+          "min": 1941709,
+          "max": 7768792,
+          "mean": 3898444.096063,
+          "stddev": 282890.561775,
+          "N": 1270,
+          "percentile": {
+            "50.000000": 3948544,
+            "95.000000": 4014080,
+            "99.000000": 4046848,
+            "99.900000": 5931008
+          }
+        }
+      },
+      "wall_seconds": 7.496045292000005,
+      "usr_cpu": 0.0,
+      "sys_cpu": 0.0,
+      "io_bytes": 5201920
+    }
+  ],
+  "environment": {
+    "boot": {
+      "mode": "shell"
+    },
+    "components": {
+      "audio": false,
+      "audio_input": false,
+      "thunking": "auto",
+      "vaapi": false,
+      "vulkan": false
+    },
+    "display": {
+      "windows": false
+    },
+    "environment": {
+      "name": "fio-bench",
+      "type": "linux",
+      "uuid": "bbbf18fb-61b4-4c63-8b22-fded449036f8"
+    },
+    "image": {
+      "distribution": "debian",
+      "sha256": "2b70e040f7d132c8d366ee0223462552686510fb372ea5a83822973c30f19e36",
+      "source": null
+    },
+    "interop": {
+      "clipboard": {
+        "enabled": false,
+        "shares": []
+      },
+      "files": {
+        "enabled": false,
+        "shares": []
+      },
+      "host_cli": {
+        "enabled": false,
+        "shares": []
+      },
+      "host_exec": {
+        "enabled": false,
+        "shares": []
+      },
+      "host_ui": {
+        "enabled": false,
+        "shares": []
+      },
+      "mounts": {
+        "enabled": false,
+        "shares": []
+      },
+      "ports": {
+        "enabled": false,
+        "shares": []
+      }
+    },
+    "mounts": [
+      {
+        "host": null,
+        "readonly": false,
+        "share": "fio-test",
+        "target": "/mnt/fio"
+      }
+    ],
+    "network": {
+      "bridge": null,
+      "mode": "none",
+      "publish": []
+    },
+    "resources": {
+      "cpus": "all",
+      "memory": "auto",
+      "memory_limit": null
+    },
+    "session": {
+      "cwd": "/",
+      "shell": [
+        "/bin/sh",
+        "-l"
+      ]
+    },
+    "version": 1
+  },
+  "host": {
+    "sysctl": "Apple M6\n12\n25769803776",
+    "macos": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+    "load_start": "23:24  up 1 day, 47 mins, 1 user, load averages: 5.63 4.82 4.09",
+    "load_end": "23:25  up 1 day, 48 mins, 1 user, load averages: 4.93 4.81 4.15"
+  },
+  "source_hashes": {
+    "storage.rs": "97681dc5b0f7c17311c658bebd0a24561123e928cb431b048be58e51554d8c8e",
+    "disk_io.rs": "d319d48e2df09c7607858170eb135c45e31e93ba61f9d1127bda586b216241ec",
+    "fs_data.rs": "ad6637c8b5a28a44b92474936f31ac34a40bf09b60421da3ca8e24686b9ba9e4",
+    "storage_tests.rs": "ab6f8cd4edaf6e21bcc155b6c79164705fc5d2028705085390297b7753631283"
+  },
+  "benchmark_build_provenance": "Candidate compiled before product revision-string update; the four runtime source files match this commit and the Runtime/Mac CI input hashes. Final installed Dev rebuild uses the new paired pin.",
+  "validation": {
+    "runtime_workflow_steps": 7,
+    "runtime_tests_passed": 1604,
+    "runtime_tests_ignored": 31,
+    "mac_workflow_steps": 13,
+    "mac_reused_steps": [
+      1,
+      8,
+      9
+    ],
+    "ipad_target": "aarch64-apple-ios",
+    "ipad_product_ffi": "passed",
+    "regressions": [
+      "target fsync completes while unrelated inode metadata remains locked",
+      "four concurrent retained-inode sync jobs merge metadata",
+      "hardlink, xattr and mode preservation across failed publication and retry",
+      "clean sync skips redundant publication",
+      "replacement/orphan lifetime and renamed inode positions",
+      "existing process-exit/reopen and post-rename directory failure regressions"
+    ],
+    "mac_native_ui_evidence": "steps 8 and 9 reused unchanged passing input hashes"
+  },
+  "limitations": [
+    "buffered sync workload, not raw SSD throughput",
+    "three shuffled 5-second samples with 1-second ramp; host load can vary",
+    "whole manifest checksum and physical replacement still occur for dirty metadata",
+    "hardware power-cut validation not performed",
+    "fdatasync path unchanged and not remeasured this round; prior 254.14917 private IOPS measurement is historical"
+  ],
+  "deployment": {
+    "dev_application": "installed after paired-pin rebuild",
+    "stable": "unchanged",
+    "ipad": "source pin paired and complete FFI compiled; no IPA/device installation",
+    "test_datasets": "removed",
+    "benchmark_service": "stopped",
+    "free_disk_gib_approximately": 25
+  }
+}

@@ -73,3 +73,6 @@ separate file/manifest/directory durability operations. An incremental metadata
 commit design or a proven ordered barrier batch can reduce that cost further.
 It requires updating all recovery and interoperation consumers if the format
 changes; simply dropping flushes would change the durability guarantee.
+
+The subsequent [file-specific manifest optimization](mac-storage-inode-20261115.md)
+raises private full fsync to 75.46 IOPS without changing the on-disk protocol.
