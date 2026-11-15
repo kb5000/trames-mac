@@ -77,6 +77,7 @@ struct NativeTextEdit {
     commit_length: usize,
 }
 unsafe extern "C" {
+    fn trames_ui_initial_scale() -> u32;
     fn trames_ui_create(shader: *const c_char) -> *mut c_void;
     fn trames_ui_source(ui: *mut c_void) -> *mut c_void;
     fn trames_ui_wake(source: *mut c_void);
@@ -160,6 +161,7 @@ struct Binding {
 }
 pub struct Bridge {
     embedded_display: bool,
+    initial_scale: u32,
     native: usize,
     wake: Arc<Wake>,
     binding: Mutex<Option<Binding>>,
@@ -177,6 +179,12 @@ impl Bridge {
         }
     }
     pub fn attach(&self, server: Server, clipboard_enabled: bool) {
+        // Publish the real output before the first guest registry roundtrip.
+        // Android HWC calibrates its immutable display density at that point.
+        if let Err(error) = server.output_scale(0, self.initial_scale as i32) {
+            self.fail(error);
+            return;
+        }
         if clipboard_enabled {
             // SAFETY: native UI is alive before this guest bootstrap and owns the
             // provider until shutdown; the returned reference is independently owned.
@@ -532,6 +540,7 @@ pub fn run(command: super::session::Command) -> Result<u8, String> {
     let source = unsafe { trames_ui_source(native) };
     let bridge = Arc::new(Bridge {
         embedded_display: command.android_init,
+        initial_scale: unsafe { trames_ui_initial_scale() },
         native: native as usize,
         wake: Arc::new(Wake(source as usize)),
         binding: Mutex::new(None),

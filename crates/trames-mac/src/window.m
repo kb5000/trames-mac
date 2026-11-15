@@ -391,6 +391,11 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
 static TramesCanvas *canvas(TramesFamily *family,NSRect rect,NSPoint origin){
     TramesCanvas *view=[[TramesCanvas alloc]initWithFrame:rect];view.family=family;view.origin=origin;view.textState=family.textState;view.layerContentsRedrawPolicy=NSViewLayerContentsRedrawOnSetNeedsDisplay;view.wantsLayer=YES;view.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;return view;
 }
+// Called once on the AppKit thread, before starting any guest client. A late
+// first-window scale update is too late for Android's density calibration.
+uint32_t trames_ui_initial_scale(void) {
+    return (uint32_t)MAX(1,MIN(4,llround(NSScreen.mainScreen.backingScaleFactor)));
+}
 void *trames_ui_create(const char *shader){
     if(getenv("TRAMES_MAC_WINDOW_TRACE"))fprintf(stderr,"trames mac windows: main run-loop source created\n");
     TramesUI *ui=[TramesUI new];ui.shader=[NSString stringWithUTF8String:shader];

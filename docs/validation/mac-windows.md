@@ -725,3 +725,12 @@ ABI is unchanged. `tests/native/window-scene.sh` exercises the actual scene and
 resize code with Metal and is included in the Mac workflow (13/13 local steps
 passed). Shared adapter and Binder acceptance/limitations are recorded in
 [Android bring-up](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/android-bringup.md#desktop-resize-and-provider-lifetime-follow-up-2026-11-15).
+
+The native main-screen scale is now published before any guest registry
+roundtrip, so Waydroid initializes Android's immutable density consistently with
+its first buffer scale (360 dpi on the tested 2x screen). Native 1004x1856 and
+1004x1570 phone-shaped windows and a 720x1560 Android override retained the full
+Quick Settings footer. Real mouse clicks opened Settings before and after a
+forced SystemUI process recreation. Eight browser exit/relaunch cycles retained
+valid input focus. The paired runtime preserves dead Binder identities inside
+live window-info parcels; invoking the dead object still returns a dead reply.
