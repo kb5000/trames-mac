@@ -94,9 +94,20 @@ for path in (registry/'launchers').glob('*.command'):
     if 'export TRAMES_HOME=' not in text or 'trames-mac-run' not in text:
         continue
     name=path.stem
+    command="shell"
+    for line in text.splitlines():
+        if not line.startswith("exec "):
+            continue
+        try:
+            words=shlex.split(line)
+        except ValueError:
+            continue
+        if len(words)==7 and words[2]=="-e" and words[4:6]==["session","attach"] and words[6].isascii() and words[6].isdigit():
+            name=words[3]
+            command="session attach "+words[6]
     if not name or any(not (c.isascii() and (c.isalnum() or c in '-_')) for c in name):
         continue
-    path.write_text('#!/bin/sh\nexport TRAMES_HOME='+shlex.quote(str(registry))+'\nexec '+shlex.quote(str(app/'Contents/MacOS/trames-mac-run'))+' -e '+shlex.quote(name)+' shell\n')
+    path.write_text('#!/bin/sh\nexport TRAMES_HOME='+shlex.quote(str(registry))+'\nexec '+shlex.quote(str(app/'Contents/MacOS/trames-mac-run'))+' -e '+shlex.quote(name)+' '+command+'\n')
     path.chmod(0o700)
 PYTHON
 # Register the installed path after the atomic replacement. Build/backup bundles

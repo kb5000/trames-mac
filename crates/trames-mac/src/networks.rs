@@ -11,9 +11,9 @@ use std::{
 use trames_distro::environment as model;
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Bridge {
+pub(super) struct Bridge {
     version: u32,
-    name: String,
+    pub(super) name: String,
     uuid: String,
     nat: bool,
     members: BTreeMap<String, u8>,
@@ -113,6 +113,19 @@ pub fn arguments(r: &Path, c: &model::Manifest) -> Result<Vec<String>> {
     }
     Ok(args)
 }
+pub(super) fn listing(r: &Path) -> Result<Vec<Bridge>> {
+    env::private_dir(&r.join("networks"))?;
+    let mut rows = vec![];
+    for e in fs::read_dir(r.join("networks"))? {
+        let p = e?.path();
+        if p.extension().is_some_and(|s| s == "toml") {
+            let b: Bridge = model::decode(&fs::read_to_string(p)?)?;
+            rows.push(b);
+        }
+    }
+    rows.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(rows)
+}
 pub fn dispatch(args: &[String]) -> Result<u8> {
     let r = env::root()?;
     let _lock = lock(&r)?;
@@ -123,15 +136,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         .as_slice()
     {
         [] | ["ls"] | ["ls", "--json"] => {
-            let mut rows = vec![];
-            for e in fs::read_dir(r.join("networks"))? {
-                let p = e?.path();
-                if p.extension().is_some_and(|s| s == "toml") {
-                    let b: Bridge = model::decode(&fs::read_to_string(p)?)?;
-                    rows.push(b);
-                }
-            }
-            rows.sort_by(|a, b| a.name.cmp(&b.name));
+            let rows = listing(&r)?;
             if args.iter().any(|s| s == "--json") {
                 println!("{}", serde_json::to_string_pretty(&rows)?)
             } else {

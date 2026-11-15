@@ -109,6 +109,48 @@ registries, services and stores; `TRAMES_HOME` provides an explicitly isolated
 registry for testing. Existing stores can receive separately authored new TOML
 profiles without being re-imported or migrated by the application.
 
+## Native Mac manager
+
+Open the application or run `trames gui`. The sidebar switches between registered
+Linux and Android environments; Networks and Trames Settings are global pages.
+Environment tabs cover overview/sessions, configuration, files/sharing, host
+permissions, and live task output. The interface follows the macOS per-app
+English/Chinese language setting without changing guest locale.
+
+Configuration forms and TOML preview use the same shared model as the CLI. Drafts
+are retained separately for each environment. **Check and Save** validates the
+whole batch and shows its exact diff before atomically saving `env.toml` for the
+next start. A running environment keeps running. Concurrent external edits cause
+a reload/review prompt, preserving the draft. Saving a guest-sourced profile
+explicitly creates a host profile; cached `effective.toml` is never treated as
+an independently editable source. The external-editor button uses your Mac's
+registered TOML editor.
+
+The creation wizard supports Alpine, Debian with daily/development/minimal tool
+presets and optional systemd, the Android adapter package, custom ARM64 rootfs,
+TOML profiles, and backups. Installing an image streams output before completion
+and does not prevent managing other environments. Imported profiles get a fresh
+UUID; imported TOML does not grant host command or shared-directory access.
+A custom-image template needs `image.source` to locate its rootfs. An installed
+profile without that source can instead be paired with `--rootfs` in the CLI.
+
+The permission page separates requested guest capabilities from independent Mac
+grants. Shared-folder TOML contains aliases and guest paths; actual host paths
+remain in this Mac's grants. Removing a mount is a draft change; revoke the grant
+after saving removal. Network mode defaults to host; bridge mode selects a
+Trames-owned network and can publish ports. Configuration, grants, and login
+startup are distinct actions.
+
+Every new terminal uses an independent session in the selected environment. The
+overview can reattach detached terminals; the CLI equivalent opens Terminal with
+`trames env terminal NAME --session ID`. Closing the manager leaves running
+environments and their sessions alive.
+
+The manager is a native AppKit client of the existing cold CLI. It adds no guest
+coordinator, polling loop, packet service or alternate file-transfer data path.
+New form fields/capabilities are described in the cold manager model. See the
+[manager architecture](../architecture/mac-manager.md) for extension boundaries.
+
 ## Linux desktop dependencies
 
 Desktop applications use their environment's own D-Bus, fonts and graphics

@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-15",
+  "product": "trames-mac Dev 1.5.5",
+  "runtime_revision": "60338f564cea811450a743e1a613e2135cbeef6d",
+  "scope": "Native Mac manager and cold environment management only; runtime/iPad unchanged",
+  "local_ci": {
+    "workflow": ".github/workflows/macos.yml",
+    "job": "build",
+    "passed_steps": 13,
+    "method": "Full workflow, then affected-check refresh after final native UI corrections; unchanged packaging checks reused",
+    "rust_tests_passed": 35,
+    "hardware_tests_ignored_by_workflow": 82,
+    "manager_model_tests_passed": 5,
+    "native_static_archive_and_bundle_tests": "passed"
+  },
+  "integration": {
+    "status": "passed",
+    "simultaneous_creation": true,
+    "profile_fresh_identity": true,
+    "live_next_start_configuration": true,
+    "grant_separation": true,
+    "stale_revision": true,
+    "atomic_validation": true,
+    "bridge_validation": true,
+    "session_launcher_upgrade": true
+  },
+  "ui_automation": {
+    "fixture": "isolated TRAMES_HOME with mock metadata and official Alpine ARM64 rootfs",
+    "created_custom_rootfs": "passed; live Importing output observed before exit",
+    "save_diff": "passed; auto to 4GiB saved through the native review sheet",
+    "per_environment_drafts": "passed; preserved across switching environments",
+    "external_edit_conflict": "passed; external 6GiB change rejected old 8GiB draft, reload retained draft, discard showed 6GiB",
+    "network": "passed; internal Trames network, bridge selection, port editor, exact save diff",
+    "permission_separation": "passed; requested clipboard remained independently denied after unchecked creation grant",
+    "installed_dev": "passed; embedded native driver, real existing registry rendered, selected-row navigation verified",
+    "localization": "English/Chinese resource parity and plist syntax passed, 340 keys; Chinese native UI exercised"
+  },
+  "deployment": {
+    "channel": "Dev",
+    "stable": "not replaced or restarted",
+    "existing_guests": "not stopped or reconfigured",
+    "free_disk_gib_after_validation": 31
+  },
+  "boundaries": [
+    "No coordinator or new guest service thread",
+    "Main-queue output and vnode notifications; no polling",
+    "Next-start configuration does not acquire the running guest lifetime lock",
+    "Host grants remain separate from portable TOML",
+    "Shared files retain original hostfs path"
+  ]
+}

@@ -8,8 +8,15 @@ xcrun clang -fobjc-arc -fblocks -Wall -Wextra -Werror -framework Foundation -fra
   tests/native/task-stream.m crates/trames-mac/src/task-stream.m -o "$temporary/task-stream-test"
 "$temporary/task-stream-test"
 
+# Match the production static-archive linkage, including Objective-C categories.
+# Native inputs: crates/trames-mac/src/manager.m crates/trames-mac/src/manager-ui.h
+# crates/trames-mac/src/manager-actions.m crates/trames-mac/src/localization.h
+for unit in manager manager-actions task-stream; do
+  xcrun clang -c -fobjc-arc -fblocks -Wall -Wextra -Werror "crates/trames-mac/src/$unit.m" -o "$temporary/$unit.o"
+done
+xcrun ar -rcs "$temporary/libmanager.a" "$temporary/manager.o" "$temporary/manager-actions.o" "$temporary/task-stream.o"
 xcrun clang -fobjc-arc -fblocks -Wall -Wextra -Werror -framework AppKit -framework Foundation -framework CoreFoundation \
-  tests/native/manager-progress.m crates/trames-mac/src/manager.m crates/trames-mac/src/task-stream.m -o "$temporary/manager-progress-test"
+  tests/native/manager-progress.m "$temporary/libmanager.a" -o "$temporary/manager-progress-test"
 "$temporary/manager-progress-test"
 
 # Exercise the actual bundle layout: Finder's entry differs from the CLI binary.

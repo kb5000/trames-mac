@@ -196,6 +196,9 @@ pub fn attach(root: &Path, name: &str, args: &[String]) -> Result<u8> {
     super::console::attach(&environments::console_socket(root, name)?, id)?;
     Ok(0)
 }
+pub(super) fn login_enabled(root: &Path, uuid: &str) -> bool {
+    agent(root, uuid).is_ok_and(|p| p.is_file())
+}
 pub fn autostart(root: &Path, name: &str, value: &str) -> Result<()> {
     let identity = environments::identity(root, name)?;
     let name = identity.as_str();

@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Product environment registry. Guest I/O never enters this management path.
+#[path = "manager_model.rs"]
+mod manager_model;
+pub fn manager(args: &[String]) -> Result<u8> {
+    manager_model::dispatch(args)
+}
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -266,6 +271,13 @@ pub(super) fn directory(r: &Path, n: &str) -> Result<PathBuf> {
     name(n)?;
     for entry in fs::read_dir(r.join("environments"))? {
         let path = entry?.path();
+        // Unpublished staging directories are never registered identities.
+        if path
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().starts_with('.'))
+        {
+            continue;
+        }
         let file = path.join("instance.toml");
         if file.is_file() {
             let i: Instance = model::decode(&fs::read_to_string(file)?)?;
@@ -554,6 +566,14 @@ fn publish(stage: &Path, dir: &Path) -> Result<()> {
     File::open(dir.parent().unwrap())?.sync_all()?;
     Ok(())
 }
+// Hold the registry lock only for publication, not downloads or guest setup.
+fn publish_environment(r: &Path, name: &str, stage: &Path, dir: &Path) -> Result<()> {
+    let _metadata = metadata_lock(r)?;
+    if directory(r, name)?.exists() {
+        return Err("environment name was registered while the image was being prepared".into());
+    }
+    publish(stage, dir)
+}
 /// Cold optional-image download; execution workers never use this path.
 fn android_images(r: &Path, archive: &Path) -> Result<Option<PathBuf>> {
     let Some(plan) = trames_distro::android_package::plan(archive)? else {
@@ -739,7 +759,7 @@ fn create(r: &Path, n: &str, mut c: Config, options: Create<'_>) -> Result<()> {
     super::packages::install(&stage.0.join("store"), cpus(&c)?, &backend(&c)?, packages)?;
     provision_init(&stage.0.join("store"), &c)?;
     register(&stage.0, &c, explicit)?;
-    publish(&stage.0, &dir)?;
+    publish_environment(r, n, &stage.0, &dir)?;
     println!("Created {n} ({})", c.image.distribution);
     Ok(())
 }
@@ -874,19 +894,41 @@ pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
 }
-fn terminal(r: &Path, n: &str) -> Result<()> {
+fn terminal(r: &Path, n: &str, args: &[String]) -> Result<()> {
+    let session = match args {
+        [] => None,
+        [flag, id] if flag == "--session" => {
+            let id = id.parse::<u64>()?;
+            if id == 0 {
+                return Err("session ID must be positive".into());
+            }
+            Some(id.to_string())
+        }
+        _ => return Err("usage: env terminal NAME [--session ID]".into()),
+    };
     let c = load(&directory(r, n)?)?;
     if c.environment.kind == trames_distro::boot::Target::Android {
+        if session.is_some() {
+            return Err("Android uses a desktop rather than terminal sessions".into());
+        }
         return super::background::start(r, n);
     }
     let launchers = r.join("launchers");
     private_dir(&launchers)?;
-    let path = launchers.join(format!("{n}.command"));
+    let path = launchers.join(format!(
+        "{n}{}.command",
+        session
+            .as_ref()
+            .map_or(String::new(), |id| format!("-{id}"))
+    ));
     let text = format!(
-        "#!/bin/sh\nexport TRAMES_HOME={}\nexec {} -e {} shell\n",
+        "#!/bin/sh\nexport TRAMES_HOME={}\nexec {} -e {} {}\n",
         shell_quote(&r.to_string_lossy()),
         shell_quote(&std::env::current_exe()?.to_string_lossy()),
-        shell_quote(n)
+        shell_quote(n),
+        session
+            .as_ref()
+            .map_or("shell".into(), |id| format!("session attach {id}"))
     );
     atomic_write(&path, text.as_bytes())?;
     use std::os::unix::fs::PermissionsExt;
@@ -931,7 +973,7 @@ struct Row {
     config: Option<Config>,
     error: Option<String>,
 }
-fn list(r: &Path, format: &str) -> Result<()> {
+fn rows(r: &Path) -> Result<Vec<Row>> {
     let mut rows = vec![];
     for entry in fs::read_dir(r.join("environments"))? {
         let e = entry?;
@@ -963,6 +1005,10 @@ fn list(r: &Path, format: &str) -> Result<()> {
         }
     }
     rows.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(rows)
+}
+fn list(r: &Path, format: &str) -> Result<()> {
+    let rows = rows(r)?;
     if format == "--json" {
         println!("{}", serde_json::to_string_pretty(&rows)?);
     } else if matches!(format, "-q" | "--quiet") {
@@ -1225,9 +1271,14 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         let (mut archive, mut custom, mut expected, mut profile, mut distro) =
             (None, None, None, None, None);
         let mut packages = None;
+        let mut fresh_identity = false;
         let mut settings = vec![];
         let mut it = args[if positional.is_some() { 2 } else { 1 }..].iter();
         while let Some(k) = it.next() {
+            if k == "--new-identity" {
+                fresh_identity = true;
+                continue;
+            }
             if k == "--" {
                 settings.push(k.clone());
                 settings.extend(it.cloned());
@@ -1254,7 +1305,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
             c.environment.name = n.clone();
         }
         name(&c.environment.name)?;
-        if c.environment.uuid.is_empty() {
+        if fresh_identity || c.environment.uuid.is_empty() {
             c.environment.uuid = model::uuid()?;
         }
         apply_settings(&mut c, &settings)?;
@@ -1264,6 +1315,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         let expected = expected.or((!sha.is_empty()).then_some(sha.as_str()));
         let n = c.environment.name.clone();
         let explicit = profile.is_some() || !settings.is_empty();
+        drop(_metadata);
         create(
             &r,
             &n,
@@ -1350,7 +1402,7 @@ pub fn dispatch(args: &[String]) -> Result<u8> {
         "attach" => return super::background::attach(&r, n, &args[2..]),
         "autostart" => super::background::autostart(&r, n, args.get(2).ok_or("expected on/off")?)?,
         "status" => super::background::status(&r, n)?,
-        "terminal" => terminal(&r, n)?,
+        "terminal" => terminal(&r, n, &args[2..])?,
         "stop" => stop(&r, n)?,
         "configure" => configure(&r, n, &args[2..])?,
         "backup" | "export" => {

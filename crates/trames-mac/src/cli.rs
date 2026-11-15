@@ -66,6 +66,9 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
         env::stop(&r, n)?;
         return Ok(0);
     }
+    if op == "_manager" {
+        return env::manager(&args[1..]);
+    }
     if op == "config" {
         return env::settings(selected.as_deref(), &args[1..]);
     }

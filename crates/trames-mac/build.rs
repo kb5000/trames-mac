@@ -12,6 +12,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src/window-input.m");
     println!("cargo:rerun-if-changed=src/window-clipboard.m");
     println!("cargo:rerun-if-changed=src/manager.m");
+    println!("cargo:rerun-if-changed=src/manager-ui.h");
+    println!("cargo:rerun-if-changed=src/manager-actions.m");
     println!("cargo:rerun-if-changed=src/task-stream.m");
     println!("cargo:rerun-if-changed=src/task-stream.h");
     println!("cargo:rerun-if-changed=src/localization.h");
@@ -25,6 +27,7 @@ fn main() {
         .file("src/window-input.m")
         .file("src/window-clipboard.m")
         .file("src/manager.m")
+        .file("src/manager-actions.m")
         .file("src/task-stream.m")
         .flag("-fobjc-arc")
         .flag("-fblocks")
