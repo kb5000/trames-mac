@@ -36,7 +36,10 @@ def main():
     parser.add_argument('--repeats', type=int, default=3)
     parser.add_argument('--runtime', type=int, default=5)
     parser.add_argument('--keep-data', action='store_true')
+    parser.add_argument('--cases', nargs='+', choices=[case[0] for case in CASES],
+                        help='Run only affected workloads; default is the full matrix')
     args = parser.parse_args()
+    cases = [case for case in CASES if not args.cases or case[0] in args.cases]
     base = args.output.resolve()
     base.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(base).free < 8 * 1024**3:
@@ -95,7 +98,8 @@ def main():
                   parameters=dict(engine='psync', depth=1, runtime=args.runtime,
                                   ramp_seconds=1, repeats=args.repeats, kb_base=1000,
                                   single_file_mib=256, parallel_file_mib=64,
-                                  jobs=[1, 4], clock='clock_gettime'),
+                                  jobs=sorted({case[3] for case in cases}), clock='clock_gettime',
+                                  cases=[case[0] for case in cases]),
                   versions={}, hashes={}, direct_probes={}, records=records)
     for label, path in [('native', args.native), ('guest', args.guest), ('runner', args.runner)]:
         report['hashes'][label] = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -127,6 +131,8 @@ def main():
     try:
         for variant in paths:
             for count, size, stem in [(1, '256MiB', 'single'), (4, '64MiB', 'parallel')]:
+                if count == 4 and not any(case[3] == 4 for case in cases):
+                    continue
                 execute(variant, 'prepare-' + stem,
                         ['--filename_format=' + stem + '.$jobnum', '--rw=write', '--bs=1MiB',
                          '--size=' + size, '--numjobs=' + str(count), '--end_fsync=1'])
@@ -135,7 +141,7 @@ def main():
                 ['--filename=single.0', '--rw=read', '--bs=4KiB', '--size=1MiB',
                  '--io_size=1MiB', '--numjobs=1', '--direct=1'], allow_error=True)
         for repeat in range(1, args.repeats + 1):
-            jobs = [(variant, case) for variant in paths for case in CASES]
+            jobs = [(variant, case) for variant in paths for case in cases]
             random.Random(20261115 + repeat).shuffle(jobs)
             for variant, (case, rw, bs, count, extra) in jobs:
                 if shutil.disk_usage(base).free < 6 * 1024**3:
@@ -161,7 +167,7 @@ def main():
                 (base / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
                 print(json.dumps(row), flush=True)
         report['medians'] = []
-        for case, *_ in CASES:
+        for case, *_ in cases:
             for variant in paths:
                 rows = [row for row in records if row['case'] == case and row['variant'] == variant]
                 report['medians'].append(dict(variant=variant, case=case, **{
