@@ -76,6 +76,23 @@ def main():
             assert not snapshot()['grants']['host_exec']
             assert 'changed outside' in patch(running, {'resources.memory': '8GiB'}, ok=False)
             current = snapshot()
+            # Native forms must send real booleans, including switch selections.
+            # Both states round-trip through the same strict TOML model.
+            for enabled in (False, True):
+                patch(current, {key: enabled for key in (
+                    'display.windows', 'components.audio', 'components.audio_input',
+                    'components.vulkan', 'components.vaapi')})
+                current = snapshot()
+                for key in ('audio', 'audio_input', 'vulkan', 'vaapi'):
+                    assert current['config']['components'][key] is enabled
+                assert current['config']['display']['windows'] is enabled
+            for setting in ('off', 'on'):
+                run('_manager', 'permission', current['config']['environment']['uuid'],
+                    'clipboard', setting, current['revision'])
+                current = snapshot()
+                assert current['config']['interop']['clipboard']['enabled'] is (setting == 'on')
+                assert current['grants']['clipboard'] is (setting == 'on')
+            assert 'PERMISSIONS_LIVE' in run('-e', 'first', 'exec', '--', '/bin/echo', 'PERMISSIONS_LIVE')
             saved = Path(current['profile']).read_bytes()
             patch(current, {'resources.cpus': 0}, ok=False)
             assert Path(current['profile']).read_bytes() == saved
@@ -108,7 +125,8 @@ def main():
     (args.output / 'summary.json').write_text(json.dumps(dict(
         status='passed', simultaneous_creation=True, profile_fresh_identity=True,
         live_next_start_configuration=True, grant_separation=True, stale_revision=True,
-        atomic_validation=True, bridge_validation=True, session_launcher_upgrade=True), indent=2) + '\n')
+        atomic_validation=True, bridge_validation=True, session_launcher_upgrade=True,
+        boolean_roundtrip=True, combined_permissions=True), indent=2) + '\n')
     print('PASS: manager model, concurrent creation, live guest save, grants, conflicts and session launcher upgrade')
 
 

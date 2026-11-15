@@ -346,3 +346,9 @@
 "all" = "all";
 
 "Dismiss Failed Task" = "Dismiss Failed Task";
+
+// Manager form controls.
+"All cores" = "All cores";
+"No additional limit" = "No additional limit";
+"Automatic (shared with Mac)" = "Automatic (shared with Mac)";
+"Host permissions" = "Host permissions";

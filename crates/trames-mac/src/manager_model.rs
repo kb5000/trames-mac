@@ -20,7 +20,7 @@ fn fields() -> Vec<Value> {
             "resources.cpus",
             "CPU cores",
             "Compute",
-            "text",
+            "resource",
             &[],
             "all, or a positive core count",
         ),
@@ -28,7 +28,7 @@ fn fields() -> Vec<Value> {
             "resources.memory",
             "Memory",
             "Compute",
-            "text",
+            "resource",
             &[],
             "auto shares host memory; a size is a demand-backed limit",
         ),
@@ -36,7 +36,7 @@ fn fields() -> Vec<Value> {
             "resources.memory_limit",
             "Optional hard limit",
             "Compute",
-            "optional",
+            "resource",
             &[],
             "Leave empty for no additional limit",
         ),
@@ -269,6 +269,48 @@ fn prepare(dir: &Path, request: &Patch) -> Result<(Config, Value)> {
     let result = json!({"version":1,"toml":model::encode(&after)?,"changes":changes});
     Ok((after, result))
 }
+fn permission(dir: &Path, key: &str, enabled: bool, base: &str) -> Result<Value> {
+    if revision(dir)? != base {
+        return Err("Configuration changed outside the manager. Reload before saving; your draft was preserved.".into());
+    }
+    if !capabilities().iter().any(|cap| cap["key"] == key) {
+        return Err("unknown host capability".into());
+    }
+    let mut c = load(dir)?;
+    let mut g = grants(dir, &c)?;
+    set_config(
+        &mut c,
+        &format!("interop.{key}.enabled"),
+        if enabled { "true" } else { "false" },
+    )?;
+    validate(&c)?;
+    *match key {
+        "clipboard" => &mut g.clipboard,
+        "files" => &mut g.files,
+        "mounts" => &mut g.mounts,
+        "ports" => &mut g.ports,
+        "host_ui" => &mut g.host_ui,
+        "host_cli" => &mut g.host_cli,
+        "host_exec" => &mut g.host_exec,
+        _ => unreachable!(),
+    } = enabled;
+    let authorization = model::encode(&model::Authorization {
+        environment_uuid: c.environment.uuid.clone(),
+        grant: g,
+    })?;
+    // These remain separate files, not an all-or-nothing transaction. A new
+    // grant is written only after saving its request; disabling revokes first.
+    // Publication/durability errors are reported; refresh and retry reconcile
+    // any half that was already published.
+    if enabled {
+        save(dir, &c)?;
+    }
+    atomic_write(&dir.join("grants.toml"), authorization.as_bytes())?;
+    if !enabled {
+        save(dir, &c)?;
+    }
+    inspect(dir)
+}
 pub(super) fn dispatch(args: &[String]) -> Result<u8> {
     let r = root()?;
     let response = match args
@@ -278,6 +320,10 @@ pub(super) fn dispatch(args: &[String]) -> Result<u8> {
         .as_slice()
     {
         ["snapshot"] => snapshot(&r)?,
+        ["permission", id, key, setting @ ("on" | "off"), base] => {
+            let _guard = metadata_lock(&r)?;
+            permission(&directory(&r, id)?, key, *setting == "on", base)?
+        }
         [op @ ("validate" | "save"), id] => {
             let mut bytes = Vec::new();
             io::stdin().take(1024 * 1024 + 1).read_to_end(&mut bytes)?;
@@ -297,7 +343,7 @@ pub(super) fn dispatch(args: &[String]) -> Result<u8> {
         }
         _ => {
             return Err(
-                "usage: _manager snapshot | validate UUID | save UUID (JSON on stdin)".into(),
+                "usage: _manager snapshot | validate UUID | save UUID (JSON on stdin) | permission UUID CAPABILITY on|off REVISION".into(),
             )
         }
     };
@@ -389,6 +435,7 @@ mod tests {
                 ("network.mode".into(), json!("bridge")),
             ]),
             BTreeMap::from([("environment.uuid".into(), json!("other"))]),
+            BTreeMap::from([("components.audio".into(), json!(0))]),
         ] {
             assert!(prepare(
                 &p,
@@ -427,5 +474,52 @@ mod tests {
         let value = snapshot(&f.0).unwrap();
         assert!(value["environments"][0]["error"].is_string());
         assert!(value["environments"][0]["path"].is_string());
+    }
+    #[test]
+    fn one_permission_decision_updates_only_its_request_and_local_grant() {
+        let f = Fixture::new();
+        let p = f.env();
+        let c = load(&p).unwrap();
+        let _running = lock(&f.0, &c.environment.uuid).unwrap();
+        for cap in capabilities() {
+            let key = cap["key"].as_str().unwrap();
+            let enabled = permission(&p, key, true, &revision(&p).unwrap()).unwrap();
+            assert_eq!(enabled["config"]["interop"][key]["enabled"], true);
+            assert_eq!(enabled["grants"][key], true);
+            let denied = permission(&p, key, false, enabled["revision"].as_str().unwrap()).unwrap();
+            assert_eq!(denied["config"]["interop"][key]["enabled"], false);
+            assert_eq!(denied["grants"][key], false);
+        }
+        let profile = fs::read(p.join("env.toml")).unwrap();
+        let authorization = fs::read(p.join("grants.toml")).unwrap();
+        for (key, base) in [("clipboard", "stale"), ("unknown", &revision(&p).unwrap())] {
+            assert!(permission(&p, key, true, base).is_err());
+            assert_eq!(fs::read(p.join("env.toml")).unwrap(), profile);
+            assert_eq!(fs::read(p.join("grants.toml")).unwrap(), authorization);
+        }
+    }
+    #[test]
+    fn interrupted_permission_changes_keep_denied_access_denied() {
+        let f = Fixture::new();
+        let p = f.env();
+        // Prevent publication of env.toml without altering its existing contents.
+        let blocker = p.join(format!("env.tmp-{}", std::process::id()));
+        fs::write(&blocker, b"publication blocked").unwrap();
+        assert!(permission(&p, "host_exec", true, &revision(&p).unwrap()).is_err());
+        let denied = inspect(&p).unwrap();
+        assert_eq!(denied["grants"]["host_exec"], false);
+        fs::remove_file(&blocker).unwrap();
+        let enabled = permission(&p, "host_exec", true, &revision(&p).unwrap()).unwrap();
+        fs::write(&blocker, b"publication blocked").unwrap();
+        assert!(permission(
+            &p,
+            "host_exec",
+            false,
+            enabled["revision"].as_str().unwrap()
+        )
+        .is_err());
+        assert_eq!(inspect(&p).unwrap()["grants"]["host_exec"], false);
+        fs::remove_file(blocker).unwrap();
+        permission(&p, "host_exec", false, &revision(&p).unwrap()).unwrap();
     }
 }

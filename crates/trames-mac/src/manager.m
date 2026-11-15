@@ -54,20 +54,51 @@ NSTextField *TMLabel(NSString *text,CGFloat size,BOOL secondary) {
 }
 NSStackView *TMStack(NSArray<NSView *> *views,BOOL vertical) {
     NSStackView *v=[TMStackView stackViewWithViews:views];v.orientation=vertical?NSUserInterfaceLayoutOrientationVertical:NSUserInterfaceLayoutOrientationHorizontal;
-    v.spacing=10;v.alignment=vertical?NSLayoutAttributeLeading:NSLayoutAttributeCenterY;return v;
+    v.distribution=NSStackViewDistributionFill;v.spacing=10;v.alignment=vertical?NSLayoutAttributeLeading:NSLayoutAttributeCenterY;return v;
 }
 TMButton *TMButtonMake(NSString *title,id target,SEL action,id payload) {
     TMButton *b=[TMButton buttonWithTitle:T(title) target:target action:action];b.bezelStyle=NSBezelStyleRounded;b.payload=payload;return b;
 }
 static NSView *spacer(void) {NSView *v=[NSView new];[v setContentHuggingPriority:1 forOrientation:NSLayoutConstraintOrientationHorizontal];return v;}
-static void pin(NSView *child,NSView *parent,CGFloat inset) {
+void TMPin(NSView *child,NSView *parent,CGFloat inset) {
     child.translatesAutoresizingMaskIntoConstraints=NO;[parent addSubview:child];
     [NSLayoutConstraint activateConstraints:@[[child.leadingAnchor constraintEqualToAnchor:parent.leadingAnchor constant:inset],[child.trailingAnchor constraintEqualToAnchor:parent.trailingAnchor constant:-inset],[child.topAnchor constraintEqualToAnchor:parent.topAnchor constant:inset],[child.bottomAnchor constraintEqualToAnchor:parent.bottomAnchor constant:-inset]]];
+}
+void TMConfigureScroll(NSScrollView *scroll) {
+    scroll.hasVerticalScroller=YES;scroll.hasHorizontalScroller=NO;
+    scroll.scrollerStyle=NSScrollerStyleOverlay;scroll.autohidesScrollers=YES;
+    scroll.verticalScroller.controlSize=NSControlSizeSmall;scroll.drawsBackground=NO;
+}
+NSComboBox *TMResourceCombo(NSString *path,id value) {
+    NSComboBox *combo=[NSComboBox new];combo.identifier=path;combo.editable=YES;combo.completes=YES;
+    NSMutableArray *options=[NSMutableArray new];NSString *display=TMString(value);
+    if([path isEqual:@"resources.cpus"]){
+        [options addObject:T(@"All cores")];for(NSUInteger i=1;i<=NSProcessInfo.processInfo.activeProcessorCount;i++)[options addObject:[@(i) stringValue]];
+        if([display isEqual:@"all"])display=T(@"All cores");
+    }else{
+        BOOL limit=[path isEqual:@"resources.memory_limit"];
+        [options addObject:T(limit?@"No additional limit":@"Automatic (shared with Mac)")];
+        [options addObjectsFromArray:@[@"1GiB",@"2GiB",@"4GiB",@"8GiB",@"16GiB",@"32GiB",@"64GiB"]];
+        if((limit && value==NSNull.null)||(!limit && [display isEqual:@"auto"]))display=options[0];
+    }
+    [combo addItemsWithObjectValues:options];combo.stringValue=display;
+    combo.numberOfVisibleItems=MIN(10,options.count);[combo.widthAnchor constraintEqualToConstant:210].active=YES;return combo;
+}
+id TMResourceValue(NSComboBox *combo) {
+    NSString *text=[combo.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    if([combo.identifier isEqual:@"resources.cpus"]){
+        if([text isEqual:T(@"All cores")] || [text isEqual:@"all"])return @"all";
+        NSScanner *scan=[NSScanner scannerWithString:text];long long n;if([scan scanLongLong:&n]&&scan.isAtEnd)return @(n);
+    }else{
+        if([text isEqual:T(@"Automatic (shared with Mac)")])return @"auto";
+        if([combo.identifier isEqual:@"resources.memory_limit"]&&(!text.length || [text isEqual:T(@"No additional limit")]))return NSNull.null;
+    }
+    return text;
 }
 NSView *TMGroup(NSArray<NSView *> *rows) {
     TMPanel *panel=[TMPanel new];NSStackView *stack=TMStack(@[],YES);stack.spacing=0;stack.alignment=NSLayoutAttributeWidth;
     for(NSView *row in rows){if(stack.arrangedSubviews.count){NSBox *line=[NSBox new];line.boxType=NSBoxSeparator;[stack addArrangedSubview:line];}[stack addArrangedSubview:row];}
-    pin(stack,panel,1);return panel;
+    TMPin(stack,panel,1);return panel;
 }
 NSView *TMRow(NSString *title,NSString *help,NSView *value) {
     NSTextField *label=TMLabel(T(title),13,NO);NSStackView *left=TMStack(@[label],YES);left.spacing=3;
@@ -103,30 +134,30 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     NSMenuItem *edit=[NSMenuItem new];[menu addItem:edit];edit.submenu=[[NSMenu alloc]initWithTitle:T(@"Edit")];
     NSArray *names=@[@"Undo",@"Redo",@"Cut",@"Copy",@"Paste",@"Select All"];SEL sels[]={@selector(undo:),@selector(redo:),@selector(cut:),@selector(copy:),@selector(paste:),@selector(selectAll:)};NSArray *keys=@[@"z",@"Z",@"x",@"c",@"v",@"a"];
     for(NSUInteger i=0;i<names.count;i++)[edit.submenu addItemWithTitle:T(names[i]) action:sels[i] keyEquivalent:keys[i]];NSApp.mainMenu=menu;
-    self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,1040,760) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];self.window.title=productName();self.window.minSize=NSMakeSize(860,610);self.window.releasedWhenClosed=NO;[self.window center];
+    self.window=[[NSWindow alloc]initWithContentRect:NSMakeRect(0,0,1120,760) styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable backing:NSBackingStoreBuffered defer:NO];self.window.title=productName();self.window.minSize=NSMakeSize(960,610);self.window.releasedWhenClosed=NO;[self.window center];
     NSSplitView *split=[[NSSplitView alloc]initWithFrame:self.window.contentView.bounds];split.vertical=YES;split.dividerStyle=NSSplitViewDividerStyleThin;split.delegate=self;split.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;[self.window.contentView addSubview:split];
-    NSVisualEffectView *side=[[NSVisualEffectView alloc]initWithFrame:NSMakeRect(0,0,210,760)];side.material=NSVisualEffectMaterialSidebar;side.blendingMode=NSVisualEffectBlendingModeBehindWindow;
-    NSStackView *sidebar=TMStack(@[],YES);sidebar.alignment=NSLayoutAttributeWidth;sidebar.edgeInsets=NSEdgeInsetsMake(18,12,14,12);sidebar.spacing=12;pin(sidebar,side,0);
+    NSVisualEffectView *side=[[NSVisualEffectView alloc]initWithFrame:NSMakeRect(0,0,280,760)];side.material=NSVisualEffectMaterialSidebar;side.blendingMode=NSVisualEffectBlendingModeBehindWindow;
+    NSStackView *sidebar=TMStack(@[],YES);sidebar.alignment=NSLayoutAttributeWidth;sidebar.edgeInsets=NSEdgeInsetsMake(18,12,14,12);sidebar.spacing=12;TMPin(sidebar,side,0);
     NSStackView *brand=TMStack(@[],NO);if(icon){NSImageView *image=[NSImageView imageViewWithImage:icon];[image.widthAnchor constraintEqualToConstant:28].active=YES;[image.heightAnchor constraintEqualToConstant:28].active=YES;[brand addArrangedSubview:image];}[brand addArrangedSubview:TMLabel(productName(),16,NO)];[sidebar addArrangedSubview:brand];
     [sidebar addArrangedSubview:TMLabel(T(@"Environments"),11,YES)];
-    self.table=[NSTableView new];NSTableColumn *column=[[NSTableColumn alloc]initWithIdentifier:@"environment"];[self.table addTableColumn:column];self.table.headerView=nil;self.table.rowHeight=60;self.table.backgroundColor=NSColor.clearColor;self.table.style=NSTableViewStyleSourceList;self.table.delegate=self;self.table.dataSource=self;self.table.allowsEmptySelection=NO;self.table.target=self;self.table.action=@selector(selectEnvironment:);
-    NSScrollView *list=[NSScrollView new];list.documentView=self.table;list.hasVerticalScroller=YES;list.drawsBackground=NO;[list.heightAnchor constraintGreaterThanOrEqualToConstant:140].active=YES;[sidebar addArrangedSubview:list];
+    self.table=[NSTableView new];NSTableColumn *column=[[NSTableColumn alloc]initWithIdentifier:@"environment"];column.width=250;column.minWidth=100;column.resizingMask=NSTableColumnAutoresizingMask;[self.table addTableColumn:column];self.table.columnAutoresizingStyle=NSTableViewLastColumnOnlyAutoresizingStyle;self.table.headerView=nil;self.table.rowHeight=60;self.table.backgroundColor=NSColor.clearColor;self.table.style=NSTableViewStyleSourceList;self.table.delegate=self;self.table.dataSource=self;self.table.allowsEmptySelection=NO;self.table.target=self;self.table.action=@selector(selectEnvironment:);
+    NSScrollView *list=[NSScrollView new];list.documentView=self.table;TMConfigureScroll(list);[list.heightAnchor constraintGreaterThanOrEqualToConstant:140].active=YES;[sidebar addArrangedSubview:list];
     [sidebar addArrangedSubview:TMButtonMake(@"New Environment…",self,@selector(create:),nil)];
     for(NSArray *item in @[@[@"Networks",@"networks"],@[@"Trames Settings",@"settings"]])[sidebar addArrangedSubview:TMButtonMake(item[0],self,@selector(globalPage:),item[1])];
     [sidebar addArrangedSubview:TMButtonMake(@"Refresh",self,@selector(refresh:),nil)];
-    self.sidebarStatus=TMLabel(T(@"Loading environments…"),11,YES);[sidebar addArrangedSubview:self.sidebarStatus];[sidebar addArrangedSubview:TMLabel(T(@"Closing the manager leaves environments running."),11,YES)];
-    NSView *main=[[TMBackground alloc]initWithFrame:NSMakeRect(211,0,829,760)];NSStackView *body=TMStack(@[],YES);body.alignment=NSLayoutAttributeWidth;body.spacing=0;pin(body,main,0);
+    self.sidebarStatus=TMLabel(T(@"Loading environments…"),11,YES);[sidebar addArrangedSubview:self.sidebarStatus];
+    NSView *main=[[TMBackground alloc]initWithFrame:NSMakeRect(281,0,839,760)];NSStackView *body=TMStack(@[],YES);body.alignment=NSLayoutAttributeWidth;body.spacing=0;TMPin(body,main,0);
     self.header=TMStack(@[],YES);self.header.alignment=NSLayoutAttributeWidth;self.header.edgeInsets=NSEdgeInsetsMake(20,24,6,24);[body addArrangedSubview:self.header];
     self.tabs=[NSSegmentedControl segmentedControlWithLabels:@[T(@"Overview"),T(@"Configuration"),T(@"Files and Sharing"),T(@"Host Interop"),T(@"Activity")] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(tabChanged:)];self.tabs.selectedSegment=0;
-    NSView *tabContainer=[NSView new];NSStackView *tabRow=TMStack(@[self.tabs,spacer()],NO);tabRow.edgeInsets=NSEdgeInsetsMake(16,24,12,24);pin(tabRow,tabContainer,0);[body addArrangedSubview:tabContainer];
-    self.scroll=[NSScrollView new];self.scroll.contentView=[TMTopClipView new];self.scroll.hasVerticalScroller=YES;self.scroll.drawsBackground=NO;self.content=TMStack(@[],YES);self.content.spacing=20;self.content.alignment=NSLayoutAttributeWidth;self.content.edgeInsets=NSEdgeInsetsMake(10,24,24,24);self.content.translatesAutoresizingMaskIntoConstraints=NO;self.scroll.documentView=self.content;[self.content.widthAnchor constraintEqualToAnchor:self.scroll.contentView.widthAnchor].active=YES;[body addArrangedSubview:self.scroll];[self.scroll.heightAnchor constraintGreaterThanOrEqualToConstant:300].active=YES;
+    NSView *tabContainer=[NSView new];NSStackView *tabRow=TMStack(@[self.tabs,spacer()],NO);tabRow.edgeInsets=NSEdgeInsetsMake(16,24,12,24);TMPin(tabRow,tabContainer,0);[body addArrangedSubview:tabContainer];
+    self.scroll=[NSScrollView new];self.scroll.contentView=[TMTopClipView new];TMConfigureScroll(self.scroll);self.content=TMStack(@[],YES);self.content.spacing=20;self.content.alignment=NSLayoutAttributeWidth;self.content.edgeInsets=NSEdgeInsetsMake(10,24,24,24);self.content.translatesAutoresizingMaskIntoConstraints=NO;self.scroll.documentView=self.content;[self.content.widthAnchor constraintEqualToAnchor:self.scroll.contentView.widthAnchor].active=YES;[body addArrangedSubview:self.scroll];[self.scroll.heightAnchor constraintGreaterThanOrEqualToConstant:300].active=YES;
     self.status=TMLabel(@"",11,YES);self.saveButton=TMButtonMake(@"Check and Save",self,@selector(saveConfiguration:),nil);self.saveButton.keyEquivalent=@"s";self.discardButton=TMButtonMake(@"Discard",self,@selector(discardConfiguration:),nil);
     NSStackView *footer=TMStack(@[self.status,spacer(),self.discardButton,self.saveButton],NO);footer.edgeInsets=NSEdgeInsetsMake(10,20,12,20);[body addArrangedSubview:footer];
-    [split addSubview:side];[split addSubview:main];[split setPosition:210 ofDividerAtIndex:0];
+    [split addSubview:side];[split addSubview:main];[split setPosition:280 ofDividerAtIndex:0];
     [self.window makeKeyAndOrderFront:nil];[NSApp activate];[self render];[self refresh:nil];
 }
-- (CGFloat)splitView:(NSSplitView *)v constrainMinCoordinate:(CGFloat)p ofSubviewAt:(NSInteger)i{(void)v;(void)p;(void)i;return 180;}
-- (CGFloat)splitView:(NSSplitView *)v constrainMaxCoordinate:(CGFloat)p ofSubviewAt:(NSInteger)i{(void)v;(void)p;(void)i;return 270;}
+- (CGFloat)splitView:(NSSplitView *)v constrainMinCoordinate:(CGFloat)p ofSubviewAt:(NSInteger)i{(void)v;(void)p;(void)i;return 250;}
+- (CGFloat)splitView:(NSSplitView *)v constrainMaxCoordinate:(CGFloat)p ofSubviewAt:(NSInteger)i{(void)v;(void)p;(void)i;return 380;}
 - (BOOL)splitView:(NSSplitView *)v shouldAdjustSizeOfSubview:(NSView *)s{ return s!=v.subviews.firstObject; }
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)table{(void)table;return self.rows.count;}
 - (NSView *)tableView:(NSTableView *)table viewForTableColumn:(NSTableColumn *)col row:(NSInteger)index {
@@ -134,9 +165,11 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     NSString *symbol=[TMValue(row,@"config.environment.type") isEqual:@"android"]?@"iphone":@"terminal";NSImageView *image=[NSImageView imageViewWithImage:[NSImage imageWithSystemSymbolName:symbol accessibilityDescription:nil]];
     [image.widthAnchor constraintEqualToConstant:23].active=YES;image.contentTintColor=NSColor.secondaryLabelColor;
     NSString *subtitle=systemName(row);if([row[@"name"] isEqual:TMValue(self.snapshot,@"global.default_environment")])subtitle=[T(@"Default") stringByAppendingFormat:@" · %@",subtitle];
-    NSStackView *names=TMStack(@[TMLabel(row[@"name"],13,NO),TMLabel(subtitle,11,YES)],YES);names.spacing=2;
-    NSTextField *dot=TMLabel(@"●",10,YES);dot.textColor=isRunning(row)?NSColor.systemGreenColor:NSColor.tertiaryLabelColor;
-    NSStackView *line=TMStack(@[image,names,spacer(),dot],NO);line.spacing=8;line.edgeInsets=NSEdgeInsetsMake(7,6,7,6);pin(line,cell,0);return cell;
+    NSTextField *name=TMLabel(row[@"name"],13,NO),*detail=TMLabel(subtitle,11,YES);
+    for(NSTextField *label in @[name,detail]){label.maximumNumberOfLines=1;label.lineBreakMode=NSLineBreakByTruncatingTail;[label setContentCompressionResistancePriority:250 forOrientation:NSLayoutConstraintOrientationHorizontal];}
+    NSStackView *names=TMStack(@[name,detail],YES);names.spacing=3;[names setContentCompressionResistancePriority:250 forOrientation:NSLayoutConstraintOrientationHorizontal];
+    NSTextField *dot=TMLabel(@"●",10,YES);[dot.widthAnchor constraintEqualToConstant:12].active=YES;dot.textColor=isRunning(row)?NSColor.systemGreenColor:NSColor.tertiaryLabelColor;
+    NSStackView *line=TMStack(@[image,names,spacer(),dot],NO);line.spacing=8;line.edgeInsets=NSEdgeInsetsMake(7,6,7,6);TMPin(line,cell,0);return cell;
 }
 - (NSString *)keyForRow:(NSDictionary *)row {id uuid=TMValue(row,@"config.environment.uuid");return [uuid isKindOfClass:NSString.class]&&[uuid length]?uuid:row[@"path"]?:row[@"name"];}
 - (NSDictionary *)selectedRow {for(NSDictionary *r in self.rows)if([[self keyForRow:r] isEqual:self.selectedKey])return r;return nil;}
@@ -236,12 +269,12 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
 - (void)updateFooter {
     BOOL dirty=[self draft].count && [self.page isEqual:@"env"];self.saveButton.hidden=!dirty;self.discardButton.hidden=!dirty;
     BOOL busy=[self hasWork:self.selectedKey];self.saveButton.enabled=!busy;
-    self.status.stringValue=dirty?T(@"Unsaved draft. Changes apply on the next start."):[self.pendingRestart containsObject:self.selectedKey]?T(@"Configuration saved. Applies on next start."):T(@"Closing the manager leaves environments running.");
+    self.status.stringValue=dirty?T(@"Unsaved draft. Changes apply on the next start."):[self.pendingRestart containsObject:self.selectedKey]?T(@"Configuration saved. Applies on next start."):@"";
 }
 - (void)render {
     if(!self.content)return;self.rendering=YES;self.log=nil;for(NSView *v in self.header.arrangedSubviews.copy){[self.header removeArrangedSubview:v];[v removeFromSuperview];}for(NSView *v in self.content.arrangedSubviews.copy){[self.content removeArrangedSubview:v];[v removeFromSuperview];}
     NSUInteger running=0;for(NSDictionary *r in self.rows)if(isRunning(r))running++;self.sidebarStatus.stringValue=[NSString stringWithFormat:T(@"%lu environments running"),(unsigned long)running];
-    self.tabs.superview.hidden=![self.page isEqual:@"env"];self.saveButton.hidden=YES;self.discardButton.hidden=YES;
+    self.tabs.superview.hidden=![self.page isEqual:@"env"];self.saveButton.hidden=YES;self.discardButton.hidden=YES;if(![self.page isEqual:@"env"])self.status.stringValue=@"";
     if([self.page isEqual:@"networks"]){[self renderNetworks];[self renderActiveTasks];}
     else if([self.page isEqual:@"settings"]){[self renderSettings];}
     else {NSDictionary *r=[self selectedRow];if(!r){[self heading:T(@"Your environments") subtitle:T(@"Create an environment from Linux, Android, a rootfs or a TOML profile.") actions:@[]];[self.content addArrangedSubview:TMButtonMake(@"New Environment…",self,@selector(create:),nil)];[self renderActiveTasks];}
@@ -288,17 +321,18 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
 - (void)showTOML:(id)sender{(void)sender;self.tabs.selectedSegment=1;[self render];[self displayTOML:nil];}
 - (void)renderConfiguration {
     NSDictionary *r=[self selectedRow];[self.content addArrangedSubview:TMLabel([r[@"source"] isEqual:@"host"]?r[@"profile"]:T(@"The guest profile is cached at last start. Saving creates an explicit host profile."),11,YES)];
-    [self.content addArrangedSubview:TMStack(@[TMButtonMake(@"View TOML",self,@selector(displayTOML:),nil),TMButtonMake(@"Open in Editor",self,@selector(externalEditor:),nil)],NO)];
+    [self.content addArrangedSubview:TMStack(@[TMButtonMake(@"View TOML",self,@selector(displayTOML:),nil),TMButtonMake(@"Open in Editor",self,@selector(externalEditor:),nil),spacer()],NO)];
     NSString *section=nil;NSMutableArray *group=[NSMutableArray new];
     for(NSDictionary *field in self.snapshot[@"fields"]){NSString *path=field[@"path"],*kind=field[@"kind"];
         if([TMValue(r,@"config.environment.type") isEqual:@"android"] && [path hasPrefix:@"session."])continue;
         if(![section isEqual:field[@"section"]] && group.count){[self section:section view:TMGroup(group)];group=[NSMutableArray new];}section=field[@"section"];
         id value=[self value:path];NSView *control=nil;
         if([kind isEqual:@"bool"]){NSButton *check=[NSButton checkboxWithTitle:@"" target:self action:@selector(fieldChanged:)];check.identifier=path;check.state=[value boolValue]?NSControlStateValueOn:NSControlStateValueOff;[check setAccessibilityLabel:T(field[@"title"])];control=check;}
+        else if([kind isEqual:@"resource"]){NSComboBox *combo=TMResourceCombo(path,value);combo.delegate=self;[combo setAccessibilityLabel:T(field[@"title"])];control=combo;}
         else if([@[@"choice",@"switch",@"network"] containsObject:kind]){
             NSPopUpButton *popup=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];popup.identifier=path;popup.target=self;popup.action=@selector(fieldChanged:);popup.menu.autoenablesItems=NO;
             NSArray *options=field[@"options"];if([kind isEqual:@"network"]){NSMutableArray *names=[NSMutableArray arrayWithObject:@""];for(NSDictionary *n in self.snapshot[@"networks"])[names addObject:n[@"name"]];options=names;}
-            for(NSString *option in options){[popup addItemWithTitle:T(option.length?option:@"Not selected")];popup.lastItem.representedObject=[kind isEqual:@"switch"]&&![option isEqual:@"auto"]?@([option isEqual:@"true"]):option;}
+            for(NSString *option in options){[popup addItemWithTitle:T(option.length?option:@"Not selected")];popup.lastItem.representedObject=[kind isEqual:@"switch"]&&![option isEqual:@"auto"]?[NSNumber numberWithBool:[option isEqual:@"true"]]:option;}
             for(NSInteger i=0;i<popup.numberOfItems;i++)if([TMString([popup itemAtIndex:i].representedObject) isEqual:TMString(value)])[popup selectItemAtIndex:i];
             if([path isEqual:@"boot.mode"]){if([TMValue(r,@"config.environment.type") isEqual:@"android"]){[popup selectItemAtIndex:2];popup.enabled=NO;}else{[popup itemAtIndex:2].enabled=NO;if([TMValue(r,@"config.image.distribution") isEqual:@"alpine"])[popup itemAtIndex:1].enabled=NO;}}
             if([kind isEqual:@"network"])popup.enabled=[[self value:@"network.mode"] isEqual:@"bridge"];
@@ -310,23 +344,26 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     if(group.count)[self section:section view:TMGroup(group)];
 }
 - (void)fieldChanged:(NSControl *)sender {
-    if(self.rendering)return;id value;if([sender isKindOfClass:NSPopUpButton.class])value=((NSPopUpButton *)sender).selectedItem.representedObject;else value=@(((NSButton *)sender).state==NSControlStateValueOn);
+    if(self.rendering)return;id value;if([sender isKindOfClass:NSPopUpButton.class])value=((NSPopUpButton *)sender).selectedItem.representedObject;else value=[NSNumber numberWithBool:((NSButton *)sender).state==NSControlStateValueOn];
     if([sender.identifier isEqual:@"network.bridge"] && [value isEqual:@""])value=NSNull.null;
     [self change:sender.identifier value:value];
     if([sender.identifier isEqual:@"network.mode"]){if(![value isEqual:@"bridge"]){[self change:@"network.bridge" value:NSNull.null];[self change:@"network.publish" value:@[]];}else if([self value:@"network.bridge"]==NSNull.null && [self.snapshot[@"networks"] count])[self change:@"network.bridge" value:self.snapshot[@"networks"][0][@"name"]];[self render];}
 }
 - (void)controlTextDidChange:(NSNotification *)note {
     NSTextField *control=note.object;if(!control.identifier.length || self.rendering)return;
-    id value=[control isKindOfClass:NSTokenField.class]?control.objectValue:control.stringValue;
+    id value=[control isKindOfClass:NSComboBox.class]?TMResourceValue((NSComboBox *)control):[control isKindOfClass:NSTokenField.class]?control.objectValue:control.stringValue;
     if([control.identifier isEqual:@"resources.cpus"] && ![control.stringValue isEqual:@"all"]){NSScanner *scan=[NSScanner scannerWithString:control.stringValue];long long n;if([scan scanLongLong:&n] && scan.isAtEnd)value=@(n);}
     if([@[@"resources.memory_limit",@"network.bridge"] containsObject:control.identifier] && !control.stringValue.length)value=NSNull.null;
     [self change:control.identifier value:value];
+}
+- (void)comboBoxSelectionDidChange:(NSNotification *)note {
+    NSComboBox *combo=note.object;if(combo.indexOfSelectedItem>=0)combo.stringValue=[combo itemObjectValueAtIndex:combo.indexOfSelectedItem];[self controlTextDidChange:note];
 }
 - (void)controlTextDidEndEditing:(NSNotification *)note{[self controlTextDidChange:note];}
 - (void)displayTOML:(id)sender {
     (void)sender;NSDictionary *r=[self selectedRow];NSData *data=[NSJSONSerialization dataWithJSONObject:@{@"version":@1,@"revision":self.revisions[self.selectedKey]?:r[@"revision"],@"changes":[self draft]?:@{}} options:0 error:nil];
     __weak TramesManager *weakSelf=self;NSString *key=self.selectedKey;
-    [self run:@[@"_manager",@"validate",key] owner:[@"query:toml:" stringByAppendingString:key] name:[self selected] title:T(@"View TOML") quiet:YES input:data completion:^(NSString *out,int code){TramesManager *owner=weakSelf;if(code){[owner showError:out];return;}NSDictionary *value=[NSJSONSerialization JSONObjectWithData:[out dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];NSAlert *a=[NSAlert new];a.messageText=T(@"Effective TOML preview");a.informativeText=T(@"Uses the same configuration model as the CLI. Host grants are stored separately.");NSTextView *text=[[NSTextView alloc]initWithFrame:NSMakeRect(0,0,580,390)];text.string=value[@"toml"]?:@"";text.editable=NO;text.font=[NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];NSScrollView *scroll=[[NSScrollView alloc]initWithFrame:text.frame];scroll.documentView=text;scroll.hasVerticalScroller=YES;a.accessoryView=scroll;[a beginSheetModalForWindow:owner.window completionHandler:nil];}];
+    [self run:@[@"_manager",@"validate",key] owner:[@"query:toml:" stringByAppendingString:key] name:[self selected] title:T(@"View TOML") quiet:YES input:data completion:^(NSString *out,int code){TramesManager *owner=weakSelf;if(code){[owner showError:out];return;}NSDictionary *value=[NSJSONSerialization JSONObjectWithData:[out dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];NSAlert *a=[NSAlert new];a.messageText=T(@"Effective TOML preview");a.informativeText=T(@"Uses the same configuration model as the CLI. Host grants are stored separately.");NSTextView *text=[[NSTextView alloc]initWithFrame:NSMakeRect(0,0,580,390)];text.string=value[@"toml"]?:@"";text.editable=NO;text.font=[NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];NSScrollView *scroll=[[NSScrollView alloc]initWithFrame:text.frame];scroll.documentView=text;TMConfigureScroll(scroll);a.accessoryView=scroll;[a beginSheetModalForWindow:owner.window completionHandler:nil];}];
 }
 - (void)renderFiles {
     NSDictionary *r=[self selectedRow];NSMutableArray *rows=[NSMutableArray new];id mounts=[self value:@"mounts"];if([mounts isKindOfClass:NSArray.class])for(NSUInteger i=0;i<[mounts count];i++){NSDictionary *m=mounts[i];NSString *alias=m[@"share"]?:m[@"host"]?:@"";NSString *host=TMString(TMValue(r,[@"grants.shares." stringByAppendingFormat:@"%@.host",alias]));NSString *help=[NSString stringWithFormat:@"%@ → %@%@",host.length?host:alias,m[@"target"],[m[@"readonly"] boolValue]?T(@" · Read only"):@""];[rows addObject:TMRow(alias,help,TMButtonMake(@"Remove Mount",self,@selector(removeMount:),@(i)))];}
@@ -342,17 +379,18 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     [self section:@"Private storage" view:TMGroup(@[TMRow(@"Environment files",r[@"path"],TMButtonMake(@"Show Storage in Finder",self,@selector(revealStorage:),nil)),TMRow(@"Backup and restore",@"Stop the environment before creating a backup.",TMButtonMake(@"Backup…",self,@selector(backup:),nil))])];
 }
 - (void)renderPermissions {
-    NSDictionary *r=[self selectedRow];if([r[@"grants_error"] isKindOfClass:NSString.class])[self.content addArrangedSubview:TMLabel(r[@"grants_error"],12,YES)];[self.content addArrangedSubview:TMLabel(T(@"A capability needs a configuration request and an independent grant on this Mac. Imported profiles do not grant host access."),12,YES)];NSMutableArray *rows=[NSMutableArray new];
-    for(NSDictionary *cap in self.snapshot[@"capabilities"]){NSString *key=cap[@"key"],*path=[NSString stringWithFormat:@"interop.%@.enabled",key];NSButton *request=[NSButton checkboxWithTitle:T(@"Requested") target:self action:@selector(fieldChanged:)];request.identifier=path;request.state=[[self value:path] boolValue]?NSControlStateValueOn:NSControlStateValueOff;[request setAccessibilityLabel:[NSString stringWithFormat:@"%@ %@",T(cap[@"title"]),T(@"Requested")]];
-        NSPopUpButton *grant=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];grant.identifier=key;grant.enabled=![r[@"grants_error"] isKindOfClass:NSString.class];[grant addItemsWithTitles:@[T(@"Not allowed"),T(@"Allowed")]];[grant selectItemAtIndex:[TMValue(r,[@"grants." stringByAppendingString:key]) boolValue]?1:0];grant.target=self;grant.action=@selector(permission:);[grant setAccessibilityLabel:[NSString stringWithFormat:@"%@ %@",T(cap[@"title"]),T(@"Host grant")]];
-        [rows addObject:TMRow(cap[@"title"],cap[@"help"],TMStack(@[request,grant],NO))];
-    }[self section:@"Requests and host grants" view:TMGroup(rows)];
+    NSDictionary *r=[self selectedRow];if([r[@"grants_error"] isKindOfClass:NSString.class])[self.content addArrangedSubview:TMLabel(r[@"grants_error"],12,YES)];NSMutableArray *rows=[NSMutableArray new];
+    for(NSDictionary *cap in self.snapshot[@"capabilities"]){NSString *key=cap[@"key"],*path=[NSString stringWithFormat:@"interop.%@.enabled",key];
+        NSPopUpButton *grant=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];grant.identifier=key;grant.enabled=![r[@"grants_error"] isKindOfClass:NSString.class] && ![self hasWork:self.selectedKey];[grant addItemsWithTitles:@[T(@"Not allowed"),T(@"Allowed")]];
+        BOOL allowed=[TMValue(r[@"config"],path) boolValue] && [TMValue(r,[@"grants." stringByAppendingString:key]) boolValue];[grant selectItemAtIndex:allowed?1:0];grant.target=self;grant.action=@selector(permission:);[grant setAccessibilityLabel:T(cap[@"title"])];[grant.widthAnchor constraintEqualToConstant:150].active=YES;
+        [rows addObject:TMRow(cap[@"title"],cap[@"help"],grant)];
+    }[self section:@"Host permissions" view:TMGroup(rows)];
 }
 - (void)renderActivity {
     TMJob *job=self.jobs[self.selectedKey]?:self.jobs[[@"create:" stringByAppendingString:[self selected]?:@""]];if(!job)for(TMJob *candidate in self.jobs.allValues)if(!candidate.quiet && [candidate.name isEqual:[self selected]])job=candidate;
     [self.content addArrangedSubview:TMLabel(job?job.title:T(@"No operations recorded in this manager session."),13,NO)];
     self.log=[[NSTextView alloc]initWithFrame:NSMakeRect(0,0,600,350)];self.log.editable=NO;self.log.font=[NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];self.log.string=job.output?:@"";
-    NSScrollView *logs=[NSScrollView new];logs.documentView=self.log;logs.hasVerticalScroller=YES;logs.borderType=NSBezelBorder;[logs.heightAnchor constraintEqualToConstant:350].active=YES;[self.content addArrangedSubview:logs];
+    NSScrollView *logs=[NSScrollView new];logs.documentView=self.log;TMConfigureScroll(logs);logs.borderType=NSBezelBorder;[logs.heightAnchor constraintEqualToConstant:350].active=YES;[self.content addArrangedSubview:logs];
     if(job.complete && job.code && [job.key hasPrefix:@"create:"])[self.content addArrangedSubview:TMButtonMake(@"Dismiss Failed Task",self,@selector(dismissFailedTask:),job.key)];
     [self.content addArrangedSubview:TMLabel(job?(job.complete?(job.code?T(@"Failed"):T(@"Completed")):T(@"Operation running. Other environments remain available.")):T(@"Task output is streamed here while the operation runs."),11,YES)];[self renderActiveTasks];
 }
@@ -370,12 +408,12 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     [self heading:T(@"Trames Settings") subtitle:T(@"This Mac; independent from guest locale") actions:@[]];if([self.snapshot[@"global_error"] isKindOfClass:NSString.class])[self.content addArrangedSubview:TMLabel(self.snapshot[@"global_error"],12,YES)];
     NSPopUpButton *defaults=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];for(NSDictionary *r in self.rows)[defaults addItemWithTitle:r[@"name"]];[defaults selectItemWithTitle:TMString(TMValue(self.snapshot,@"global.default_environment"))];defaults.target=self;defaults.action=@selector(globalSetting:);defaults.identifier=@"default_environment";
     [self section:@"General" view:TMGroup(@[TMRow(@"Default environment",@"Used when the CLI has no -e selection",defaults),TMRow(@"Interface language",@"Follows the macOS per-app language; guest locale is unchanged.",TMLabel(NSBundle.mainBundle.preferredLocalizations.firstObject?:@"",12,YES))])];
-    NSMutableArray *rows=[NSMutableArray new];for(NSDictionary *r in self.rows){NSPopUpButton *p=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];[p addItemsWithTitles:@[T(@"Off"),T(@"On")]];[p selectItemAtIndex:[r[@"autostart"] boolValue]?1:0];p.identifier=[self keyForRow:r];p.target=self;p.action=@selector(autostart:);[rows addObject:TMRow(r[@"name"],@"Start this environment at Mac user login",p)];}if(rows.count)[self section:@"Start at login" view:TMGroup(rows)];
+    NSMutableArray *rows=[NSMutableArray new];for(NSDictionary *r in self.rows){NSButton *p=[NSButton checkboxWithTitle:@"" target:self action:@selector(autostart:)];p.state=[r[@"autostart"] boolValue]?NSControlStateValueOn:NSControlStateValueOff;p.identifier=[self keyForRow:r];[p setAccessibilityLabel:[NSString stringWithFormat:@"%@ — %@",r[@"name"],T(@"Start at login")]];[rows addObject:TMRow(r[@"name"],@"Start this environment at Mac user login",p)];}if(rows.count)[self section:@"Start at login" view:TMGroup(rows)];
     [self section:@"Configuration and diagnostics" view:TMGroup(@[TMRow(@"Global defaults",self.snapshot[@"global_path"],TMButtonMake(@"Open in Editor",self,@selector(editGlobal:),nil)),TMRow(@"Version and environment information",@"Collect configuration and build identities",TMButtonMake(@"Diagnostics",self,@selector(doctor:),nil))])];
 }
 - (void)revealStorage:(id)sender{(void)sender;NSString *path=[self selectedRow][@"path"];if(path)[NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[[NSURL fileURLWithPath:[path stringByAppendingPathComponent:@"store"]]]];}
 - (void)removeNetwork:(TMButton *)sender{if([self confirm:@"Remove Trames network?" message:@"Attached environments must be stopped. Private environment files are preserved."])[self run:@[@"network",@"remove",sender.payload] owner:[@"network:" stringByAppendingString:sender.payload] name:sender.payload title:T(@"Removing network…") quiet:NO input:nil completion:nil];}
-- (void)autostart:(NSPopUpButton *)sender{NSDictionary *row=nil;for(NSDictionary *r in self.rows)if([[self keyForRow:r] isEqual:sender.identifier])row=r;if(row)[self run:@[@"env",sender.indexOfSelectedItem?@"enable":@"disable",row[@"name"]] owner:[self keyForRow:row] name:row[@"name"] title:T(@"Saving login setting…") quiet:NO input:nil completion:nil];}
+- (void)autostart:(NSButton *)sender{NSDictionary *row=nil;for(NSDictionary *r in self.rows)if([[self keyForRow:r] isEqual:sender.identifier])row=r;if(row)[self run:@[@"env",sender.state==NSControlStateValueOn?@"enable":@"disable",row[@"name"]] owner:[self keyForRow:row] name:row[@"name"] title:T(@"Saving login setting…") quiet:NO input:nil completion:nil];}
 - (void)editGlobal:(id)sender{(void)sender;NSString *path=self.snapshot[@"global_path"];if([NSFileManager.defaultManager fileExistsAtPath:path])[NSWorkspace.sharedWorkspace openURL:[NSURL fileURLWithPath:path]];else self.status.stringValue=T(@"Set a default environment first to create config.toml.");}
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)app{(void)app;for(TMJob *job in self.jobs.allValues)if(!job.quiet&&!job.complete){self.status.stringValue=T(@"A management task is still running. Wait for it to finish before closing.");return NSTerminateCancel;}for(NSDictionary *d in self.drafts.allValues)if(d.count){if(![self confirm:@"Discard unsaved drafts?" message:@"Environment configuration files have not been changed."])return NSTerminateCancel;break;}for(dispatch_source_t source in self.watches)dispatch_source_cancel(source);return NSTerminateNow;}
 @end

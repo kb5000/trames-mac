@@ -4,7 +4,7 @@ void TramesManagerLoadActions(void) {}
 
 static NSTextField *input(NSString *value,NSString *placeholder){NSTextField *f=[NSTextField new];f.stringValue=value?:@"";f.placeholderString=placeholder;[f.widthAnchor constraintGreaterThanOrEqualToConstant:280].active=YES;return f;}
 static NSAlert *dialog(NSString *title,NSString *help){NSAlert *a=[NSAlert new];a.messageText=T(title);a.informativeText=T(help);[a addButtonWithTitle:T(@"Continue")];[a addButtonWithTitle:T(@"Cancel")];return a;}
-static NSView *accessory(NSArray *rows,CGFloat width){NSStackView *s=TMStack(rows,YES);s.alignment=NSLayoutAttributeWidth;NSView *v=[[NSView alloc]initWithFrame:NSMakeRect(0,0,width,MAX(70,rows.count*65))];s.frame=v.bounds;s.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;[v addSubview:s];return v;}
+static NSView *accessory(NSArray *rows,CGFloat width){NSStackView *s=TMStack(rows,YES);s.alignment=NSLayoutAttributeWidth;NSView *v=[[NSView alloc]initWithFrame:NSMakeRect(0,0,width,MAX(70,rows.count*65))];TMPin(s,v,0);return v;}
 static NSString *askName(NSString *title){NSAlert *a=dialog(title,@"Use letters, numbers, '-' or '_'. Existing environments are never replaced.");NSTextField *f=input(@"",T(@"Environment name"));a.accessoryView=accessory(@[f],370);[a.window setInitialFirstResponder:f];return [a runModal]==NSAlertFirstButtonReturn?f.stringValue:nil;}
 static NSURL *pick(NSString *message,BOOL directories){NSOpenPanel *p=[NSOpenPanel openPanel];p.canChooseFiles=!directories;p.canChooseDirectories=directories;p.message=T(message);return [p runModal]==NSModalResponseOK?p.URL:nil;}
 static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSWorkspace *w=NSWorkspace.sharedWorkspace;NSURL *app=[w URLForApplicationToOpenURL:url]?:[w URLForApplicationWithBundleIdentifier:@"com.apple.TextEdit"];if(app)[w openURLs:@[url] withApplicationAtURL:app configuration:[NSWorkspaceOpenConfiguration configuration] completionHandler:nil];else [w openURL:url];}
@@ -17,18 +17,18 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
 @property NSPopUpButton *boot;
 @property NSPopUpButton *packages;
 @property NSButton *clipboard;
-@property NSTextField *cpus;
-@property NSTextField *memory;
+@property NSComboBox *cpus;
+@property NSComboBox *memory;
 @property NSString *kind;
 @property NSInteger step;
 @end
 @implementation TMCreateController
 - (instancetype)initWithManager:(TramesManager *)manager {
-    NSPanel *panel=[[NSPanel alloc]initWithContentRect:NSMakeRect(0,0,570,530) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
+    NSPanel *panel=[[NSPanel alloc]initWithContentRect:NSMakeRect(0,0,620,600) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
     if((self=[super initWithWindow:panel])){self.manager=manager;self.kind=@"alpine";self.name=input(@"",T(@"Environment name"));self.source=input(@"",T(@"Choose a file or directory…"));self.source.editable=NO;
         self.boot=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];[self.boot addItemsWithTitles:@[@"shell",@"systemd"]];self.packages=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];[self.packages addItemsWithTitles:@[T(@"Daily tools (default)"),T(@"Daily + development tools"),T(@"Minimal base only")]];
-        self.cpus=input(@"all",@"all");self.memory=input(@"auto",@"auto");self.clipboard=[NSButton checkboxWithTitle:T(@"Allow clipboard access on this Mac") target:nil action:nil];self.clipboard.state=NSControlStateValueOn;
-        self.body=TMStack(@[],YES);self.body.alignment=NSLayoutAttributeWidth;self.body.edgeInsets=NSEdgeInsetsMake(24,24,20,24);self.body.frame=panel.contentView.bounds;self.body.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;[panel.contentView addSubview:self.body];[self render];}
+        self.cpus=TMResourceCombo(@"resources.cpus",@"all");self.memory=TMResourceCombo(@"resources.memory",@"auto");self.clipboard=[NSButton checkboxWithTitle:T(@"Allow clipboard access on this Mac") target:nil action:nil];self.clipboard.state=NSControlStateValueOn;
+        self.body=TMStack(@[],YES);self.body.alignment=NSLayoutAttributeWidth;self.body.edgeInsets=NSEdgeInsetsMake(24,24,20,24);TMPin(self.body,panel.contentView,0);panel.title=T(@"New Environment");panel.becomesKeyOnlyIfNeeded=NO;[self render];}
     return self;
 }
 - (void)render {
@@ -58,7 +58,7 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
     else {if([self.kind isEqual:@"custom"])[args addObjectsFromArray:@[@"--rootfs",self.source.stringValue]];else [args addObjectsFromArray:@[@"--distro",self.kind]];
         if([self.kind isEqual:@"android"])[args addObjectsFromArray:@[@"--rootfs",self.source.stringValue]];
         if(![self.kind isEqual:@"android"])[args addObjectsFromArray:@[@"--init",[self.kind isEqual:@"debian"]?self.boot.titleOfSelectedItem:@"shell"]];
-        [args addObjectsFromArray:@[@"--cpus",self.cpus.stringValue,@"--memory",self.memory.stringValue]];
+        [args addObjectsFromArray:@[@"--cpus",TMString(TMResourceValue(self.cpus)),@"--memory",TMString(TMResourceValue(self.memory))]];
         if([self.kind isEqual:@"debian"])[args addObjectsFromArray:@[@"--packages",@[@"standard",@"development",@"minimal"][self.packages.indexOfSelectedItem]]];}
     TramesManager *manager=self.manager;BOOL clipboard=self.clipboard.state==NSControlStateValueOn;[self cancel:nil];manager.pendingSelectionName=name;
     NSString *key=[@"create:" stringByAppendingString:name];
@@ -108,7 +108,7 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
     [self run:@[@"_manager",@"validate",key] owner:[@"query:validate:" stringByAppendingString:key] name:name title:T(@"Checking configuration…") quiet:YES input:body completion:^(NSString *out,int code){
         TramesManager *owner=weakSelf;if(code){[owner showError:out];return;}NSDictionary *result=[NSJSONSerialization JSONObjectWithData:[out dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];NSMutableString *summary=[NSMutableString new];for(NSDictionary *change in result[@"changes"])[summary appendFormat:@"%@\n%@ → %@\n\n",change[@"path"],TMString(change[@"before"]),TMString(change[@"after"])];
         NSAlert *a=dialog(@"Save configuration?",@"The running environment continues unchanged. Saved settings apply on the next start.");a.informativeText=[NSString stringWithFormat:@"%@\n\n%@",name,T(@"The running environment continues unchanged. Saved settings apply on the next start.")];
-        NSTextView *text=[[NSTextView alloc]initWithFrame:NSMakeRect(0,0,520,230)];text.editable=NO;text.string=summary;text.font=[NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];NSScrollView *s=[[NSScrollView alloc]initWithFrame:text.frame];s.documentView=text;s.hasVerticalScroller=YES;a.accessoryView=s;
+        NSTextView *text=[[NSTextView alloc]initWithFrame:NSMakeRect(0,0,520,230)];text.editable=NO;text.string=summary;text.font=[NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];NSScrollView *s=[[NSScrollView alloc]initWithFrame:text.frame];s.documentView=text;TMConfigureScroll(s);a.accessoryView=s;
         [a beginSheetModalForWindow:owner.window completionHandler:^(NSModalResponse response){if(response!=NSAlertFirstButtonReturn)return;
             [owner run:@[@"_manager",@"save",key] owner:key name:name title:T(@"Saving configuration…") quiet:NO input:body completion:^(NSString *output,int status){(void)output;if(!status){if([owner.drafts[key] isEqual:changes])[owner.drafts removeObjectForKey:key];[owner.revisions removeObjectForKey:key];[owner.pendingRestart addObject:key];}}];
         }];
@@ -124,14 +124,21 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
 }
 - (void)revealConfig:(id)sender{(void)sender;NSString *path=[self selectedRow][@"path"];if(path)[NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[[NSURL fileURLWithPath:path]]];}
 - (void)permission:(NSPopUpButton *)sender {
-    NSString *cap=sender.identifier;BOOL allow=sender.indexOfSelectedItem==1;NSDictionary *description=nil;for(NSDictionary *c in self.snapshot[@"capabilities"])if([c[@"key"] isEqual:cap])description=c;
+    NSString *cap=sender.identifier;BOOL allow=sender.indexOfSelectedItem==1;NSDictionary *row=[self selectedRow];NSString *key=self.selectedKey,*base=row[@"revision"];
+    NSDictionary *description=nil;for(NSDictionary *c in self.snapshot[@"capabilities"])if([c[@"key"] isEqual:cap])description=c;
+    if(!description)return;
     if(allow&&![self confirm:@"Allow this host capability?" message:[NSString stringWithFormat:@"%@\n\n%@",T(description[@"title"]),T(description[@"help"])]]){[sender selectItemAtIndex:0];return;}
-    [self.pendingRestart addObject:self.selectedKey];[self operation:@[@"env",@"grant",[self selected],description[@"command"],allow?@"on":@"off"] title:T(@"Saving host grant…")];
+    __weak TramesManager *weakSelf=self;
+    [self run:@[@"_manager",@"permission",key,cap,allow?@"on":@"off",base] owner:key name:row[@"name"] title:T(@"Saving host grant…") quiet:NO input:nil completion:^(NSString *out,int code){
+        TramesManager *owner=weakSelf;if(code){[owner showError:out];return;}NSDictionary *result=[NSJSONSerialization JSONObjectWithData:[out dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+        if([owner.revisions[key] isEqual:base])owner.revisions[key]=result[@"revision"];
+        [owner.pendingRestart addObject:key];
+    }];
 }
 - (void)share:(id)sender {
     (void)sender;NSURL *url=pick(@"Select a host folder to share with Linux.",YES);if(!url)return;
     NSAlert *a=dialog(@"Shared Folder",@"The host path stays in this Mac's grants. TOML stores only the share alias and guest path.");NSTextField *alias=input(@"project",T(@"Share alias")),*target=input(@"/work",T(@"Guest path"));NSButton *ro=[NSButton checkboxWithTitle:T(@"Read only") target:nil action:nil];a.accessoryView=accessory(@[TMRow(@"Share alias",@"",alias),TMRow(@"Guest path",@"",target),ro],530);if([a runModal]!=NSAlertFirstButtonReturn)return;
-    NSString *key=self.selectedKey,*name=[self selected];NSDictionary *row=[self selectedRow];NSMutableArray *mounts=[NSMutableArray arrayWithArray:[self draft][@"mounts"]?:row[@"config"][@"mounts"]?:@[]];[mounts filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSDictionary *m,NSDictionary *bindings){(void)bindings;return ![m[@"target"] isEqual:target.stringValue];}]];[mounts addObject:@{@"share":alias.stringValue,@"target":target.stringValue,@"readonly":@(ro.state==NSControlStateValueOn)}];
+    NSString *key=self.selectedKey,*name=[self selected];NSDictionary *row=[self selectedRow];NSMutableArray *mounts=[NSMutableArray arrayWithArray:[self draft][@"mounts"]?:row[@"config"][@"mounts"]?:@[]];[mounts filterUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSDictionary *m,NSDictionary *bindings){(void)bindings;return ![m[@"target"] isEqual:target.stringValue];}]];[mounts addObject:@{@"share":alias.stringValue,@"target":target.stringValue,@"readonly":[NSNumber numberWithBool:ro.state==NSControlStateValueOn]}];
     __weak TramesManager *weakSelf=self;[self run:@[@"env",@"grant",name,@"share",alias.stringValue,url.path,ro.state?@"ro":@"rw"] owner:key name:name title:T(@"Authorizing shared folder…") quiet:NO input:nil completion:^(NSString *out,int code){(void)out;if(code)return;TramesManager *owner=weakSelf;if(!owner.drafts[key])owner.drafts[key]=[NSMutableDictionary new];owner.drafts[key][@"mounts"]=mounts;if(!owner.revisions[key])owner.revisions[key]=row[@"revision"];owner.tabs.selectedSegment=2;}];
 }
 - (void)revokeShare:(TMButton *)sender{if([self confirm:@"Revoke this shared folder?" message:@"This removes the directory grant on this Mac. Existing environment files are preserved."])[self operation:@[@"env",@"grant",[self selected],@"unshare",sender.payload] title:T(@"Saving host grant…")];}
@@ -139,8 +146,8 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
 - (void)editPorts:(id)sender {
     (void)sender;if(self.createController)return;TMPortsController *c=[TMPortsController new];c.manager=self;c.key=self.selectedKey;if(!self.revisions[c.key])self.revisions[c.key]=[self selectedRow][@"revision"];[self draft];
     c.rules=[NSMutableArray new];for(NSDictionary *p in [self draft][@"network.publish"]?:[self selectedRow][@"config"][@"network"][@"publish"])[c.rules addObject:[p mutableCopy]];
-    c.window=[[NSPanel alloc]initWithContentRect:NSMakeRect(0,0,600,350) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];NSStackView *root=TMStack(@[],YES);root.alignment=NSLayoutAttributeWidth;root.edgeInsets=NSEdgeInsetsMake(20,20,20,20);root.frame=c.window.contentView.bounds;root.autoresizingMask=NSViewWidthSizable|NSViewHeightSizable;[c.window.contentView addSubview:root];[root addArrangedSubview:TMLabel(T(@"Published ports"),20,NO)];
-    c.table=[NSTableView new];c.table.dataSource=c;c.table.delegate=c;for(NSArray *column in @[@[@"protocol",@"Protocol"],@[@"host",@"Host address and port"],@[@"guest",@"Guest port"]]){NSTableColumn *col=[[NSTableColumn alloc]initWithIdentifier:column[0]];col.title=T(column[1]);col.editable=YES;col.width=[column[0] isEqual:@"host"]?280:110;[c.table addTableColumn:col];}NSScrollView *scroll=[NSScrollView new];scroll.documentView=c.table;scroll.hasVerticalScroller=YES;[scroll.heightAnchor constraintGreaterThanOrEqualToConstant:160].active=YES;[root addArrangedSubview:scroll];[root addArrangedSubview:TMStack(@[TMButtonMake(@"Add",c,@selector(add:),nil),TMButtonMake(@"Remove",c,@selector(remove:),nil),TMButtonMake(@"Cancel",c,@selector(cancel:),nil),TMButtonMake(@"Keep Changes",c,@selector(save:),nil)],NO)];self.createController=c;[self.window beginSheet:c.window completionHandler:nil];
+    c.window=[[NSPanel alloc]initWithContentRect:NSMakeRect(0,0,600,350) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];NSStackView *root=TMStack(@[],YES);root.alignment=NSLayoutAttributeWidth;root.edgeInsets=NSEdgeInsetsMake(20,20,20,20);TMPin(root,c.window.contentView,0);[root addArrangedSubview:TMLabel(T(@"Published ports"),20,NO)];
+    c.table=[NSTableView new];c.table.dataSource=c;c.table.delegate=c;for(NSArray *column in @[@[@"protocol",@"Protocol"],@[@"host",@"Host address and port"],@[@"guest",@"Guest port"]]){NSTableColumn *col=[[NSTableColumn alloc]initWithIdentifier:column[0]];col.title=T(column[1]);col.editable=YES;col.width=[column[0] isEqual:@"host"]?280:110;[c.table addTableColumn:col];}NSScrollView *scroll=[NSScrollView new];scroll.documentView=c.table;TMConfigureScroll(scroll);[scroll.heightAnchor constraintGreaterThanOrEqualToConstant:160].active=YES;[root addArrangedSubview:scroll];[root addArrangedSubview:TMStack(@[TMButtonMake(@"Add",c,@selector(add:),nil),TMButtonMake(@"Remove",c,@selector(remove:),nil),TMButtonMake(@"Cancel",c,@selector(cancel:),nil),TMButtonMake(@"Keep Changes",c,@selector(save:),nil)],NO)];self.createController=c;[self.window beginSheet:c.window completionHandler:nil];
 }
 - (void)backup:(id)sender{(void)sender;NSString *n=[self selected];if(!n)return;NSSavePanel *p=[NSSavePanel savePanel];p.nameFieldStringValue=[n stringByAppendingString:@".trames.tar.gz"];p.message=T(@"Stop the environment first. Existing backups will not be overwritten.");if([p runModal]==NSModalResponseOK)[self operation:@[@"env",@"backup",n,p.URL.path] title:T(@"Creating verified backup…")];}
 - (void)restore:(id)sender{(void)sender;NSURL *url=pick(@"Choose a Trames backup.",NO);if(!url)return;NSString *n=askName(@"Restore as New Environment");if(n){self.pendingSelectionName=n;[self run:@[@"env",@"restore",n,url.path] owner:[@"create:" stringByAppendingString:n] name:n title:T(@"Verifying and restoring backup…") quiet:NO input:nil completion:nil];}}

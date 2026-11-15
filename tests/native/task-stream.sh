@@ -19,6 +19,11 @@ xcrun clang -fobjc-arc -fblocks -Wall -Wextra -Werror -framework AppKit -framewo
   tests/native/manager-progress.m "$temporary/libmanager.a" -o "$temporary/manager-progress-test"
 "$temporary/manager-progress-test"
 
+# Geometry and actual native-control actions, linked like the production manager.
+xcrun clang -fobjc-arc -fblocks -Wall -Wextra -Werror -framework AppKit -framework Foundation -framework CoreFoundation \
+  tests/native/manager-layout.m "$temporary/libmanager.a" -o "$temporary/manager-layout-test"
+"$temporary/manager-layout-test"
+
 # Exercise the actual bundle layout: Finder's entry differs from the CLI binary.
 bundle="$temporary/ManagerFixture.app"
 mkdir -p "$bundle/Contents/MacOS"

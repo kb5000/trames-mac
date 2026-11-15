@@ -25,10 +25,14 @@ NSView *TMRow(NSString *title, NSString *help, NSView *value);
 TMButton *TMButtonMake(NSString *title, id target, SEL action, id payload);
 id TMValue(NSDictionary *object, NSString *path);
 NSString *TMString(id value);
+void TMPin(NSView *child, NSView *parent, CGFloat inset);
+void TMConfigureScroll(NSScrollView *scroll);
+NSComboBox *TMResourceCombo(NSString *path, id value);
+id TMResourceValue(NSComboBox *combo);
 // Explicit archive anchor: Objective-C categories have no natural C reference.
 void TramesManagerLoadActions(void);
 
-@interface TramesManager : NSObject <NSApplicationDelegate,NSTableViewDataSource,NSTableViewDelegate,NSSplitViewDelegate,NSTextFieldDelegate>
+@interface TramesManager : NSObject <NSApplicationDelegate,NSTableViewDataSource,NSTableViewDelegate,NSSplitViewDelegate,NSTextFieldDelegate,NSComboBoxDelegate>
 @property NSWindow *window;
 @property NSTableView *table;
 @property NSStackView *content;
