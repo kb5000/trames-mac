@@ -46,11 +46,26 @@ Validation:
   both boolean states. Its profile bytes and running environment were unchanged.
 - English/Chinese resource key parity and syntax passed, with 344 keys each.
 
-Desktop attachment timed out and AppKit reported an inactive desktop session.
-OS mouse-event dispatch was therefore explicitly skipped; native hit testing
-and control actions ran. Main configuration, permission and settings view
-renders were reviewed; inactive-session sheet captures did not provide complete
-visual output. A foreground desktop mouse/visual check remains outstanding.
+The foreground follow-up used a uniquely identified temporary app with the exact
+installed Dev executable and an isolated `TRAMES_HOME`. It copied Debian
+configuration metadata only: no private store was copied and no guest started.
+Ordinary Dev attachment still timed out with two legacy manager instances;
+read-only samples showed both GUI main threads idle in AppKit event loops.
+
+Desktop CUA control clicks and keyboard interaction verified source selection,
+all creation stages, cancellation, CPU combo selection/text entry, configuration
+review and successful saving of integer CPU `2` and boolean `false`. Reopening
+the UI and a CLI inspection confirmed the saved values. The permission menu had
+only Not allowed/Allowed, and login startup was a checkbox. No host grant or
+login agent was enabled by this follow-up. Coordinate-only pointer dispatch is
+not claimed; native hit testing and the semantic control flows were verified.
+
+Foreground screenshots also exposed an over-stretched Cancel button. A flexible
+footer spacer now preserves native action-button widths. The new regression
+limits Cancel width at default and minimum manager widths, affected local CI
+checks passed, and the final desktop screenshot confirmed the compact footer
+and correctly aligned sheet contents. The temporary verification window closed
+normally without disturbing existing managers or their drafts.
 
 Mac Dev is installed with embedded Vulkan and verified signing. Existing manager
 windows should be reopened to load the new code; they were not forcibly closed

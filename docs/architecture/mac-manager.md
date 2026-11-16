@@ -61,7 +61,8 @@ There is no persistent closing-manager hint in either footer.
 
 Sheet root stacks use four-edge Auto Layout constraints rather than autoresizing
 frames. The creation panel provides 620 × 600 points, and port editing uses the
-same constraint helper. CPU, memory and the optional hard limit use editable
+same constraint helper. A flexible footer spacer keeps wizard action buttons
+at their intrinsic widths. CPU, memory and the optional hard limit use editable
 combo boxes: friendly automatic/all-core/no-limit choices map to the original
 TOML values, CPU counts are integers, and custom resource values still pass the
 shared validator. Login startup uses a native checkbox.

@@ -11,7 +11,8 @@
     "constrained creation/accessory/port-editor root layouts; 620x600 creation panel",
     "native login-startup checkboxes",
     "editable CPU/memory/hard-limit preset combo boxes",
-    "boolean NSNumber serialization for checkboxes, switches and shared-mount readonly"
+    "boolean NSNumber serialization for checkboxes, switches and shared-mount readonly",
+    "flexible wizard footer keeps action buttons at their intrinsic widths"
   ],
   "local_ci": {
     "workflow": ".github/workflows/macos.yml",
@@ -49,16 +50,27 @@
     "resource_presets_and_custom_values": "passed",
     "login_checkbox_actions": "passed",
     "permission_change_preserves_other_drafts": "passed",
-    "desktop_connection": "CUA app attachment timed out; AppKit reported inactive session",
-    "os_mouse_dispatch": "skipped while desktop inactive; native hit tests and control actions passed",
-    "visual_review": "main configuration, permissions and settings AppKit view renders reviewed; sheet layer captures incomplete in inactive session"
+    "desktop_connection": "Two legacy Dev manager instances still timed out through the ordinary app selector; same-binary uniquely identified fixture attached successfully. Read-only stack samples showed both legacy GUI threads waiting in AppKit event loops.",
+    "os_mouse_dispatch": "Native test OS event portion remains conditional; desktop CUA semantic control clicks and keyboard flows were verified. Coordinate-only pointer dispatch is not claimed.",
+    "visual_review": "Foreground CUA screenshots reviewed for creation configuration/source pages, including correct top alignment, full-width form content and compact footer buttons.",
+    "foreground_cua": {
+      "fixture": "Exact installed Dev executable, distinct temporary bundle identifier and isolated TRAMES_HOME containing copied Debian configuration metadata only; no private store copied or guest started",
+      "executable_sha256": "6dd60a9756eb9dab1f0c30e15f31a99df393313802a3d8f78b6fdcf005c5aff3",
+      "source_choice_and_wizard_transitions": "passed: Debian -> configure -> review -> cancel",
+      "cpu_combo_selection_and_text_entry": "passed: selected and entered integer 2",
+      "save_review_and_publication": "passed: display.windows true -> false and resources.cpus all -> 2, save confirmation completed; reloaded UI and CLI confirmed values",
+      "host_permission_controls": "passed: only Not allowed/Allowed; no configuration-request checkbox; no grant enabled",
+      "login_checkbox": "present and correctly rendered; no login agent enabled",
+      "footer_button_sizing": "passed: compact Cancel/Continue after adding a flexible spacer; regression limits Cancel width at both window sizes",
+      "cleanup": "Temporary validation window closed; existing managers, drafts, guests and Stable preserved"
+    }
   },
   "source_hashes": {
     "crates/trames-mac/src/manager.m": "afd9ac625dd4e9995e9f2aaceddbbd13c9388cade807ff4d8388342f23256490",
-    "crates/trames-mac/src/manager-actions.m": "e6e7fce567e4c02be5ae41cd7b091545e43d821eaedd522d2acfa8bf1538d948",
+    "crates/trames-mac/src/manager-actions.m": "20c335ee4d066a8b11d7a14540119cc56d5af96adb116d5d2469d794d8e9293f",
     "crates/trames-mac/src/manager-ui.h": "7ed976f37e8efa826e69190946eabb5d14157279bcb1de3ee31c977c6a2005ef",
     "crates/trames-mac/src/manager_model.rs": "fd90abaea68afc0be1318aa97fa90cf433f0caf09bd604c9c8471e7793575395",
-    "tests/native/manager-layout.m": "ff4487222147a906aa198d7e935484de2b34b00bbe27fe1201faf9f205adb917",
+    "tests/native/manager-layout.m": "3b24a49546b47a2068ecdd7703697d4d4be10bf321870d52fe00e4b218bbd92c",
     "tests/integration/mac-manager.py": "8afaaaa757e9835b1b9c0f88956c3da1102ccab358edc97ec6987d73c35f1544"
   },
   "deployment": {
