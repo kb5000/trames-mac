@@ -68,6 +68,11 @@ with tempfile.TemporaryDirectory(prefix='trames-control-cli-') as temporary:
         run('-e','lab','files','cp','-n',str(source),'guest:/root/live')
         assert 'live' in data('-e','lab','files','ls','guest:/root','--json')['entries']
         assert data('-e','lab','status','--json')['running'] is True
+        for size in [3072,7168,12288]:
+            edge=root/f'edge-{size}';edge.write_bytes((bytes(range(256))*64)[:size])
+            run('-e','lab','files','cp',str(edge),f'guest:/root/edge-{size}')
+            back=root/f'edge-back-{size}';run('-e','lab','files','cp',f'guest:/root/edge-{size}',str(back))
+            assert back.read_bytes()==edge.read_bytes()
         large=root/'large';large.write_bytes(payload*256)
         before=time.monotonic();shutil.copyfile(large,root/'native-large');native=time.monotonic()-before
         before=time.monotonic();run('-e','lab','files','cp',str(large),'guest:/root/large');upload=time.monotonic()-before
@@ -78,6 +83,10 @@ with tempfile.TemporaryDirectory(prefix='trames-control-cli-') as temporary:
     run('-e','lab','permissions','deny','files','host-exec')
     run('-e','lab','files','cp',str(source),'guest:/root/denied',code=77)
     guest('/usr/bin/trames','host','exec','--','/usr/bin/uname',code=77)
+    run('-e','lab','permissions','deny','--all')
+    guest('/usr/bin/trames','host','gui',code=77)
+    guest('/usr/bin/trames','host','cli','--','--version',code=77)
+    guest('/usr/bin/trames','host','open','https://example.com/',code=77)
     run('permissions','defaults','allow','--all')
     assert all(v['allowed'] for v in data('permissions','defaults','--json').values())
 (a.output/'result.json').write_text(json.dumps(dict(passed=True,commands=len(rows),binary_roundtrip_bytes=len(payload),owner_copies='offline+live',guest_permissions='read-only',scoped_delegation=True),indent=2)+'\n')

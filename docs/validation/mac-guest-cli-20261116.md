@@ -1,6 +1,6 @@
 # Shared guest and Mac owner CLI — 2026-11-16
 
-Runtime: `77543a5b4d31ac0a7f144ed1f343e1411053142e`.
+Runtime: `7f4cae8c5fabeb0d05362359f770af12ba231bc4`.
 
 ## Behavior
 
@@ -34,7 +34,7 @@ its own command channel. Full host-exec retains the host user's access.
   native task/window checks, both channels built and packaged). Entitlement-
   gated tests remain excluded from ordinary cargo test; real-HVF acceptance
   below uses the signed Dev runner.
-- Real-HVF CLI acceptance: 41 operations, 256 KiB binary command
+- Real-HVF CLI acceptance: 51 operations, 256 KiB binary command
   input/output, separate stderr, nonzero exit, literal arguments, deadlines,
   descendant cancellation, independent files/mount grants, and live/offline
   bidirectional file/tree copies.
