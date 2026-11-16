@@ -68,37 +68,63 @@ private address spaces. Shared folders retain the existing hostfs data path.
 
 ## Guest controls
 
-A requested capability also needs a host grant:
+New owner-created environments allow supported interoperability by default.
+Existing explicit denials and read-only shares are preserved. The host owns
+permission changes; the guest can only inspect them:
 
 ```sh
-trames -e work config set interop.clipboard.enabled true
-trames env grant work clipboard on
-trames -e work config set interop.host_exec.enabled true
-trames env grant work host-exec on
-trames -e work config set interop.host_cli.enabled true
-trames env grant work host-cli on
+trames -e work permissions
+trames -e work permissions deny host-exec
+trames -e work permissions allow clipboard files
+trames permissions defaults deny host-exec   # future environments only
 ```
 
-Restart to apply the grants. Disabled devices are absent; Clipboard, UI, CLI,
-host execution, file, port, and mount permissions are independent. Inside Linux:
+Changes apply at the next environment start. Disabled devices are absent;
+clipboard, host UI, delegated CLI, host execution, files, ports and mounts
+remain independent. Both the manager and CLI update the shared TOML/UUID-bound
+host policy. Importing guest TOML cannot manufacture local host authority.
+
+Inside Linux (or Android at `/system/bin/trames`):
 
 ```sh
-trames info
-trames clipboard read
-trames clipboard write '"clipboard text"'
-trames host-cli -- --version
-trames host-exec -- /usr/bin/uname -s
-trames files
-trames rpc port-forward ports.list '{}'
-trames rpc mount-control mounts.add '{"share":"project","target":"/mnt/project"}'
+trames status
+trames permissions
+printf 'hello' | trames clipboard set
+trames clipboard get
+trames host cli -- --version
+trames host exec -- /usr/bin/uname -s
+trames files ls
+trames files cp report.txt share:project/report.txt
+trames mount add project /mnt/project
+trames port ls
 ```
 
-Port/mount control also needs its matching manifest request and host grant.
-Dynamic changes last for the current boot; edit TOML for persistence. Files move
-through mounted folders, using normal Linux tools and the original file I/O
-implementation. Control-device replies are JSON; host command replies stream in
-bounded frames. The native Wayland clipboard continues to use its streaming
-pipe backend.
+The injected command is one static ARM64 ELF shared with iPad. Help and shell
+completion work offline. Output is readable text; `--json` supplies stable
+records. Command streams preserve stdin, stdout/stderr bytes and exit codes,
+and support explicit `--timeout` and interruption without a fixed total limit.
+
+The host has matching file/clipboard/mount/port commands, with `-e` selecting
+the environment:
+
+```sh
+trames -e work files cp report.txt guest:/tmp/report.txt
+trames -e work files cp -r guest:/root/project ./project
+trames -e work files ls guest:/tmp
+trames -e work clipboard get
+```
+
+File copies reuse the original hostfs/private VFS path and need file permission,
+without separate dynamic-mount permission or a per-copy Trames prompt. Host
+copies into a running environment use its existing exec channel; offline copies
+use its locked store and do not boot it. File control frames never carry bulk
+file JSON. Mount/port mutations require a running environment, are scoped to
+its grants and last for the current boot. Port publication applies to bridge
+networks; host networking already exposes guest listeners directly.
+
+Full host command execution has the host user's access and can indirectly edit
+host configuration. Disable it when read-only guest policy must be meaningful.
+
 
 ## Storage and channels
 

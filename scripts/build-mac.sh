@@ -18,6 +18,7 @@ else
   unset TRAMES_MOLTENVK_STATIC_DIR
   export TRAMES_VULKAN_LINKAGE=external
 fi
+python3 runtime/scripts/build-guest-cli.py
 cargo build -p trames-mac --release --locked
 # A minimal agent bundle supplies AppKit identity without a startup window.
 # The CLI re-execs this binary in place; stdin/stdout and the PID are retained.

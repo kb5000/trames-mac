@@ -9,7 +9,7 @@ _trames() {
         session) _values command ls attach ;;
         apk) _values command install launch list ;;
         completion) _values shell bash zsh fish ;;
-        *) _values command shell exec env config network session apk gui completion --environment --help --version ;;
+        *) _values command shell exec env config network session apk status doctor permissions clipboard files mount port gui completion --environment --help --version ;;
     esac
 }
 if [[ $ZSH_EVAL_CONTEXT == *:file ]]; then

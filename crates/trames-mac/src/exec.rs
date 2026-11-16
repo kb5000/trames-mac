@@ -461,12 +461,22 @@ pub fn capture(console: &Path, request: Request) -> io::Result<(u8, Vec<u8>, Vec
     )?;
     Ok((code, stdout, stderr))
 }
-fn run_streams(
+pub fn run_streams(
+    console: &Path,
+    request: Request,
+    input: impl Read + AsRawFd,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+) -> io::Result<u8> {
+    run_streams_deadline(console, request, input, stdout, stderr, None)
+}
+pub fn run_streams_deadline(
     console: &Path,
     request: Request,
     mut input: impl Read + AsRawFd,
     stdout: &mut impl Write,
     stderr: &mut impl Write,
+    deadline: Option<std::time::Instant>,
 ) -> io::Result<u8> {
     let mut socket = UnixStream::connect(path(console)).map_err(|e| io::Error::new(e.kind(), format!("exec service unavailable ({e}); restart this environment to load the updated runtime")))?;
     socket.set_write_timeout(Some(Duration::from_secs(30)))?;
@@ -522,7 +532,15 @@ fn run_streams(
                 revents: 0,
             },
         ];
-        if unsafe { libc::poll(fds.as_mut_ptr(), 2, 100) } < 0 {
+        let timeout = match deadline {
+            Some(d) => d
+                .checked_duration_since(std::time::Instant::now())
+                .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "File transfer timed out"))?
+                .as_millis()
+                .clamp(1, 100) as i32,
+            None => 100,
+        };
+        if unsafe { libc::poll(fds.as_mut_ptr(), 2, timeout) } < 0 {
             let e = io::Error::last_os_error();
             if e.kind() == io::ErrorKind::Interrupted {
                 continue;

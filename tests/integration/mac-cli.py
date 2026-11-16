@@ -80,6 +80,8 @@ def main():
         # A flattened Debian rootfs with merged-/usr links, not a catalog pin.
         run('env', 'create', 'custom-debian', '--rootfs', str(a.debian.resolve()), '--sha256', hashlib.sha256(a.debian.read_bytes()).hexdigest())
         assert 'glibc' in run('debug', 'env-run', 'custom-debian', '--no-pty', '/usr/bin/getconf', 'GNU_LIBC_VERSION').stdout
+        assert 'Trames guest CLI' in run('debug','env-run','custom-debian','--no-pty','/usr/bin/trames','--version').stdout
+        assert json.loads(run('debug','env-run','custom-debian','--no-pty','/usr/bin/trames','status','--json').stdout)['data']['platform'] == 'macos'
         # Gzip archive and a >64 MiB file must work without the pinned importer's
         # old per-file limit or whole-expanded-image buffering.
         archive_path = base / 'rootfs.tar.gz'

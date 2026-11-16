@@ -98,7 +98,10 @@ def main():
         assert 'persistent' in start('restored', 'cat /root/check').stdout
         restored_config = config('restored')
         assert restored_config['mounts'] == []
-        assert not (directory('restored') / 'grants.toml').exists()
+        restored_grants = (directory('restored') / 'grants.toml').read_text()
+        assert restored_config['environment']['uuid'] in restored_grants
+        assert '/mnt' not in restored_grants
+        assert json.loads(run('-e','restored','permissions','--json').stdout)['data']['files']['allowed']
         corrupted = home / 'corrupt.tar.gz'
         payload = bytearray(archive.read_bytes())
         payload[-5] ^= 0xff

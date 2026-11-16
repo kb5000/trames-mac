@@ -7,6 +7,7 @@ members = [
 exclude = ["runtime"]
 
 [workspace.dependencies]
+trames-control = { path = "runtime/crates/trames-control" }
 trames-vulkan = { path = "runtime/crates/trames-vulkan" }
 trames-accel = { path = "runtime/crates/trames-accel" }
 trames-native = { path = "runtime/crates/trames-native" }

@@ -40,7 +40,7 @@ fn child(parent: &[u8], name: &[u8]) -> Vec<u8> {
     result.extend_from_slice(name);
     result
 }
-fn names(vfs: &mut Vfs, path: &[u8]) -> Result<Vec<Vec<u8>>> {
+pub(super) fn names(vfs: &mut Vfs, path: &[u8]) -> Result<Vec<Vec<u8>>> {
     let fd = vfs.open_at(AT_FDCWD, path, O_DIRECTORY, 0)?;
     let result: Result<Vec<Vec<u8>>> = (|| {
         let mut result = Vec::new();
@@ -116,6 +116,15 @@ fn get(vfs: &mut Vfs, guest: &[u8], host: &Path) -> Result<()> {
     Ok(())
 }
 fn put(vfs: &mut Vfs, host: &Path, guest: &[u8], replace: bool) -> Result<()> {
+    put_timed(vfs, host, guest, replace, None)
+}
+fn put_timed(
+    vfs: &mut Vfs,
+    host: &Path,
+    guest: &[u8],
+    replace: bool,
+    deadline: Option<std::time::Instant>,
+) -> Result<()> {
     let meta = fs::symlink_metadata(host)?;
     if meta.is_dir() {
         if replace {
@@ -164,6 +173,11 @@ fn put(vfs: &mut Vfs, host: &Path, guest: &[u8], replace: bool) -> Result<()> {
         let result: Result<()> = (|| {
             let mut buffer = vec![0; 64 * 1024];
             loop {
+                if deadline.is_some_and(|d| std::time::Instant::now() >= d) {
+                    return Err(
+                        io::Error::new(io::ErrorKind::TimedOut, "File transfer timed out").into(),
+                    );
+                }
                 let count = source.read(&mut buffer)?;
                 if count == 0 {
                     break;
@@ -226,6 +240,144 @@ pub fn run(vfs: &mut Vfs, args: &[String]) -> Result<()> {
                     .into(),
             )
         }
+    }
+    Ok(())
+}
+
+/// Owner copy of an offline store. Runtime files keep their normal VFS path.
+pub fn copy(
+    vfs: &mut Vfs,
+    guest: &[u8],
+    host: &Path,
+    upload: bool,
+    o: &trames_control::copy::Options,
+) -> Result<()> {
+    fn check(o: &trames_control::copy::Options) -> Result<()> {
+        if o.deadline.is_some_and(|d| std::time::Instant::now() >= d) {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "File transfer timed out").into());
+        }
+        Ok(())
+    }
+    fn up(
+        vfs: &mut Vfs,
+        host: &Path,
+        target: &[u8],
+        o: &trames_control::copy::Options,
+    ) -> Result<()> {
+        check(o)?;
+        let meta = fs::symlink_metadata(host)?;
+        let exists = vfs.stat_at_flags(AT_FDCWD, target, true).is_ok();
+        if meta.is_dir() {
+            if !o.recursive {
+                return Err("directory copy requires -r".into());
+            }
+            match vfs.mkdir_at(AT_FDCWD, target, meta.permissions().mode() & 0o777) {
+                Ok(()) | Err(trames_vfs::Errno(17)) => (),
+                Err(e) => return Err(e.into()),
+            }
+            for e in fs::read_dir(host)? {
+                let e = e?;
+                up(vfs, &e.path(), &child(target, e.file_name().as_bytes()), o)?;
+            }
+        } else {
+            if exists && o.no_clobber {
+                return Ok(());
+            }
+            if meta.file_type().is_symlink() {
+                if exists {
+                    vfs.unlink_at(AT_FDCWD, target, false)?;
+                }
+                put_timed(vfs, host, target, false, o.deadline)?;
+            } else {
+                put_timed(vfs, host, target, exists, o.deadline)?;
+            }
+        }
+        Ok(())
+    }
+    fn down(
+        vfs: &mut Vfs,
+        source: &[u8],
+        target: &Path,
+        o: &trames_control::copy::Options,
+    ) -> Result<()> {
+        check(o)?;
+        let stat = vfs.stat_at_flags(AT_FDCWD, source, true)?;
+        if kind(&stat) == 0o40000 {
+            if !o.recursive {
+                return Err("directory copy requires -r".into());
+            }
+            fs::create_dir_all(target)?;
+            for name in names(vfs, source)? {
+                down(
+                    vfs,
+                    &child(source, &name),
+                    &target.join(std::ffi::OsString::from_vec(name)),
+                    o,
+                )?;
+            }
+        } else {
+            let exists = fs::symlink_metadata(target).is_ok();
+            if exists && o.no_clobber {
+                return Ok(());
+            }
+            if kind(&stat) == 0o120000 {
+                if exists {
+                    fs::remove_file(target)?;
+                }
+                get(vfs, source, target)?;
+            } else if kind(&stat) == 0o100000 {
+                let fd = vfs.open_at(AT_FDCWD, source, 0, 0)?;
+                let result = (|| -> Result<()> {
+                    let mut output = fs::File::create(target)?;
+                    loop {
+                        check(o)?;
+                        let bytes = vfs.read(fd, 256 * 1024)?;
+                        if bytes.is_empty() {
+                            break;
+                        }
+                        output.write_all(&bytes)?;
+                    }
+                    fs::set_permissions(
+                        target,
+                        fs::Permissions::from_mode(
+                            u32::from_le_bytes(stat[16..20].try_into().unwrap()) & 0o777,
+                        ),
+                    )?;
+                    Ok(())
+                })();
+                let closed = vfs.close(fd);
+                result?;
+                closed?;
+            } else {
+                return Err("only files, directories and symlinks can be copied".into());
+            }
+        }
+        Ok(())
+    }
+    if upload {
+        let target = if vfs
+            .stat_at(AT_FDCWD, guest)
+            .is_ok_and(|s| kind(&s) == 0o40000)
+        {
+            child(
+                guest,
+                host.file_name()
+                    .ok_or("source basename required")?
+                    .as_bytes(),
+            )
+        } else {
+            guest.to_vec()
+        };
+        up(vfs, host, &target, o)?;
+        vfs.sync()?;
+    } else {
+        let source = Path::new(std::ffi::OsStr::from_bytes(guest));
+        let target = if host.is_dir() {
+            host.join(source.file_name().ok_or("source basename required")?)
+        } else {
+            host.to_path_buf()
+        };
+        down(vfs, guest, &target, o)?;
     }
     Ok(())
 }

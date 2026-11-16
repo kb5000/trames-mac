@@ -404,6 +404,18 @@ mod tests {
         let f = Fixture::new();
         let p = f.env();
         let c = load(&p).unwrap();
+        let denied = model::Authorization {
+            environment_uuid: c.environment.uuid.clone(),
+            grant: model::Grant {
+                host_exec: false,
+                ..model::Grant::allowed()
+            },
+        };
+        atomic_write(
+            &p.join("grants.toml"),
+            model::encode(&denied).unwrap().as_bytes(),
+        )
+        .unwrap();
         let _running = lock(&f.0, &c.environment.uuid).unwrap();
         let grants_before = fs::read(p.join("grants.toml")).unwrap();
         let request = Patch {
@@ -480,6 +492,18 @@ mod tests {
         let f = Fixture::new();
         let p = f.env();
         let c = load(&p).unwrap();
+        let denied = model::Authorization {
+            environment_uuid: c.environment.uuid.clone(),
+            grant: model::Grant {
+                host_exec: false,
+                ..model::Grant::allowed()
+            },
+        };
+        atomic_write(
+            &p.join("grants.toml"),
+            model::encode(&denied).unwrap().as_bytes(),
+        )
+        .unwrap();
         let _running = lock(&f.0, &c.environment.uuid).unwrap();
         for cap in capabilities() {
             let key = cap["key"].as_str().unwrap();
@@ -502,6 +526,19 @@ mod tests {
     fn interrupted_permission_changes_keep_denied_access_denied() {
         let f = Fixture::new();
         let p = f.env();
+        let c = load(&p).unwrap();
+        let denied = model::Authorization {
+            environment_uuid: c.environment.uuid,
+            grant: model::Grant {
+                host_exec: false,
+                ..model::Grant::allowed()
+            },
+        };
+        atomic_write(
+            &p.join("grants.toml"),
+            model::encode(&denied).unwrap().as_bytes(),
+        )
+        .unwrap();
         // Prevent publication of env.toml without altering its existing contents.
         let blocker = p.join(format!("env.tmp-{}", std::process::id()));
         fs::write(&blocker, b"publication blocked").unwrap();

@@ -8,7 +8,7 @@ _trames() {
         session) COMPREPLY=( $(compgen -W 'ls attach' -- "$current") ) ;;
         apk) COMPREPLY=( $(compgen -W 'install launch list' -- "$current") ) ;;
         completion) COMPREPLY=( $(compgen -W 'bash zsh fish' -- "$current") ) ;;
-        *) COMPREPLY=( $(compgen -W 'shell exec env config network session apk gui completion --environment --help --version' -- "$current") ) ;;
+        *) COMPREPLY=( $(compgen -W 'shell exec env config network session apk status doctor permissions clipboard files mount port gui completion --environment --help --version' -- "$current") ) ;;
     esac
 }
 complete -F _trames trames trames-dev

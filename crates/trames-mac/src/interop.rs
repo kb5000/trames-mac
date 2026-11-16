@@ -3,11 +3,11 @@
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
-    io::{self, Read},
+    io::{self, Read, Write},
     os::fd::{AsRawFd, FromRawFd, OwnedFd},
     os::unix::process::{CommandExt, ExitStatusExt},
     path::PathBuf,
-    process::{Child, Command, Stdio},
+    process::{Child, ChildStdin, Command, Stdio},
     sync::Arc,
 };
 use trames_bridge::{Broker, HostRequest, Policy};
@@ -19,10 +19,14 @@ struct Job {
     pending: Option<Value>,
     status: Option<i32>,
     text_tail: [Vec<u8>; 2],
+    input: Option<ChildStdin>,
+    input_queue: std::collections::VecDeque<(u64, Vec<u8>, usize, bool)>,
+    binary: bool,
+    completed: bool,
 }
 impl Drop for Job {
     fn drop(&mut self) {
-        if self.status.is_none() {
+        if !self.completed {
             unsafe {
                 libc::kill(-(self.child.id() as i32), libc::SIGKILL);
             }
@@ -62,12 +66,7 @@ fn delegated(argv: &[String], uuid: &str) -> io::Result<Vec<String>> {
     let words: Vec<_> = argv.iter().map(String::as_str).collect();
     if matches!(
         words.as_slice(),
-        ["--version"]
-            | ["--list"]
-            | ["--list", "--json"]
-            | ["env", "ls"]
-            | ["env", "ls", "--json"]
-            | ["gui"]
+        ["--version"] | ["--list"] | ["--list", "--json"] | ["env", "ls"] | ["env", "ls", "--json"]
     ) {
         return Ok(argv.to_vec());
     }
@@ -85,8 +84,6 @@ fn delegated(argv: &[String], uuid: &str) -> io::Result<Vec<String>> {
             | ["session", "ls", "--json"]
             | ["env", "status"]
             | ["env", "start"]
-            | ["env", "stop"]
-            | ["env", "restart"]
     );
     if !allowed {
         return Err(ioe("host-cli permits read-only configuration and lifecycle of this environment; use the separately granted host-exec capability for host administration"));
@@ -108,7 +105,7 @@ unsafe extern "C" {
         length: usize,
     ) -> isize;
 }
-fn clipboard(request: &trames_bridge::Request) -> Result<Value, String> {
+pub(super) fn clipboard(request: &trames_bridge::Request) -> Result<Value, String> {
     match request.method.as_str() {
         "clipboard.read" => {
             let mut bytes = vec![0; 16384];
@@ -161,6 +158,9 @@ impl Host {
                 .with_clipboard(e.clipboard.enabled),
             )
             .map_err(ioe)?;
+        broker
+            .describe(model::control_info(&config, &grant, "macos"))
+            .map_err(ioe)?;
         Ok(Self {
             broker,
             jobs: BTreeMap::new(),
@@ -172,6 +172,25 @@ impl Host {
             config,
             grant,
         })
+    }
+    pub fn attach_files(&self, vfs: &mut trames_vfs::Vfs) -> io::Result<()> {
+        let info = model::control_info(&self.config, &self.grant, "macos");
+        if let Some(shares) = info["shares"].as_array() {
+            for row in shares {
+                let alias = row["alias"]
+                    .as_str()
+                    .ok_or_else(|| ioe("missing share alias"))?;
+                let share = &self.grant.shares[alias];
+                super::files::mkdirs(vfs, model::share_path(alias).as_bytes()).map_err(ioe)?;
+                vfs.mount_host_authorized(
+                    model::share_path(alias).as_bytes(),
+                    &share.host,
+                    share.readonly,
+                )
+                .map_err(ioe)?;
+            }
+        }
+        Ok(())
     }
     pub fn clipboard(&self) -> bool {
         self.broker.enabled(trames_bridge::Channel::Clipboard)
@@ -194,6 +213,11 @@ impl Host {
             wait.until(deadline);
         }
         for job in self.jobs.values() {
+            if !job.input_queue.is_empty() {
+                if let Some(input) = &job.input {
+                    wait.watch(input, true)?;
+                }
+            }
             if job.pending.is_none() {
                 for file in job.output.iter().flatten() {
                     wait.watch(file, false)?;
@@ -228,11 +252,23 @@ impl Host {
             command.current_dir(cwd);
         }
         let mut child = command
-            .stdin(Stdio::null())
+            .stdin(if request.request.params["stdin"] == true {
+                Stdio::piped()
+            } else {
+                Stdio::null()
+            })
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .process_group(0)
             .spawn()?;
+        let input = child.stdin.take();
+        if let Some(f) = &input {
+            let flags = unsafe { libc::fcntl(f.as_raw_fd(), libc::F_GETFL) };
+            if unsafe { libc::fcntl(f.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
+                let _ = child.kill();
+                return Err(io::Error::last_os_error());
+            }
+        }
         let output = [
             child
                 .stdout
@@ -282,6 +318,10 @@ impl Host {
             pending: None,
             status,
             text_tail: [vec![], vec![]],
+            input,
+            input_queue: Default::default(),
+            binary: request.request.params["encoding"] == "base64",
+            completed: false,
         })
     }
     fn control(
@@ -348,7 +388,14 @@ impl Host {
                         .as_str()
                         .ok_or("authorized share alias required")?;
                     let effective = self.grant.effective(&self.config.interop);
-                    if !effective.mounts.shares.iter().any(|v| v == alias) {
+                    if !effective
+                        .mounts
+                        .shares
+                        .as_deref()
+                        .unwrap_or(&[])
+                        .iter()
+                        .any(|v| v == alias)
+                    {
                         return Err("share is outside the requested mount grant".into());
                     }
                     let share = self.grant.shares.get(alias).ok_or("unknown host share")?;
@@ -400,10 +447,53 @@ impl Host {
                         None => Err("URL is required".into()),
                     }
                 }
+                "host.input" => {
+                    let target = request.request.params["id"]
+                        .as_u64()
+                        .and_then(|id| self.broker.input_target(request.ticket, id));
+                    match target.and_then(|id| self.jobs.get_mut(&id)) {
+                        Some(job) if job.input.is_some() => {
+                            let data = request.request.params["data"].as_str().unwrap_or("");
+                            match trames_control::decode(data) {
+                                Ok(bytes) if bytes.len() <= 8192 && job.input_queue.is_empty() => {
+                                    self.broker.accept_stream(request.ticket).map_err(ioe)?;
+                                    job.input_queue.push_back((
+                                        request.ticket,
+                                        bytes,
+                                        0,
+                                        request.request.params["eof"] == true,
+                                    ));
+                                    if let Some(wake) = &self.wake {
+                                        wake.notify();
+                                    }
+                                    continue;
+                                }
+                                _ => Err("Invalid or busy command input".into()),
+                            }
+                        }
+                        Some(_) => Ok(json!({"closed":true})),
+                        None => Err("Command no longer exists".into()),
+                    }
+                }
+                "ui.manager" => Command::new(std::env::current_exe()?)
+                    .env("TRAMES_HOME", &self.root)
+                    .args(["-e", &self.config.environment.name, "gui"])
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .spawn()
+                    .map(|_| json!({"opened":true}))
+                    .map_err(|e| e.to_string()),
                 "host.exec" | "host.cli" => match self.spawn(&request) {
                     Ok(job) => {
                         if self.trace {
                             eprintln!("interop spawned {} status {:?}", job.child.id(), job.status);
+                        }
+                        self.broker.accept_stream(request.ticket).map_err(ioe)?;
+                        if job.binary {
+                            self.broker
+                                .stream(request.ticket, json!({"ready":true,"done":false}), false)
+                                .map_err(ioe)?;
                         }
                         self.jobs.insert(request.ticket, job);
                         // Interest was armed before this deciding pass. The
@@ -419,7 +509,7 @@ impl Host {
                     Ok(json!({"platform":"macos","environment":self.config.environment}))
                 }
                 "files.list" => Ok(
-                    json!({"shares":self.grant.effective(&self.config.interop).files.shares,"mounts":self.config.mounts,"transport":"hostfs"}),
+                    json!({"shares":model::control_info(&self.config,&self.grant,"macos")["shares"],"transport":"hostfs"}),
                 ),
                 _ => Err("unsupported host control operation".into()),
             };
@@ -442,10 +532,10 @@ impl Host {
         let mut done = vec![];
         for (&ticket, job) in &mut self.jobs {
             if !self.broker.active(ticket) {
-                if job.status.is_none() {
-                    unsafe {
-                        libc::kill(-(job.child.id() as i32), libc::SIGKILL);
-                    }
+                // The leader may already have exited while descendants still
+                // own its pipes. Cancellation owns the entire process group.
+                unsafe {
+                    libc::kill(-(job.child.id() as i32), libc::SIGKILL);
                 }
                 job.status = job
                     .child
@@ -455,6 +545,39 @@ impl Host {
                     done.push(ticket);
                 }
                 continue;
+            }
+            if let Some((input_ticket, bytes, at, eof)) = job.input_queue.front_mut() {
+                let mut closed = job.input.is_none();
+                if let Some(input) = job.input.as_mut() {
+                    if *at < bytes.len() {
+                        match input.write(&bytes[*at..]) {
+                            Ok(n) => {
+                                *at += n;
+                                closed = n == 0;
+                            }
+                            Err(e)
+                                if matches!(
+                                    e.kind(),
+                                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                                ) => {}
+                            Err(e) if e.kind() == io::ErrorKind::BrokenPipe => closed = true,
+                            Err(e) => return Err(e),
+                        }
+                    }
+                }
+                if closed || *at == bytes.len() {
+                    if closed || *eof {
+                        job.input = None;
+                    }
+                    let reply = serde_json::to_vec(&json!({"version":1,"ticket":input_ticket,"result":{"accepted":true,"closed":closed}})).map_err(ioe)?;
+                    match self.broker.reply(&reply) {
+                        Ok(()) | Err(2) => {
+                            job.input_queue.pop_front();
+                        }
+                        Err(11) => (),
+                        Err(e) => return Err(ioe(e)),
+                    }
+                }
             }
             if let Some(value) = job.pending.take() {
                 match self.broker.stream(ticket, value.clone(), false) {
@@ -498,12 +621,21 @@ impl Host {
                             if self.trace {
                                 eprintln!("interop bytes {ticket} {direction} {n}");
                             }
-                            let field = if direction == 0 { "stdout" } else { "stderr" };
-                            let text = text_chunk(&mut job.text_tail[direction], &bytes[..n]);
-                            if text.is_empty() {
-                                continue;
-                            }
-                            let value = json!({field:text,"done":false});
+                            let value = if job.binary {
+                                let field = if direction == 0 {
+                                    "stdout_base64"
+                                } else {
+                                    "stderr_base64"
+                                };
+                                json!({field:trames_control::encode(&bytes[..n]),"done":false})
+                            } else {
+                                let field = if direction == 0 { "stdout" } else { "stderr" };
+                                let text = text_chunk(&mut job.text_tail[direction], &bytes[..n]);
+                                if text.is_empty() {
+                                    continue;
+                                }
+                                json!({field:text,"done":false})
+                            };
                             match self.broker.stream(ticket, value.clone(), false) {
                                 Ok(()) => (),
                                 Err(11) => {
@@ -531,7 +663,11 @@ impl Host {
                         .broker
                         .stream(ticket, json!({"done":true,"exit_code":code}), true)
                     {
-                        Ok(()) | Err(2) => done.push(ticket),
+                        Ok(()) => {
+                            job.completed = true;
+                            done.push(ticket);
+                        }
+                        Err(2) => done.push(ticket),
                         Err(11) => (),
                         Err(e) => return Err(ioe(e)),
                     }

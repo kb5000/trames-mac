@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Product environment registry. Guest I/O never enters this management path.
+#[path = "controls.rs"]
+mod controls;
 #[path = "manager_model.rs"]
 mod manager_model;
+pub fn control(selected: Option<&str>, args: &[String]) -> Result<u8> {
+    controls::dispatch(selected, args)
+}
 pub fn manager(args: &[String]) -> Result<u8> {
     manager_model::dispatch(args)
 }
@@ -37,6 +42,7 @@ struct CliConfig {
     version: u32,
     default_environment: String,
     defaults: Config,
+    permission_defaults: model::Grant,
 }
 impl Default for CliConfig {
     fn default() -> Self {
@@ -44,6 +50,7 @@ impl Default for CliConfig {
             version: 1,
             default_environment: "default".into(),
             defaults: Config::default(),
+            permission_defaults: model::Grant::allowed(),
         }
     }
 }
@@ -428,7 +435,12 @@ pub(super) fn atomic_write(p: &Path, data: &[u8]) -> Result<()> {
 }
 fn register(dir: &Path, c: &Config, explicit: bool) -> Result<()> {
     validate(c)?;
-    let new_instance = !dir.join("instance.toml").exists();
+    let new_instance = if dir.join("instance.toml").exists() {
+        let previous: Instance = model::decode(&fs::read_to_string(dir.join("instance.toml"))?)?;
+        previous.uuid != c.environment.uuid
+    } else {
+        true
+    };
     let i = Instance {
         name: c.environment.name.clone(),
         uuid: c.environment.uuid.clone(),
@@ -438,10 +450,12 @@ fn register(dir: &Path, c: &Config, explicit: bool) -> Result<()> {
     if new_instance {
         let grant = model::Authorization {
             environment_uuid: c.environment.uuid.clone(),
-            grant: model::Grant {
-                clipboard: true,
-                ..Default::default()
-            },
+            grant: load_cli(
+                dir.parent()
+                    .and_then(Path::parent)
+                    .ok_or("invalid environment directory")?,
+            )?
+            .permission_defaults,
         };
         atomic_write(&dir.join("grants.toml"), model::encode(&grant)?.as_bytes())?;
     }

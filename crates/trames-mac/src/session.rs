@@ -643,6 +643,7 @@ pub fn run(
         let config = super::environments::load(&path)?;
         let grant = super::environments::grants(&path, &config)?;
         let host = super::interop::Host::new(super::environments::root()?, config, grant)?;
+        host.attach_files(&mut vfs)?;
         vfs.attach_bridge(host.broker());
         Some(host)
     } else {

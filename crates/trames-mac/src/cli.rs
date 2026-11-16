@@ -2,9 +2,24 @@
 //! User-facing CLI. Parsing, help, config and completion never start a runtime.
 use super::environments::{self as env, Result};
 use std::io::IsTerminal;
-const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --distro android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  network ls|create|inspect|remove  Trames networks\n  config get|set|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set resources.memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
+const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --distro android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  network ls|create|inspect|remove  Trames networks\n  config get|set|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  status | doctor          Inspect the selected environment (also offline)
+  permissions [allow|deny CAPABILITY|--all]
+  permissions defaults [allow|deny CAPABILITY|--all]
+  files ls | cp [-r] HOST guest:/PATH | cp guest:/PATH HOST
+  clipboard get|set [TEXT]; mount ls|add|rm; port ls|publish|unpublish
+  gui                      Open the environment manager\n  completion zsh|bash|fish  Print shell completion\n\nOptions: -e, --environment NAME; -h, --help; -V, --version\n\nExamples:\n  trames env create work --distro debian\n  trames -e work shell\n  printf hello | trames -e work exec -- cat\n  trames -e work exec -- sh -c 'echo error >&2; exit 7'\n  trames -e work config set resources.memory 4GiB\n\nShell/exec start existing environments on demand. They never download or create\nan image. exec uses separate stdin/stdout/stderr pipes unless -t is requested.\nUse an explicit sh -c for shell syntax. Exiting a terminal leaves the environment\nrunning. env start always starts in the background and returns.\n";
 pub fn dispatch(args: Vec<String>) -> Result<u8> {
     let (selected, args) = selection(args)?;
+    if let Ok((_, parsed)) = trames_control::Options::parse(&args) {
+        if parsed.first().is_some_and(|s| {
+            matches!(
+                s.as_str(),
+                "status" | "doctor" | "permissions" | "clipboard" | "files" | "mount" | "port"
+            )
+        }) {
+            return env::control(selected.as_deref(), &args);
+        }
+    }
     let op = args.first().map(String::as_str).unwrap_or("");
     if op == "help"
         || args
@@ -68,6 +83,12 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
     }
     if op == "_manager" {
         return env::manager(&args[1..]);
+    }
+    if matches!(
+        op,
+        "status" | "doctor" | "permissions" | "clipboard" | "files" | "mount" | "port"
+    ) {
+        return env::control(selected.as_deref(), &args);
     }
     if op == "config" {
         return env::settings(selected.as_deref(), &args[1..]);

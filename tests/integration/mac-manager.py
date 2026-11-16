@@ -56,7 +56,7 @@ def main():
         profile.write_text(first['toml'].replace('[image]\n', '[image]\nsource = ' + json.dumps(str(args.alpine.resolve())) + '\n'))
         run('env', 'create', 'clone', '--config', str(profile), '--new-identity')
         assert snapshot('clone')['config']['environment']['uuid'] != first['config']['environment']['uuid']
-        assert not snapshot('clone')['grants']['host_exec']
+        assert snapshot('clone')['grants']['host_exec']
 
         try:
             run('env', 'start', 'first', '--detach')
@@ -67,13 +67,13 @@ def main():
             grant = Path(running['path']) / 'grants.toml'
             grants_before = grant.read_bytes()
             result = json.loads(patch(running, {'resources.memory': '4GiB',
-                                               'interop.host_exec.enabled': True}))
+                                               'interop.host_exec.enabled': False}))
             assert {change['path'] for change in result['changes']} == {
                 'resources.memory', 'interop.host_exec.enabled'}
             assert grant.read_bytes() == grants_before
             assert 'STILL_LIVE' in run('-e', 'first', 'exec', '--', '/bin/echo', 'STILL_LIVE')
             assert snapshot()['state'] == running['state']
-            assert not snapshot()['grants']['host_exec']
+            assert snapshot()['grants']['host_exec']
             assert 'changed outside' in patch(running, {'resources.memory': '8GiB'}, ok=False)
             current = snapshot()
             # Native forms must send real booleans, including switch selections.
