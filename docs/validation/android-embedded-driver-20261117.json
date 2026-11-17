@@ -1,0 +1,43 @@
+{
+  "runtime": "c2c9fd7c1365db94ff9d4b1235953e9eeac9eaef",
+  "production_mac_commit": "b808e50",
+  "apps": {
+    "Trames": {
+      "version": "1.5.5",
+      "linkage": "embedded",
+      "runner_sha256": "a57f62617f2da952ee1c3b41763eb52680258132d15a9afa12d95d9bc971131c"
+    },
+    "Trames Dev": {
+      "version": "1.5.5",
+      "linkage": "embedded",
+      "runner_sha256": "136bc082596735d13ebaff4ca10504010a63f5771cc2ef152bbc47ba102d35cf"
+    }
+  },
+  "checks": {
+    "stable-debian": {
+      "exit": 0,
+      "output": "stable-debian-okaarch64\n"
+    },
+    "dev-debian": {
+      "exit": 0,
+      "output": "dev-debian-okaarch64\n"
+    },
+    "docker": {
+      "exit": 0,
+      "output": "active\nweb\n"
+    },
+    "android": {
+      "exit": 0,
+      "output": "1\nrunning\nrunning\n88\n64\n"
+    },
+    "android_soak": {
+      "output": "1\nrunning\nrunning\n88\n64\n",
+      "seconds_since_first_observation": 238,
+      "unchanged_graphics_pids": true,
+      "crash_buffer_empty": true
+    },
+    "installed_screen": "installed-android-screen.png",
+    "isolated_native_mouse_settings_navigation": true,
+    "isolated_startup_systemui_anr": "Recovered by restarting SystemUI; not claimed as an ANR semantic fix"
+  }
+}
