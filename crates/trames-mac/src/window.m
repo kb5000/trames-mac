@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import <AppKit/AppKit.h>
 #import "localization.h"
+#import "appearance.h"
 #import "window-input.h"
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -320,7 +321,7 @@ static void source_perform(void *info){[(__bridge TramesUI *)info tick];}
         self.lifecycleObserved=YES;
     }
     if(NSApp)return YES;
-    [NSApplication sharedApplication];NSApp.delegate=self;
+    [NSApplication sharedApplication];NSApp.delegate=self;TMObserveInterfaceStyle();
     // Wayland windows run in the CLI helper, not the Finder manager entry.
     // Set the bundled icon explicitly before this helper enters the Dock.
     NSImage *icon=[[NSImage alloc]initWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"Trames" withExtension:@"icns"]];

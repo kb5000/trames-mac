@@ -352,3 +352,9 @@
 "No additional limit" = "不额外限制";
 "Automatic (shared with Mac)" = "自动（与 Mac 共享）";
 "Host permissions" = "宿主权限";
+"Appearance" = "外观";
+"Interface Style" = "界面模式";
+"Follow System" = "跟随系统";
+"Light" = "亮色";
+"Dark" = "暗色";
+"Changes the Trames interface only, leaving application themes inside environments unchanged." = "仅改变 Trames 界面，不改变环境内应用的主题。";

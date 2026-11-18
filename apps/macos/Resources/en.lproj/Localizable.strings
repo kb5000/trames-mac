@@ -352,3 +352,9 @@
 "No additional limit" = "No additional limit";
 "Automatic (shared with Mac)" = "Automatic (shared with Mac)";
 "Host permissions" = "Host permissions";
+"Appearance" = "Appearance";
+"Interface Style" = "Interface Style";
+"Follow System" = "Follow System";
+"Light" = "Light";
+"Dark" = "Dark";
+"Changes the Trames interface only, leaving application themes inside environments unchanged." = "Changes the Trames interface only, leaving application themes inside environments unchanged.";

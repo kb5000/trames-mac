@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import <AppKit/AppKit.h>
 #import "../../crates/trames-mac/src/manager-ui.h"
+#import "../../crates/trames-mac/src/appearance.h"
 
 @interface TramesManager (LayoutTests)
 - (void)fieldChanged:(NSControl *)sender;
@@ -70,6 +71,18 @@ static void runTests(void) {@autoreleasepool {
     [m saveConfiguration:nil];for(NSString *path in @[@"display.windows",@"components.audio",@"components.audio_input",@"components.vulkan",@"components.vaapi"])booleanValue(m.lastBody[@"changes"][path],NO);
     snapshot(m.window,@"configuration");
     [m.drafts removeAllObjects];[m.revisions removeAllObjects];m.page=@"settings";[m render];layout(m.window);NSButton *login=identified(m.content,@"fixture");NSCAssert([login isKindOfClass:NSButton.class],@"login setting is not a checkbox");[login performClick:nil];NSCAssert(([m.lastArguments isEqual:@[@"env",@"enable",@"debian"]]),@"login checkbox did not enable");[login performClick:nil];NSCAssert(([m.lastArguments isEqual:@[@"env",@"disable",@"debian"]]),@"login checkbox did not disable");snapshot(m.window,@"settings");
+    id previousStyle=[NSUserDefaults.standardUserDefaults objectForKey:@"interfaceStyle"];
+    NSPopUpButton *appearance=identified(m.content,@"interface-style");NSCAssert(appearance.numberOfItems==3,@"missing appearance choices");
+    for(NSString *style in @[@"light",@"dark",@"system"]){
+        for(NSMenuItem *item in appearance.itemArray)if([item.representedObject isEqual:style])[appearance selectItem:item];
+        [NSApp sendAction:appearance.action to:appearance.target from:appearance];layout(m.window);
+        NSCAssert([TMInterfaceStyle() isEqual:style],@"appearance choice not persisted");
+        if([style isEqual:@"system"])NSCAssert(NSApp.appearance==nil,@"system appearance should inherit macOS");
+        else {NSString *resolved=[m.window.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,NSAppearanceNameDarkAqua]];NSString *expected=[style isEqual:@"dark"]?NSAppearanceNameDarkAqua:NSAppearanceNameAqua;NSCAssert([resolved isEqual:expected],@"window appearance did not update live");}
+        snapshot(m.window,[@"settings-" stringByAppendingString:style]);
+    }
+    if(previousStyle)[NSUserDefaults.standardUserDefaults setObject:previousStyle forKey:@"interfaceStyle"];else[NSUserDefaults.standardUserDefaults removeObjectForKey:@"interfaceStyle"];TMApplyInterfaceStyle();
+
     m.page=@"env";m.tabs.selectedSegment=3;[m render];layout(m.window);NSCAssert(!button(m.content,@"Requested"),@"redundant request control remains");NSPopUpButton *permission=identified(m.content,@"clipboard");NSCAssert(permission.indexOfSelectedItem==0,@"grant without enabled permission displayed as allowed");[m change:@"components.audio" value:@NO];[permission selectItemAtIndex:1];[m permission:permission];NSCAssert([m.revisions[@"fixture"] isEqual:@"permission-saved"] && [[m draft][@"components.audio"] isEqual:@NO],@"permission action lost or invalidated an unrelated draft");NSCAssert(([m.lastArguments isEqual:@[@"_manager",@"permission",@"fixture",@"clipboard",@"on",@"base"]]),@"permission action did not update the combined setting");snapshot(m.window,@"permissions");
     for(NSNumber *width in @[@1120,@960]){[m.window setContentSize:NSMakeSize(width.doubleValue,720)];layout(m.window);[m create:nil];id controller=m.createController;NSWindow *sheet=[controller window];[sheet makeKeyWindow];layout(sheet);NSCAssert(button(sheet.contentView,@"Cancel").frame.size.width<160,@"wizard action button stretched across the panel");NSStackView *body=[controller valueForKey:@"body"];NSView *heading=body.arrangedSubviews.firstObject;NSCAssert(NSMaxY(heading.frame)>body.bounds.size.height-64,@"sheet content starts halfway down the panel");
         NSButton *source=button(sheet.contentView,@"Debian — daily tools and optional systemd");clickable(source,sheet);if(NSApp.active && sheet.keyWindow)mouseClick(source,sheet);else{puts("SKIP: OS mouse dispatch requires an active desktop; validating native hit targets and control actions");[source performClick:nil];}layout(sheet);NSCAssert([[controller valueForKey:@"kind"] isEqual:@"debian"],@"source choice did not respond");snapshot(sheet,@"create-source");

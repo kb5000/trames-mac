@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #import "manager-ui.h"
+#import "appearance.h"
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -128,7 +129,7 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app{(void)app;return YES;}
 - (void)applicationDidBecomeActive:(NSNotification *)note{(void)note;if(self.window && !NSApp.modalWindow){[self.sessions removeObjectForKey:self.selectedKey?:@""];[self refresh:nil];}}
 - (void)applicationDidFinishLaunching:(NSNotification *)note {
-    (void)note;[self initializeModel];[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    (void)note;[self initializeModel];TMObserveInterfaceStyle();[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     NSImage *icon=[[NSImage alloc]initWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"Trames" withExtension:@"icns"]];if(icon)NSApp.applicationIconImage=icon;
     NSMenu *menu=[NSMenu new];NSMenuItem *app=[NSMenuItem new];[menu addItem:app];NSMenu *sub=[NSMenu new];[sub addItemWithTitle:[NSString stringWithFormat:T(@"Quit %@"),productName()] action:@selector(terminate:) keyEquivalent:@"q"];app.submenu=sub;
     NSMenuItem *edit=[NSMenuItem new];[menu addItem:edit];edit.submenu=[[NSMenu alloc]initWithTitle:T(@"Edit")];
@@ -407,10 +408,15 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
 - (void)renderSettings {
     [self heading:T(@"Trames Settings") subtitle:T(@"This Mac; independent from guest locale") actions:@[]];if([self.snapshot[@"global_error"] isKindOfClass:NSString.class])[self.content addArrangedSubview:TMLabel(self.snapshot[@"global_error"],12,YES)];
     NSPopUpButton *defaults=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];for(NSDictionary *r in self.rows)[defaults addItemWithTitle:r[@"name"]];[defaults selectItemWithTitle:TMString(TMValue(self.snapshot,@"global.default_environment"))];defaults.target=self;defaults.action=@selector(globalSetting:);defaults.identifier=@"default_environment";
+    NSPopUpButton *appearance=[[NSPopUpButton alloc]initWithFrame:NSZeroRect pullsDown:NO];
+    for(NSArray *item in @[@[@"system",@"Follow System"],@[@"light",@"Light"],@[@"dark",@"Dark"]]){[appearance addItemWithTitle:T(item[1])];appearance.lastItem.representedObject=item[0];if([TMInterfaceStyle() isEqual:item[0]])[appearance selectItem:appearance.lastItem];}
+    appearance.target=self;appearance.action=@selector(interfaceStyleChanged:);appearance.identifier=@"interface-style";[appearance setAccessibilityLabel:T(@"Interface Style")];
+    [self section:@"Appearance" view:TMGroup(@[TMRow(@"Interface Style",@"Changes the Trames interface only, leaving application themes inside environments unchanged.",appearance)])];
     [self section:@"General" view:TMGroup(@[TMRow(@"Default environment",@"Used when the CLI has no -e selection",defaults),TMRow(@"Interface language",@"Follows the macOS per-app language; guest locale is unchanged.",TMLabel(NSBundle.mainBundle.preferredLocalizations.firstObject?:@"",12,YES))])];
     NSMutableArray *rows=[NSMutableArray new];for(NSDictionary *r in self.rows){NSButton *p=[NSButton checkboxWithTitle:@"" target:self action:@selector(autostart:)];p.state=[r[@"autostart"] boolValue]?NSControlStateValueOn:NSControlStateValueOff;p.identifier=[self keyForRow:r];[p setAccessibilityLabel:[NSString stringWithFormat:@"%@ — %@",r[@"name"],T(@"Start at login")]];[rows addObject:TMRow(r[@"name"],@"Start this environment at Mac user login",p)];}if(rows.count)[self section:@"Start at login" view:TMGroup(rows)];
     [self section:@"Configuration and diagnostics" view:TMGroup(@[TMRow(@"Global defaults",self.snapshot[@"global_path"],TMButtonMake(@"Open in Editor",self,@selector(editGlobal:),nil)),TMRow(@"Version and environment information",@"Collect configuration and build identities",TMButtonMake(@"Diagnostics",self,@selector(doctor:),nil))])];
 }
+- (void)interfaceStyleChanged:(NSPopUpButton *)sender {TMSetInterfaceStyle(sender.selectedItem.representedObject);}
 - (void)revealStorage:(id)sender{(void)sender;NSString *path=[self selectedRow][@"path"];if(path)[NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[[NSURL fileURLWithPath:[path stringByAppendingPathComponent:@"store"]]]];}
 - (void)removeNetwork:(TMButton *)sender{if([self confirm:@"Remove Trames network?" message:@"Attached environments must be stopped. Private environment files are preserved."])[self run:@[@"network",@"remove",sender.payload] owner:[@"network:" stringByAppendingString:sender.payload] name:sender.payload title:T(@"Removing network…") quiet:NO input:nil completion:nil];}
 - (void)autostart:(NSButton *)sender{NSDictionary *row=nil;for(NSDictionary *r in self.rows)if([[self keyForRow:r] isEqual:sender.identifier])row=r;if(row)[self run:@[@"env",sender.state==NSControlStateValueOn?@"enable":@"disable",row[@"name"]] owner:[self keyForRow:row] name:row[@"name"] title:T(@"Saving login setting…") quiet:NO input:nil completion:nil];}

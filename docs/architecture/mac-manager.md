@@ -79,3 +79,29 @@ runs when an active desktop is available; inactive sessions report that portion
 as skipped and still exercise native actions and geometry. Disposable running
 Linux integration checks validate boolean round-trips and permission updates
 without restarting the guest. These changes do not alter execution coordination.
+
+## Appearance
+
+**Trames Settings → Appearance → Interface Style** offers **Follow System**
+(default), **Light**, and **Dark**, matching iPad. Both products use native
+semantic surfaces, labels, separators and accent treatments instead of fixed
+light/dark UI colours. `interfaceStyle` is a local app preference with values
+`system`, `light` and `dark`; it never enters environment TOML. Stable and Dev
+keep their separate application preference domains.
+
+`appearance.h` applies the override to AppKit and lets `system` inherit macOS.
+The manager and lazy Wayland frontend use the same bundled app preference domain.
+A bundle-scoped distributed notification updates existing frontend chrome when
+changed in the manager. There is no poll, guest request or execution dependency.
+Guest-rendered pixels and the external Terminal application's palette remain
+under those applications' control.
+
+The native manager fixture exercises all three control actions, persisted
+selection and effective window appearance. Light/dark snapshots were visually
+checked. `task-stream.sh` and `window-scene.sh` passed; OS-dispatched mouse tests
+were skipped because the test process did not have an active desktop, while
+native actions, hit targets and layout checks passed. The Mac Dev bundle built
+and passed its signature checks without installing or restarting environments.
+
+[Light appearance](../validation/assets/mac-appearance-light-20261119.png) ·
+[Dark appearance](../validation/assets/mac-appearance-dark-20261119.png)
