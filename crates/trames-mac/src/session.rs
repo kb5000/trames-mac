@@ -639,6 +639,9 @@ pub fn run(
             }
         }
     }
+    if !filesystem && !android_init && init == super::systemd::Init::Shell {
+        trames_distro::boot::prepare_shared_memory(&mut vfs)?;
+    }
     let interop = if let Some(path) = host_profile {
         let config = super::environments::load(&path)?;
         let grant = super::environments::grants(&path, &config)?;
@@ -666,7 +669,7 @@ pub fn run(
     }
     for import in imports {
         let (guest, host) = import.split_once('=').ok_or("import must be GUEST=HOST")?;
-        vfs.import_reader(guest.as_bytes(), &mut std::fs::File::open(host)?, true)?;
+        vfs.import_session_reader(guest.as_bytes(), &mut std::fs::File::open(host)?, true)?;
     }
     for (specification, readonly) in mounts {
         let (guest, host) = specification
