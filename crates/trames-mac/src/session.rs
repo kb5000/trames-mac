@@ -2032,12 +2032,12 @@ mod tests {
             let calls: [(u32, u64, u64, i64); 18] = [
                 (25, 4, noatime, 0),
                 (26, 4, noatime, -1),
-                (25, 4, 0x80000000, -22),
+                (25, 4, noatime | 0x80000000, 0), // Linux ignores unknown F_SETFL bits.
                 (28, 4, 0, -9),
                 (25, 12, u64::MAX, -22),
                 (28, 12, u64::MAX, -9),
                 (21, 1034, 0, 0),
-                (21, 1033, 16, -22),
+                (21, 1033, 1 << 30, -22), // Unknown seal bit (0x10 is F_SEAL_FUTURE_WRITE).
                 (21, 1033, 6, 0),
                 (21, 1034, 0, 6),
                 (27, 1033, 8, -16),
@@ -2046,7 +2046,12 @@ mod tests {
                 (21, 1033, 1, 0),
                 (21, 1034, 0, 15),
                 (21, 1033, 0, -1),
-                (25, 3, 0, (noatime | 2) as i64),
+                (
+                    25,
+                    3,
+                    0,
+                    (noatime | trames_vfs::O_LARGEFILE as u64 | 2) as i64,
+                ),
                 (26, 1034, 0, -22),
             ];
             let mut code = vec![0xd2a000b4, 0x8b132294]; // x20=0x50000+thread*256

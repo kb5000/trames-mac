@@ -1369,8 +1369,15 @@ fn native_range_has_one_fault_for_all_512_pages_and_sparse_real_residency() {
         "address registration does not populate data"
     );
     assert!(unpopulated.populated_pages().is_empty());
+    let mut flags = [1; 4];
+    unpopulated.residency(4096, &mut flags).unwrap();
+    assert_eq!(flags, [0; 4]);
     drop(unpopulated);
     native_step(&mut executor, &mut memory, 0x200000);
+    assert_eq!(
+        memory.resident(0x201000, 4 * PAGE_SIZE).unwrap(),
+        [1, 1, 1, 0]
+    );
     assert!(
         memory.resident_bytes() < 65536,
         "one reached host granule, not a charged 2MiB range"

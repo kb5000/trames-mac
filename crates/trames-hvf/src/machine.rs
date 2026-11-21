@@ -886,6 +886,33 @@ unsafe impl HardwareStorage for NativeRange {
 }
 // SAFETY: all bytes are demand-zero/stable; mincore reads only host metadata.
 unsafe impl HardwareRange for NativeRange {
+    fn residency(&self, offset: usize, pages: &mut [u8]) -> Result<(), trames_memory::MemoryError> {
+        // The HVF RAM allocation is aligned to the 16 KiB host granule.
+        const HOST: usize = 16384;
+        let guest = PAGE_SIZE as usize;
+        if !offset.is_multiple_of(guest)
+            || offset > self.len()
+            || pages.len() > (self.len() - offset) / guest
+        {
+            return Err(trames_memory::MemoryError::InvalidRange);
+        }
+        if pages.is_empty() {
+            return Ok(());
+        }
+        let base = offset / HOST * HOST;
+        let len = offset - base + pages.len() * guest;
+        let mut host = [0i8; 128];
+        let host = host
+            .get_mut(..len.div_ceil(HOST))
+            .ok_or(trames_memory::MemoryError::InvalidRange)?;
+        if unsafe { libc::mincore(self.pointer().add(base).cast(), len, host.as_mut_ptr()) } != 0 {
+            return Err(trames_memory::MemoryError::BackingIo(libc::EIO as u32));
+        }
+        for (index, page) in pages.iter_mut().enumerate() {
+            *page = (host[(offset - base + index * guest) / HOST] & 1) as u8;
+        }
+        Ok(())
+    }
     fn populated_pages(&self) -> Vec<usize> {
         let mut groups = [0u64; 2];
         if unsafe { trames_hvf_populated(self.pointer().cast(), self.len(), groups.as_mut_ptr()) }
