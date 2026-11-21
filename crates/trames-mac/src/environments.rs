@@ -1204,7 +1204,9 @@ fn backup_path(p: &Path) -> bool {
     matches!(s, "instance.toml" | "env.toml" | "effective.toml")
         || s == "store/manifest"
         || s.strip_prefix("store/objects/").is_some_and(|x| {
-            x.len() == 20 && x.ends_with(".dat") && x[..16].bytes().all(|c| c.is_ascii_hexdigit())
+            x.len() == 20
+                && (x.ends_with(".dat") || x.ends_with(".cap"))
+                && x.as_bytes()[..16].iter().all(u8::is_ascii_hexdigit)
         })
 }
 fn restore(r: &Path, n: &str, archive: &Path) -> Result<()> {
