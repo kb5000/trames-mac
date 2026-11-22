@@ -970,6 +970,7 @@ dependencies = [
  "parking_lot",
  "smoltcp",
  "socket2",
+ "trames-memory",
  "trames-shared",
 ]
 
