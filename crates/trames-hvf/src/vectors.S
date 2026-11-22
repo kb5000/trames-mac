@@ -42,9 +42,20 @@ _trames_hvf_resume_begin:
     ldr x0, [sp, #272]
     msr tpidr_el0, x0
     ldr w0, [sp, #264]
+    // Single-step only EL0. EL1 keeps debug masked while saving the mailbox.
+    // Clear MDSCR for ordinary execution so a migrated vCPU cannot retain it.
+    ubfx x1, x0, #21, #1
+    lsl x1, x1, #21
     and x0, x0, #0xf0000000
-    orr x0, x0, #0x3c0
-    msr spsr_el1, x0
+    orr x0, x0, x1
+    orr x0, x0, #0x1c0
+    cbnz x1, 4f
+    orr x0, x0, #0x200
+    msr mdscr_el1, xzr
+    b 5f
+4:  mov x1, #0x8001
+    msr mdscr_el1, x1
+5:  msr spsr_el1, x0
     ldr w0, [sp, #288]
     msr fpcr, x0
     ldr w0, [sp, #292]

@@ -139,6 +139,7 @@ fn fault(state: &Aarch64State, error: Error) -> CpuFault {
                 // accesses are recoverable Linux SIGILL, not backend failures.
                 0 | 0x18 | 0x1d => (4, 1, pc),
                 0x3c => (5, 1, pc),
+                0x32 => (5, 2, pc),
                 0x22 | 0x26 => {
                     return CpuFault::Memory {
                         pc,
@@ -222,7 +223,9 @@ impl trames_engine::Cpu for Cpu {
         self.state.tpidr_el0 = value;
     }
     fn architectural_state(&self) -> Aarch64State {
-        self.state.clone()
+        let mut state = self.state.clone();
+        state.nzcv &= 0xf0000000;
+        state
     }
     fn restore_architectural_state(&mut self, state: &Aarch64State) {
         self.state.clone_from(state);
@@ -284,6 +287,10 @@ impl trames_engine::Cpu for Cpu {
     }
     fn set_video_calls(&mut self, enabled: bool) {
         self.video_calls = enabled;
+    }
+    fn set_single_step(&mut self, enabled: bool) {
+        // The mailbox transports SS to EL1; user-visible state remains NZCV only.
+        self.state.nzcv = (self.state.nzcv & 0xf0000000) | if enabled { 1 << 21 } else { 0 };
     }
     fn clear_exclusive(&mut self) {}
     fn fault_retired(&self) -> u64 {
