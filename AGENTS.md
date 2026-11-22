@@ -56,5 +56,8 @@ Owner clarification, 2026-10-27:
 - Keep one development line per repository on `main`. Merge validated changes
   promptly; do not maintain stacked or parallel long-lived draft PRs. If repository
   rules require a PR, keep it short-lived and target `main`.
+- After completing and validating changes, commit and push them directly to
+  `main`, including paired runtime pins. Do not leave validated work local-only
+  unless the owner explicitly asks to hold the push.
 - Preserve tested commit identities and paired runtime pins when integrating.
   Prefer fast-forward integration; do not rewrite published history for cleanup.
