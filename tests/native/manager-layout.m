@@ -10,11 +10,12 @@
 @interface TMLayoutFixture : TramesManager
 @property NSArray *lastArguments;
 @property NSDictionary *lastBody;
+@property NSUInteger confirmationCount;
 @end
 @implementation TMLayoutFixture
 - (void)refresh:(id)sender {(void)sender;}
 - (void)watchRegistry {}
-- (BOOL)confirm:(NSString *)title message:(NSString *)message {(void)title;(void)message;return YES;}
+- (BOOL)confirm:(NSString *)title message:(NSString *)message {(void)title;(void)message;self.confirmationCount++;return YES;}
 - (void)run:(NSArray *)args owner:(NSString *)key name:(NSString *)name title:(NSString *)title quiet:(BOOL)quiet input:(NSData *)input completion:(void(^)(NSString *,int))done {
     (void)key;(void)name;(void)title;(void)quiet;self.lastArguments=args;self.lastBody=input?[NSJSONSerialization JSONObjectWithData:input options:0 error:nil]:nil;
     if(done && [args containsObject:@"permission"])done(@"{\"revision\":\"permission-saved\"}",0);
@@ -76,7 +77,8 @@ static void runTests(void) {@autoreleasepool {
         snapshot(m.window,[@"sidebar-" stringByAppendingString:width.stringValue]);
     }
 
-    for(NSView *view in descendants(m.window.contentView))if([view isKindOfClass:NSScrollView.class]){NSScrollView *scroll=(NSScrollView *)view;NSCAssert(scroll.autohidesScrollers && scroll.scrollerStyle==NSScrollerStyleOverlay,@"oversized permanent scrollbar");}
+    // Respect the current system preference for legacy scrollers.
+    for(NSScrollView *scroll in @[m.table.enclosingScrollView,m.scroll]){NSCAssert(scroll.autohidesScrollers && (scroll.scrollerStyle==NSScrollerStyleOverlay || NSScroller.preferredScrollerStyle==NSScrollerStyleLegacy),@"oversized permanent scrollbar: auto=%d style=%ld preferred=%ld",scroll.autohidesScrollers,(long)scroll.scrollerStyle,(long)NSScroller.preferredScrollerStyle);}
     NSCAssert(m.status.stringValue.length==0,@"unwanted closing-manager footer");
     for(NSString *path in @[@"display.windows",@"components.audio",@"components.audio_input"]){NSButton *b=identified(m.content,path);for(NSNumber *state in @[@YES,@NO]){b.state=[state boolValue]?NSControlStateValueOn:NSControlStateValueOff;[m fieldChanged:b];booleanValue([m draft][path],[state boolValue]);}}
     for(NSString *path in @[@"components.vulkan",@"components.vaapi"]){NSPopUpButton *p=identified(m.content,path);[p selectItemAtIndex:1];[m fieldChanged:p];booleanValue([m draft][path],NO);}
@@ -99,6 +101,15 @@ static void runTests(void) {@autoreleasepool {
     if(previousStyle)[NSUserDefaults.standardUserDefaults setObject:previousStyle forKey:@"interfaceStyle"];else[NSUserDefaults.standardUserDefaults removeObjectForKey:@"interfaceStyle"];TMApplyInterfaceStyle();
 
     m.page=@"env";m.tabs.selectedSegment=3;[m render];layout(m.window);NSCAssert(!button(m.content,@"Requested"),@"redundant request control remains");NSPopUpButton *permission=identified(m.content,@"clipboard");NSCAssert(permission.indexOfSelectedItem==0,@"grant without enabled permission displayed as allowed");[m change:@"components.audio" value:@NO];[permission selectItemAtIndex:1];[m permission:permission];NSCAssert([m.revisions[@"fixture"] isEqual:@"permission-saved"] && [[m draft][@"components.audio"] isEqual:@NO],@"permission action lost or invalidated an unrelated draft");NSCAssert(([m.lastArguments isEqual:@[@"_manager",@"permission",@"fixture",@"clipboard",@"on",@"base"]]),@"permission action did not update the combined setting");snapshot(m.window,@"permissions");
+    NSUInteger confirmations=m.confirmationCount;
+    for(NSString *capability in @[@"clipboard",@"host_cli"])for(NSNumber *allowed in @[@YES,@NO]) {
+        NSPopUpButton *control=identified(m.content,capability);[control selectItemAtIndex:allowed.boolValue?1:0];
+        [NSApp sendAction:control.action to:control.target from:control];
+        NSCAssert(m.confirmationCount==confirmations && !m.window.attachedSheet && !NSApp.modalWindow,@"host permission change opened a confirmation window");
+        NSCAssert(([m.lastArguments isEqual:@[@"_manager",@"permission",@"fixture",capability,allowed.boolValue?@"on":@"off",@"base"]]),@"host permission did not save the chosen value");
+        NSCAssert([[m draft][@"components.audio"] isEqual:@NO],@"permission change lost an unrelated draft");
+    }
+
     for(NSNumber *width in @[@1120,@960]){[m.window setContentSize:NSMakeSize(width.doubleValue,720)];layout(m.window);[m create:nil];id controller=m.createController;NSWindow *sheet=[controller window];[sheet makeKeyWindow];layout(sheet);NSCAssert(button(sheet.contentView,@"Cancel").frame.size.width<160,@"wizard action button stretched across the panel");NSStackView *body=[controller valueForKey:@"body"];NSView *heading=body.arrangedSubviews.firstObject;NSCAssert(NSMaxY(heading.frame)>body.bounds.size.height-64,@"sheet content starts halfway down the panel");
         NSButton *source=button(sheet.contentView,@"Debian — daily tools and optional systemd");clickable(source,sheet);if(NSApp.active && sheet.keyWindow)mouseClick(source,sheet);else{puts("SKIP: OS mouse dispatch requires an active desktop; validating native hit targets and control actions");[source performClick:nil];}layout(sheet);NSCAssert([[controller valueForKey:@"kind"] isEqual:@"debian"],@"source choice did not respond");snapshot(sheet,@"create-source");
         NSButton *next=button(sheet.contentView,@"Continue");clickable(next,sheet);[next performClick:nil];layout(sheet);[[controller valueForKey:@"name"] setStringValue:@"layout-test"];

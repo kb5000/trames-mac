@@ -127,7 +127,6 @@ static void editFile(NSString *path){NSURL *url=[NSURL fileURLWithPath:path];NSW
     NSString *cap=sender.identifier;BOOL allow=sender.indexOfSelectedItem==1;NSDictionary *row=[self selectedRow];NSString *key=self.selectedKey,*base=row[@"revision"];
     NSDictionary *description=nil;for(NSDictionary *c in self.snapshot[@"capabilities"])if([c[@"key"] isEqual:cap])description=c;
     if(!description)return;
-    if(allow&&![self confirm:@"Allow this host capability?" message:[NSString stringWithFormat:@"%@\n\n%@",T(description[@"title"]),T(description[@"help"])]]){[sender selectItemAtIndex:0];return;}
     __weak TramesManager *weakSelf=self;
     [self run:@[@"_manager",@"permission",key,cap,allow?@"on":@"off",base] owner:key name:row[@"name"] title:T(@"Saving host grant…") quiet:NO input:nil completion:^(NSString *out,int code){
         TramesManager *owner=weakSelf;if(code){[owner showError:out];return;}NSDictionary *result=[NSJSONSerialization JSONObjectWithData:[out dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];

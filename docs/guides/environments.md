@@ -160,8 +160,11 @@ UUID; imported TOML does not grant host command or shared-directory access.
 A custom-image template needs `image.source` to locate its rootfs. An installed
 profile without that source can instead be paired with `--rootfs` in the CLI.
 
-The permission page separates requested guest capabilities from independent Mac
-grants. Shared-folder TOML contains aliases and guest paths; actual host paths
+In **Host Interop**, choosing **Allowed** or **Not allowed** saves that permission
+immediately. Other unsaved configuration edits remain intact.
+
+The permission page saves the environment capability and this Mac’s grant
+together. Shared-folder TOML contains aliases and guest paths; actual host paths
 remain in this Mac's grants. Removing a mount is a draft change; revoke the grant
 after saving removal. Network mode defaults to host; bridge mode selects a
 Trames-owned network and can publish ports. Configuration, grants, and login
