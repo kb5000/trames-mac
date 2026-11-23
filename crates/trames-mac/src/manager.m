@@ -43,6 +43,22 @@
     return bounds;
 }
 @end
+// Source-list style adds horizontal row insets to the initial column width.
+// Fit the document after Auto Layout resolves the scroll viewport, including
+// first presentation when AppKit has not yet resized the column itself.
+@interface TMEnvironmentScrollView : NSScrollView
+@end
+@implementation TMEnvironmentScrollView
+- (void)layout {
+    [super layout];
+    NSTableView *table=(NSTableView *)self.documentView;
+    CGFloat width=self.contentSize.width;
+    if(width>0 && fabs(table.frame.size.width-width)>0.5){
+        [table setFrameSize:NSMakeSize(width,table.frame.size.height)];
+        [table sizeLastColumnToFit];
+    }
+}
+@end
 @interface TMBackground : NSView
 @end
 @implementation TMBackground
@@ -142,7 +158,7 @@ static NSString *systemName(NSDictionary *row){NSDictionary *c=row[@"config"];if
     NSStackView *brand=TMStack(@[],NO);if(icon){NSImageView *image=[NSImageView imageViewWithImage:icon];[image.widthAnchor constraintEqualToConstant:28].active=YES;[image.heightAnchor constraintEqualToConstant:28].active=YES;[brand addArrangedSubview:image];}[brand addArrangedSubview:TMLabel(productName(),16,NO)];[sidebar addArrangedSubview:brand];
     [sidebar addArrangedSubview:TMLabel(T(@"Environments"),11,YES)];
     self.table=[NSTableView new];NSTableColumn *column=[[NSTableColumn alloc]initWithIdentifier:@"environment"];column.width=250;column.minWidth=100;column.resizingMask=NSTableColumnAutoresizingMask;[self.table addTableColumn:column];self.table.columnAutoresizingStyle=NSTableViewLastColumnOnlyAutoresizingStyle;self.table.headerView=nil;self.table.rowHeight=60;self.table.backgroundColor=NSColor.clearColor;self.table.style=NSTableViewStyleSourceList;self.table.delegate=self;self.table.dataSource=self;self.table.allowsEmptySelection=NO;self.table.target=self;self.table.action=@selector(selectEnvironment:);
-    NSScrollView *list=[NSScrollView new];list.documentView=self.table;TMConfigureScroll(list);[list.heightAnchor constraintGreaterThanOrEqualToConstant:140].active=YES;[sidebar addArrangedSubview:list];
+    NSScrollView *list=[TMEnvironmentScrollView new];list.documentView=self.table;TMConfigureScroll(list);[list.heightAnchor constraintGreaterThanOrEqualToConstant:140].active=YES;[sidebar addArrangedSubview:list];
     [sidebar addArrangedSubview:TMButtonMake(@"New Environment…",self,@selector(create:),nil)];
     for(NSArray *item in @[@[@"Networks",@"networks"],@[@"Trames Settings",@"settings"]])[sidebar addArrangedSubview:TMButtonMake(item[0],self,@selector(globalPage:),item[1])];
     [sidebar addArrangedSubview:TMButtonMake(@"Refresh",self,@selector(refresh:),nil)];

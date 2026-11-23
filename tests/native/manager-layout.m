@@ -60,7 +60,22 @@ static void runTests(void) {@autoreleasepool {
         [fields addObject:@{@"path":entry[0],@"title":entry[1],@"kind":entry[2],@"section":@"Compute",@"help":@"",@"options":@[@"true",@"false",@"auto"]}];
     m.snapshot=@{@"global":@{@"default_environment":@"debian"},@"global_path":@"config.toml",@"fields":fields,@"capabilities":@[@{@"key":@"clipboard",@"title":@"Clipboard",@"help":@"Exchange text",@"command":@"clipboard"},@{@"key":@"host_cli",@"title":@"Trames CLI",@"help":@"Manage this environment",@"command":@"host-cli"}]};
     m.rows=@[row];m.selectedKey=@"fixture";[m applicationDidFinishLaunching:[NSNotification notificationWithName:NSApplicationDidFinishLaunchingNotification object:NSApp]];m.tabs.selectedSegment=1;[m render];layout(m.window);
-    NSCAssert(m.table.tableColumns[0].width>=240,@"environment column did not grow with the sidebar");
+    NSSplitView *split=(NSSplitView *)m.window.contentView.subviews.firstObject;
+    for(NSNumber *width in @[@280,@380,@250,@340,@280]) {
+        [split setPosition:width.doubleValue ofDividerAtIndex:0];layout(m.window);
+        [m.table reloadData];[m.table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];layout(m.window);
+        NSRect visible=m.table.visibleRect,rowRect=[m.table rectOfRow:0];
+        NSCAssert(fabs(m.table.frame.size.width-visible.size.width)<0.5,@"sidebar document overflows its viewport: %@ vs %@",NSStringFromRect(m.table.frame),NSStringFromRect(visible));
+        NSCAssert(NSMinX(rowRect)>=NSMinX(visible) && NSMaxX(rowRect)<=NSMaxX(visible)+0.5,@"selected row is clipped at sidebar width %@: %@ vs %@",width,NSStringFromRect(rowRect),NSStringFromRect(visible));
+        NSView *cell=[m.table viewAtColumn:0 row:0 makeIfNecessary:YES];BOOL found=NO;
+        for(NSView *view in descendants(cell))if([view isKindOfClass:NSTextField.class] && [((NSTextField *)view).stringValue isEqual:@"●"]){
+            NSRect dot=[view convertRect:view.bounds toView:m.table];found=YES;
+            NSCAssert(NSMaxX(dot)<=NSMaxX(visible)-6,@"status dot is clipped: %@ vs %@",NSStringFromRect(dot),NSStringFromRect(visible));
+        }
+        NSCAssert(found,@"sidebar status dot is missing");
+        snapshot(m.window,[@"sidebar-" stringByAppendingString:width.stringValue]);
+    }
+
     for(NSView *view in descendants(m.window.contentView))if([view isKindOfClass:NSScrollView.class]){NSScrollView *scroll=(NSScrollView *)view;NSCAssert(scroll.autohidesScrollers && scroll.scrollerStyle==NSScrollerStyleOverlay,@"oversized permanent scrollbar");}
     NSCAssert(m.status.stringValue.length==0,@"unwanted closing-manager footer");
     for(NSString *path in @[@"display.windows",@"components.audio",@"components.audio_input"]){NSButton *b=identified(m.content,path);for(NSNumber *state in @[@YES,@NO]){b.state=[state boolValue]?NSControlStateValueOn:NSControlStateValueOff;[m fieldChanged:b];booleanValue([m draft][path],[state boolValue]);}}
