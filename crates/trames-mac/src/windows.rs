@@ -285,7 +285,11 @@ impl Bridge {
                     }
                     ImageBuffer::Gpu(gpu) => {
                         info.kind = 2;
-                        info.address = gpu.metal_texture() as *mut c_void;
+                        info.address = gpu
+                            .native_handle()
+                            .metal_texture()
+                            .map_err(|_| "native frame is not a Metal texture")?
+                            as *mut c_void;
                     }
                 }
                 images.push(info);
