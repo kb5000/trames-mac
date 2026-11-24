@@ -17,10 +17,9 @@ use std::{
 pub use trames_cli_common::exec::{
     capture, run, run_input, run_interactive_streams_deadline as run_streams_deadline, Request,
 };
+use trames_cli_common::exec::{LIMIT, MAGIC};
 use trames_linux::{HostProcess, HostSpawn, HOST_RUNNING};
 use trames_vfs::{DirectFd, Vfs};
-const MAGIC: &[u8; 8] = b"TRMEXEC1";
-const LIMIT: usize = 65536;
 struct Job {
     input: Option<DirectFd>,
     output: [Option<DirectFd>; 2],

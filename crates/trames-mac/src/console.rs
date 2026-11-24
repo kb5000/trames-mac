@@ -13,9 +13,8 @@ use std::{
 };
 #[cfg(test)]
 use trames_cli_common::console::write_frame as frame;
+use trames_cli_common::console::{LIST, MAGIC};
 use trames_distro::terminals::{Channel, LIMIT, QUEUE_LIMIT};
-const LIST: &[u8; 8] = b"TRMLIST1";
-const MAGIC: &[u8; 8] = b"TRAMES02";
 struct Peer {
     stream: UnixStream,
     incoming: Vec<u8>,
