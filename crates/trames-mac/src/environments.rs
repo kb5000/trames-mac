@@ -848,6 +848,9 @@ pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
         "--network".into(),
         backend(&c)?,
     ];
+    for (name, value) in &c.kernel.sysctl {
+        args.extend(["--sysctl".into(), format!("{name}={value}")]);
+    }
     if c.network.mode == model::NetworkMode::Bridge {
         args.extend(super::networks::arguments(r, &c)?);
     }

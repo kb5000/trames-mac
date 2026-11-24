@@ -109,6 +109,7 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
         "--storage",
         "--filesystem",
         "--cpus",
+        "--sysctl",
         "--timeout",
         "--pty",
         "--no-pty",

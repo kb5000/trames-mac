@@ -290,6 +290,7 @@ pub struct Command {
     link_id: u8,
     link_nat: bool,
     publish: Vec<String>,
+    kernel: trames_distro::environment::Kernel,
     trace: bool,
     pub(super) android_init: bool,
     metrics: bool,
@@ -339,6 +340,7 @@ impl Command {
         let mut link_id = 2u8;
         let mut link_nat = true;
         let mut publish = vec![];
+        let mut kernel = trames_distro::environment::Kernel::default();
         let mut trace = false;
         let mut android_init = false;
         let mut metrics = false;
@@ -412,6 +414,9 @@ impl Command {
                     }
                 }
                 "--timeout" => timeout = arguments.next().ok_or("missing timeout")?.parse()?,
+                "--sysctl" => {
+                    kernel.argument(&arguments.next().ok_or("missing sysctl declaration")?)?;
+                }
                 "--cpus" => {
                     cpus = arguments.next().ok_or("missing CPU count")?.parse()?;
                     if !(1..=trames_hvf::max_parallel_cpus()).contains(&cpus) {
@@ -513,6 +518,7 @@ impl Command {
             link_id,
             link_nat,
             publish,
+            kernel,
             trace,
             android_init,
             metrics,
@@ -551,6 +557,7 @@ pub fn run(
         link_id,
         link_nat,
         publish,
+        kernel,
         trace,
         android_init,
         metrics,
@@ -593,6 +600,7 @@ pub fn run(
     } else {
         trames_vfs::Vfs::default()
     };
+    kernel.apply(&vfs)?;
     if !filesystem {
         if let Some(directory) = link {
             let fabric = trames_net::Fabric::new()?;
