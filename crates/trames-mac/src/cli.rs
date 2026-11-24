@@ -2,6 +2,7 @@
 //! User-facing CLI. Parsing, help, config and completion never start a runtime.
 use super::environments::{self as env, Result};
 use std::io::IsTerminal;
+use trames_cli_common::arguments::{parse_exec, selection};
 const HELP: &str = "Usage: trames [-e ENVIRONMENT] COMMAND [OPTIONS]\n\n  shell                    Open an independent shell (default with a terminal)\n  exec [-t] [--setenv K=V] [--cwd DIR] -- COMMAND [ARG...]\n                           Execute argv, returning its exit code\n  -- COMMAND [ARG...]      Shorthand for exec\n  env ls [--json|-q]       List environments\n  env create NAME [--distro alpine|debian | --rootfs PATH]\n  env create NAME --distro android --rootfs ANDROID_PACKAGE\n  apk install FILE.apk | launch PACKAGE[/ACTIVITY] | list\n  env start|stop|restart [NAME]\n  env enable|disable NAME [--now]   Autostart at Mac user login\n  env setup NAME --init systemd    Explicitly prepare systemd\n  session ls [--json|-q]   List terminals in the selected environment\n  session attach ID        Reattach a detached terminal\n  network ls|create|inspect|remove  Trames networks\n  config get|set|list|edit|path  Environment settings\n  config --global ...      CLI defaults and default environment\n  status | doctor          Inspect the selected environment (also offline)
   permissions [allow|deny CAPABILITY|--all]
   permissions defaults [allow|deny CAPABILITY|--all]
@@ -176,78 +177,6 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
         }
         _ => Err(format!("unknown command '{op}'; use trames --help").into()),
     }
-}
-fn selection(args: Vec<String>) -> Result<(Option<String>, Vec<String>)> {
-    let mut it = args.into_iter();
-    let mut selected = None;
-    let mut rest = vec![];
-    while let Some(a) = it.next() {
-        if a == "--" {
-            rest.push(a);
-            rest.extend(it);
-            break;
-        }
-        if a == "-e" || a == "--environment" {
-            selected = Some(it.next().ok_or("--environment requires a name")?);
-        } else if let Some(value) = a.strip_prefix("--environment=") {
-            selected = Some(value.to_owned());
-        } else {
-            rest.push(a);
-            rest.extend(it);
-            break;
-        }
-    }
-    Ok((selected, rest))
-}
-fn parse_exec(args: &[String], literal: bool) -> Result<super::exec::Request> {
-    let mut r = super::exec::Request::default();
-    let mut i = 0;
-    if !literal {
-        while let Some(a) = args.get(i) {
-            match a.as_str() {
-                "--" => {
-                    i += 1;
-                    break;
-                }
-                "-t" | "--tty" => r.tty = true,
-                "--setenv" | "--cwd" | "-w" => {
-                    i += 1;
-                    let value = args.get(i).ok_or("missing exec option value")?.clone();
-                    if a == "--setenv" {
-                        r.environment.push(value);
-                    } else {
-                        r.cwd = Some(value);
-                    }
-                }
-                a if a.starts_with("--setenv=") => r.environment.push(a[9..].into()),
-                a if a.starts_with('-') => {
-                    return Err(
-                        format!("unknown exec option '{a}'; put -- before the command").into(),
-                    )
-                }
-                _ => break,
-            }
-            i += 1;
-        }
-    }
-    r.argv = args[i..].to_vec();
-    if r.argv.is_empty() {
-        return Err("usage: trames [-e NAME] exec [-t] [--setenv KEY=VALUE] [--cwd DIR] -- COMMAND [ARG...]".into());
-    }
-    for entry in &r.environment {
-        if !entry.split_once('=').is_some_and(|(k, _)| !k.is_empty()) {
-            return Err("--setenv requires KEY=VALUE".into());
-        }
-    }
-    if r.argv
-        .iter()
-        .chain(&r.environment)
-        .any(|a| a.contains('\0'))
-    {
-        return Err("arguments cannot contain NUL".into());
-    }
-    r.size = r.tty.then(super::session::window_size).flatten();
-    Ok(r)
 }
 fn android_apps(
     root: &std::path::Path,

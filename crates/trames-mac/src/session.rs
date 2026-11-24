@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 use std::{
-    io::{self, IsTerminal, Write},
+    io::{self, Write},
     time::{Duration, Instant},
 };
 use trames_linux::{GuestOutput, OutputFd, TerminalEvent};
@@ -57,18 +57,7 @@ impl Output {
         Ok(())
     }
 }
-pub(crate) fn window_size() -> Option<(u16, u16)> {
-    let mut size = libc::winsize {
-        ws_row: 0,
-        ws_col: 0,
-        ws_xpixel: 0,
-        ws_ypixel: 0,
-    };
-    // SAFETY: TIOCGWINSZ writes exactly one initialized winsize structure.
-    (unsafe { libc::ioctl(libc::STDIN_FILENO, libc::TIOCGWINSZ, &mut size) } == 0)
-        .then_some((size.ws_row, size.ws_col))
-        .filter(|&(rows, columns)| rows != 0 && columns != 0)
-}
+pub(crate) use trames_cli_common::terminal::window_size;
 impl GuestOutput for Output {
     fn source_console(&mut self) -> std::sync::Arc<dyn trames_vfs::ConsoleIo> {
         if let Some(source) = &self.source {
@@ -242,42 +231,7 @@ impl GuestOutput for Output {
     }
 }
 
-/// Keep host terminal setup local; no subprocess or guest state is involved.
-pub(crate) struct RawTerminal(Option<libc::termios>);
-impl RawTerminal {
-    pub(crate) fn enter(enabled: bool) -> io::Result<Self> {
-        if !enabled || !io::stdin().is_terminal() {
-            return Ok(Self(None));
-        }
-        let mut saved = std::mem::MaybeUninit::<libc::termios>::uninit();
-        // SAFETY: tcgetattr initializes one complete termios on success.
-        if unsafe { libc::tcgetattr(libc::STDIN_FILENO, saved.as_mut_ptr()) } != 0 {
-            return Err(io::Error::last_os_error());
-        }
-        // SAFETY: the successful call initialized all fields.
-        let saved = unsafe { saved.assume_init() };
-        let mut raw = saved;
-        // SAFETY: private initialized termios; tcsetattr reads it synchronously.
-        unsafe {
-            libc::cfmakeraw(&mut raw);
-        }
-        if unsafe { libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, &raw) } != 0 {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(Self(Some(saved)))
-    }
-}
-impl Drop for RawTerminal {
-    fn drop(&mut self) {
-        if let Some(saved) = &self.0 {
-            // SAFETY: original initialized settings; the fd can legitimately
-            // have hung up, in which case there is no live terminal to restore.
-            unsafe {
-                libc::tcsetattr(libc::STDIN_FILENO, libc::TCSANOW, saved);
-            }
-        }
-    }
-}
+pub(crate) use trames_cli_common::terminal::RawTerminal;
 
 pub struct Command {
     rootfs: Option<String>,

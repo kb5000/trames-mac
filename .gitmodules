@@ -1,3 +1,7 @@
 [submodule "runtime"]
 	path = runtime
 	url = https://github.com/kb5000/trames-runtime.git
+
+[submodule "cli"]
+	path = cli
+	url = https://github.com/kb5000/trames-cli.git

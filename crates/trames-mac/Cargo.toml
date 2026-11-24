@@ -10,6 +10,7 @@ name = "trames-mac-run"
 path = "src/main.rs"
 
 [target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+trames-cli-common.workspace = true
 trames-control = { workspace = true }
 trames-session = { workspace = true }
 trames-wayland = { workspace = true }

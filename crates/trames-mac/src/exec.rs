@@ -1,35 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //! Structured host commands use original process/pipe/PTY resources while CPUs run.
 //! Accepted image loading and task admission use existing runtime workers.
-use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use std::time::Duration;
 use std::{
     collections::VecDeque,
     fs,
     io::{self, Read, Write},
-    os::{
-        fd::AsRawFd,
-        unix::{
-            fs::{FileTypeExt, PermissionsExt},
-            net::{UnixListener, UnixStream},
-        },
+    os::unix::{
+        fs::{FileTypeExt, PermissionsExt},
+        net::{UnixListener, UnixStream},
     },
     path::{Path, PathBuf},
     sync::{atomic::Ordering, Arc},
-    time::Duration,
+};
+pub use trames_cli_common::exec::{
+    capture, run, run_input, run_interactive_streams_deadline as run_streams_deadline, Request,
 };
 use trames_linux::{HostProcess, HostSpawn, HOST_RUNNING};
 use trames_vfs::{DirectFd, Vfs};
 const MAGIC: &[u8; 8] = b"TRMEXEC1";
 const LIMIT: usize = 65536;
-#[derive(Clone, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Request {
-    pub argv: Vec<String>,
-    pub environment: Vec<String>,
-    pub cwd: Option<String>,
-    pub tty: bool,
-    pub size: Option<(u16, u16)>,
-}
 struct Job {
     input: Option<DirectFd>,
     output: [Option<DirectFd>; 2],
@@ -432,200 +423,6 @@ impl Drop for Server {
         let _ = fs::remove_file(&self.path);
     }
 }
-fn queue(outgoing: &mut VecDeque<u8>, kind: u8, bytes: &[u8]) {
-    outgoing.push_back(kind);
-    outgoing.extend((bytes.len() as u32).to_be_bytes());
-    outgoing.extend(bytes);
-}
-pub fn run(console: &Path, request: Request) -> io::Result<u8> {
-    run_input(console, request, io::stdin())
-}
-pub fn run_input(console: &Path, request: Request, input: impl Read + AsRawFd) -> io::Result<u8> {
-    run_streams(
-        console,
-        request,
-        input,
-        &mut io::stdout(),
-        &mut io::stderr(),
-    )
-}
-pub fn capture(console: &Path, request: Request) -> io::Result<(u8, Vec<u8>, Vec<u8>)> {
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    let code = run_streams(
-        console,
-        request,
-        fs::File::open("/dev/null")?,
-        &mut stdout,
-        &mut stderr,
-    )?;
-    Ok((code, stdout, stderr))
-}
-pub fn run_streams(
-    console: &Path,
-    request: Request,
-    input: impl Read + AsRawFd,
-    stdout: &mut impl Write,
-    stderr: &mut impl Write,
-) -> io::Result<u8> {
-    run_streams_deadline(console, request, input, stdout, stderr, None)
-}
-pub fn run_streams_deadline(
-    console: &Path,
-    request: Request,
-    mut input: impl Read + AsRawFd,
-    stdout: &mut impl Write,
-    stderr: &mut impl Write,
-    deadline: Option<std::time::Instant>,
-) -> io::Result<u8> {
-    let mut socket = UnixStream::connect(path(console)).map_err(|e| io::Error::new(e.kind(), format!("exec service unavailable ({e}); restart this environment to load the updated runtime")))?;
-    socket.set_write_timeout(Some(Duration::from_secs(30)))?;
-    let bytes = serde_json::to_vec(&request)?;
-    if bytes.len() > LIMIT {
-        return Err(io::Error::other("command arguments exceed 64 KiB"));
-    }
-    socket.write_all(MAGIC)?;
-    socket.write_all(&(bytes.len() as u32).to_be_bytes())?;
-    socket.write_all(&bytes)?;
-    let _signals = super::lifecycle::Signals::install()?;
-    let _raw = super::session::RawTerminal::enter(request.tty)?;
-    socket.set_nonblocking(true)?;
-    let mut outgoing = VecDeque::new();
-    let mut input_open = true;
-    let mut incoming = Vec::new();
-    let mut size = request.size;
-    loop {
-        if let Some(signal) = super::lifecycle::take_signal() {
-            queue(&mut outgoing, 2, &[signal as u8]);
-        }
-        if request.tty {
-            let now = super::session::window_size();
-            if now != size {
-                size = now;
-                if let Some((r, c)) = size {
-                    queue(
-                        &mut outgoing,
-                        3,
-                        &[r.to_be_bytes(), c.to_be_bytes()].concat(),
-                    );
-                }
-            }
-        }
-        let mut fds = [
-            libc::pollfd {
-                fd: socket.as_raw_fd(),
-                events: libc::POLLIN
-                    | if outgoing.is_empty() {
-                        0
-                    } else {
-                        libc::POLLOUT
-                    },
-                revents: 0,
-            },
-            libc::pollfd {
-                fd: if input_open && outgoing.len() < LIMIT {
-                    input.as_raw_fd()
-                } else {
-                    -1
-                },
-                events: libc::POLLIN,
-                revents: 0,
-            },
-        ];
-        let timeout = match deadline {
-            Some(d) => d
-                .checked_duration_since(std::time::Instant::now())
-                .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "File transfer timed out"))?
-                .as_millis()
-                .clamp(1, 100) as i32,
-            None => 100,
-        };
-        if unsafe { libc::poll(fds.as_mut_ptr(), 2, timeout) } < 0 {
-            let e = io::Error::last_os_error();
-            if e.kind() == io::ErrorKind::Interrupted {
-                continue;
-            }
-            return Err(e);
-        }
-        let mut bytes = [0; 4096];
-        if fds[0].revents & libc::POLLOUT != 0 && !outgoing.is_empty() {
-            match socket.write(outgoing.as_slices().0) {
-                Ok(n) => {
-                    outgoing.drain(..n);
-                }
-                Err(e)
-                    if matches!(
-                        e.kind(),
-                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                    ) => {}
-                Err(e) => return Err(e),
-            }
-        }
-        if fds[0].revents & (libc::POLLIN | libc::POLLHUP | libc::POLLERR) != 0 {
-            let n = match socket.read(&mut bytes) {
-                Ok(n) => n,
-                Err(e)
-                    if matches!(
-                        e.kind(),
-                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                    ) =>
-                {
-                    continue
-                }
-                Err(e) => return Err(e),
-            };
-            if n == 0 {
-                return Err(io::Error::other(
-                    "exec connection closed before exit status",
-                ));
-            }
-            incoming.extend_from_slice(&bytes[..n]);
-            while incoming.len() >= 5 {
-                let kind = incoming[0];
-                let n = u32::from_be_bytes(incoming[1..5].try_into().unwrap()) as usize;
-                if n > LIMIT {
-                    return Err(io::Error::other("invalid exec response"));
-                }
-                if incoming.len() < n + 5 {
-                    break;
-                }
-                match kind {
-                    1 => {
-                        stdout.write_all(&incoming[5..5 + n])?;
-                        stdout.flush()?;
-                    }
-                    2 => {
-                        stderr.write_all(&incoming[5..5 + n])?;
-                        stderr.flush()?;
-                    }
-                    4 => eprintln!("trames: {}", String::from_utf8_lossy(&incoming[5..5 + n])),
-                    3 if n == 4 => {
-                        let status = i32::from_be_bytes(incoming[5..9].try_into().unwrap());
-                        return Ok(if status == -2 || status == -20 {
-                            127
-                        } else if status < 0 {
-                            126
-                        } else if status & 127 == 0 {
-                            (status >> 8) as u8
-                        } else {
-                            (128 + (status & 127)) as u8
-                        });
-                    }
-                    _ => return Err(io::Error::other("invalid exec response kind")),
-                }
-                incoming.drain(..n + 5);
-            }
-        }
-        if fds[1].revents != 0 {
-            let n = input.read(&mut bytes)?;
-            queue(&mut outgoing, if n == 0 { 1 } else { 0 }, &bytes[..n]);
-            if n == 0 {
-                input_open = false;
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
