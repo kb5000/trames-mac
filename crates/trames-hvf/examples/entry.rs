@@ -44,6 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     break;
                 }
                 trames_linux::SyscallOutcome::Continue => {}
+                trames_linux::SyscallOutcome::Deferred => {
+                    panic!("entry fixture has no blocking syscalls")
+                }
             }
         }
     }
