@@ -31,7 +31,7 @@ version = "1.5.5"
 edition = "2021"
 rust-version = "1.101"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/kb5000/trames-mac"
+repository = "https://github.com/project-trames/trames-mac"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

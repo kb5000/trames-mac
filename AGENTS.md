@@ -29,7 +29,7 @@
   条件。无法界定后果的 UB，或一次运行未出问题，不能作为无害的依据。
 
 现有实现和限制见 [区域访存](runtime/docs/architecture/region-memory.md) 与
-[原生 allocator](https://github.com/kb5000/trames-ipad/blob/main/docs/architecture/native-allocator.md)。
+[原生 allocator](https://github.com/project-trames/trames-ipad/blob/main/docs/architecture/native-allocator.md)。
 
 ## 验证与构建
 
