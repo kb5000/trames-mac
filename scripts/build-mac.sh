@@ -18,6 +18,7 @@ else
   unset TRAMES_MOLTENVK_STATIC_DIR
   export TRAMES_VULKAN_LINKAGE=external
 fi
+python3 scripts/prepare-third-party-notices.py --check
 python3 runtime/scripts/build-guest-cli.py
 cargo build -p trames-mac --release --locked
 # A minimal agent bundle supplies AppKit identity without a startup window.
@@ -25,6 +26,7 @@ cargo build -p trames-mac --release --locked
 bundle="target/release/$bundle_name"
 mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
 xcrun clang -Os -Wall -Wextra crates/trames-mac/src/manager-entry.c -o "$bundle/Contents/MacOS/trames-manager"
+cp THIRD_PARTY_NOTICES.txt "$bundle/Contents/Resources/THIRD_PARTY_NOTICES.txt"
 cp -R completions "$bundle/Contents/Resources/"
 cp apps/macos/Resources/Trames.icns "$bundle/Contents/Resources/Trames.icns"
 cp -R apps/macos/Resources/en.lproj apps/macos/Resources/zh-Hans.lproj "$bundle/Contents/Resources/"

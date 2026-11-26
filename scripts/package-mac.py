@@ -57,12 +57,23 @@ def main():
         p.error('A production release requires the stable product channel')
     revision = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
     runtime = subprocess.check_output(['git', '-C', str(root / 'runtime'), 'rev-parse', 'HEAD'], text=True).strip()
+    cli = subprocess.check_output(['git', '-C', str(root / 'cli'), 'rev-parse', 'HEAD'], text=True).strip()
     pin = json.loads((root / 'runtime-version.json').read_text())
     if runtime != pin['revision'] and not args.development:
         p.error('Runtime source does not match the pinned revision')
-    for repo in (root, root / 'runtime'):
+    if not args.development:
+        for name, actual in (('runtime', runtime), ('cli', cli)):
+            expected = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD:' + name], text=True).strip()
+            if actual != expected:
+                p.error(f'{name} source does not match the product Git pin')
+    for repo in (root, root / 'runtime', root / 'cli'):
         if not args.development and subprocess.check_output(['git', '-C', str(repo), 'status', '--porcelain']).strip():
             p.error(f'Release source is dirty: {repo}')
+    run('python3', str(root / 'scripts/prepare-third-party-notices.py'), '--check')
+    notices = root / 'THIRD_PARTY_NOTICES.txt'
+    bundled_notices = app / 'Contents/Resources/THIRD_PARTY_NOTICES.txt'
+    if not bundled_notices.is_file() or bundled_notices.read_bytes() != notices.read_bytes():
+        p.error('App Rust notices are missing or stale; rebuild the app before signing and packaging')
     args.output.mkdir(parents=True, exist_ok=True)
     basename = f"{'Trames' if channel == 'stable' else 'Trames-Dev'}-{version}-mac-arm64" + ('-unnotarized' if args.development else '')
     if linkage == 'external':
@@ -76,16 +87,17 @@ def main():
         run('/usr/bin/ditto', str(app), str(stage / (product_name + '.app')))
         shutil.copy2(root / 'scripts/install-mac.sh', stage / 'install.command')
         shutil.copy2(root / 'LICENSE', stage / 'LICENSE')
+        shutil.copy2(notices, stage / 'THIRD_PARTY_NOTICES.txt')
         shutil.copy2(root / 'docs/guides/environments.md', stage / 'README.md')
         sources = stage / 'Sources'
         sources.mkdir()
-        for repo, name in ((root, 'trames-mac'), (root / 'runtime', 'trames-runtime')):
+        for repo, name in ((root, 'trames-mac'), (root / 'runtime', 'trames-runtime'), (root / 'cli', 'trames-cli')):
             run('git', '-C', str(repo), 'archive', '--format=tar.gz', f'--output={sources / (name + ".tar.gz")}', 'HEAD')
         for source in args.corresponding_source:
             if not source.is_file():
                 p.error(f'Missing source archive: {source}')
             shutil.copy2(source, sources / source.name)
-        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'development': args.development, 'channel': channel, 'notarized': not args.development, 'architecture': 'arm64', 'native_vulkan': linkage}, indent=2) + '\n')
+        (stage / 'BUILD.json').write_text(json.dumps({'version': version, 'product_revision': revision, 'runtime_revision': runtime, 'cli_revision': cli, 'development': args.development, 'channel': channel, 'notarized': not args.development, 'architecture': 'arm64', 'native_vulkan': linkage}, indent=2) + '\n')
         if args.notarize_profile:
             submission = Path(tmp) / 'notarize.zip'
             run('/usr/bin/ditto', '-c', '-k', '--keepParent', str(stage / (product_name + '.app')), str(submission))
