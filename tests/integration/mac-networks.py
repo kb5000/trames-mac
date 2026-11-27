@@ -69,13 +69,13 @@ def main():
             # A previously blocked listener observes a newly published host port.
             run('env','grant','a','ports','on');run('-e','a','config','set','interop.ports.enabled','true')
             port=free_port();params=json.dumps(dict(host='127.0.0.1:'+str(port),guest=47002))
-            child,out,err=spawn('a',"nc -l -p 47002 >/root/published & sleep .1; trames rpc port-forward ports.add '"+params+"'; echo READY; wait; cat /root/published")
+            child,out,err=spawn('a',"nc -l -p 47002 >/root/published & sleep .1; trames debug rpc port-forward ports.add '"+params+"'; echo READY; wait; cat /root/published")
             with socket.create_connection(('127.0.0.1',port),timeout=3) as client:client.sendall(b'published-live');client.shutdown(socket.SHUT_WR)
             finish(child,out,err,'published-live')
             shared=home/'shared';shared.mkdir()
             run('env','grant','a','share','project',str(shared),'rw');run('env','grant','a','mounts','on')
-            run('-e','a','config','set','interop.mounts.enabled','true','interop.mounts.shares','["project"]')
-            output=execute('a',"mkdir -p /mnt/control; trames rpc mount-control mounts.add '{\"share\":\"project\",\"target\":\"/mnt/control\"}'; echo original-resource >/mnt/control/check; trames rpc mount-control mounts.remove '{\"target\":\"/mnt/control\"}'; test ! -e /mnt/control/check; echo MOUNT_OK")
+            run('-e','a','config','set','interop.mounts.enabled','true')
+            output=execute('a',"mkdir -p /mnt/control; trames debug rpc mount-control mounts.add '{\"share\":\"project\",\"target\":\"/mnt/control\"}'; echo original-resource >/mnt/control/check; trames debug rpc mount-control mounts.remove '{\"target\":\"/mnt/control\"}'; test ! -e /mnt/control/check; echo MOUNT_OK")
             assert 'MOUNT_OK' in output and (shared/'check').read_text().strip()=='original-resource'
         finally:
             for child in children:

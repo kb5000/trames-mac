@@ -1,0 +1,285 @@
+[
+  {
+    "args": [
+      "config",
+      "--global",
+      "set",
+      "defaults.resources.cpus",
+      "2",
+      "defaults.display.windows",
+      "false",
+      "defaults.components.vulkan",
+      "false",
+      "defaults.components.thunking",
+      "false"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "create",
+      "a",
+      "--archive",
+      "/Users/main/dev/trames-mac/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz"
+    ],
+    "code": 0,
+    "stdout": "Created a (alpine)\n",
+    "stderr": "Importing alpine rootfs\u2026\n"
+  },
+  {
+    "args": [
+      "env",
+      "create",
+      "b",
+      "--archive",
+      "/Users/main/dev/trames-mac/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz"
+    ],
+    "code": 0,
+    "stdout": "Created b (alpine)\n",
+    "stderr": "Importing alpine rootfs\u2026\n"
+  },
+  {
+    "args": [
+      "env",
+      "create",
+      "c",
+      "--archive",
+      "/Users/main/dev/trames-mac/target/alpine-download/alpine-minirootfs-3.22.6-aarch64.tar.gz"
+    ],
+    "code": 0,
+    "stdout": "Created c (alpine)\n",
+    "stderr": "Importing alpine rootfs\u2026\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "b",
+      "--no-pty",
+      "/bin/sh",
+      "-ec",
+      "nc -l -p 56194"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "trames: session ready\nnc: bind: Address in use\n"
+  },
+  {
+    "args": [
+      "network",
+      "create",
+      "lan",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network lan\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "network",
+      "create",
+      "isolated",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network isolated\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "a",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "b",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "c",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "isolated"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "network",
+      "ls",
+      "--json"
+    ],
+    "code": 0,
+    "stdout": "[\n  {\n    \"version\": 1,\n    \"name\": \"isolated\",\n    \"uuid\": \"1e073700-494a-45a5-8058-ab35ae2ab372\",\n    \"nat\": false,\n    \"members\": {}\n  },\n  {\n    \"version\": 1,\n    \"name\": \"lan\",\n    \"uuid\": \"e0afe682-bc18-4fec-a1f7-78a274a68d03\",\n    \"nat\": false,\n    \"members\": {\n      \"ddf11ce7-1f92-4353-bf89-a42dd04aa51f\": 2\n    }\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "a",
+      "config",
+      "show",
+      "--json"
+    ],
+    "code": 0,
+    "stdout": "{\n  \"boot\": {\n    \"mode\": \"shell\"\n  },\n  \"components\": {\n    \"audio\": false,\n    \"audio_input\": false,\n    \"thunking\": false,\n    \"vaapi\": false,\n    \"vulkan\": false\n  },\n  \"display\": {\n    \"windows\": false\n  },\n  \"environment\": {\n    \"name\": \"a\",\n    \"type\": \"linux\",\n    \"uuid\": \"ddf11ce7-1f92-4353-bf89-a42dd04aa51f\"\n  },\n  \"image\": {\n    \"distribution\": \"alpine\",\n    \"sha256\": \"821565fa8f3953eefd12497b166b4b50add2f7c57fb312e75862f5867e06fefe\",\n    \"source\": null\n  },\n  \"interop\": {\n    \"clipboard\": {\n      \"enabled\": true\n    },\n    \"files\": {\n      \"enabled\": true\n    },\n    \"host_cli\": {\n      \"enabled\": true\n    },\n    \"host_exec\": {\n      \"enabled\": true\n    },\n    \"host_ui\": {\n      \"enabled\": true\n    },\n    \"mounts\": {\n      \"enabled\": true\n    },\n    \"ports\": {\n      \"enabled\": true\n    }\n  },\n  \"kernel\": {\n    \"sysctl\": {}\n  },\n  \"mounts\": [],\n  \"network\": {\n    \"bridge\": \"lan\",\n    \"mode\": \"bridge\",\n    \"publish\": []\n  },\n  \"resources\": {\n    \"cpus\": 2,\n    \"memory\": \"auto\",\n    \"memory_limit\": null\n  },\n  \"session\": {\n    \"cwd\": \"/\",\n    \"shell\": [\n      \"/bin/sh\",\n      \"-l\"\n    ]\n  },\n  \"version\": 1\n}\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "c",
+      "--no-pty",
+      "/bin/sh",
+      "-ec",
+      "echo isolated | nc -w 1 10.0.0.2 47000"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "b",
+      "--no-pty",
+      "/bin/sh",
+      "-ec",
+      "printf peer-b | nc -w 2 10.0.0.2 47000 || true"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "env",
+      "stop",
+      "a"
+    ],
+    "code": 0,
+    "stdout": "Stopped a\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "stop",
+      "b"
+    ],
+    "code": 0,
+    "stdout": "Stopped b\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "grant",
+      "a",
+      "ports",
+      "on"
+    ],
+    "code": 0,
+    "stdout": "Host grants saved; restart the environment to apply\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "a",
+      "config",
+      "set",
+      "interop.ports.enabled",
+      "true"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "grant",
+      "a",
+      "share",
+      "project",
+      "/var/folders/z9/pm_9zfxs6wj4ngjn4jn2myyw0000gp/T/trames-links-p3b7cl3w/shared",
+      "rw"
+    ],
+    "code": 0,
+    "stdout": "Host grants saved; restart the environment to apply\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "grant",
+      "a",
+      "mounts",
+      "on"
+    ],
+    "code": 0,
+    "stdout": "Host grants saved; restart the environment to apply\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "a",
+      "config",
+      "set",
+      "interop.mounts.enabled",
+      "true"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "a",
+      "--no-pty",
+      "/bin/sh",
+      "-ec",
+      "mkdir -p /mnt/control; trames debug rpc mount-control mounts.add '{\"share\":\"project\",\"target\":\"/mnt/control\"}'; echo original-resource >/mnt/control/check; trames debug rpc mount-control mounts.remove '{\"target\":\"/mnt/control\"}'; test ! -e /mnt/control/check; echo MOUNT_OK"
+    ],
+    "code": 0,
+    "stdout": "{\"persistent\":false,\"updated\":true}\n{\"persistent\":false,\"updated\":true}\nMOUNT_OK\n",
+    "stderr": "trames: session ready\n"
+  }
+]

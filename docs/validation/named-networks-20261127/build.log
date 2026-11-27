@@ -1,0 +1,309 @@
+warning: unused workspace dependency `trames-kernel`
+  --> Cargo.toml:19:1
+   |
+19 | trames-kernel = { path = "runtime/crates/trames-kernel" }
+   | ^^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `trames-kernel`
+warning: unused workspace dependency `trames-native`
+  --> Cargo.toml:15:1
+   |
+15 | trames-native = { path = "runtime/crates/trames-native" }
+   | ^^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `trames-native`
+warning: unused workspace dependency `trames-vulkan`
+  --> Cargo.toml:13:1
+   |
+13 | trames-vulkan = { path = "runtime/crates/trames-vulkan" }
+   | ^^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `trames-vulkan`
+warning: unused field `repository` in `workspace.package`
+  --> Cargo.toml:35:1
+   |
+35 | repository = "https://github.com/project-trames/trames-mac"
+   | ^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.repository`
+warning: workspace (manifest) generated 4 warnings
+   Compiling bitflags v2.13.2
+   Compiling scopeguard v1.2.0
+   Compiling smallvec v1.16.3
+   Compiling libc v0.2.190
+   Compiling serde_core v1.0.229
+   Compiling wayland-sys v0.31.11
+   Compiling simdutf8 v0.1.5
+   Compiling downcast-rs v1.2.1
+   Compiling const-random v0.1.18
+   Compiling zerocopy v0.8.63
+   Compiling byteorder v1.5.0
+   Compiling x11rb-protocol v0.13.2
+   Compiling lock_api v0.4.14
+   Compiling log v0.4.34
+   Compiling stable_deref_trait v1.2.1
+   Compiling hashbrown v0.16.1
+   Compiling encoding_rs v0.8.42
+   Compiling hash32 v0.3.1
+   Compiling xim-parser v0.2.2
+   Compiling managed v0.8.0
+   Compiling bitflags v1.3.2
+   Compiling heapless v0.8.0
+   Compiling trames-execution v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-execution)
+   Compiling adler2 v2.0.1
+   Compiling simd-adler32 v0.3.10
+   Compiling crc32fast v1.5.2
+   Compiling hashbrown v0.17.1
+   Compiling winnow v1.0.5
+   Compiling miniz_oxide v0.9.1
+   Compiling equivalent v1.0.3
+   Compiling crc-catalog v2.5.0
+   Compiling smoltcp v0.12.0 (/private/tmp/trames-network-mac-check/runtime/vendor/smoltcp)
+   Compiling zeroize v1.9.1
+   Compiling crc v3.4.0
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling constant_time_eq v0.6.1
+   Compiling trames-native v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-native)
+   Compiling indexmap v2.14.2
+   Compiling flate2 v1.1.10
+   Compiling libloading v0.8.9
+   Compiling typed-path v0.13.0
+   Compiling toml_writer v1.2.0+spec-1.1.0
+   Compiling errno v0.3.14
+   Compiling parking_lot_core v0.9.12
+   Compiling cpufeatures v0.2.17
+   Compiling rustix v1.1.5
+   Compiling sha2 v0.10.9
+   Compiling xim-ctext v0.4.1
+   Compiling nix v0.31.3
+warning: unused variable: `source_hardware_addr`
+  --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:89:9
+   |
+89 |         source_hardware_addr: HardwareAddress,
+   |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_hardware_addr`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:480:35
+    |
+480 |         tx_token.consume(tx_len, |mut tx_buffer| {
+    |                                   ----^^^^^^^^^
+    |                                   |
+    |                                   help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:457:13
+    |
+457 |         let mut tx_len = ip_len;
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `source_hardware_addr`
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv6.rs:191:9
+    |
+191 |         source_hardware_addr: HardwareAddress,
+    |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_hardware_addr`
+
+   Compiling parking_lot v0.12.5
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1448:51
+     |
+1448 |                         tx_token.consume(tx_len, |mut tx_buffer| {
+     |                                                   ----^^^^^^^^^
+     |                                                   |
+     |                                                   help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1473:50
+     |
+1473 |                     tx_token.consume(total_len, |mut tx_buffer| {
+     |                                                  ----^^^^^^^^^
+     |                                                  |
+     |                                                  help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1487:61
+     |
+1487 |             IpRepr::Ipv6(_) => tx_token.consume(total_len, |mut tx_buffer| {
+     |                                                             ----^^^^^^^^^
+     |                                                             |
+     |                                                             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1320:13
+     |
+1320 |         let mut total_len = ip_repr.buffer_len();
+     |             ----^^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+
+   Compiling getrandom v0.3.4
+   Compiling socket2 v0.6.1
+   Compiling filetime v0.2.29
+   Compiling getrandom v0.4.3
+   Compiling tar v0.4.46
+   Compiling ash v0.38.0+1.3.281
+   Compiling ext4-view v1.0.0 (/private/tmp/trames-network-mac-check/runtime/vendor/ext4-view)
+   Compiling trames-hvf v1.5.5 (/private/tmp/trames-network-mac-check/crates/trames-hvf)
+warning: field `hardware_addr` is never read
+   --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:224:5
+    |
+210 | pub struct InterfaceInner {
+    |            -------------- field in this struct
+...
+224 |     hardware_addr: HardwareAddress,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: variants `NoRoute` and `NeighborPending` are never constructed
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1519:5
+     |
+1514 | enum DispatchError {
+     |      ------------- variants in this enum
+...
+1519 |     NoRoute,
+     |     ^^^^^^^
+...
+1523 |     NeighborPending,
+     |     ^^^^^^^^^^^^^^^
+     |
+     = note: `DispatchError` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `link_local_ipv6_address` and `mldv2_report_packet` are never used
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv6.rs:171:8
+    |
+ 21 | impl InterfaceInner {
+    | ------------------- methods in this implementation
+...
+171 |     fn link_local_ipv6_address(&self) -> Option<Ipv6Address> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+563 |     pub(super) fn mldv2_report_packet<'any>(
+    |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: variant `HopByHopIcmpv6` is never constructed
+   --> runtime/vendor/smoltcp/src/iface/packet.rs:263:5
+    |
+255 | pub(crate) enum IpPayload<'p> {
+    |                 --------- variant in this enum
+...
+263 |     HopByHopIcmpv6(Ipv6HopByHopRepr<'p>, Icmpv6Repr<'p>),
+    |     ^^^^^^^^^^^^^^
+    |
+    = note: `IpPayload` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: type alias `Rest` is never used
+  --> runtime/vendor/smoltcp/src/wire/mod.rs:75:14
+   |
+75 |     pub type Rest = ::core::ops::RangeFrom<usize>;
+   |              ^^^^
+
+warning: constant `CUR_HOP_LIMIT` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:220:15
+    |
+220 |     pub const CUR_HOP_LIMIT: usize = 4;
+    |               ^^^^^^^^^^^^^
+
+warning: constant `ROUTER_FLAGS` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:221:15
+    |
+221 |     pub const ROUTER_FLAGS: usize = 5;
+    |               ^^^^^^^^^^^^
+
+warning: constant `ROUTER_LT` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:222:15
+    |
+222 |     pub const ROUTER_LT: Field = 6..8;
+    |               ^^^^^^^^^
+
+warning: constant `REACHABLE_TM` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:223:15
+    |
+223 |     pub const REACHABLE_TM: Field = 8..12;
+    |               ^^^^^^^^^^^^
+
+warning: constant `NEIGH_FLAGS` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:230:15
+    |
+230 |     pub const NEIGH_FLAGS: usize = 4;
+    |               ^^^^^^^^^^^
+
+warning: methods `solicited_node` and `is_solicited_node_multicast` are never used
+   --> runtime/vendor/smoltcp/src/wire/ipv6.rs:121:8
+    |
+ 79 | pub(crate) trait AddressExt {
+    |                  ---------- methods in this trait
+...
+121 |     fn solicited_node(&self) -> Address;
+    |        ^^^^^^^^^^^^^^
+...
+131 |     fn is_solicited_node_multicast(&self) -> bool;
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `emit_header` is never used
+   --> runtime/vendor/smoltcp/src/wire/udp.rs:264:19
+    |
+221 | impl Repr {
+    | --------- method in this implementation
+...
+264 |     pub(crate) fn emit_header<T>(&self, packet: &mut Packet<&mut T>, payload_len: usize)
+    |                   ^^^^^^^^^^^
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> runtime/vendor/smoltcp/src/storage/assembler.rs:330:22
+    |
+330 |     pub fn iter_data(&self, first_offset: usize) -> AssemblerIter {
+    |                      ^^^^^                          ^^^^^^^^^^^^^ the same lifetime is hidden here
+    |                      |
+    |                      the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+330 |     pub fn iter_data(&self, first_offset: usize) -> AssemblerIter<'_> {
+    |                                                                  ++++
+
+   Compiling trames-mac v1.5.5 (/private/tmp/trames-network-mac-check/crates/trames-mac)
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling serde_spanned v1.1.3
+   Compiling toml_datetime v1.1.3+spec-1.1.0
+   Compiling zip v9.5.1
+   Compiling toml v1.2.1+spec-1.1.0
+warning: `smoltcp` (lib) generated 21 warnings (run `cargo fix --lib -p smoltcp` to apply 9 suggestions)
+   Compiling trames-control v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-control)
+   Compiling trames-cli-common v0.1.0 (/private/tmp/trames-network-mac-check/cli/crates/trames-cli-common)
+   Compiling trames-shared v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-shared)
+   Compiling wayland-backend v0.3.17 (/private/tmp/trames-network-mac-check/runtime/vendor/wayland-backend)
+   Compiling gethostname v1.1.0
+   Compiling ahash v0.8.12
+   Compiling trames-memory v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-memory)
+   Compiling trames-bridge v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-bridge)
+   Compiling wayland-server v0.31.14
+   Compiling wayland-protocols v0.32.13
+   Compiling trames-graphics v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-graphics)
+   Compiling trames-net v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-net)
+   Compiling trames-elf v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-elf)
+   Compiling trames-accel v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-accel)
+   Compiling trames-engine v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-engine)
+   Compiling trames-audio v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-audio)
+   Compiling trames-video v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-video)
+   Compiling x11rb v0.13.2
+   Compiling xim v0.5.0
+   Compiling trames-wayland v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-wayland)
+   Compiling trames-vfs v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-vfs)
+   Compiling trames-vulkan v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-vulkan)
+   Compiling trames-linux v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-linux)
+   Compiling trames-distro v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-distro)
+   Compiling trames-kernel v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-kernel)
+   Compiling trames-session v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-session)
+   Compiling trames-host v1.3.0 (/private/tmp/trames-network-mac-check/runtime/crates/trames-host)
+    Finished `dev` profile [unoptimized] target(s) in 1m 35s

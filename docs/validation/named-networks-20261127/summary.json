@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "commands": 22,
+  "product_base": "35a0a078033c74ed8a9851e581905537a56587c9",
+  "runtime": "88be4442dec1f9a8095796c422016b1b3f030e57",
+  "toolchain": "rustc 1.101.0-nightly (4ebd25825 2026-10-15)\nbinary: rustc\ncommit-hash: 4ebd258257737d5b7635c116fa7d281627a7e937\ncommit-date: 2026-10-15\nhost: aarch64-apple-darwin\nrelease: 1.101.0-nightly\nLLVM version: 23.1.4\n",
+  "runner_sha256": "bce43b5ab55ff4e5d8fe9870aaae6a94c2aa8bfa8b441815e2c5a2769256594a",
+  "inputs": {
+    "Cargo.toml": "db9518eefa76a3ad0f8a4445c52a5750655812ac1c0a10afbd96409abf710467",
+    "Cargo.lock": "b9646e800d536eb8b376c9242da62ccc2c58633c2ee695073b53cd8641b81f22",
+    "crates/trames-mac/src/networks.rs": "f1c77f4f262bdd59a1023db5241669b4dbfbe2056f2bbe4e65363f1d231873ee",
+    "runtime-version.json": "f52ba1e2304efcc88a379729c3a68b80ebdce8841213aeae5fbe8d10a6d73d96",
+    "crates/trames-mac/src/session.rs": "d4e1de967b8aebaad998b7f74e0067b5c808d357da2572a974edcc5f26816ed4"
+  },
+  "source_isolation": "Source copy includes the network adapter and clean Runtime; session.rs is the committed base. Concurrent uncommitted memory-pressure integration is preserved in the owner checkout and excluded from this build."
+}
