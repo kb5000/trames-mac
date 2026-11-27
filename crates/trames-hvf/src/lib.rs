@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#![recursion_limit = "512"]
 //! Apple Silicon instruction execution. Linux and virtual-memory policy remain
 //! in the common runtime; this adapter owns only vCPU and MMU transport.
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
