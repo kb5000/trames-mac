@@ -23,6 +23,7 @@ pub struct Cpu {
 #[derive(Default)]
 pub struct Engine {
     executor: Option<Executor>,
+    perf_deadline: Option<std::time::Instant>,
 }
 
 impl Engine {
@@ -347,6 +348,9 @@ impl trames_engine::Cpu for Cpu {
     ) -> Option<std::sync::Arc<trames_memory::HardwareWait>> {
         engine.executor.as_mut().and_then(Executor::take_wait)
     }
+    fn set_execution_deadline(engine: &mut Engine, deadline: Option<std::time::Instant>) {
+        engine.perf_deadline = deadline;
+    }
     fn run_parallel(&mut self, engine: &mut Engine, memory: &mut View, _: u64) -> SliceOutcome {
         #[cfg(feature = "diagnostics")]
         crate::macos::diagnostics::binding(&mut self.execution_thread);
@@ -356,6 +360,13 @@ impl trames_engine::Cpu for Cpu {
                 Err(error) => return SliceOutcome::Fault(CpuFault::Host(error.to_string())),
             }
         }
+        let quantum = engine
+            .perf_deadline
+            .map_or(Duration::from_millis(2), |deadline| {
+                deadline
+                    .saturating_duration_since(std::time::Instant::now())
+                    .min(Duration::from_millis(2))
+            });
         let executor = engine.executor.as_mut().unwrap();
         let result = if self.sme_config().is_some() {
             executor.run_parallel_sme(
@@ -363,10 +374,10 @@ impl trames_engine::Cpu for Cpu {
                 &mut self.sme,
                 self.sme_config.vl,
                 memory,
-                Duration::from_millis(2),
+                quantum,
             )
         } else {
-            executor.run_parallel(&mut self.state, memory, Duration::from_millis(2))
+            executor.run_parallel(&mut self.state, memory, quantum)
         };
         self.outcome(result, memory)
     }
