@@ -19,6 +19,7 @@ struct Output {
     deadline: Option<Instant>,
     window: Option<(u16, u16)>,
     pressure: Option<trames_hvf::Reclaim>,
+    memory_pressure: Option<std::sync::Arc<trames_memory::MemoryPressure>>,
     host_wake: Option<std::sync::Arc<trames_linux::HostWake>>,
     bridge: Option<std::sync::Arc<super::windows::Bridge>>,
 }
@@ -36,7 +37,13 @@ impl Output {
         Ok(())
     }
     fn observe_pressure(&mut self) -> io::Result<()> {
-        match trames_hvf::take_memory_pressure().map_err(io::Error::other)? {
+        let level = trames_hvf::take_memory_pressure().map_err(io::Error::other)?;
+        if level != 0 {
+            if let Some(source) = &self.memory_pressure {
+                source.source_changed();
+            }
+        }
+        match level {
             1 => self.pressure = None,
             level if level & 6 != 0 => {
                 let mapped = trames_hvf::paging_stats().mapped_bytes;
@@ -50,7 +57,18 @@ impl Output {
             _ => {}
         }
         if let Some(request) = &mut self.pressure {
-            if request.progress().map_err(io::Error::other)? {
+            let before = trames_hvf::paging_stats().page_out_bytes;
+            let complete = request.progress().map_err(io::Error::other)?;
+            let pages = trames_hvf::paging_stats()
+                .page_out_bytes
+                .saturating_sub(before)
+                / 4096;
+            if pages != 0 {
+                if let Some(source) = &self.memory_pressure {
+                    source.reclaimed_pages(pages);
+                }
+            }
+            if complete {
                 self.pressure = None;
             }
         }
@@ -71,6 +89,9 @@ impl GuestOutput for Output {
         source
     }
 
+    fn bind_memory_pressure(&mut self, pressure: std::sync::Arc<trames_memory::MemoryPressure>) {
+        self.memory_pressure = Some(pressure);
+    }
     fn host_memory_source(
         &self,
     ) -> Option<std::sync::Arc<dyn Fn() -> trames_linux::HostMemoryInfo + Send + Sync>> {
@@ -766,6 +787,7 @@ pub fn run(
             .transpose()?,
         deadline: (timeout != 0).then(|| Instant::now() + Duration::from_secs(timeout)),
         pressure: None,
+        memory_pressure: None,
         host_wake: None,
         bridge,
         window: None,
@@ -995,6 +1017,7 @@ mod tests {
             deadline: Some(Instant::now() + Duration::from_secs(5)),
             window: None,
             pressure: None,
+            memory_pressure: None,
             host_wake: None,
             bridge: None,
         };
@@ -3609,6 +3632,7 @@ mod tests {
                     deadline: None,
                     window: None,
                     pressure: None,
+                    memory_pressure: None,
                     host_wake: None,
                     bridge: None,
                 },
