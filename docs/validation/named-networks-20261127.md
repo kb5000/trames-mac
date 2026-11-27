@@ -7,3 +7,5 @@ The [record](named-networks-20261127/summary.json) identifies Runtime `88be4442d
 A source-isolated copy used committed `session.rs` while retaining its owner's unrelated in-progress memory-pressure changes in the original checkout. This acceptance does not cover that concurrent work. The existing fixture was updated to the current `trames debug rpc` command and current mount configuration keys; failed stale-fixture runs were not counted.
 
 The paired Linux product runs its own KVM SMCCC/MMIO × one/four-CPU network matrix. No Linux GUI is introduced.
+
+The clean paired Mac commit also passed [formal CI](https://github.com/project-trames/trames-mac/actions/runs/45939741723), including workspace all-feature checks/tests, native integration checks and both Dev/Stable product builds. [Recorded steps](named-networks-20261127/ci.json) bind the result to `761dd7f53e7ed215b6d94b811717eb33fcc45f1d`. This separately verifies the actual published clean source tree.
