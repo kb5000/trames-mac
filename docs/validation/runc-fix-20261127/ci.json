@@ -1,0 +1,104 @@
+{
+  "label": "mac",
+  "repository": "project-trames/trames-mac",
+  "head_sha": "012a56b36fabe2d7d930d07b1f04f6de4708ea12",
+  "runtime": "bb2748532f7ea56d658d819f8afdfd114b7a01df",
+  "run_id": 45957042856,
+  "url": "https://github.com/project-trames/trames-mac/actions/runs/45957042856",
+  "jobs": [
+    {
+      "id": 140365819613,
+      "name": "build",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run rustup show",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python3 scripts/check-execution-boundaries.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python3 runtime/scripts/build-guest-cli.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo fmt --all --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo test --workspace --all-features --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bash -n scripts/build-mac.sh scripts/install-mac.sh",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python3 tests/integration/mac-native-driver.py && python3 -m py_compile scripts/configure-native-vulkan.py scripts/package-mac.py scripts/benchmark-firefox-video.py scripts/run-firefox-gpu.py tests/integration/mac-environments.py tests/integration/mac-networks.py tests/integration/mac-controls.py tests/integration/mac-packages.py tests/integration/mac-systemd.py tests/integration/mac-cli.py tests/integration/mac-manager.py tests/integration/mac-channels.py tests/integration/mac-background.py tests/integration/mac-exec.py tests/integration/mac-host-lifecycle.py tests/integration/mac-docker.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bash tests/native/task-stream.sh",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bash tests/native/window-scene.sh",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run TRAMES_BUILD_CHANNEL=stable TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python3 scripts/package-mac.py --app 'target/release/Trames Dev.app' --unnotarized",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python3 scripts/package-mac.py --app target/release/Trames.app --unnotarized",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "prior_gate_failures": [
+    {
+      "run_id": 45955912915,
+      "gate": "Formatting in independently integrated memory lifecycle"
+    },
+    {
+      "run_id": 45956158745,
+      "gate": "HVF compile-time Send proof exceeded default recursion limit"
+    }
+  ]
+}
