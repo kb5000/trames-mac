@@ -1,0 +1,33 @@
+{
+  "fingerprint": {
+    "binary_sha256": "d5e46e2fda3347d120fb71def1e9782750d7b51f1616fd92a9524b6dc50f50c1",
+    "command": [
+      "python3",
+      "/private/tmp/trames-discovery-mac-build.py"
+    ],
+    "flags": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_TEST_DEBUG": "0"
+    },
+    "sources": {
+      "product": "8a5763ac016921041d10a815cdd1670fed83d169f70d3ba25083779965ef11b0",
+      "runtime": "8addfd0777da33e1b6ffef2d3c2442c3e5ab3aa14d5d41965af4e232e1cdead4"
+    },
+    "toolchain": "rustc 1.101.0-nightly (4ebd25825 2026-10-15)\nbinary: rustc\ncommit-hash: 4ebd258257737d5b7635c116fa7d281627a7e937\ncommit-date: 2026-10-15\nhost: aarch64-apple-darwin\nrelease: 1.101.0-nightly\nLLVM version: 23.1.4\n"
+  },
+  "fingerprint_sha256": "0aaf7c493a5e5fa0edaf8f09986650020d27cfc545d87604f67d06f825f5d959",
+  "schema_version": 1,
+  "sources": {
+    "product": {
+      "commit": "cf55b3958770755d22e176c1d76a41481afd61f6",
+      "dirty": true,
+      "inputs_sha256": "8a5763ac016921041d10a815cdd1670fed83d169f70d3ba25083779965ef11b0"
+    },
+    "runtime": {
+      "commit": "8bd058556ffb35be8e127afbaf7c1c26dae998d9",
+      "dirty": false,
+      "inputs_sha256": "8addfd0777da33e1b6ffef2d3c2442c3e5ab3aa14d5d41965af4e232e1cdead4"
+    }
+  }
+}

@@ -1,0 +1,916 @@
+[
+  {
+    "argv": [
+      "config",
+      "--global",
+      "set",
+      "defaults.components.vulkan",
+      "false",
+      "defaults.display.windows",
+      "false",
+      "defaults.resources.cpus",
+      "1"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.854813833
+  },
+  {
+    "argv": [
+      "network",
+      "create",
+      "lan",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network lan\n",
+    "stderr": "",
+    "seconds": 0.02255291700000006
+  },
+  {
+    "argv": [
+      "network",
+      "create",
+      "other",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network other\n",
+    "stderr": "",
+    "seconds": 0.017469957999999952
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "web",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created web (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.6524848330000002
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.029189624999999886
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "web"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started b086cd8c-64d1-4535-9603-3c87a99587da in background\n",
+    "seconds": 0.26707508299999994
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "db",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created db (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.6859549170000001
+  },
+  {
+    "argv": [
+      "-e",
+      "db",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.027188124999999896
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "db"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started ba07b680-94ca-4581-8e9e-5095637603c2 in background\n",
+    "seconds": 0.256028959
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "isolated",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created isolated (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.662059916
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "other"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.026147291000000017
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "isolated"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started 8b629891-2357-4eea-9760-fb35e8516aa1 in background\n",
+    "seconds": 0.266674375
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.052629750000000364
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.03193812500000037
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "DB.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.031054417000000445
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "DB.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.02682983299999986
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.env.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.023537457999999845
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.env.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.02185387499999969
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.048351584000000614
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.021419999999999995
+  },
+  {
+    "argv": [
+      "env",
+      "stop",
+      "db"
+    ],
+    "code": 0,
+    "stdout": "Stopped db\n",
+    "stderr": "",
+    "seconds": 0.12859745799999978
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.042948917000000364
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.03214804100000013
+  },
+  {
+    "argv": [
+      "env",
+      "rename",
+      "db",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.027468458000000417
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started ba07b680-94ca-4581-8e9e-5095637603c2 in background\n",
+    "seconds": 0.20663250000000044
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.03829895800000038
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.03781087499999991
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.03409141699999996
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.03130208400000001
+  },
+  {
+    "argv": [
+      "env",
+      "restart",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "Stopped database\n",
+    "stderr": "Started ba07b680-94ca-4581-8e9e-5095637603c2 in background\n",
+    "seconds": 0.3488756669999997
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.041861332999999945
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.03208237500000077
+  },
+  {
+    "argv": [
+      "env",
+      "stop",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "Stopped database\n",
+    "stderr": "",
+    "seconds": 0.1324144159999996
+  },
+  {
+    "argv": [
+      "config",
+      "--global",
+      "set",
+      "defaults.components.vulkan",
+      "false",
+      "defaults.display.windows",
+      "false",
+      "defaults.resources.cpus",
+      "4"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.02240474999999975
+  },
+  {
+    "argv": [
+      "network",
+      "create",
+      "lan",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network lan\n",
+    "stderr": "",
+    "seconds": 0.017135375000000508
+  },
+  {
+    "argv": [
+      "network",
+      "create",
+      "other",
+      "--internal"
+    ],
+    "code": 0,
+    "stdout": "Created Trames network other\n",
+    "stderr": "",
+    "seconds": 0.01519424999999952
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "web",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created web (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.637966542
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.03143054200000073
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "web"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started 7006fcb9-cecd-4bdf-8a65-4c80875f0346 in background\n",
+    "seconds": 0.26679850000000016
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "db",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created db (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.6718495000000004
+  },
+  {
+    "argv": [
+      "-e",
+      "db",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "lan"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.026562250000000454
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "db"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started a2baba51-bc76-462a-a46e-20a682e3a960 in background\n",
+    "seconds": 0.26227070799999996
+  },
+  {
+    "argv": [
+      "env",
+      "create",
+      "isolated",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-discovery-services/first/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created isolated (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n",
+    "seconds": 0.6758051670000009
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "config",
+      "set",
+      "network.mode",
+      "bridge",
+      "network.bridge",
+      "other"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.028450582999999696
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "isolated"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started ba753046-e7ff-465c-8779-5f6fb82a26aa in background\n",
+    "seconds": 0.27709679099999995
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.05065304100000034
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.03361233399999897
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "DB.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.030727374999999668
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "DB.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.029250334000000322
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.env.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.025406709000000305
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.env.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.022371624999999895
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.04449412499999994
+  },
+  {
+    "argv": [
+      "-e",
+      "isolated",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.023667917000000926
+  },
+  {
+    "argv": [
+      "env",
+      "stop",
+      "db"
+    ],
+    "code": 0,
+    "stdout": "Stopped db\n",
+    "stderr": "",
+    "seconds": 0.12669683299999868
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.03926920799999856
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.033974917000000104
+  },
+  {
+    "argv": [
+      "env",
+      "rename",
+      "db",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.026642042000000643
+  },
+  {
+    "argv": [
+      "env",
+      "start",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": "Started a2baba51-bc76-462a-a46e-20a682e3a960 in background\n",
+    "seconds": 0.19594262499999893
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.04070266699999969
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "db.trames"
+    ],
+    "code": 1,
+    "stdout": "",
+    "stderr": "resolve: Name or service not known\n",
+    "seconds": 0.03232437499999996
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.030541166000000786
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.026800458000000305
+  },
+  {
+    "argv": [
+      "env",
+      "restart",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "Stopped database\n",
+    "stderr": "Started a2baba51-bc76-462a-a46e-20a682e3a960 in background\n",
+    "seconds": 0.3313579579999999
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "10.0.0.3\n",
+    "stderr": "",
+    "seconds": 0.036209832999999136
+  },
+  {
+    "argv": [
+      "-e",
+      "web",
+      "exec",
+      "--",
+      "/bin/netprobe",
+      "resolve6",
+      "database.trames"
+    ],
+    "code": 0,
+    "stdout": "fd00::3\n",
+    "stderr": "",
+    "seconds": 0.03329191599999959
+  },
+  {
+    "argv": [
+      "env",
+      "stop",
+      "database"
+    ],
+    "code": 0,
+    "stdout": "Stopped database\n",
+    "stderr": "",
+    "seconds": 0.13200954200000048
+  }
+]

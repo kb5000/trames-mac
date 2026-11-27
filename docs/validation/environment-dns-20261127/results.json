@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "complete": true,
+  "runner_sha256": "d5e46e2fda3347d120fb71def1e9782750d7b51f1616fd92a9524b6dc50f50c1",
+  "operations": 66,
+  "cpus": [
+    1,
+    4
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "harness.py": "0fe6775e1c61d4fd07e617e5d145606eb749ab0cc99eee56a3715d7092dfe27f",
+  "build-receipt.json": "d4424df25ab67acc23e3a989d1c8404b89be6d157d705a6c3483123aabc8395a",
+  "results.json": "7e747c0aa45ac043deccde36d2d68c0f3d9f040382859a5e42fd8025e86e22a2",
+  "clippy.log": "2138c33246cf81e37104ee0de099241c904001b36eeb13ecefc787172408b6bd",
+  "build-command.py": "eed05e8ff74246d51b6f000ebabf6d6192ed309476b2c913a8ceefab966e981d",
+  "rootfs-inputs.json": "084232cba48f59403ab0f918273b2ebc8c4b610ceb44944ddd4acdee0507d0fe",
+  "tests.log": "0dc878abc8fbee8fedba36f5e98e7015d6575fc25352a5e243118b0dd7da1706",
+  "operations.json": "93fb2f19a569759ef4654a4be3a7fb997bd639a5fe0abc62751ce3187ac951b1"
+}

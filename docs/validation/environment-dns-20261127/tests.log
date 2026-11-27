@@ -1,0 +1,358 @@
+warning: unused workspace dependency `trames-kernel`
+  --> Cargo.toml:19:1
+   |
+19 | trames-kernel = { path = "runtime/crates/trames-kernel" }
+   | ^^^^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_dependencies` is set to `warn` by default
+help: consider removing the workspace dependency `trames-kernel`
+warning: unused workspace dependency `trames-native`
+  --> Cargo.toml:15:1
+   |
+15 | trames-native = { path = "runtime/crates/trames-native" }
+   | ^^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `trames-native`
+warning: unused workspace dependency `trames-vulkan`
+  --> Cargo.toml:13:1
+   |
+13 | trames-vulkan = { path = "runtime/crates/trames-vulkan" }
+   | ^^^^^^^^^^^^^
+   |
+help: consider removing the workspace dependency `trames-vulkan`
+warning: unused field `repository` in `workspace.package`
+  --> Cargo.toml:35:1
+   |
+35 | repository = "https://github.com/project-trames/trames-mac"
+   | ^^^^^^^^^^
+   |
+   = note: `cargo::unused_workspace_package_fields` is set to `warn` by default
+help: consider removing the field `workspace.package.repository`
+warning: workspace (manifest) generated 4 warnings
+warning: unused variable: `source_hardware_addr`
+  --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:89:9
+   |
+89 |         source_hardware_addr: HardwareAddress,
+   |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_hardware_addr`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:480:35
+    |
+480 |         tx_token.consume(tx_len, |mut tx_buffer| {
+    |                                   ----^^^^^^^^^
+    |                                   |
+    |                                   help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv4.rs:457:13
+    |
+457 |         let mut tx_len = ip_len;
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `source_hardware_addr`
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv6.rs:191:9
+    |
+191 |         source_hardware_addr: HardwareAddress,
+    |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_hardware_addr`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1448:51
+     |
+1448 |                         tx_token.consume(tx_len, |mut tx_buffer| {
+     |                                                   ----^^^^^^^^^
+     |                                                   |
+     |                                                   help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1473:50
+     |
+1473 |                     tx_token.consume(total_len, |mut tx_buffer| {
+     |                                                  ----^^^^^^^^^
+     |                                                  |
+     |                                                  help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1487:61
+     |
+1487 |             IpRepr::Ipv6(_) => tx_token.consume(total_len, |mut tx_buffer| {
+     |                                                             ----^^^^^^^^^
+     |                                                             |
+     |                                                             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1320:13
+     |
+1320 |         let mut total_len = ip_repr.buffer_len();
+     |             ----^^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+
+warning: field `hardware_addr` is never read
+   --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:224:5
+    |
+210 | pub struct InterfaceInner {
+    |            -------------- field in this struct
+...
+224 |     hardware_addr: HardwareAddress,
+    |     ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: variants `NoRoute` and `NeighborPending` are never constructed
+    --> runtime/vendor/smoltcp/src/iface/interface/mod.rs:1519:5
+     |
+1514 | enum DispatchError {
+     |      ------------- variants in this enum
+...
+1519 |     NoRoute,
+     |     ^^^^^^^
+...
+1523 |     NeighborPending,
+     |     ^^^^^^^^^^^^^^^
+     |
+     = note: `DispatchError` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: methods `link_local_ipv6_address` and `mldv2_report_packet` are never used
+   --> runtime/vendor/smoltcp/src/iface/interface/ipv6.rs:171:8
+    |
+ 21 | impl InterfaceInner {
+    | ------------------- methods in this implementation
+...
+171 |     fn link_local_ipv6_address(&self) -> Option<Ipv6Address> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+563 |     pub(super) fn mldv2_report_packet<'any>(
+    |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: variant `HopByHopIcmpv6` is never constructed
+   --> runtime/vendor/smoltcp/src/iface/packet.rs:263:5
+    |
+255 | pub(crate) enum IpPayload<'p> {
+    |                 --------- variant in this enum
+...
+263 |     HopByHopIcmpv6(Ipv6HopByHopRepr<'p>, Icmpv6Repr<'p>),
+    |     ^^^^^^^^^^^^^^
+    |
+    = note: `IpPayload` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: type alias `Rest` is never used
+  --> runtime/vendor/smoltcp/src/wire/mod.rs:75:14
+   |
+75 |     pub type Rest = ::core::ops::RangeFrom<usize>;
+   |              ^^^^
+
+warning: constant `CUR_HOP_LIMIT` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:220:15
+    |
+220 |     pub const CUR_HOP_LIMIT: usize = 4;
+    |               ^^^^^^^^^^^^^
+
+warning: constant `ROUTER_FLAGS` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:221:15
+    |
+221 |     pub const ROUTER_FLAGS: usize = 5;
+    |               ^^^^^^^^^^^^
+
+warning: constant `ROUTER_LT` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:222:15
+    |
+222 |     pub const ROUTER_LT: Field = 6..8;
+    |               ^^^^^^^^^
+
+warning: constant `REACHABLE_TM` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:223:15
+    |
+223 |     pub const REACHABLE_TM: Field = 8..12;
+    |               ^^^^^^^^^^^^
+
+warning: constant `NEIGH_FLAGS` is never used
+   --> runtime/vendor/smoltcp/src/wire/icmpv6.rs:230:15
+    |
+230 |     pub const NEIGH_FLAGS: usize = 4;
+    |               ^^^^^^^^^^^
+
+warning: methods `solicited_node` and `is_solicited_node_multicast` are never used
+   --> runtime/vendor/smoltcp/src/wire/ipv6.rs:121:8
+    |
+ 79 | pub(crate) trait AddressExt {
+    |                  ---------- methods in this trait
+...
+121 |     fn solicited_node(&self) -> Address;
+    |        ^^^^^^^^^^^^^^
+...
+131 |     fn is_solicited_node_multicast(&self) -> bool;
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `emit_header` is never used
+   --> runtime/vendor/smoltcp/src/wire/udp.rs:264:19
+    |
+221 | impl Repr {
+    | --------- method in this implementation
+...
+264 |     pub(crate) fn emit_header<T>(&self, packet: &mut Packet<&mut T>, payload_len: usize)
+    |                   ^^^^^^^^^^^
+
+warning: hiding a lifetime that's elided elsewhere is confusing
+   --> runtime/vendor/smoltcp/src/storage/assembler.rs:330:22
+    |
+330 |     pub fn iter_data(&self, first_offset: usize) -> AssemblerIter {
+    |                      ^^^^^                          ^^^^^^^^^^^^^ the same lifetime is hidden here
+    |                      |
+    |                      the lifetime is elided here
+    |
+    = help: the same lifetime is referred to in inconsistent ways, making the signature confusing
+    = note: `#[warn(mismatched_lifetime_syntaxes)]` on by default
+help: use `'_` for type paths
+    |
+330 |     pub fn iter_data(&self, first_offset: usize) -> AssemblerIter<'_> {
+    |                                                                  ++++
+
+   Compiling trames-hvf v1.5.5 (/Users/main/dev/trames-mac/crates/trames-hvf)
+warning: `smoltcp` (lib) generated 21 warnings (run `cargo fix --lib -p smoltcp` to apply 9 suggestions)
+   Compiling trames-net v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-net)
+   Compiling trames-vfs v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-vfs)
+   Compiling trames-linux v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-linux)
+   Compiling trames-distro v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-distro)
+   Compiling trames-kernel v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-kernel)
+   Compiling trames-session v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-session)
+   Compiling trames-host v1.3.0 (/Users/main/dev/trames-mac/runtime/crates/trames-host)
+   Compiling trames-mac v1.5.5 (/Users/main/dev/trames-mac/crates/trames-mac)
+    Finished `test` profile [unoptimized] target(s) in 1m 22s
+     Running unittests src/lib.rs (target/debug/build/trames-hvf/172368d50c69bde9/out/trames_hvf-172368d50c69bde9)
+
+running 61 tests
+test kernel::tests::hardware_native_call_returns_through_shared_dispatch_boundary ... ignored, requires Hypervisor entitlement and Apple Silicon
+test kernel::tests::quiesced_run_has_a_hardware_deadline_and_returns_unhandled_exits ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::address_space_cache_is_bounded_and_does_not_retain_physical_ram ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::anonymous_arenas_reuse_only_retired_granules_and_zero_new_slots ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::anonymous_pager_preserves_host_edits_and_releases_final_storage ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::clock_vdso_handles_long_elapsed_carry_and_leaves_realtime_for_the_syscall ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::concurrent_slot_allocation_preserves_live_bytes_and_releases_idle_ram ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::context_mailbox_preserves_complete_state_across_tasks_and_roots ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::cross_thread_cancel_before_entry_preserves_all_state_and_the_next_svc ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::cross_thread_cancel_returns_a_computing_cpu_and_preserves_its_register_bank ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::demand_faults_continue_the_same_timer_and_complete_register_bank ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::el0_cannot_read_write_or_execute_the_private_context ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::el0_timer_uses_full_register_fallback_without_changing_state ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::execute_only_pages_run_instructions_but_deny_guest_data_loads ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::explicit_resident_target_retains_granular_page_admission ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::fresh_leaves_and_table_branches_publish_without_tlb_invalidation ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::guest_code_stores_use_guest_cache_maintenance_across_cpus ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::host_borrow_parks_hardware_and_fires_one_readiness_notification ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::host_code_writes_publish_only_their_range_without_consumer_rescans ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::imported_data_epochs_coalesce_live_pages_but_code_and_retirement_keep_original_rules ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::interrupted_context_save_and_restore_keep_the_complete_continuation ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::large_untouched_vmas_do_not_rescan_unrelated_cached_hardware_pages ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::late_worker_revalidates_only_changed_chunks_after_journal_expiry ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::lazy_arena_registration_preserves_sparse_ram_holes_reclaim_and_reuse ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::live_dirty_pages_survive_explicit_page_out_and_hardware_page_in ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::live_vcpus_preserve_dirty_bytes_during_concurrent_pressure_reclamation ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::migrating_workers_reuse_resident_translation_blocks_without_new_page_faults ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::native_block_partial_protection_unmap_discard_and_reuse_are_precise ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::native_blocks_promote_after_sparse_leaf_permission_exceptions ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::native_extents_rebind_without_retaining_the_old_vm_range_or_losing_accounting ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::native_range_fork_migration_and_pressure_keep_canonical_bytes ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::native_range_has_one_fault_for_all_512_pages_and_sparse_real_residency ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::one_mapping_change_checks_one_cached_page ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::private_arena_addresses_stay_linear_across_table_growth_and_release_without_ram_cache ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::private_writable_code_reuses_metadata_across_joined_epochs ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::raw_host_reads_can_race_hardware_without_gate_or_torn_aligned_words ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::retained_cancel_handle_is_inert_during_destroy_and_cpu_identifier_reuse ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::retained_memory_rebinds_after_the_previous_vm_is_destroyed ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::retained_roots_observe_code_protection_replacement_and_eviction ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::serial_and_worker_dispatch_keep_one_snapshot_registration_domain ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::shared_file_pixels_survive_import_eviction_and_vm_replacement ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::simultaneous_vm_owners_wait_for_last_owner_teardown ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::sme::ordinary_tasks_skip_sme_and_tpidr2_first_use_isolated_between_tasks ... ignored, requires Hypervisor entitlement and SME2
+test macos::hardware_tests::sme::sme_syscall_and_cross_thread_migration_preserve_za_zt_and_tls ... ignored, requires Hypervisor entitlement and SME2
+test kernel::tests::stack_alignment_keeps_instruction_pc_separate_from_fault_address ... ok
+test kernel::tests::privileged_system_register_access_delivers_guest_sigill ... ok
+test macos::hardware_tests::sme::sme_timer_exit_preserves_streaming_vectors_and_predicates ... ignored, requires Hypervisor entitlement and SME2
+test macos::hardware_tests::sparse_native_fork_describes_only_populated_host_granules ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::sparse_page_table_growth_removal_and_reused_gpas_remain_exact ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::syscall_arguments_cannot_be_consumed_by_platform_hypercalls ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::unrelated_guest_pages_reuse_partial_physical_granules ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::hardware_tests::warm_address_spaces_switch_without_reexport_or_page_walks ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::concurrent_import_retirement_keeps_replacement_weak_entries ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::concurrent_native_growth_retirement_and_reclaim_keep_original_accounting ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::imported_granules_retire_without_scanning_other_live_imports ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::pressure_batches_are_bounded_and_do_not_become_a_residency_cap ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::pressure_native_ranges_respect_the_byte_batch_without_releasing_address_ownership ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::pressure_waits_on_original_byte_lease_and_preserves_host_writes ... ignored, requires Hypervisor entitlement and Apple Silicon
+test macos::machine::reclaim_tests::pressure_event_wakes_the_embedding_without_periodic_polling ... ok
+test kernel::tests::native_transport_preserves_other_traps_and_execute_permission ... ok
+test kernel::tests::native_transport_is_opt_in_and_keeps_common_authorization ... ok
+
+test result: ok. 5 passed; 0 failed; 56 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/build/trames-mac/89a18d871cf06da1/out/trames_mac_run-89a18d871cf06da1)
+
+running 53 tests
+test cli::tests::argv_is_literal_and_guest_environment_is_separate ... ok
+test background::tests::background_console_readiness_rejects_a_stale_socket_path ... ok
+test background::tests::registry_and_channel_are_part_of_job_identity_and_paths_are_xml_escaped ... ok
+test host_memory::tests::live_host_memory_is_bounded_and_not_a_fixed_guest_pool ... ok
+test interop::tests::delegated_cli_cannot_change_grants_or_select_another_environment ... ok
+test interop::tests::stream_frames_preserve_unicode_across_pipe_boundaries ... ok
+test environments::tests::dotted_updates_validate_as_one_transaction_and_do_not_modify_identity ... ok
+test interop::tests::new_jobs_rearm_original_waiter_and_stream_until_exit_without_polling ... ok
+test product::tests::channel_identity_is_immutable_and_uses_its_own_registry ... ok
+test session::tests::caught_native_cpu_faults_and_signal_frames_complete_on_original_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::descriptor_discovery_controls_use_original_native_workers_without_ioctl_joins ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::dormant_shared_futex_child_resumes_without_another_joined_native_cohort ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::exact_instruction_budget_is_rejected_before_creating_hardware ... ok
+test session::tests::guest_event_dispatch_completes_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::guest_file_cache_advice_completes_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::guest_memfd_lifecycle_completes_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::guest_msync_shared_backings_complete_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::guest_poweroff_retires_original_native_group_without_returned_syscall ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::headless_selection_uses_parsed_host_options_only ... ok
+test session::tests::host_pause_resume_preserves_one_hardware_cohort ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::memory_defaults_to_host_management_and_accepts_an_explicit_cap_or_auto_reset ... ok
+test session::tests::memory_pressure_preserves_one_live_cohort_with_four_and_twelve_cpus ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::memory_queries_run_on_original_native_views_without_mapping_checkpoints ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::mqueue_paths_and_directories_run_without_joined_native_dispatch ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::native_futex_wake_op_uses_original_atomic_memory_without_owner_returns ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::native_session_completion_and_host_cancel_use_sources_at_one_four_and_twelve_cpus ... ignored, requires Hypervisor entitlement and Apple Silicon
+test environments::manager_model::tests::invalid_batch_and_identity_changes_never_publish_a_partial_profile ... ok
+test session::tests::native_structural_task_memory_and_ring_controls_share_original_dispatch ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::original_fd_status_and_memfd_seals_complete_without_joined_native_dispatch ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::original_posix_ofd_and_directory_locks_complete_without_joined_native_dispatch ... ignored, requires Hypervisor entitlement and Apple Silicon
+test environments::manager_model::tests::invalid_profiles_remain_discoverable_and_guest_cache_is_not_a_host_profile ... ok
+test session::tests::original_task_proc_memory_views_do_not_require_host_statistics ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::original_uring_event_graph_completes_on_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::prctl_names_and_sme_configuration_complete_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::pressure_notification_reclaims_without_join_and_restores_original_bytes ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::published_global_metadata_and_uring_complete_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test environments::manager_model::tests::malformed_grants_and_networks_do_not_hide_environment_configuration ... ok
+test session::tests::retained_original_uring_bodies_complete_without_a_join_on_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::sessions_are_unlimited_unless_timeout_is_requested ... ok
+test session::tests::sysinfo_preserves_one_hardware_cohort_with_four_and_twelve_cpus ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::time_observations_and_vdso_realtime_complete_on_original_native_workers ... ignored, requires Hypervisor entitlement and Apple Silicon
+test session::tests::systemd_requires_explicit_shell_override_for_maintenance_commands ... ok
+test session::tests::uring_signal_requests_keep_original_native_submitters_in_solo_and_live_cohorts ... ignored, requires Hypervisor entitlement and Apple Silicon
+test environments::tests::identity_survives_alias_changes_and_grants_are_not_portable ... ok
+test environments::manager_model::tests::next_start_patch_does_not_need_the_running_environment_lock_or_mutate_grants ... ok
+test windows::tests::frame_lease_waits_for_gpu_and_every_drawable_and_finishes_once ... ok
+test windows::tests::sleep_wake_invalidates_static_frames_and_releases_input_state ... ok
+test environments::tests::config_is_toml_only_and_preserves_explicit_profile_precedence ... ok
+test environments::manager_model::tests::staging_is_not_registered_and_publication_rechecks_concurrent_names ... ok
+test windows::tests::newer_scene_retires_stalled_presentation_without_releasing_inflight_gpu_sources ... ok
+test windows::tests::cancelled_and_skipped_frames_release_only_after_gpu_reads_end ... ok
+test environments::manager_model::tests::interrupted_permission_changes_keep_denied_access_denied ... ok
+test environments::manager_model::tests::one_permission_decision_updates_only_its_request_and_local_grant ... ok
+
+test result: ok. 27 passed; 0 failed; 26 ignored; 0 measured; 0 filtered out; finished in 0.66s
+
+   Doc-tests trames_hvf
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -264,6 +264,7 @@ pub struct Command {
     link: Option<std::path::PathBuf>,
     link_id: u8,
     link_nat: bool,
+    link_name: Option<String>,
     publish: Vec<String>,
     kernel: trames_distro::environment::Kernel,
     trace: bool,
@@ -314,6 +315,7 @@ impl Command {
         let mut link = None;
         let mut link_id = 2u8;
         let mut link_nat = true;
+        let mut link_name = None;
         let mut publish = vec![];
         let mut kernel = trames_distro::environment::Kernel::default();
         let mut trace = false;
@@ -370,6 +372,11 @@ impl Command {
                     link = Some(std::path::PathBuf::from(
                         arguments.next().ok_or("missing network link")?,
                     ))
+                }
+                "--network-name" => {
+                    let name = arguments.next().ok_or("missing network name")?;
+                    trames_distro::registry::name(&name)?;
+                    link_name = Some(name);
                 }
                 "--network-id" => {
                     link_id = arguments.next().ok_or("missing network id")?.parse()?
@@ -492,6 +499,7 @@ impl Command {
             link,
             link_id,
             link_nat,
+            link_name,
             publish,
             kernel,
             trace,
@@ -531,6 +539,7 @@ pub fn run(
         link,
         link_id,
         link_nat,
+        link_name,
         publish,
         kernel,
         trace,
@@ -579,7 +588,7 @@ pub fn run(
     if !filesystem {
         if let Some(directory) = link {
             let fabric = trames_net::Fabric::new()?;
-            fabric.attach(&directory, link_id, link_nat)?;
+            fabric.attach_named(&directory, link_id, link_nat, link_name.as_deref())?;
             for p in publish {
                 let f: Vec<_> = p.split(',').collect();
                 if f.len() != 3 {
