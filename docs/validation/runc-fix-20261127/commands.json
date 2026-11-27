@@ -1,0 +1,148 @@
+[
+  {
+    "args": [
+      "config",
+      "--global",
+      "set",
+      "defaults.components.vulkan",
+      "false",
+      "defaults.components.thunking",
+      "false",
+      "defaults.display.windows",
+      "false"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "env",
+      "create",
+      "test",
+      "--rootfs",
+      "/Users/main/dev/trames/target/local-ci/io/linux-runc-fix/memfd-final/rootfs"
+    ],
+    "code": 0,
+    "stdout": "Created test (custom)\n",
+    "stderr": "Importing custom rootfs\u2026\n"
+  },
+  {
+    "args": [
+      "-e",
+      "test",
+      "config",
+      "set",
+      "resources.cpus",
+      "1"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "env",
+      "stop",
+      "test"
+    ],
+    "code": 0,
+    "stdout": "test is stopped\n",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "-e",
+      "test",
+      "config",
+      "set",
+      "resources.cpus",
+      "4"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "debug",
+      "env-run",
+      "test",
+      "--no-pty",
+      "/bin/memfd-exec"
+    ],
+    "code": 0,
+    "stdout": "MEMFD_EXEC_OK\n",
+    "stderr": "trames: session ready\n"
+  },
+  {
+    "args": [
+      "env",
+      "stop",
+      "test"
+    ],
+    "code": 0,
+    "stdout": "test is stopped\n",
+    "stderr": ""
+  }
+]

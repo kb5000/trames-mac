@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "commands": 12,
+  "self_reexecs": 6,
+  "signed_runner_sha256": "22df4e15d6511c7fb52d23ae7aa8a50aeb9fd16d0b67d0d7c8a64997f537de30",
+  "signing": [
+    "codesign",
+    "--force",
+    "--sign",
+    "-",
+    "--entitlements",
+    "apps/macos/Trames.entitlements",
+    "target/debug/trames-mac-run"
+  ],
+  "signing_verified": true,
+  "sources_match_compilation_receipt": true
+}
