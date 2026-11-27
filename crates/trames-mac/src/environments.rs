@@ -108,6 +108,10 @@ fn set_config(c: &mut Config, key: &str, value: &str) -> Result<()> {
     if key == "environment.name" || key == "environment.uuid" {
         return Err("use env rename/clone to change registered identity".into());
     }
+    if let Some(name) = key.strip_prefix("kernel.sysctl.") {
+        c.kernel.argument(&format!("{name}={value}"))?;
+        return Ok(());
+    }
     let mut json = serde_json::to_value(&*c)?;
     let parts: Vec<_> = key.split('.').collect();
     let mut slot = &mut json;
@@ -122,6 +126,22 @@ fn set_config(c: &mut Config, key: &str, value: &str) -> Result<()> {
     let candidate: Config = serde_json::from_value(json)?;
     *c = candidate;
     Ok(())
+}
+/// Sysctl names are literal map keys, including the dots in kernel.threads-max.
+fn config_value<'a>(value: &'a serde_json::Value, key: &str) -> Result<&'a serde_json::Value> {
+    let (value, key) = if let Some(key) = key.strip_prefix("defaults.") {
+        (value.get("defaults").ok_or("unknown configuration field")?, key)
+    } else {
+        (value, key)
+    };
+    let keys = if let Some(name) = key.strip_prefix("kernel.sysctl.") {
+        vec!["kernel", "sysctl", name]
+    } else {
+        key.split('.').collect()
+    };
+    keys.into_iter().try_fold(value, |node, key| {
+        node.get(key).ok_or_else(|| "unknown configuration field".into())
+    })
 }
 fn metadata_lock(r: &Path) -> Result<File> {
     let guard = OpenOptions::new()
@@ -167,7 +187,7 @@ pub fn settings(selected: Option<&str>, args: &[String]) -> Result<u8> {
             if args.contains(&"--json"){println!("{}",serde_json::to_string_pretty(&value)?)}else if global {print!("{}",model::encode(&cli)?)}else{print!("{}",model::encode(&c)?)}
         }
         "validate" if args.len()==1=>{validate(&c)?;println!("Valid environment configuration");}
-        "get" if args.len()==2=>{let v=if global{serde_json::to_value(&cli)?}else{serde_json::to_value(&c)?};let mut p=&v;for key in args[1].split('.') {p=p.get(key).ok_or("unknown configuration field")?;}if let Some(text)=p.as_str(){println!("{text}")}else{println!("{p}")}}
+        "get" if args.len()==2=>{let v=if global{serde_json::to_value(&cli)?}else{serde_json::to_value(&c)?};let p=config_value(&v,args[1])?;if let Some(text)=p.as_str(){println!("{text}")}else{println!("{p}")}}
         "set" if args.len()>=3&&args.len()%2==1=>{
             for pair in args[1..].chunks_exact(2) {
                 if global&&pair[0]=="default_environment"{name(pair[1])?;load(&directory(&r,pair[1])?)?;cli.default_environment=pair[1].into();}
@@ -1531,6 +1551,24 @@ mod tests {
             Config::parse(&text).unwrap().network.bridge.as_deref(),
             Some("private")
         );
+    }
+    #[test]
+    fn literal_sysctl_updates_round_trip_and_reject_invalid_values_before_mutation() {
+        let mut c = Config::default();
+        set_config(&mut c, "kernel.sysctl.kernel.threads-max", "300").unwrap();
+        assert_eq!(c.kernel.sysctl["kernel.threads-max"], 300);
+        let json = serde_json::to_value(&c).unwrap();
+        assert_eq!(config_value(&json, "kernel.sysctl.kernel.threads-max").unwrap(), 300);
+        let global = serde_json::json!({"defaults": json});
+        assert_eq!(config_value(&global, "defaults.kernel.sysctl.kernel.threads-max").unwrap(), 300);
+        let text = model::encode(&c).unwrap();
+        assert_eq!(Config::parse(&text).unwrap().kernel.sysctl, c.kernel.sysctl);
+        for value in ["0", "-1", "1.5", "1073741824"] {
+            assert!(set_config(&mut c, "kernel.sysctl.kernel.threads-max", value).is_err());
+            assert_eq!(c.kernel.sysctl["kernel.threads-max"], 300);
+        }
+        assert!(set_config(&mut c, "kernel.sysctl.kernel.unknown", "2").is_err());
+        assert_eq!(c.kernel.sysctl.len(), 1);
     }
     #[test]
     fn config_is_toml_only_and_preserves_explicit_profile_precedence() {

@@ -452,7 +452,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--exec-socket PATH] [--android-init] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--sysctl kernel.threads-max=N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--exec-socket PATH] [--android-init] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
                     );
                     return Ok(None);
                 }
