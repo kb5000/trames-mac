@@ -7,6 +7,7 @@ members = [
 exclude = ["runtime", "cli"]
 
 [workspace.dependencies]
+trames-host = { path = "runtime/crates/trames-host" }
 trames-cli-common = { path = "cli/crates/trames-cli-common" }
 trames-control = { path = "runtime/crates/trames-control" }
 trames-vulkan = { path = "runtime/crates/trames-vulkan" }

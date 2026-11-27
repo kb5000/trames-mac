@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "checks": [
+    "help_without_runtime",
+    "no_implicit_creation",
+    "scoped_config_and_defaults",
+    "idempotent_background_start",
+    "literal_argv_env_cwd",
+    "stdout_stderr_exit",
+    "binary_full_duplex_8MiB",
+    "pty_opt_in",
+    "concurrent_exec",
+    "signal_group_isolation",
+    "independent_shells_and_listing",
+    "persistent_restart",
+    "login_enable_disable"
+  ],
+  "runner_sha256": "455b1882594cafebcfe2e013de228f28f7a37808a7ff7c002daeec89d36ea3b5",
+  "runtime_pin": "3f5d4f53bb3dae0449b03cd0a8a0fe1ea8562cc8",
+  "product_baseline": "22cd90858424c1e95c6752c80e109bd84d0a3667",
+  "unit_tests": {
+    "hvf_pass": 5,
+    "product_pass": 27,
+    "hardware_and_pressure_ignored": 82
+  },
+  "limits": [
+    "Shared host transport scope; no app installation or complete OS compatibility claim",
+    "CPU interpreter, product lifecycle and GUI remain in their owning repositories"
+  ]
+}
