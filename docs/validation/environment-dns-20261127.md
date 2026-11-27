@@ -29,3 +29,5 @@ and names. Host clients continue using explicit native publications.
 The reproducible entry point is `scripts/validate-environment-dns.py` with
 `--runner`, `--receipt`, `--rootfs` and `--output`. Linux's separate native
 systemd user-service work remains in the Linux product.
+
+Full [Runtime Linux/macOS CI](https://github.com/project-trames/trames-runtime/actions/runs/45966807752) and [Mac CI](https://github.com/project-trames/trames-mac/actions/runs/45967467914) passed, including Dev/Stable builds. The [CI ledger](environment-dns-20261127/ci.json) and [source closure](environment-dns-20261127/source-closure.json) retain tested commit identities and prove the final product inputs match the signed HVF receipt. Documentation-only closure reuses these passed results.

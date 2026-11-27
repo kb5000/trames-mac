@@ -1,0 +1,285 @@
+{
+  "runtime": {
+    "repository": "project-trames/trames-runtime",
+    "commit": "8bd058556ffb35be8e127afbaf7c1c26dae998d9",
+    "run_id": 45966807752,
+    "jobs": [
+      {
+        "id": 140397325036,
+        "name": "verify (macos-15)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install native PCM test headers (Linux only)",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Compile ALSA ABI oracle",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Run rustup show",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/check-execution-boundaries.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/build-guest-cli.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo fmt --all --check",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo test --workspace --all-features --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify musl DNS ABI with a GNU C frontend",
+            "status": "completed",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Run cargo build --workspace --all-features --release --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo run --release -p trames-memory --example reclaim-footprint --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "id": 140397325366,
+        "name": "verify (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install native PCM test headers (Linux only)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Compile ALSA ABI oracle",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run rustup show",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/check-execution-boundaries.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/build-guest-cli.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo fmt --all --check",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo test --workspace --all-features --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify musl DNS ABI with a GNU C frontend",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo build --workspace --all-features --release --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo run --release -p trames-memory --example reclaim-footprint --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "mac": {
+    "repository": "project-trames/trames-mac",
+    "commit": "f620fa2958b920f8f5ae9c77e6c04387cd309daf",
+    "run_id": 45967467914,
+    "jobs": [
+      {
+        "id": 140399496812,
+        "name": "build",
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run rustup show",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/check-execution-boundaries.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 runtime/scripts/build-guest-cli.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo fmt --all --check",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run cargo test --workspace --all-features --locked",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run bash -n scripts/build-mac.sh scripts/install-mac.sh",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 tests/integration/mac-native-driver.py && python3 -m py_compile scripts/configure-native-vulkan.py scripts/package-mac.py scripts/benchmark-firefox-video.py scripts/run-firefox-gpu.py tests/integration/mac-environments.py tests/integration/mac-networks.py tests/integration/mac-controls.py tests/integration/mac-packages.py tests/integration/mac-systemd.py tests/integration/mac-cli.py tests/integration/mac-manager.py tests/integration/mac-channels.py tests/integration/mac-background.py tests/integration/mac-exec.py tests/integration/mac-host-lifecycle.py tests/integration/mac-docker.py",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run bash tests/native/task-stream.sh",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run bash tests/native/window-scene.sh",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run TRAMES_BUILD_CHANNEL=stable TRAMES_VULKAN_LINKAGE=external bash scripts/build-mac.sh",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/package-mac.py --app 'target/release/Trames Dev.app' --unnotarized",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run python3 scripts/package-mac.py --app target/release/Trames.app --unnotarized",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  }
+}

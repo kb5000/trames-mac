@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "final_product": {
+    "commit": "f620fa2958b920f8f5ae9c77e6c04387cd309daf",
+    "dirty": true,
+    "inputs_sha256": "8a5763ac016921041d10a815cdd1670fed83d169f70d3ba25083779965ef11b0"
+  },
+  "runtime": {
+    "commit": "8bd058556ffb35be8e127afbaf7c1c26dae998d9",
+    "dirty": false,
+    "inputs_sha256": "8addfd0777da33e1b6ffef2d3c2442c3e5ab3aa14d5d41965af4e232e1cdead4"
+  },
+  "inputs_match_signed_hvf_receipt": true,
+  "tracked_production_tree_clean": true
+}
