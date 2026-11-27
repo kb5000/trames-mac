@@ -21,3 +21,5 @@ matches the actual submodule; obsolete extraction-only metadata was removed.
 Formatting, boundary validation, locked Clippy and license fingerprints pass.
 No user environment, app installation, iPad source or independent CLI pin was
 changed by this adaptation.
+
+Cloud closure: the [Mac workflow](https://github.com/project-trames/trames-mac/actions/runs/45928741548) passed all checks, both application channels and packaging at `df7533c21301078f47717dc64a1d961b0865a9f1`. The paired [Runtime workflow](https://github.com/project-trames/trames-runtime/actions/runs/45928372889) passed on Linux and Apple. This record-only update reuses those unchanged code results.

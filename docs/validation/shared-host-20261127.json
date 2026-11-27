@@ -26,5 +26,12 @@
   "limits": [
     "Shared host transport scope; no app installation or complete OS compatibility claim",
     "CPU interpreter, product lifecycle and GUI remain in their owning repositories"
-  ]
+  ],
+  "ci": {
+    "commit": "df7533c21301078f47717dc64a1d961b0865a9f1",
+    "conclusion": "success",
+    "url": "https://github.com/project-trames/trames-mac/actions/runs/45928741548",
+    "runtime_conclusion": "success",
+    "runtime_url": "https://github.com/project-trames/trames-runtime/actions/runs/45928372889"
+  }
 }
