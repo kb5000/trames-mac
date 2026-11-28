@@ -49,12 +49,20 @@ fn fields() -> Vec<Value> {
             "Prepare systemd before selecting it",
         ),
         field(
+            "session.user",
+            "Login user",
+            "Startup and sessions",
+            "text",
+            &[],
+            "Account name in /etc/passwd (default root); determines default shell and home directory",
+        ),
+        field(
             "session.shell",
             "Shell and arguments",
             "Startup and sessions",
             "argv",
             &[],
-            "Each token is a literal argument, not shell syntax",
+            "Leave empty to use the login user's shell from /etc/passwd; otherwise literal arguments",
         ),
         field(
             "session.cwd",
@@ -62,7 +70,7 @@ fn fields() -> Vec<Value> {
             "Startup and sessions",
             "text",
             &[],
-            "Directory used by new sessions",
+            "Leave empty to use the login user's home directory",
         ),
         field(
             "display.windows",

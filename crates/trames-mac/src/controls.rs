@@ -43,7 +43,8 @@ impl Owner {
         super::super::exec::Request {
             argv,
             environment: vec![],
-            cwd: Some(c.session.cwd.clone()),
+            user: (!c.session.user.is_empty()).then(|| c.session.user.clone()),
+            cwd: (!c.session.cwd.is_empty()).then(|| c.session.cwd.clone()),
             tty: false,
             size: Some((80, 24)),
         }

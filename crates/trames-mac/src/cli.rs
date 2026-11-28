@@ -140,6 +140,7 @@ pub fn dispatch(args: Vec<String>) -> Result<u8> {
                     super::exec::Request {
                         argv: vec!["/system/bin/sh".into(), "-i".into()],
                         environment: vec!["TERM=xterm-256color".into()],
+                        user: None,
                         cwd: Some("/".into()),
                         tty: true,
                         size: super::session::window_size(),

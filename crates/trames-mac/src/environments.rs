@@ -786,7 +786,8 @@ fn create(r: &Path, n: &str, mut c: Config, options: Create<'_>) -> Result<()> {
     if c.environment.kind == trames_distro::boot::Target::Android {
         trames_distro::android::validate_image(&mut vfs)?;
     } else if custom.is_some() {
-        super::rootfs::validate_command(&mut vfs, &c.session.shell)?;
+        let resolved = c.resolve_login(&mut vfs);
+        super::rootfs::validate_command(&mut vfs, &resolved.argv)?;
     }
     vfs.sync()?;
     drop(vfs);
@@ -881,7 +882,12 @@ pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     if c.components.vulkan.resolve(true)? {
         args.push("--vulkan".into());
     }
-    args.extend(["--cwd".into(), c.session.cwd.clone()]);
+    if !c.session.user.is_empty() {
+        args.extend(["--user".into(), c.session.user.clone()]);
+    }
+    if !c.session.cwd.is_empty() {
+        args.extend(["--cwd".into(), c.session.cwd.clone()]);
+    }
     if c.components.audio {
         args.push("--audio".into());
     }
@@ -926,7 +932,12 @@ pub(super) fn start(r: &Path, n: &str, extra: &[String]) -> Result<u8> {
     ]);
     let extra = extra.strip_prefix(&["--".into()]).unwrap_or(extra);
     args.extend_from_slice(extra);
-    Ok(super::execute_with_default(args, &c.command())?)
+    let default_cmd = if c.environment.kind == trames_distro::boot::Target::Android {
+        c.command()
+    } else {
+        c.session.shell.clone()
+    };
+    Ok(super::execute_with_default(args, &default_cmd)?)
 }
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\"'\"'"))
@@ -1126,7 +1137,7 @@ fn configure(r: &Path, n: &str, args: &[String]) -> Result<()> {
     let dir = directory(r, n)?;
     let mut c = load(&dir)?;
     apply_settings(&mut c, args)?;
-    if c.session.shell != load(&dir)?.session.shell {
+    if c.session.shell != load(&dir)?.session.shell && !c.session.shell.is_empty() {
         let mut vfs = Vfs::open_disk(dir.join("store"), DiskOptions::default())?;
         super::rootfs::validate_command(&mut vfs, &c.session.shell)?;
     }
@@ -1146,6 +1157,8 @@ fn apply_settings(c: &mut Config, settings: &[String]) -> Result<()> {
             "--network" => "network.mode",
             "--bridge" => "network.bridge",
             "--init" => "boot.mode",
+            "--user" | "-u" => "session.user",
+            "--cwd" => "session.cwd",
             "--vulkan" => "components.vulkan",
             "--vaapi" => "components.vaapi",
             "--thunking" => "components.thunking",

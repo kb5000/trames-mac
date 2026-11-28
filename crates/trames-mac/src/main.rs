@@ -82,7 +82,7 @@ fn main() {
 }
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn execute(args: Vec<String>) -> Result<u8, String> {
-    execute_with_default(args, &["/bin/sh".into(), "-l".into()])
+    execute_with_default(args, &[])
 }
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 fn execute_with_default(args: Vec<String>, command: &[String]) -> Result<u8, String> {

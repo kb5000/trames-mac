@@ -277,6 +277,7 @@ pub struct Command {
     pub windows: bool,
     vulkan: bool,
     video: bool,
+    user: String,
     cwd: Option<String>,
     audio: bool,
     audio_input: bool,
@@ -294,7 +295,7 @@ impl Command {
         arguments: impl Iterator<Item = String>,
         pty: bool,
     ) -> Result<Option<Self>, Box<dyn std::error::Error>> {
-        Self::parse_with_default(arguments, pty, &["/bin/sh".into(), "-l".into()])
+        Self::parse_with_default(arguments, pty, &[])
     }
     pub fn parse_with_default(
         arguments: impl Iterator<Item = String>,
@@ -330,6 +331,7 @@ impl Command {
         let mut windows = true;
         let mut vulkan = false;
         let mut video = false;
+        let mut user = "root".to_string();
         let mut cwd = None;
         let mut audio = false;
         let mut audio_input = false;
@@ -432,6 +434,16 @@ impl Command {
                 }
                 "--no-windows" => windows = false,
                 "--vulkan" => vulkan = true,
+                "--user" => {
+                    user = arguments.next().ok_or("missing user")?;
+                    if user.is_empty()
+                        || user
+                            .chars()
+                            .any(|c| matches!(c, ':' | '/' | '\0' | '\n' | '\r') || c.is_whitespace())
+                    {
+                        return Err("invalid user name".into());
+                    }
+                }
                 "--cwd" => cwd = Some(arguments.next().ok_or("missing cwd")?),
                 "--video" => video = true,
                 "--audio" => audio = true,
@@ -452,7 +464,7 @@ impl Command {
                 "--" => break,
                 "--help" => {
                     println!(
-                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--sysctl kernel.threads-max=N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--exec-socket PATH] [--android-init] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and /bin/sh -l with a rootfs."
+                        "trames-mac-run [--init shell|systemd] [--rootfs TAR_OR_DIRECTORY] [--storage DIR] [--user USER] [--cwd DIR] [--exec-file GUEST=HOST] [--mount GUEST=HOST] [--mount-ro GUEST=HOST] [--fs ls|cat|get|put ...] [--network off|loopback|outbound|full] [--memory-mib auto|N] [--cpus N] [--sysctl kernel.threads-max=N] [--resident-mib N] [--timeout SECONDS] [--pty|--no-pty] [--no-windows] [--vulkan] [--video] [--audio] [--audio-input] [--trace] [--exec-socket PATH] [--android-init] [--metrics] [ELF [ARG...]]\nLinux userspace with hardware ARM64 execution; defaults to host-managed memory and the login user's shell from /etc/passwd with a rootfs."
                     );
                     return Ok(None);
                 }
@@ -512,6 +524,7 @@ impl Command {
             windows,
             vulkan,
             video,
+            user,
             cwd,
             audio,
             audio_input,
@@ -552,19 +565,25 @@ pub fn run(
         windows,
         vulkan,
         video,
+        user,
         cwd,
         audio,
         audio_input,
         pty,
         mut argv,
     } = command;
-    let launcher = trames_distro::terminals::launcher_at(&terminal_command, cwd.as_deref());
+    let session_cfg = trames_distro::environment::Session {
+        user,
+        shell: terminal_command,
+        cwd: cwd.clone().unwrap_or_default(),
+    };
+    let launcher = trames_distro::terminals::launcher_for_session(&session_cfg);
     if console.is_some() && init == super::systemd::Init::Shell {
         argv = vec!["/bin/sh".into(), "-c".into(), launcher.clone()];
     }
-    let path = argv
-        .first()
-        .ok_or("an ELF program or --rootfs is required; use --help")?;
+    if argv.is_empty() && !filesystem && rootfs.is_none() && storage.is_none() {
+        return Err("an ELF program or --rootfs is required; use --help".into());
+    }
     let options = RuntimeOptions {
         pure_accelerator: false,
         native_bsearch: false,
@@ -694,10 +713,21 @@ pub fn run(
     } else {
         None
     };
+    let resolved_login = (!android_init && (rootfs.is_some() || storage.is_some()))
+        .then(|| trames_distro::environment::resolve_login(&mut vfs, &session_cfg));
+    if argv.is_empty() {
+        if let Some(info) = &resolved_login {
+            argv = info.argv.clone();
+        }
+    }
+    let path = argv
+        .first()
+        .ok_or("an ELF program or --rootfs is required; use --help")?
+        .clone();
     let bytes = if rootfs.is_some() || storage.is_some() {
         vfs.executable(path.as_bytes())?
     } else {
-        let bytes = std::fs::read(path)?;
+        let bytes = std::fs::read(&path)?;
         vfs.import_executable(b"/program", bytes.clone())?;
         bytes
     };
@@ -733,12 +763,24 @@ pub fn run(
             interop.as_ref().is_none_or(|host| host.clipboard()),
         );
     }
-    let mut envp = vec![
-        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".into(),
-        "HOME=/root".into(),
-        "LANG=C.UTF-8".into(),
-        "TERM=xterm-256color".into(),
-    ];
+    let mut envp = if let Some(info) = &resolved_login {
+        vec![
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".into(),
+            format!("HOME={}", info.home),
+            format!("USER={}", info.user),
+            format!("LOGNAME={}", info.user),
+            format!("SHELL={}", info.shell),
+            "LANG=C.UTF-8".into(),
+            "TERM=xterm-256color".into(),
+        ]
+    } else {
+        vec![
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin".into(),
+            "HOME=/root".into(),
+            "LANG=C.UTF-8".into(),
+            "TERM=xterm-256color".into(),
+        ]
+    };
     if android_init {
         envp = trames_distro::android::environment();
     }
@@ -759,7 +801,9 @@ pub fn run(
         }
     }
     if init.is_none() && !android_init {
-        if let Some(cwd) = &cwd {
+        if let Some(info) = &resolved_login {
+            vfs.chdir(info.cwd.as_bytes())?;
+        } else if let Some(cwd) = cwd.as_deref().filter(|s| !s.is_empty()) {
             vfs.chdir(cwd.as_bytes())?;
         }
     }
