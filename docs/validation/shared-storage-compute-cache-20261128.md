@@ -1,6 +1,6 @@
 # Shared storage and pathname runtime pin — 2026-11-28
 
-Runtime: `03d21f4f2ac7aa7be00c7827afad4a3b2ad8ec29`.
+Runtime: `8fee46855ab3e092f27fbc654b9f0d9ef413275a`.
 
 Private metadata uses incremental WAL plus bounded periodic checkpoints. The VFS
 name cache keeps live inode metadata/permissions. Both paths apply to this product.
@@ -21,3 +21,8 @@ Shared Apple/Linux storage tests, computation ABI matrix, WAL recovery and limit
 are recorded in [the runtime validation](../../runtime/docs/validation/storage-compute-cache-20261128.md).
 No new hardware guest acceptance or end-to-end application speed measurement is
 claimed by these product compilation checks.
+
+The complete-workspace follow-up also pins CLI `bd22dbf1b6f9875d2298633467bf81f1516b6f5b`. Product compilation
+was repeated with the final shared login/ALSA helper and network accessor changes.
+Shared distro unit tests passed 47 cases each on Apple and Linux. CLI code is
+unchanged by its documentation-only commit.
