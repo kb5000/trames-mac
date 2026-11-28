@@ -65,9 +65,12 @@ that every entry is linked into each product. Project-owned packages are exclude
 | heapless | 0.8.0 | MIT OR Apache-2.0 | MIT | Main |
 | indexmap | 2.14.2 | Apache-2.0 OR MIT | MIT | Main |
 | itoa | 1.0.18 | MIT OR Apache-2.0 | MIT | Main |
+| jobserver | 0.1.35 | MIT OR Apache-2.0 | MIT | Main |
 | js-sys | 0.3.107 | MIT OR Apache-2.0 | MIT | Main |
 | libc | 0.2.190 | MIT OR Apache-2.0 | MIT | Main |
 | libloading | 0.8.9 | ISC | ISC | Main |
+| liblzma-sys | 0.4.9 | MIT OR Apache-2.0 | MIT AND 0BSD | Main |
+| libz-sys | 1.1.33 | MIT OR Apache-2.0 | MIT AND Zlib | Main |
 | linux-raw-sys | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | MIT | Main |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 | MIT | Main |
 | log | 0.4.34 | MIT OR Apache-2.0 | MIT | Main |
@@ -77,6 +80,8 @@ that every entry is linked into each product. Project-owned packages are exclude
 | multiversion_no_op | 1.0.0 | Apache-2.0 OR MIT | MIT | Main |
 | nix | 0.31.3 | MIT | MIT | Main |
 | once_cell | 1.21.4 | MIT OR Apache-2.0 | MIT | Main |
+| openssl-src | 300.6.1+3.6.3 | MIT/Apache-2.0 | MIT AND Apache-2.0 | Main |
+| openssl-sys | 0.9.118 | MIT | MIT | Main |
 | parking_lot | 0.12.5 | MIT OR Apache-2.0 | MIT | Main |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 | MIT | Main |
 | pkg-config | 0.3.34 | MIT OR Apache-2.0 | MIT | Main |
@@ -115,6 +120,7 @@ that every entry is linked into each product. Project-owned packages are exclude
 | typed-path | 0.13.0 | MIT OR Apache-2.0 | MIT | Main |
 | typenum | 1.20.1 | MIT OR Apache-2.0 | MIT | Main |
 | unicode-ident | 1.0.26 | (MIT OR Apache-2.0) AND Unicode-3.0 | MIT AND Unicode-3.0 | Main |
+| vcpkg | 0.2.15 | MIT/Apache-2.0 | MIT | Main |
 | version_check | 0.9.5 | MIT/Apache-2.0 | MIT | Main |
 | wasi | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | MIT | Main |
 | wasip2 | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | MIT | Main |
@@ -152,6 +158,7 @@ that every entry is linked into each product. Project-owned packages are exclude
 | zeroize_derive | 1.5.0 | Apache-2.0 OR MIT | MIT | Main |
 | zip | 9.5.1 | MIT | MIT | Main |
 | zmij | 1.0.23 | MIT | MIT | Main |
+| zstd-sys | 2.2.0+zstd.1.6.0 | BSD-3-Clause AND BSD-2-Clause | BSD-3-Clause AND BSD-2-Clause | Main |
 
 Auxiliary lockfiles: `benchmarks/memory-architecture/Cargo.lock`.
 
